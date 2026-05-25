@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>El Clásico - Urban Queens</title>
+    <link href="https://fonts.googleapis.com/css2?family=Bangers&display=swap" rel="stylesheet">
+    <style>
+        /* 🟩 FONDO CHROMA PARA CAPTURA PERFECTA 🟩 */
+        body { 
+            font-family: 'Bangers', cursive; 
+            text-align: center; 
+            background: rgba(0, 255, 0, 0.05); 
+            color: white; 
+            margin: 0; 
+            padding: 10px; 
+            overflow: hidden; 
+            letter-spacing: 1px; 
+        }
+        
+        .copa-container {
+            background: #111111; 
+            border: 3px solid #FFD700; 
+            border-radius: 20px;
+            padding: 15px; 
+            width: 300px; 
+            box-sizing: border-box; 
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.9); 
+            display: flex; flex-direction: column; gap: 10px;
+        }
+        
+        .titulo-copa { font-size: 34px; color: #FFD700; margin: 0; text-transform: uppercase; text-shadow: 2px 2px 5px rgba(0,0,0,0.8); line-height: 1.1; }
+        
+        .subtitulo { 
+            font-size: 16px; color: #FFF; margin-bottom: 5px; font-weight: bold; 
+            background: #222; 
+            border: 1px solid rgba(255, 255, 255, 0.3); 
+            border-radius: 10px; padding: 4px;
+            text-shadow: 1px 1px 3px rgba(0,0,0,0.8);
+            letter-spacing: 2px;
+        }
+
+        #lista-clasico { display: flex; flex-direction: column; gap: 12px; }
+
+        /* Fila base de equipo */
+        .equipo-fila {
+            border-radius: 12px; 
+            padding: 10px;
+            display: flex; flex-direction: column; align-items: center; position: relative; overflow: hidden;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.5); 
+            transition: transform 0.3s, box-shadow 0.2s ease-out;
+            border: 2px solid white;
+        }
+        
+        .equipo-nombre { 
+            font-size: 30px; 
+            z-index: 2; 
+            text-shadow: 2px 2px 5px rgba(0,0,0,0.9); 
+            text-transform: uppercase; 
+            line-height: 1; 
+            margin-bottom: 2px; 
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .equipo-integrantes {
+            font-size: 14px;
+            z-index: 2;
+            color: #ddd;
+            margin-bottom: 8px;
+            text-shadow: 1px 1px 3px rgba(0,0,0,0.9);
+            font-family: sans-serif;
+            font-weight: bold;
+        }
+        
+        .puntos-container {
+            position: relative;
+            z-index: 2;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .equipo-puntos { 
+            font-size: 55px; 
+            line-height: 1; 
+            text-shadow: 0 0 8px rgba(0,0,0,1), 3px 3px 6px rgba(0,0,0,1); 
+            color: white;
+            transition: transform 0.2s ease-out, color 0.2s ease-out; 
+        }
+
+        /* ✨ ANIMACIÓN DE GOL ✨ */
+        @keyframes impactoGol {
+            0% { transform: translateY(0) scale(1) rotate(0); color: #fff; text-shadow: 0 0 5px #fff; }
+            30% { transform: translateY(-15px) scale(1.4) rotate(-10deg); color: gold; text-shadow: 0 0 15px gold, 0 0 30px gold; }
+            50% { transform: translateY(-12px) scale(1.35) rotate(5deg); }
+            70% { transform: translateY(-2px) scale(1.1) rotate(-3deg); }
+            100% { transform: translateY(0) scale(1) rotate(0); color: white; text-shadow: 0 0 5px rgba(0,0,0,1); }
+        }
+
+        .animar-puntos-gol { animation: impactoGol 0.6s ease-out; }
+
+        .particulas-gol {
+            position: absolute;
+            width: 180px; height: 180px;
+            background: radial-gradient(circle, rgba(255,215,0,1) 0%, rgba(255,255,255,0.7) 20%, rgba(0,0,0,0) 60%);
+            border-radius: 50%;
+            opacity: 0;
+            z-index: 1; 
+            transition: transform 0.1s, opacity 0.1s;
+        }
+
+        @keyframes explosionParticulas {
+            0% { transform: scale(0.1) rotate(0deg); opacity: 1; }
+            100% { transform: scale(1.5) rotate(180deg); opacity: 0; }
+        }
+
+        .animar-particulas-gol { animation: explosionParticulas 0.7s ease-out; }
+
+        .bg-color { position: absolute; top: 0; left: 0; width: 100%; height: 100%; opacity: 0.6; z-index: 1; }
+    </style>
+</head>
+<body>
+    <div class="copa-container">
+        <h1 class="titulo-copa">⚽ EL CLÁSICO ⚽</h1>
+        <div class="subtitulo">GLOBAL DEL DÍA</div>
+        <div id="lista-clasico"></div>
+    </div>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script>
+        const socket = io();
+        const listaClasico = document.getElementById('lista-clasico');
+
+        // Memorias de puntos para saber cuándo animar
+        let prevPuntos = { madrid: 0, barca: 0 };
+        let currPuntos = { madrid: 0, barca: 0 };
+
+        // Definimos los equipos fijos para el clásico
+        const EQUIPOS_CLÁSICO = [
+            {
+                id: 'madrid',
+                nombre: 'REAL MADRID',
+                integrantes: 'AMY Y VENUS',
+                colorPrincipal: '#ffffff',
+                colorSecundario: '#aaaaaa', // Blanco/Plata
+                borde: '#ffffff',
+                chicas: ['Amy', 'Venus']
+            },
+            {
+                id: 'barca',
+                nombre: 'BARÇA',
+                integrantes: 'NUCITA Y RAY',
+                colorPrincipal: '#004D98', // Azul Barça
+                colorSecundario: '#A50044', // Grana Barça
+                borde: '#FFD700',
+                chicas: ['Nucita', 'Ray']
+            }
+        ];
+
+        function renderClasico() {
+            listaClasico.innerHTML = '';
+
+            // Ordenamos: el que tenga más puntos va arriba
+            let ordenados = [...EQUIPOS_CLÁSICO].sort((a, b) => currPuntos[b.id] - currPuntos[a.id]);
+
+            ordenados.forEach((equipo, index) => {
+                const pts = currPuntos[equipo.id];
+
+                // Trofeo para el que va ganando (si tiene puntos)
+                let trofeo = '';
+                if (index === 0 && pts > 0 && currPuntos[ordenados[0].id] !== currPuntos[ordenados[1].id]) {
+                    trofeo = '<span style="font-size: 32px; margin-right: 8px; filter: drop-shadow(0 0 8px gold);">🏆</span>';
+                }
+
+                const div = document.createElement('div');
+                div.className = 'equipo-fila';
+                div.style.borderColor = equipo.borde; 
+                div.id = `fila-${equipo.id}`; 
+
+                // Color de fondo especial (degradado para Barça, sólido plateado para Madrid)
+                div.innerHTML = `
+                    <div class="bg-color" style="background: linear-gradient(135deg, ${equipo.colorPrincipal}, ${equipo.colorSecundario});"></div>
+                    <div class="equipo-nombre" style="color: white;">${trofeo}${equipo.nombre}</div>
+                    <div class="equipo-integrantes">${equipo.integrantes}</div>
+                    <div class="puntos-container">
+                        <div class="particulas-gol" id="particulas-${equipo.id}"></div>
+                        <div class="equipo-puntos" id="pts-${equipo.id}">${pts}</div>
+                    </div>
+                `;
+                listaClasico.appendChild(div);
+            });
+        }
+
+        function procesarDatosCopa(copaData) {
+            // Sumamos los puntos de la memoria del servidor
+            let puntosMadrid = (copaData.Amy || 0) + (copaData.Venus || 0);
+            let puntosBarca = (copaData.Nucita || 0) + (copaData.Ray || 0);
+
+            currPuntos = { madrid: puntosMadrid, barca: puntosBarca };
+
+            // Comprobamos si hubo un GOL (aumento de puntos)
+            ['madrid', 'barca'].forEach(idEquipo => {
+                if(currPuntos[idEquipo] > prevPuntos[idEquipo]) {
+                    setTimeout(() => {
+                        const filaEl = document.getElementById(`fila-${idEquipo}`);
+                        const ptsEl = document.getElementById(`pts-${idEquipo}`);
+                        const partEl = document.getElementById(`particulas-${idEquipo}`);
+
+                        if(filaEl && ptsEl && partEl) {
+                            // Brillo de la tarjeta
+                            filaEl.style.boxShadow = `0 0 35px white`;
+                            
+                            // Animación de impacto
+                            ptsEl.classList.add('animar-puntos-gol');
+                            partEl.classList.add('animar-particulas-gol');
+
+                            setTimeout(() => {
+                                ptsEl.classList.remove('animar-puntos-gol');
+                                partEl.classList.remove('animar-particulas-gol');
+                                filaEl.style.boxShadow = "0 4px 10px rgba(0,0,0,0.5)";
+                            }, 750); 
+                        }
+                    }, 50);
+                }
+            });
+
+            renderClasico();
+            prevPuntos = {...currPuntos};
+        }
+
+        // Carga inicial
+        fetch('/api/copa').then(res => res.json()).then(data => {
+            if(data.copa) {
+                // Sincronizamos memorias al cargar la página
+                let pMad = (data.copa.Amy || 0) + (data.copa.Venus || 0);
+                let pBar = (data.copa.Nucita || 0) + (data.copa.Ray || 0);
+                prevPuntos = { madrid: pMad, barca: pBar };
+                procesarDatosCopa(data.copa);
+            }
+        });
+
+        // Actualización en vivo (recibe de server.js y el botón "Reiniciar Copa")
+        socket.on('actualizarCopa', (copaData) => {
+            procesarDatosCopa(copaData);
+        });
+    </script>
+</body>
+</html>

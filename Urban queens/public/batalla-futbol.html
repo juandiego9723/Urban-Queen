@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>El Clásico Compacto - Urban Queens</title>
+    <link href="https://fonts.googleapis.com/css2?family=Bangers&display=swap" rel="stylesheet">
+    <style>
+        /* 🟩 FONDO CHROMA 🟩 */
+        body { font-family: 'Bangers', cursive; text-align: center; background: #00FF00; color: white; margin: 0; overflow: hidden; letter-spacing: 1px; }
+        
+        /* Contenedor más ajustado */
+        .container { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; width: 100vw; gap: 12px; }
+
+        /* HEADER COMPACTO */
+        .timer-header { 
+            display: flex; align-items: center; justify-content: center; gap: 20px; 
+            background: linear-gradient(180deg, #111, #000); 
+            padding: 8px 35px; border-radius: 40px; border: 4px solid #FFD700; 
+            box-shadow: 0 0 20px rgba(255, 215, 0, 0.5); min-width: 320px;
+            z-index: 10;
+        }
+        .reloj { font-size: 65px; color: #FFF; text-shadow: 0 0 10px rgba(255,255,255,0.5); margin-bottom: -5px;}
+        .titulo-clasico { font-size: 30px; color: #FFD700; line-height: 0.9; text-align: left;}
+
+        /* MODO SNIPE EXTREMO */
+        .snipe-mode { 
+            color: #ff0000 !important; 
+            animation: latidoFuerte 0.4s infinite alternate; 
+            text-shadow: 0 0 20px #ff0000;
+        }
+        @keyframes latidoFuerte { 0% { transform: scale(1); } 100% { transform: scale(1.15); } }
+
+        /* 📊 BARRA DE PODER (TUG-OF-WAR) REDUCIDA 📊 */
+        .barra-poder-container {
+            width: 80%; max-width: 900px; height: 30px; background: #222; border: 4px solid white; border-radius: 20px;
+            display: flex; overflow: hidden; box-shadow: 0 5px 15px rgba(0,0,0,0.8); z-index: 10;
+            position: relative;
+        }
+        
+        .barra-poder-container::after {
+            content: 'VS'; position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%);
+            font-size: 22px; color: gold; text-shadow: 0 0 8px #000; z-index: 5;
+        }
+
+        .barra-barca {
+            width: 50%; height: 100%; background: linear-gradient(90deg, #004D98, #A50044);
+            transition: width 0.6s cubic-bezier(0.25, 1, 0.5, 1);
+            display: flex; align-items: center; justify-content: flex-start; padding-left: 15px;
+            box-shadow: inset -5px 0 15px rgba(0,0,0,0.5);
+        }
+        .barra-madrid {
+            width: 50%; height: 100%; background: linear-gradient(90deg, #CCCCCC, #FFFFFF);
+            transition: width 0.6s cubic-bezier(0.25, 1, 0.5, 1);
+            display: flex; align-items: center; justify-content: flex-end; padding-right: 15px;
+            box-shadow: inset 5px 0 15px rgba(0,0,0,0.5);
+        }
+
+        /* CONTENEDOR DE EQUIPOS COMPACTO */
+        .clasico-vs { display: flex; justify-content: center; align-items: center; gap: 20px; width: 85%; max-width: 1000px; height: 160px; }
+
+        .team-card {
+            flex: 1; height: 100%; border-radius: 25px; border: 5px solid white;
+            display: flex; flex-direction: column; align-items: center; justify-content: space-around;
+            position: relative; overflow: hidden; transition: all 0.3s ease;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.8); padding: 10px 0;
+        }
+
+        /* ESTILOS DE EQUIPOS */
+        .barca { background: linear-gradient(135deg, #004D98 0%, #A50044 100%); border-color: #EDBB00; }
+        .madrid { background: linear-gradient(135deg, #FFFFFF 0%, #CCCCCC 100%); border-color: #004D98; color: #000; }
+        .madrid .puntos, .madrid .nombre-equipo { color: #000; text-shadow: none; }
+
+        .nombre-equipo { font-size: 38px; text-transform: uppercase; margin-top: 5px; text-shadow: 2px 2px 5px #000; z-index: 2; line-height: 1;}
+        .integrantes { font-size: 15px; margin-top: -5px; opacity: 0.9; background: rgba(0,0,0,0.3); padding: 3px 15px; border-radius: 12px; z-index: 2;}
+        .madrid .integrantes { color: white; }
+        .puntos { font-size: 85px; line-height: 0.9; margin: 0; text-shadow: 3px 3px 10px rgba(0,0,0,0.5); z-index: 2;}
+
+        /* ✨⚽ ANIMACIÓN DEL BALONAZO AJUSTADA ⚽✨ */
+        .balon-gol {
+            position: absolute; top: 50%; left: 50%;
+            transform: translate(-50%, -50%) scale(0);
+            font-size: 130px; opacity: 0; z-index: 50;
+            pointer-events: none; filter: drop-shadow(0 10px 10px rgba(0,0,0,0.8));
+        }
+
+        @keyframes balonazoStrike {
+            0% { transform: translate(-50%, -50%) scale(3) rotate(-180deg); opacity: 0; }
+            20% { transform: translate(-50%, -50%) scale(1.3) rotate(-45deg); opacity: 1; filter: drop-shadow(0 0 30px white); }
+            40% { transform: translate(-50%, -50%) scale(0.8) rotate(10deg); opacity: 1; }
+            60% { transform: translate(-50%, -50%) scale(1.1) rotate(0deg); opacity: 1; }
+            100% { transform: translate(-50%, -50%) scale(0); opacity: 0; }
+        }
+
+        .disparar { animation: balonazoStrike 0.8s cubic-bezier(0.25, 1, 0.5, 1) forwards; }
+
+        /* VIBRACIÓN DE LA TARJETA AL RECIBIR EL GOL */
+        .vibrar-gol { animation: shake 0.5s cubic-bezier(.36,.07,.19,.97) both; }
+        @keyframes shake { 10%, 90% { transform: translate3d(-2px, 0, 0); } 20%, 80% { transform: translate3d(4px, 0, 0); } 30%, 50%, 70% { transform: translate3d(-6px, 0, 0); } 40%, 60% { transform: translate3d(6px, 0, 0); } }
+
+        /* TARJETAS GIGANTES AJUSTADAS A PANTALLA */
+        .notif-tarjeta { 
+            position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; 
+            z-index: 50000; display: none; flex-direction: column; align-items: center; justify-content: center;
+            animation: flashOverlay 0.5s ease;
+        }
+        .tarjeta-img { width: 220px; height: 310px; border-radius: 20px; border: 8px solid white; box-shadow: 0 0 50px rgba(0,0,0,1); transform: rotate(-5deg); margin-bottom: 20px; }
+        .tarjeta-texto { font-size: 50px; text-transform: uppercase; background: rgba(0,0,0,0.9); padding: 8px 30px; border-radius: 15px; border: 4px solid white; }
+
+        .amarilla-bg { background: rgba(255, 215, 0, 0.4); }
+        .roja-bg { background: rgba(255, 0, 0, 0.4); }
+        .amarilla-card { background: #FFD700; }
+        .roja-card { background: #FF0000; }
+
+        /* LETRERO FINAL AJUSTADO */
+        .final-overlay {
+            position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.95);
+            display: none; flex-direction: column; align-items: center; justify-content: center; z-index: 100000;
+        }
+        .ganador-nombre { font-size: 90px; text-shadow: 0 0 30px gold; margin: 0; }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <div class="timer-header" id="header">
+            <div class="titulo-clasico">EL<br>CLÁSICO</div>
+            <div class="reloj" id="reloj">00:00</div>
+        </div>
+
+        <div class="barra-poder-container">
+            <div class="barra-barca" id="barra-barca"></div>
+            <div class="barra-madrid" id="barra-madrid"></div>
+        </div>
+
+        <div class="clasico-vs">
+            <div class="team-card barca" id="card-barca">
+                <div class="balon-gol" id="balon-barca">⚽</div>
+                <div class="nombre-equipo">BARCELONA</div>
+                <div class="integrantes">RAY & NUCITA</div>
+                <div class="puntos" id="pts-barca">0</div>
+            </div>
+
+            <div class="team-card madrid" id="card-madrid">
+                <div class="balon-gol" id="balon-madrid">⚽</div>
+                <div class="nombre-equipo">REAL MADRID</div>
+                <div class="integrantes">AMY & VENUS</div>
+                <div class="puntos" id="pts-madrid">0</div>
+            </div>
+        </div>
+    </div>
+
+    <div id="pantalla-tarjeta" class="notif-tarjeta">
+        <div class="tarjeta-img" id="color-tarjeta"></div>
+        <div class="tarjeta-texto" id="texto-tarjeta">¡FALTA!</div>
+    </div>
+
+    <div class="final-overlay" id="pantalla-final">
+        <h2 style="font-size: 40px; margin: 0;">¡FIN DEL ENCUENTRO!</h2>
+        <div style="font-size: 100px; margin: 10px 0;">🏆</div>
+        <h1 class="ganador-nombre" id="ganador-texto">¡BARCELONA!</h1>
+    </div>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script>
+        const socket = io();
+        const ptsBarca = document.getElementById('pts-barca');
+        const ptsMadrid = document.getElementById('pts-madrid');
+        const cardBarca = document.getElementById('card-barca');
+        const cardMadrid = document.getElementById('card-madrid');
+        const barraBarca = document.getElementById('barra-barca');
+        const barraMadrid = document.getElementById('barra-madrid');
+        const balonBarca = document.getElementById('balon-barca');
+        const balonMadrid = document.getElementById('balon-madrid');
+        const reloj = document.getElementById('reloj');
+        
+        let lastPoints = { barca: 0, madrid: 0 };
+
+        function calcularPuntos(puntos) {
+            // Barça = Ray + Nucita
+            const barca = (puntos['Ray'] || 0) + (puntos['Nucita'] || 0);
+            // Madrid = Amy + Venus
+            const madrid = (puntos['Amy'] || 0) + (puntos['Venus'] || 0);
+            
+            // Lógica de la Barra de Poder
+            let totalPuntos = barca + madrid;
+            let porcentajeBarca = totalPuntos === 0 ? 50 : (barca / totalPuntos) * 100;
+            let porcentajeMadrid = totalPuntos === 0 ? 50 : (madrid / totalPuntos) * 100;
+            
+            barraBarca.style.width = porcentajeBarca + '%';
+            barraMadrid.style.width = porcentajeMadrid + '%';
+
+            // Animación de Balonazo y Vibración
+            if (barca > lastPoints.barca) { 
+                cardBarca.classList.add('vibrar-gol'); 
+                balonBarca.classList.remove('disparar');
+                void balonBarca.offsetWidth; 
+                balonBarca.classList.add('disparar');
+                setTimeout(() => cardBarca.classList.remove('vibrar-gol'), 600); 
+            }
+            if (madrid > lastPoints.madrid) { 
+                cardMadrid.classList.add('vibrar-gol'); 
+                balonMadrid.classList.remove('disparar');
+                void balonMadrid.offsetWidth; 
+                balonMadrid.classList.add('disparar');
+                setTimeout(() => cardMadrid.classList.remove('vibrar-gol'), 600); 
+            }
+            
+            lastPoints = { barca, madrid };
+            ptsBarca.innerText = barca;
+            ptsMadrid.innerText = madrid;
+        }
+
+        socket.on('batallaInicio', (data) => {
+            document.getElementById('pantalla-final').style.display = 'none';
+            document.getElementById('pantalla-tarjeta').style.display = 'none';
+            reloj.classList.remove('snipe-mode');
+            calcularPuntos(data.puntos || {});
+        });
+
+        socket.on('batallaTick', (t) => {
+            let m = Math.floor(t / 60).toString().padStart(2, '0');
+            let s = (t % 60).toString().padStart(2, '0');
+            reloj.innerText = `${m}:${s}`;
+            
+            if (t <= 10 && t > 0) reloj.classList.add('snipe-mode');
+            else reloj.classList.remove('snipe-mode');
+        });
+
+        socket.on('batallaPuntos', calcularPuntos);
+
+        socket.on('batallaFin', (data) => {
+            reloj.innerText = "00:00";
+            reloj.classList.remove('snipe-mode');
+            
+            const overlay = document.getElementById('pantalla-final');
+            const texto = document.getElementById('ganador-texto');
+            
+            let ganador = "EMPATE";
+            if (lastPoints.barca > lastPoints.madrid) ganador = "¡BARCELONA!";
+            else if (lastPoints.madrid > lastPoints.barca) ganador = "¡REAL MADRID!";
+            
+            texto.innerText = ganador;
+            overlay.style.display = 'flex';
+
+            if (data.reporteTarjetas && data.reporteTarjetas.length > 0) {
+                setTimeout(() => { mostrarTarjetasGigantes(data.reporteTarjetas); }, 2500);
+            }
+            
+            setTimeout(() => overlay.style.display = 'none', 10000);
+        });
+
+        function mostrarTarjetasGigantes(lista) {
+            const overlay = document.getElementById('pantalla-tarjeta');
+            const colorDiv = document.getElementById('color-tarjeta');
+            const textoDiv = document.getElementById('texto-tarjeta');
+            let i = 0;
+
+            function siguiente() {
+                if (i >= lista.length) { overlay.style.display = 'none'; return; }
+                
+                const t = lista[i];
+                const equipo = (t.chica === 'Ray' || t.chica === 'Nucita') ? 'BARÇA' : 'MADRID';
+                
+                overlay.className = 'notif-tarjeta ' + (t.tipo === 'AMARILLA' ? 'amarilla-bg' : 'roja-bg');
+                colorDiv.className = 'tarjeta-img ' + (t.tipo === 'AMARILLA' ? 'amarilla-card' : 'roja-card');
+                textoDiv.innerText = `${equipo}: ¡${t.tipo}!`;
+                
+                overlay.style.display = 'flex';
+                
+                setTimeout(() => {
+                    overlay.style.display = 'none';
+                    i++;
+                    setTimeout(siguiente, 500);
+                }, 4000);
+            }
+            siguiente();
+        }
+
+        socket.on('batallaCancelada', () => { 
+            document.getElementById('pantalla-final').style.display = 'none';
+            reloj.innerText = "00:00";
+        });
+    </script>
+</body>
+</html>

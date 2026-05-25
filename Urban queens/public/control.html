@@ -1,0 +1,1268 @@
+﻿<!DOCTYPE html>
+<html lang="es">
+    <head>
+        <title>Urban Queens — Control</title>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+    :root {
+        --bg: #0f1117;
+        --surface: #161b27;
+        --surface2: #1c2235;
+        --surface3: #232b3e;
+        --border: #2a3347;
+        --border-hi: #3d4f6e;
+        --text: #e2e8f0;
+        --muted: #7e8fa6;
+        --green: #10b981;
+        --red: #f43f5e;
+        --yellow: #f59e0b;
+        --cyan: #06b6d4;
+        --pink: #ec4899;
+        --purple: #a855f7;
+        --indigo: #6366f1;
+        --indigo-dim: rgba(99,102,241,0.12);
+        --shadow: 0 1px 3px rgba(0,0,0,.45), 0 4px 16px rgba(0,0,0,.22);
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { background: var(--bg); color: var(--text); font-family: 'Inter', system-ui, -apple-system, sans-serif; min-height: 100vh; font-size: 14px; line-height: 1.5; -webkit-font-smoothing: antialiased; }
+
+    /* ── TOPBAR ── */
+    .topbar { background: var(--surface); border-bottom: 1px solid var(--border); padding: 0 24px; height: 56px; display: flex; align-items: center; gap: 14px; position: sticky; top: 0; z-index: 100; }
+    .topbar-logo { font-size: 15px; font-weight: 800; letter-spacing: -0.5px; color: var(--text); }
+    .topbar-logo span { color: var(--pink); }
+    .live-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--green); flex-shrink: 0; box-shadow: 0 0 8px var(--green); animation: blink 2s infinite; }
+    @keyframes blink { 0%,100%{opacity:1} 50%{opacity:.3} }
+    .topbar-status { font-size: 12px; color: var(--muted); font-weight: 500; }
+    .topbar-links { margin-left: auto; display: flex; gap: 4px; flex-wrap: wrap; }
+    .topbar-link { font-size: 12px; font-weight: 500; color: var(--muted); text-decoration: none; background: var(--surface2); border: 1px solid var(--border); padding: 5px 11px; border-radius: 7px; transition: color .15s, border-color .15s, background .15s; }
+    .topbar-link:hover { color: var(--text); border-color: var(--indigo); background: var(--indigo-dim); }
+
+    /* ── TABS ── */
+    .tabs { background: var(--surface); border-bottom: 1px solid var(--border); padding: 0 20px; display: flex; gap: 0; overflow-x: auto; position: sticky; top: 56px; z-index: 99; }
+    .tabs::-webkit-scrollbar { height: 2px; }
+    .tabs::-webkit-scrollbar-thumb { background: var(--border-hi); }
+    .tab { padding: 15px 16px 13px; font-size: 13px; font-weight: 500; color: var(--muted); cursor: pointer; border: none; background: transparent; white-space: nowrap; border-bottom: 2px solid transparent; transition: color .15s, border-color .15s; user-select: none; }
+    .tab:hover { color: var(--text); }
+    .tab.active { color: var(--text); border-bottom-color: var(--indigo); font-weight: 600; }
+
+    /* ── LAYOUT ── */
+    .main { padding: 20px; max-width: 640px; margin: 0 auto; display: flex; flex-direction: column; gap: 16px; }
+    .tab-content { display: none; }
+    .tab-content.active { display: contents; }
+
+    /* ── CARDS ── */
+    .card { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 20px; box-shadow: var(--shadow); }
+    .card-title { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 1.2px; color: var(--muted); margin-bottom: 18px; display: flex; align-items: center; gap: 7px; }
+    .card-title-accent { color: var(--text); font-size: 14px; text-transform: none; letter-spacing: 0; font-weight: 700; }
+
+    /* ── BUTTONS ── */
+    .btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; padding: 10px 18px; border-radius: 8px; font-weight: 600; font-size: 13px; cursor: pointer; border: none; transition: filter .15s, transform .1s, box-shadow .15s; white-space: nowrap; line-height: 1; font-family: inherit; }
+    .btn:active { transform: scale(.97); }
+    .btn-primary { background: var(--indigo); color: #fff; }
+    .btn-primary:hover { box-shadow: 0 4px 14px rgba(99,102,241,.45); filter: brightness(1.08); }
+    .btn-success { background: var(--green); color: #052e10; }
+    .btn-danger { background: var(--red); color: #fff; }
+    .btn-warning { background: var(--yellow); color: #1a0e00; }
+    .btn-ghost { background: var(--surface2); color: var(--text); border: 1px solid var(--border); }
+    .btn-ghost:hover { border-color: var(--indigo); background: var(--indigo-dim); color: var(--text); }
+    .btn:hover:not(.btn-primary) { filter: brightness(1.1); }
+    .btn-full { width: 100%; }
+    .btn-sm { padding: 7px 13px; font-size: 12px; }
+
+    /* ── INPUTS ── */
+    .input { background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; padding: 10px 13px; color: var(--text); font-size: 13px; font-family: inherit; outline: none; transition: border-color .15s, box-shadow .15s; width: 100%; }
+    .input:focus { border-color: var(--indigo); box-shadow: 0 0 0 3px rgba(99,102,241,.15); }
+    .input::placeholder { color: var(--muted); }
+    .select { background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; padding: 10px 13px; color: var(--text); font-size: 13px; font-family: inherit; cursor: pointer; outline: none; width: 100%; transition: border-color .15s, box-shadow .15s; }
+    .select:focus { border-color: var(--indigo); box-shadow: 0 0 0 3px rgba(99,102,241,.15); }
+    .input-num { width: 80px; text-align: center; }
+
+    /* ── LAYOUTS ── */
+    .row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+    .row-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .row-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; }
+    .col { display: flex; flex-direction: column; gap: 10px; }
+    .divider { height: 1px; background: var(--border); margin: 6px 0; }
+    .label { font-size: 11px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: .6px; }
+
+    /* ── QUEEN CARDS ── */
+    .queen-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .queen-card { background: var(--surface2); border: 1px solid var(--border); border-radius: 12px; padding: 16px 14px; display: flex; flex-direction: column; gap: 12px; transition: border-color .15s; }
+    .queen-card:hover { border-color: var(--border-hi); }
+    .queen-header { display: flex; align-items: center; gap: 9px; }
+    .queen-dot { width: 11px; height: 11px; border-radius: 50%; flex-shrink: 0; }
+    .queen-name { font-size: 15px; font-weight: 800; letter-spacing: -0.2px; }
+    .queen-pts-row { display: flex; gap: 7px; }
+    .queen-pts-row .input { flex: 1; min-width: 0; }
+    .queen-btn-row { display: flex; gap: 7px; }
+    .queen-btn-row .btn { flex: 1; font-size: 12px; padding: 8px 5px; }
+
+    /* ── BAILARINAS LIST ── */
+    .bailarina-row { display: flex; align-items: center; gap: 12px; background: var(--surface2); border: 1px solid var(--border); border-radius: 12px; padding: 12px 14px; transition: border-color .15s; }
+    .bailarina-row + .bailarina-row { margin-top: 8px; }
+    .bailarina-row:hover { border-color: var(--border-hi); }
+    .bailarina-info { flex: 1; display: flex; align-items: center; gap: 10px; min-width: 0; }
+    .bailarina-stats { display: flex; gap: 6px; font-size: 11px; color: var(--muted); flex-wrap: wrap; }
+    .stat-chip { background: var(--surface3); border-radius: 5px; padding: 2px 7px; font-weight: 600; border: 1px solid var(--border); }
+    .toggle-btn { padding: 6px 13px; border-radius: 7px; font-size: 12px; font-weight: 700; font-family: inherit; border: none; cursor: pointer; transition: filter .15s; white-space: nowrap; }
+    .toggle-btn:hover { filter: brightness(1.1); }
+
+    /* ── ALIAS / GRUPOS ── */
+    .chip { display: inline-flex; align-items: center; gap: 6px; background: var(--surface2); border: 1px solid var(--border); border-radius: 7px; padding: 5px 11px; font-size: 12px; margin: 3px; font-weight: 500; }
+    .chip-del { background: none; border: none; color: var(--muted); cursor: pointer; font-size: 14px; line-height: 1; padding: 0 2px; }
+    .chip-del:hover { color: var(--red); }
+    .chips-wrap { display: flex; flex-wrap: wrap; gap: 2px; }
+    .group-card { background: var(--surface2); border: 1px solid var(--border); border-radius: 12px; padding: 14px; margin-top: 10px; transition: border-color .15s; }
+    .group-card:hover { border-color: var(--border-hi); }
+    .group-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+    .group-name { font-weight: 700; font-size: 14px; }
+    .member-btn { border-radius: 7px; padding: 5px 11px; font-size: 12px; font-weight: 700; font-family: inherit; cursor: pointer; margin: 3px; transition: filter .15s; }
+    .member-btn:hover { filter: brightness(1.1); }
+
+    /* ── SOUND ROWS ── */
+    .sound-item { display: flex; align-items: center; gap: 10px; padding: 10px 0; border-bottom: 1px solid var(--border); }
+    .sound-item:last-child { border-bottom: none; }
+    .sound-ev { font-size: 11px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: .5px; min-width: 120px; }
+
+    /* ── TAGS ── */
+    .tag { display: inline-flex; align-items: center; padding: 3px 9px; border-radius: 5px; font-size: 11px; font-weight: 700; }
+    .tag-on  { background: rgba(16,185,129,.15); color: var(--green); border: 1px solid rgba(16,185,129,.25); }
+    .tag-off { background: rgba(126,143,166,.1); color: var(--muted); border: 1px solid var(--border); }
+
+    /* ── INFO BOX ── */
+    .info-box { background: var(--surface2); border: 1px solid var(--border); border-radius: 10px; padding: 13px 16px; font-size: 12px; color: var(--muted); line-height: 1.65; }
+    .info-box strong { color: var(--text); }
+    .info-box code { color: var(--cyan); background: rgba(6,182,212,.12); padding: 1px 5px; border-radius: 4px; font-size: 11px; }
+
+    /* ── ACUMULADO ── */
+    #timer-acumulado { font-size: 13px; font-weight: 700; display: flex; flex-wrap: wrap; gap: 7px; margin-top: 4px; }
+
+    /* ── GRUPOS BATALLA ── */
+    #gruposBatallaContainer .btn { font-size: 11px; padding: 6px 11px; margin: 2px; }
+
+    /* ── PANTALLAS GRID ── */
+    .page-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .page-card { background: var(--surface2); border: 1px solid var(--border); border-radius: 12px; padding: 16px 14px; display: flex; flex-direction: column; gap: 10px; transition: border-color .15s, box-shadow .15s; }
+    .page-card:hover { border-color: var(--indigo); box-shadow: 0 0 0 2px var(--indigo-dim); }
+    .page-card-name { font-size: 13px; font-weight: 700; color: var(--text); }
+    .page-card-desc { font-size: 11px; color: var(--muted); line-height: 1.55; flex: 1; }
+    .page-card-url { font-size: 10px; color: var(--border-hi); font-family: monospace; }
+    .helper-text { font-size: 12px; color: var(--muted); line-height: 1.6; margin-bottom: 14px; }
+
+    /* ── BAILARINA CRUD ── */
+    .bailarina-btns { display: flex; gap: 5px; align-items: center; flex-shrink: 0; }
+    .bail-edit-card { background: var(--surface2); border: 1px solid var(--indigo); border-radius: 12px; padding: 16px 14px; margin-bottom: 8px; display: flex; flex-direction: column; gap: 12px; box-shadow: 0 0 0 3px var(--indigo-dim); }
+        </style>
+    </head>
+    <body>
+        <div class="topbar">
+            <span class="topbar-logo">Urban <span>Queens</span></span>
+            <div class="live-dot"></div>
+            <span class="topbar-status">Control Maestro</span>
+            <div class="topbar-links">
+                <a class="topbar-link" href="/" target="_blank">🏆 Ranking</a>
+                <a class="topbar-link" href="/batalla" target="_blank">⚔️ Batalla</a>
+                <a class="topbar-link" href="/batalla-futbol" target="_blank">⚽ Clásico</a>
+                <a class="topbar-link" href="/timer" target="_blank">💃 Timer</a>
+                <a class="topbar-link" href="/conociendo" target="_blank">👑 Conociendo</a>
+                <a class="topbar-link" href="/copa" target="_blank">🥇 Copa</a>
+                <a class="topbar-link" href="/lista-regalos" target="_blank">🎁 Regalos</a>
+                <a class="topbar-link" href="/dinamica" target="_blank">⚡ Dinámica</a>
+            </div>
+        </div>
+        <div class="tabs">
+            <div class="tab active"  onclick="cambiarTab('batallas',this)">⚔️ Batallas</div>
+            <div class="tab" onclick="cambiarTab('puntos',this)">🏆 Puntos</div>
+            <div class="tab" onclick="cambiarTab('timer',this)">💃 Timer</div>
+            <div class="tab" onclick="cambiarTab('pantallas',this)">📺 Pantallas</div>
+            <div class="tab" onclick="cambiarTab('bailarinas',this)">🌟 Bailarinas</div>
+            <div class="tab" onclick="cambiarTab('grupos',this)">👥 Grupos</div>
+            <!-- <div class="tab" onclick="cambiarTab('sonidos',this)">🔊 Sonidos</div> -->
+            <div class="tab" onclick="cambiarTab('dinamicas',this)">⚡ Dinámicas</div>
+            <div class="tab" onclick="cambiarTab('sistema',this)">⚙️ Sistema</div>
+        </div>
+        <div class="main">
+            <!-- ══ BATALLAS ══ -->
+            <div id="tab-batallas" class="tab-content active">
+                <div class="card">
+                    <div class="card-title">
+                        ⚔️ <span class="card-title-accent">Modo Batalla</span>
+                    </div>
+                    <div class="col">
+                        <div>
+                            <div class="label" style="margin-bottom:6px">Participantes</div>
+                            <select id="participantesBatalla" class="select"></select>
+                        </div>
+                        <div id="gruposBatallaContainer"></div>
+                        <div class="row-2">
+                            <div>
+                                <div class="label" style="margin-bottom:6px">Duración</div>
+                                <select id="tiempoBatalla" class="select">
+                                    <option value="2">2 minutos</option>
+                                    <option value="3" selected>3 minutos</option>
+                                    <option value="5">5 minutos</option>
+                                </select>
+                            </div>
+                            <div style="display:flex;align-items:flex-end">
+                                <button class="btn btn-warning btn-full" onclick="iniciarBatalla()">▶ Iniciar</button>
+                            </div>
+                        </div>
+                        <div class="row-2">
+                            <button class="btn btn-danger" onclick="hacerFetch('/batalla/stop')">⏹ Cancelar</button>
+                            <button class="btn btn-ghost" onclick="hacerFetch('/batalla/reset-wins')">👑 Reset victorias</button>
+                        </div>
+                    </div>
+                </div>
+                <div class="card">
+                    <div class="card-title">
+                        ⚽ <span class="card-title-accent">El Clásico (Fútbol)</span>
+                    </div>
+                    <div class="col">
+                        <div class="info-box">
+                            <div class="row" style="gap:12px;flex-wrap:nowrap;">
+                                <span>🟨 Derrotas para amarilla:</span>
+                                <input type="number" id="faltasA" value="3" class="input input-num">
+                            </div>
+                            <div style="margin-top:6px;font-size:11px;color:var(--muted)">2 amarillas = 🟥 roja automática</div>
+                        </div>
+                        <div class="row-2">
+                            <button class="btn btn-success" onclick="guardarReglasFutbol()">💾 Guardar reglas</button>
+                            <button class="btn btn-danger"
+                                    onclick="if(confirm('¿Limpiar tarjetas?')) hacerFetch('/futbol/reset-tarjetas')">
+                                🔄 Limpiar tarjetas
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                <div class="card">
+                    <div class="card-title">
+                        👑 <span class="card-title-accent">Conociendo a mi Queen</span>
+                    </div>
+                    <div class="col">
+                        <div class="row-3">
+                            <button class="btn btn-ghost"
+                                    onclick="hacerFetch('/conociendo/start?meta=1000')">▶ Meta 1000</button>
+                            <button class="btn btn-ghost"
+                                    onclick="hacerFetch('/conociendo/start?meta=2000')">▶ Meta 2000</button>
+                            <button class="btn btn-ghost"
+                                    onclick="hacerFetch('/conociendo/start?meta=5000')">▶ Meta 5000</button>
+                        </div>
+                        <button class="btn btn-danger btn-full"
+                                onclick="hacerFetch('/conociendo/stop')">⏹ Cancelar</button>
+                        <div id="btns-conociendo" class="row" style="justify-content:center"></div>
+                    </div>
+                </div>
+            </div>
+            <!-- ══ PUNTOS ══ -->
+            <div id="tab-puntos" class="tab-content">
+                <div class="card">
+                    <div class="card-title">
+                        🏆 <span class="card-title-accent">Sumar / Restar puntos</span>
+                    </div>
+                    <div id="tarjetas-puntos" class="queen-grid"></div>
+                </div>
+                <div class="card">
+                    <div class="card-title">
+                        🔄 <span class="card-title-accent">Reinicios</span>
+                    </div>
+                    <div class="col">
+                        <button class="btn btn-warning btn-full"
+                                onclick="if(confirm('¿Reiniciar Copa del día?')) hacerFetch('/copa/reset')">
+                            🏆 Reiniciar Copa del día
+                        </button>
+                        <button class="btn btn-danger btn-full"
+                                onclick="if(confirm('¿Reiniciar Ranking Semanal?')) hacerFetch('/reset-semanal')">
+                            🔄 Reiniciar Ranking Semanal
+                        </button>
+                        <button class="btn btn-ghost btn-full"
+                                onclick="if(confirm('¿Reiniciar Ranking Mensual?')) hacerFetch('/reset-mensual')">
+                            🔄 Reiniciar Ranking Mensual
+                        </button>
+                    </div>
+                </div>
+            </div>
+            <!-- ══ TIMER ══ -->
+            <div id="tab-timer" class="tab-content">
+                <div class="card">
+                    <div class="card-title">
+                        💃 <span class="card-title-accent">Timer de Baile</span>
+                    </div>
+                    <div class="col">
+                        <div class="row">
+                            <span class="label">Tiempo base (seg):</span>
+                            <input type="number"
+                                   id="tiempoBaseTimer"
+                                   value="30"
+                                   min="10"
+                                   max="300"
+                                   class="input input-num">
+                        </div>
+                        <div class="row-2">
+                            <button class="btn btn-primary btn-full" onclick="iniciarTimer()">▶ Iniciar timer</button>
+                            <button class="btn btn-danger btn-full" onclick="hacerFetch('/timer/stop')">⏹ Cancelar</button>
+                        </div>
+                        <div class="divider"></div>
+                        <div class="label">Saltar a queen:</div>
+                        <div id="btns-timer" class="row-2"></div>
+                        <div class="divider"></div>
+                        <div class="label">Tiempo acumulado en vivo:</div>
+                        <div id="timer-acumulado"></div>
+                    </div>
+                </div>
+            </div>
+            <!-- ══ PANTALLAS ══ -->
+            <div id="tab-pantallas" class="tab-content">
+                <div class="card">
+                    <div class="card-title">
+                        📺 <span class="card-title-accent">Pantallas de Transmisión</span>
+                    </div>
+                    <p class="helper-text">
+                        Abre cada pantalla en <strong>OBS → Fuente de Navegador</strong>.
+                        Copia la URL y pégala en OBS para que aparezca en tu transmisión.
+                    </p>
+                    <div id="page-grid" class="page-grid"></div>
+                </div>
+            </div>
+            <!-- ══ BAILARINAS ══ -->
+            <div id="tab-bailarinas" class="tab-content">
+                <div class="card">
+                    <div class="card-title">
+                        🌟 <span class="card-title-accent">Gestión de Bailarinas</span>
+                    </div>
+                    <div class="col">
+                        <div class="row">
+                            <input type="text"
+                                   id="nuevaBailarina"
+                                   class="input"
+                                   placeholder="Nombre de la nueva bailarina..."
+                                   style="flex:1">
+                            <input type="color"
+                                   id="colorBailarina"
+                                   value="#ff1493"
+                                   style="width:38px;
+                                          height:38px;
+                                          border:none;
+                                          cursor:pointer;
+                                          border-radius:8px;
+                                          padding:2px;
+                                          background:var(--surface2)">
+                            <button class="btn btn-success" onclick="crearBailarina()">+ Agregar</button>
+                        </div>
+                        <div class="divider"></div>
+                        <div id="lista-bailarinas"></div>
+                    </div>
+                </div>
+            </div>
+            <!-- ══ GRUPOS ══ -->
+            <div id="tab-grupos" class="tab-content">
+                <div class="card">
+                    <div class="card-title">
+                        👥 <span class="card-title-accent">Grupos / Equipos</span>
+                    </div>
+                    <p class="helper-text">
+                        Guarda combos de bailarinas para iniciar batallas con un clic.
+                        Ejemplo: crea un grupo <strong>"Equipo A"</strong> con Amy y Ray,
+                        y en la pestaña Batallas aparecerá un botón para iniciarlas directamente.
+                    </p>
+                    <div class="col">
+                        <div class="row">
+                            <input type="text"
+                                   id="nombreGrupo"
+                                   class="input"
+                                   placeholder="Nombre del grupo..."
+                                   style="flex:1">
+                            <input type="color"
+                                   id="colorGrupo"
+                                   value="#39FF14"
+                                   style="width:38px;
+                                          height:38px;
+                                          border:none;
+                                          cursor:pointer;
+                                          border-radius:8px;
+                                          padding:2px;
+                                          background:var(--surface2)">
+                            <button class="btn btn-success" onclick="crearGrupo()">+ Crear</button>
+                        </div>
+                        <div id="lista-grupos"></div>
+                    </div>
+                </div>
+            </div>
+            <!-- ══ SONIDOS ══ -->
+            <div id="tab-sonidos" class="tab-content">
+                <div class="card">
+                    <div class="card-title">
+                        🔊 <span class="card-title-accent">Configurar Sonidos</span>
+                    </div>
+                    <p style="font-size:12px;color:var(--muted);margin-bottom:12px">
+                        URLs de audio para eventos. Compatible con TikFinity.
+                    </p>
+                    <div id="lista-sonidos"></div>
+                    <button class="btn btn-warning btn-full"
+                            style="margin-top:14px"
+                            onclick="guardarSonidos()">💾 Guardar sonidos</button>
+                </div>
+            </div>
+            <!-- ══ SISTEMA ══ -->
+            <div id="tab-sistema" class="tab-content">
+                <div class="card">
+                    <div class="card-title">
+                        ⚙️ <span class="card-title-accent">Sistema</span>
+                    </div>
+                    <div class="col">
+                        <div class="info-box" style="line-height:2">
+                            📂 BD: <code>database.db</code>
+                            <br>
+                            🌐 Puerto: <code>3000</code>
+                            <br>
+                            🔄 Restart: <code>node server.js</code>
+                        </div>
+                        <div class="row-2" style="gap:8px">
+                            <button class="btn btn-danger"
+                                    style="flex:1"
+                                    onclick="if(confirm('¿Borrar ranking diario?')) hacerFetch('/reset-diario')">
+                                🌅 Reset Diario
+                            </button>
+                            <button class="btn btn-danger"
+                                    style="flex:1"
+                                    onclick="if(confirm('¿Borrar ranking semanal?')) hacerFetch('/reset-semanal')">
+                                📅 Reset Semanal
+                            </button>
+                            <button class="btn btn-danger"
+                                    style="flex:1"
+                                    onclick="if(confirm('¿Borrar ranking mensual?')) hacerFetch('/reset-mensual')">
+                                🗓️ Reset Mensual
+                            </button>
+                        </div>
+                        <button class="btn btn-danger btn-full"
+                                onclick="if(confirm('🚨 ¿Reiniciar ABSOLUTAMENTE TODO?')) hacerFetch('/reset-total')">
+                            ☢️ Reset Total
+                        </button>
+                    </div>
+                </div>
+            </div>
+            <!-- ══ DINÁMICAS ══ -->
+            <div id="tab-dinamicas" class="tab-content">
+                <div class="card">
+                    <div class="card-title">
+                        ⚡ <span class="card-title-accent">Mis Dinámicas</span>
+                    </div>
+                    <div id="dinamicas-lista"></div>
+                    <button class="btn btn-primary btn-full"
+                            style="margin-top:14px"
+                            onclick="mostrarFormDinamica()">+ Nueva Dinámica</button>
+                </div>
+                <div class="card" id="din-form" style="display:none">
+                    <div class="card-title">
+                        ⚡ <span class="card-title-accent" id="din-form-title">Nueva Dinámica</span>
+                    </div>
+                    <div class="col">
+                        <div class="row" style="align-items:flex-end;gap:8px">
+                            <div style="flex:1">
+                                <div class="label" style="margin-bottom:6px">Nombre *</div>
+                                <input id="din-nombre" class="input" placeholder="Ej: Reina del Ring">
+                            </div>
+                            <div>
+                                <div class="label" style="margin-bottom:6px">Ícono / Imagen</div>
+                                <div style="display:flex;gap:10px;margin-bottom:6px;font-size:12px">
+                                    <label style="display:flex;align-items:center;gap:4px;cursor:pointer">
+                                        <input type="radio"
+                                               name="din-icono-tipo"
+                                               value="emoji"
+                                               checked
+                                               onchange="cambiarTipoIcono()">
+                                        Emoji
+                                    </label>
+                                    <label style="display:flex;align-items:center;gap:4px;cursor:pointer">
+                                        <input type="radio"
+                                               name="din-icono-tipo"
+                                               value="imagen"
+                                               onchange="cambiarTipoIcono()">
+                                        Imagen
+                                    </label>
+                                </div>
+                                <input id="din-icono"
+                                       class="input"
+                                       style="width:58px;
+                                              text-align:center"
+                                       placeholder="⚔️">
+                                <input id="din-icono-img"
+                                       class="input"
+                                       placeholder="archivo.png (carpeta /dinamicas/)"
+                                       style="display:none;
+                                              margin-top:4px">
+                            </div>
+                            <div>
+                                <div class="label" style="margin-bottom:6px">Color</div>
+                                <input type="color"
+                                       id="din-color"
+                                       value="#6366f1"
+                                       style="width:46px;
+                                              height:42px;
+                                              padding:3px;
+                                              border-radius:8px;
+                                              border:1px solid var(--border);
+                                              cursor:pointer;
+                                              background:var(--surface2)">
+                            </div>
+                        </div>
+                        <div>
+                            <div class="label" style="margin-bottom:6px">Descripción (opcional)</div>
+                            <input id="din-desc"
+                                   class="input"
+                                   placeholder="Describe brevemente esta dinámica...">
+                        </div>
+                        <div class="divider"></div>
+                        <div class="card-title" style="margin-bottom:10px">👥 Participantes</div>
+                        <div>
+                            <div class="label" style="margin-bottom:6px">¿Quiénes participan?</div>
+                            <select id="din-part-tipo"
+                                    class="select"
+                                    onchange="cambiarTipoParticipantes()">
+                                <option value="todas">Todas las bailarinas activas</option>
+                                <option value="grupo">Un grupo predefinido</option>
+                                <option value="manual">Selección manual</option>
+                            </select>
+                        </div>
+                        <div id="din-part-grupo-wrap" style="display:none">
+                            <div class="label" style="margin-bottom:6px">Grupo</div>
+                            <select id="din-part-grupo" class="select"></select>
+                        </div>
+                        <div id="din-part-manual-wrap" style="display:none">
+                            <div class="label" style="margin-bottom:8px">Seleccionar bailarinas</div>
+                            <div id="din-part-manual" class="col" style="gap:8px"></div>
+                        </div>
+                        <div class="divider"></div>
+                        <div class="card-title" style="margin-bottom:10px">⚙️ Reglas</div>
+                        <div class="row-2">
+                            <div>
+                                <div class="label" style="margin-bottom:6px">Duración (min)</div>
+                                <input type="number"
+                                       id="din-duracion"
+                                       class="input"
+                                       value="3"
+                                       min="1"
+                                       max="60">
+                            </div>
+                            <div>
+                                <div class="label" style="margin-bottom:6px">Modo de juego</div>
+                                <select id="din-modo" class="select" onchange="cambiarModo()">
+                                    <option value="puntos">🏆 Más puntos gana</option>
+                                    <option value="meta">🎯 Meta de puntos</option>
+                                    <option value="supervivencia">💀 Supervivencia</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div id="din-meta-wrap" style="display:none">
+                            <div class="label" style="margin-bottom:6px">Meta de puntos para ganar</div>
+                            <input type="number" id="din-meta" class="input" value="500" min="1">
+                        </div>
+                        <div id="din-supervivencia-wrap" style="display:none">
+                            <div class="label" style="margin-bottom:6px">Rondas de pérdida antes de eliminar</div>
+                            <input type="number"
+                                   id="din-max-derrotas"
+                                   class="input"
+                                   value="2"
+                                   min="1"
+                                   max="10">
+                        </div>
+                        <label style="display:flex;align-items:center;gap:10px;cursor:pointer">
+                            <input type="checkbox" id="din-tarjetas" onchange="cambiarTarjetas()">
+                            <span class="label" style="text-transform:none;letter-spacing:0">🟨 Activar tarjetas (amarilla / roja)</span>
+                        </label>
+                        <div id="din-tarjeta-wrap" style="display:none">
+                            <div class="label" style="margin-bottom:6px">Derrotas consecutivas para tarjeta amarilla</div>
+                            <input type="number"
+                                   id="din-limite-amarilla"
+                                   class="input"
+                                   value="3"
+                                   min="1"
+                                   max="10">
+                        </div>
+                        <div class="divider"></div>
+                        <div class="card-title" style="margin-bottom:10px">⚔️ Equipos (opcional)</div>
+                        <label style="display:flex;align-items:center;gap:10px;cursor:pointer">
+                            <input type="checkbox" id="din-equipos-activo" onchange="cambiarEquipos()">
+                            <span class="label" style="text-transform:none;letter-spacing:0">Dividir en equipos (1v1, 2v2...)</span>
+                        </label>
+                        <div id="din-equipos-wrap" style="display:none">
+                            <div style="display:flex;align-items:center;gap:10px;margin:10px 0 8px">
+                                <div class="label" style="margin-bottom:0">Número de equipos:</div>
+                                <select id="din-num-equipos"
+                                        class="select"
+                                        style="width:auto"
+                                        onchange="renderEquiposBuilder()">
+                                    <option value="2">2 equipos</option>
+                                    <option value="3">3 equipos</option>
+                                    <option value="4">4 equipos</option>
+                                </select>
+                            </div>
+                            <div id="din-equipos-builder"></div>
+                        </div>
+                        <div class="row-2" style="margin-top:4px">
+                            <button class="btn btn-primary" onclick="guardarDinamica()">💾 Guardar</button>
+                            <button class="btn btn-ghost" onclick="ocultarFormDinamica()">Cancelar</button>
+                        </div>
+                    </div>
+                </div>
+                <div class="card">
+                    <div class="card-title">
+                        🎛️ <span class="card-title-accent">Control en Vivo</span>
+                    </div>
+                    <div id="din-control-vivo">
+                        <div class="info-box">No hay ninguna dinámica activa en este momento.</div>
+                    </div>
+                    <button class="btn btn-danger btn-full"
+                            style="margin-top:14px"
+                            onclick="hacerFetch('/dinamica/stop')">⏹ Detener Dinámica</button>
+                </div>
+            </div>
+        </div>
+        <!-- /main -->
+        <script src="/socket.io/socket.io.js"></script>
+        <script>
+const socket = io();
+let QUEENS = [];
+let QUEEN_COLORS = {};
+
+const EVENTOS_SONIDO = ['batalla_inicio','batalla_fin','batalla_punto','timer_inicio','timer_cambio','timer_fin','gol','tarjeta_amarilla','tarjeta_roja'];
+
+const PAGES = [
+    { emoji: '🏆', nombre: 'Ranking', url: '/', desc: 'Clasificación semanal y mensual. Pón esto en OBS como fuente de navegador.' },
+    { emoji: '⚔️', nombre: 'Batalla Normal', url: '/batalla', desc: 'Modo batalla con barra de puntos, timer y ganadora. Hasta 4 bailarinas.' },
+    { emoji: '⚽', nombre: 'El Clásico', url: '/batalla-futbol', desc: 'Modo fútbol con equipos, tarjetas amarilla/roja y goles.' },
+    { emoji: '💃', nombre: 'Timer de Baile', url: '/timer', desc: 'Turno automático entre bailarinas. Cada regalo extiende el tiempo.' },
+    { emoji: '👑', nombre: 'Conociendo a mi Queen', url: '/conociendo', desc: 'Meta de puntos por bailarina con barra de progreso.' },
+    { emoji: '🥇', nombre: 'Copa del Día', url: '/copa', desc: 'Acumulado del día en El Clásico. Muestra el equipo líder.' },
+    { emoji: '🎁', nombre: 'Lista de Regalos', url: '/lista-regalos', desc: 'Overlay que muestra qué regalo corresponde a cada bailarina y cuántos puntos vale.' },
+    { emoji: '⚡', nombre: 'Dinámica', url: '/dinamica', desc: 'Overlay genérico para dinámicas personalizadas creadas desde el Constructor.' },
+];
+
+let editingQueen = null;
+
+function isLightColor(hex) {
+    try { const r=parseInt(hex.slice(1,3),16),g=parseInt(hex.slice(3,5),16),b=parseInt(hex.slice(5,7),16); return (r*299+g*587+b*114)/1000>140; } catch(e){return false;}
+}
+
+function hacerFetch(url) {
+    fetch(url).then(r=>r.text()).then(msg=>{ if(msg==='Sistema pausado') alert('Sistema pausado'); });
+}
+
+function cambiarTab(nombre, el) {
+    document.querySelectorAll('.tab-content').forEach(t=>t.classList.remove('active'));
+    document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+    document.getElementById('tab-'+nombre).classList.add('active');
+    if(el) el.classList.add('active');
+}
+
+async function init() {
+    const res = await fetch('/api/queens');
+    QUEENS = await res.json();
+    await cargarColores();
+    renderPantallas();
+    renderPuntos();
+    renderBatallaOptions();
+    renderBotonesTimer();
+    renderBotonesConociendo();
+    cargarGrupos();
+    cargarSonidos();
+    cargarBailarinas();
+    cargarDinamicas();
+}
+
+function renderPantallas() {
+    const c = document.getElementById('page-grid');
+    if (!c) return;
+    c.innerHTML = PAGES.map(p => `
+        <div class="page-card">
+            <div style="display:flex;align-items:center;gap:8px">
+                <span style="font-size:1.4rem">${p.emoji}</span>
+                <span class="page-card-name">${p.nombre}</span>
+            </div>
+            <div class="page-card-desc">${p.desc}</div>
+            <div class="page-card-url">localhost:3000${p.url}</div>
+            <button class="btn btn-ghost btn-sm" onclick="window.open('${p.url}','_blank')">&#128279; Abrir</button>
+        </div>`).join('');
+}
+
+async function cargarColores() {
+    const all = await (await fetch('/api/queens/all')).json();
+    all.forEach(q => { QUEEN_COLORS[q.name] = q.color; });
+}
+
+// ── Puntos ──
+function renderPuntos() {
+    const c = document.getElementById('tarjetas-puntos');
+    c.innerHTML = '';
+    QUEENS.forEach(q => {
+        const col = QUEEN_COLORS[q] || '#fff';
+        c.innerHTML += `<div class="queen-card" style="border-color:${col}44">
+            <div class="queen-header">
+                <div class="queen-dot" style="background:${col}"></div>
+                <span class="queen-name" style="color:${col}">${q}</span>
+            </div>
+            <div class="queen-pts-row"><input type="number" id="pts${q}" class="input" placeholder="Puntos..."></div>
+            <div class="queen-btn-row">
+                <button class="btn btn-success" onclick="mandarPuntos('${q}','suma')">+ Sumar</button>
+                <button class="btn btn-danger" onclick="mandarPuntos('${q}','resta')">− Restar</button>
+            </div>
+        </div>`;
+    });
+}
+
+function mandarPuntos(chica, op) {
+    let n = document.getElementById('pts'+chica).value;
+    if(!n||n<=0) return;
+    hacerFetch('/update?nombre='+chica+'&puntos='+(op==='resta'?'-'+n:n));
+    document.getElementById('pts'+chica).value='';
+}
+
+// ── Batalla ──
+function renderBatallaOptions() {
+    const sel = document.getElementById('participantesBatalla');
+    if(!sel||QUEENS.length<2 ) return; sel.innerHTML = `<option value="${QUEENS.join(',')}">🛡 Todas (${QUEENS.length})</option>`;
+    if(QUEENS.length>2) QUEENS.forEach(q=>{
+        sel.innerHTML += `<option value="${QUEENS.filter(x=>x!==q).join(',')}">🛡 Sin ${q}</option>`;
+    });
+    for(let i=0;i<QUEENS.length;i ++) for(let j=i+1;j<QUEENS.length;j++) sel.innerHTML += `<option value="${QUEENS[i]},${QUEENS[j]}">⚔ ${QUEENS[i]} vs ${QUEENS[j]}</option>`;
+}
+
+function iniciarBatalla() {
+    const m = document.getElementById('tiempoBatalla').value;
+    const p = document.getElementById('participantesBatalla').value;
+    hacerFetch('/batalla/start?m='+m+'&p='+p);
+}
+
+function guardarReglasFutbol() {
+    hacerFetch('/futbol/reglas?fa='+document.getElementById('faltasA').value);
+    alert('✅ Reglas guardadas');
+}
+
+// ── Timer ──
+function renderBotonesTimer() {
+    const c = document.getElementById('btns-timer');
+    c.innerHTML = '';
+    QUEENS.forEach(q => {
+        const col = QUEEN_COLORS[q]||'#fff';
+        const tc = isLightColor(col)?'#111':'#fff';
+        c.innerHTML += `<button class="btn btn-sm" style="background:${col};color:${tc}" onclick="hacerFetch('/timer/skip?c=${q}')">⏭ ${q}</button>`;
+    });
+}
+
+function iniciarTimer() {
+    hacerFetch('/timer/start?t='+(document.getElementById('tiempoBaseTimer').value||30));
+}
+
+// ── Conociendo ──
+function renderBotonesConociendo() {
+    const c = document.getElementById('btns-conociendo');
+    c.innerHTML = '';
+    QUEENS.forEach(q => {
+        const col = QUEEN_COLORS[q]||'#fff';
+        const tc = isLightColor(col)?'#111':'#fff';
+        c.innerHTML += `<button class="btn btn-sm" style="background:${col};color:${tc}" onclick="hacerFetch('/conociendo/skip?c=${q}')">⏭ ${q}</button>`;
+    });
+}
+
+// ── Bailarinas ──
+async function cargarBailarinas() {
+    const todas = await (await fetch('/api/queens/all')).json();
+    const c = document.getElementById('lista-bailarinas');
+    c.innerHTML = '';
+    todas.forEach(q => {
+        if (editingQueen === q.name) {
+            c.innerHTML += `<div class="bail-edit-card">
+                <div style="font-size:12px;font-weight:700;color:var(--indigo);margin-bottom:2px">✏️ Editando: ${q.name}</div>
+                <div class="row">
+                    <span class="label" style="min-width:52px">Nombre</span>
+                    <input id="edit-n" class="input" value="${q.name}" style="flex:1">
+                </div>
+                <div class="row">
+                    <span class="label" style="min-width:52px">Apodo</span>
+                    <input id="edit-a" class="input" value="${q.apodo||''}" placeholder="Apodo en pantalla (opcional)..." style="flex:1">
+                </div>
+                <div class="row">
+                    <span class="label" style="min-width:52px">Regalo</span>
+                    <input id="edit-ri" class="input" value="${q.regalo_img||''}" placeholder="URL o nombre de imagen..." style="flex:1">
+                    <input id="edit-rp" type="number" class="input" value="${q.regalo_pts||0}" placeholder="Pts" style="width:64px" min="0">
+                </div>
+                <div class="row">
+                    <span class="label" style="min-width:52px">Color</span>
+                    <input type="color" id="edit-c" value="${q.color}" style="width:38px;height:38px;border:none;cursor:pointer;border-radius:8px;padding:2px;background:var(--surface3)">
+                    <span style="font-size:11px;color:var(--muted)">Clic para cambiar</span>
+                </div>
+                <div class="row-2">
+                    <button class="btn btn-success" onclick="guardarEdicionBailarina('${q.name}')">&#10003; Guardar</button>
+                    <button class="btn btn-ghost" onclick="cancelarEdicion()">&#10005; Cancelar</button>
+                </div>
+            </div>`;
+        } else {
+            const activo = q.activo == 1;
+            c.innerHTML += `<div class="bailarina-row" style="border-color:${q.color}44">
+                <input type="color" value="${q.color}" onchange="editarColor('${q.name}',this.value)" title="Cambiar color" style="width:28px;height:28px;border:none;cursor:pointer;border-radius:6px;padding:1px;background:transparent;flex-shrink:0">
+                <div class="bailarina-info" style="flex:1">
+                    <div style="font-weight:800;color:${q.color};font-size:0.95rem">${q.name}</div>
+                    <div class="bailarina-stats">
+                        <span class="stat-chip">Sem ${q.ranking_semanal}</span>
+                        <span class="stat-chip">Mes ${q.ranking_mensual}</span>
+                        <span class="stat-chip">Vic ${q.victorias}</span>
+                    </div>
+                </div>
+                <div class="bailarina-btns">
+                    <button class="btn btn-ghost btn-sm" title="Editar nombre" onclick="empezarEdicion('${q.name}')">&#9999;️</button>
+                    <button class="toggle-btn" style="background:${activo?'var(--green)':'var(--surface3)'};color:${activo?'#052e10':'var(--muted)'}" onclick="toggleBailarina('${q.name}',this)">${activo?'Activa':'Inact.'}</button>
+                    <button class="btn btn-danger btn-sm" title="Eliminar" onclick="eliminarBailarina('${q.name}')">&#128465;</button>
+                </div>
+            </div>`;
+        }
+    });
+}
+
+function empezarEdicion(nombre) {
+    editingQueen = nombre;
+    cargarBailarinas();
+}
+
+function cancelarEdicion() {
+    editingQueen = null;
+    cargarBailarinas();
+}
+
+async function guardarEdicionBailarina(nombreViejo) {
+    const nuevo     = document.getElementById('edit-n').value.trim();
+    const color     = document.getElementById('edit-c').value;
+    const apodo     = document.getElementById('edit-a').value.trim();
+    const regaloImg = document.getElementById('edit-ri').value.trim();
+    const regaloPts = parseInt(document.getElementById('edit-rp').value) || 0;
+    if (!nuevo) return alert('El nombre no puede estar vacío');
+    if (nuevo !== nombreViejo) {
+        await fetch('/api/queens/renombrar?nombre='+encodeURIComponent(nombreViejo)+'&nuevo='+encodeURIComponent(nuevo));
+    }
+    await fetch('/api/queens/editar?nombre='+encodeURIComponent(nuevo)+'&color='+encodeURIComponent(color)+'&apodo='+encodeURIComponent(apodo)+'&regalo_img='+encodeURIComponent(regaloImg)+'&regalo_pts='+regaloPts);
+    if (nuevo !== nombreViejo) delete QUEEN_COLORS[nombreViejo];
+    QUEEN_COLORS[nuevo] = color;
+    editingQueen = null;
+    QUEENS = await (await fetch('/api/queens')).json();
+    await cargarColores();
+    cargarBailarinas(); renderPuntos(); renderBatallaOptions();
+    renderBotonesTimer(); renderBotonesConociendo();
+}
+
+async function eliminarBailarina(nombre) {
+    if (!confirm('\u00bfEliminar a "' + nombre + '"?\n⚠️ Se borrarán todos sus puntos y victorias.')) return;
+    await fetch('/api/queens/eliminar?nombre='+encodeURIComponent(nombre));
+    delete QUEEN_COLORS[nombre];
+    editingQueen = null;
+    QUEENS = await (await fetch('/api/queens')).json();
+    await cargarColores();
+    cargarBailarinas(); renderPuntos(); renderBatallaOptions();
+    renderBotonesTimer(); renderBotonesConociendo();
+}
+
+async function crearBailarina() {
+    const nombre = document.getElementById('nuevaBailarina').value.trim();
+    const color = document.getElementById('colorBailarina').value;
+    if(!nombre) return alert('Escribe un nombre');
+    await fetch('/api/queens/crear?nombre='+encodeURIComponent(nombre)+'&color='+encodeURIComponent(color));
+    document.getElementById('nuevaBailarina').value='';
+    QUEENS = await (await fetch('/api/queens')).json();
+    await cargarColores();
+    cargarBailarinas(); renderPuntos(); renderBatallaOptions();
+    renderBotonesTimer(); renderBotonesConociendo();
+}
+
+async function editarColor(nombre, color) {
+    await fetch('/api/queens/editar?nombre='+encodeURIComponent(nombre)+'&color='+encodeURIComponent(color));
+    QUEEN_COLORS[nombre] = color;
+    cargarBailarinas();
+}
+
+async function toggleBailarina(nombre, btn) {
+    const data = await (await fetch('/api/queens/toggle?nombre='+encodeURIComponent(nombre))).json();
+    btn.style.background = data.activo?'var(--green)':'var(--surface3)';
+    btn.style.color = data.activo?'#052e10':'var(--muted)';
+    btn.innerText = data.activo?'✅ Activa':'⏸ Inactiva';
+    QUEENS = await (await fetch('/api/queens')).json();
+    renderPuntos(); renderBatallaOptions(); renderBotonesTimer();
+    renderBotonesConociendo(); cargarBailarinas();
+}
+
+socket.on('queensActualizadas', async (data) => {
+    QUEENS = data.queens;
+    if(data.equipos) Object.keys(data.equipos).forEach(n=>{ QUEEN_COLORS[n]=data.equipos[n].color; });
+    renderPuntos(); renderBatallaOptions(); renderBotonesTimer();
+    renderBotonesConociendo(); cargarBailarinas();
+});
+
+// ── Grupos ──
+async function cargarGrupos() {
+    const grupos = await (await fetch('/api/grupos')).json();
+    const c = document.getElementById('lista-grupos');
+    if(grupos.length===0){ c.innerHTML='<p style="color:var(--muted);font-size:12px;padding:8px 0">Sin grupos creados</p>'; return; }
+    c.innerHTML = grupos.map(g=>{
+        const miembros = QUEENS.map(q=>{
+            const en = g.miembros.includes(q);
+            const col = QUEEN_COLORS[q]||'#fff';
+            const tc = isLightColor(col)?'#111':'#fff';
+            return `<button class="member-btn" style="background:${en?col:'var(--surface3)'};color:${en?tc:'var(--muted)'};border:1px solid ${col}40" onclick="toggleMiembro(${g.id},'${q}',${!en})">${q}</button>`;
+        }).join('');
+        return `<div class="group-card" style="border-color:${g.color}44">
+            <div class="group-header">
+                <span class="group-name" style="color:${g.color}">${g.nombre}</span>
+                <button class="btn btn-danger btn-sm" onclick="if(confirm('¿Eliminar?')) eliminarGrupo(${g.id})">🗑</button>
+            </div>
+            <div>${miembros}</div>
+        </div>`;
+    }).join('');
+    cargarGruposBatalla();
+}
+
+function crearGrupo() {
+    const nombre = document.getElementById('nombreGrupo').value.trim();
+    const color = document.getElementById('colorGrupo').value;
+    if(!nombre) return alert('Escribe un nombre');
+    hacerFetch('/api/grupos/crear?nombre='+encodeURIComponent(nombre)+'&color='+encodeURIComponent(color));
+    document.getElementById('nombreGrupo').value='';
+    setTimeout(cargarGrupos,300);
+}
+
+function eliminarGrupo(id) { hacerFetch('/api/grupos/eliminar?id='+id); setTimeout(cargarGrupos,300); }
+
+function toggleMiembro(gid, queen, agregar) {
+    hacerFetch(agregar?`/api/grupos/agregar-miembro?id=${gid}&queen=${queen}`:`/api/grupos/remover-miembro?id=${gid}&queen=${queen}`);
+    setTimeout(cargarGrupos,300);
+}
+
+async function cargarGruposBatalla() {
+    try {
+        const grupos = await (await fetch('/api/grupos')).json();
+        const c = document.getElementById('gruposBatallaContainer');
+        if(grupos.length===0){c.innerHTML='';return;}
+        let html='<div style="margin:6px 0"><span class="label">O por grupos:</span><br><br>';
+        grupos.forEach(g=>{ if(g.miembros.length>0){
+            const tc=isLightColor(g.color)?'#111':'#fff';
+            html+=`<button class="btn btn-sm" style="background:${g.color};color:${tc};margin:2px" onclick="document.getElementById('participantesBatalla').value='${g.miembros.join(',')}'">
+                ${g.nombre} (${g.miembros.join(', ')})</button>`;
+        }});
+        html+='</div>';
+        c.innerHTML=html;
+    } catch(e){}
+}
+
+// ── Sonidos ──
+function cargarSonidos() {
+    const c = document.getElementById('lista-sonidos');
+    c.innerHTML = EVENTOS_SONIDO.map(ev=>`
+        <div class="sound-item">
+            <span class="sound-ev">${ev.replace(/_/g,' ')}</span>
+            <input type="text" id="sonido-${ev}" class="input" placeholder="URL del sonido...">
+        </div>`).join('');
+    fetch('/api/sonidos').then(r=>r.json()).then(ss=>{
+        ss.forEach(s=>{ const el=document.getElementById('sonido-'+s.evento); if(el) el.value=s.url; });
+    });
+}
+
+function guardarSonidos() {
+    EVENTOS_SONIDO.forEach(ev=>{
+        const url = document.getElementById('sonido-'+ev).value.trim();
+        if(url) hacerFetch('/api/sonidos/set?evento='+encodeURIComponent(ev)+'&url='+encodeURIComponent(url));
+    });
+    alert('✅ Sonidos guardados');
+}
+
+// ── Dinámicas ──
+let dinamicaEditandoId = null;
+
+async function cargarDinamicas() {
+    const [list, grupos] = await Promise.all([
+        fetch('/api/dinamicas').then(r => r.json()),
+        fetch('/api/grupos').then(r => r.json())
+    ]);
+    renderListaDinamicas(list);
+    renderSelectorGruposDin(grupos);
+    renderCheckboxesManual();
+}
+
+function renderListaDinamicas(list) {
+    const c = document.getElementById('dinamicas-lista');
+    if (!list.length) {
+        c.innerHTML = '<div class="info-box" style="margin-bottom:0">Aún no hay dinámicas. Crea la primera 👆</div>';
+        return;
+    }
+    c.innerHTML = list.map(d => {
+        const versus = (d.reglas && d.reglas.equipos && d.reglas.equipos.length >= 2)
+            ? d.reglas.equipos.map(e => e.miembros ? e.miembros.length : 0).join('v') : null;
+        const icoHtml = d.icono && d.icono.startsWith('img:')
+            ? `<img src="/dinamicas/${d.icono.slice(4)}" style="width:28px;height:28px;object-fit:contain;vertical-align:middle" onerror="this.outerHTML='⚡'">`
+            : `<span style="font-size:22px;line-height:1">${d.icono || '⚡'}</span>`;
+        return `
+        <div class="bailarina-row" style="border-left:3px solid ${d.color}">
+            <div class="bailarina-info">
+                ${icoHtml}
+                <div>
+                    <div style="font-weight:700;color:${d.color};font-size:14px">${d.nombre}</div>
+                    <div class="bailarina-stats">
+                        <span class="stat-chip">${getModoLabel(d.reglas && d.reglas.modo)}</span>
+                        <span class="stat-chip">${(d.reglas && d.reglas.duracion) || 3} min</span>
+                        ${versus ? `<span class="stat-chip">${versus}</span>` : ''}
+                        ${d.descripcion ? `<span class="stat-chip" title="${d.descripcion}">📝</span>` : ''}
+                    </div>
+                </div>
+            </div>
+            <div class="bailarina-btns">
+                <button class="btn btn-success btn-sm" onclick="iniciarDinamica(${d.id})">▶</button>
+                <button class="btn btn-ghost btn-sm" onclick="editarDinamicaById(${d.id})">✏️</button>
+                <button class="btn btn-ghost btn-sm" onclick="duplicarDinamica(${d.id})">⧉</button>
+                <button class="btn btn-danger btn-sm" onclick="eliminarDinamica(${d.id})">🗑</button>
+            </div>
+        </div>`;
+    }).join('');
+}
+
+function getModoLabel(modo) {
+    return { puntos: '🏆 Puntos', meta: '🎯 Meta', supervivencia: '💀 Supervivencia' }[modo] || '🏆 Puntos';
+}
+
+function renderSelectorGruposDin(grupos) {
+    const sel = document.getElementById('din-part-grupo');
+    if (!sel) return;
+    sel.innerHTML = grupos.length
+        ? grupos.map(g => `<option value="${g.id}">${g.nombre}</option>`).join('')
+        : '<option value="">Sin grupos creados</option>';
+}
+
+function renderCheckboxesManual() {
+    const c = document.getElementById('din-part-manual');
+    if (!c) return;
+    c.innerHTML = QUEENS.map(q => `
+        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;padding:4px 0">
+            <input type="checkbox" value="${q}">
+            <span style="color:${QUEEN_COLORS[q]||'#fff'};font-weight:600">${q}</span>
+        </label>`).join('');
+}
+
+function mostrarFormDinamica(data = null) {
+    dinamicaEditandoId = data ? data.id : null;
+    document.getElementById('din-form').style.display = 'block';
+    document.getElementById('din-nombre').value = data ? data.nombre : '';
+    const iconoVal = data ? (data.icono || '⚔️') : '⚔️';
+    const isImgIcono = iconoVal.startsWith('img:');
+    document.querySelector(`input[name="din-icono-tipo"][value="${isImgIcono ? 'imagen' : 'emoji'}"]`).checked = true;
+    cambiarTipoIcono();
+    if (isImgIcono) document.getElementById('din-icono-img').value = iconoVal.slice(4);
+    else { document.getElementById('din-icono').value = iconoVal; document.getElementById('din-icono-img').value = ''; }
+    document.getElementById('din-color').value = data ? data.color : '#6366f1';
+    document.getElementById('din-desc').value = data ? (data.descripcion || '') : '';
+    const partes = data ? (data.participantes || 'todas') : 'todas';
+    document.getElementById('din-part-tipo').value = partes.startsWith('grupo:') ? 'grupo' : partes.startsWith('manual:') ? 'manual' : 'todas';
+    cambiarTipoParticipantes();
+    if (partes.startsWith('grupo:')) document.getElementById('din-part-grupo').value = partes.split(':')[1];
+    if (partes.startsWith('manual:')) {
+        const names = partes.split(':')[1].split(',');
+        document.querySelectorAll('#din-part-manual input[type=checkbox]').forEach(cb => { cb.checked = names.includes(cb.value); });
+    }
+    const r = (data && data.reglas) ? data.reglas : {};
+    document.getElementById('din-duracion').value = r.duracion || 3;
+    document.getElementById('din-modo').value = r.modo || 'puntos';
+    document.getElementById('din-meta').value = r.meta || 500;
+    document.getElementById('din-max-derrotas').value = r.max_derrotas || 2;
+    document.getElementById('din-tarjetas').checked = r.tarjetas || false;
+    document.getElementById('din-limite-amarilla').value = r.limite_amarilla || 3;
+    cambiarModo(); cambiarTarjetas();
+    const tieneEquipos = r.equipos && r.equipos.length > 0;
+    document.getElementById('din-equipos-activo').checked = tieneEquipos;
+    document.getElementById('din-equipos-wrap').style.display = tieneEquipos ? 'block' : 'none';
+    if (tieneEquipos) {
+        document.getElementById('din-num-equipos').value = r.equipos.length;
+        renderEquiposBuilder();
+        setTimeout(() => {
+            r.equipos.forEach((eq, i) => {
+                if (document.getElementById('din-eq-nombre-' + i)) {
+                    document.getElementById('din-eq-nombre-' + i).value = eq.nombre;
+                    document.getElementById('din-eq-color-' + i).value = eq.color;
+                    eq.miembros.forEach(m => { const sel = document.getElementById('din-eq-assign-' + m); if (sel) sel.value = i; });
+                }
+            });
+        }, 50);
+    }
+    document.getElementById('din-form-title').textContent = data ? 'Editar Dinámica' : 'Nueva Dinámica';
+    document.getElementById('din-form').scrollIntoView({ behavior: 'smooth' });
+}
+
+function ocultarFormDinamica() {
+    document.getElementById('din-form').style.display = 'none';
+    dinamicaEditandoId = null;
+}
+
+function cambiarTipoParticipantes() {
+    const tipo = document.getElementById('din-part-tipo').value;
+    document.getElementById('din-part-grupo-wrap').style.display = tipo === 'grupo' ? 'block' : 'none';
+    document.getElementById('din-part-manual-wrap').style.display = tipo === 'manual' ? 'block' : 'none';
+}
+
+function cambiarModo() {
+    const modo = document.getElementById('din-modo').value;
+    document.getElementById('din-meta-wrap').style.display = modo === 'meta' ? 'block' : 'none';
+    document.getElementById('din-supervivencia-wrap').style.display = modo === 'supervivencia' ? 'block' : 'none';
+}
+
+function cambiarTarjetas() {
+    document.getElementById('din-tarjeta-wrap').style.display = document.getElementById('din-tarjetas').checked ? 'block' : 'none';
+}
+
+function cambiarTipoIcono() {
+    const tipo = document.querySelector('input[name="din-icono-tipo"]:checked')?.value;
+    document.getElementById('din-icono').style.display = tipo === 'imagen' ? 'none' : 'inline-block';
+    document.getElementById('din-icono-img').style.display = tipo === 'imagen' ? 'block' : 'none';
+}
+
+function getIconoValue() {
+    const tipo = document.querySelector('input[name="din-icono-tipo"]:checked')?.value;
+    if (tipo === 'imagen') {
+        const img = document.getElementById('din-icono-img').value.trim();
+        return img ? 'img:' + img : '⚔️';
+    }
+    return document.getElementById('din-icono').value.trim() || '⚔️';
+}
+
+function cambiarEquipos() {
+    const activo = document.getElementById('din-equipos-activo').checked;
+    document.getElementById('din-equipos-wrap').style.display = activo ? 'block' : 'none';
+    if (activo) renderEquiposBuilder();
+}
+
+function renderEquiposBuilder() {
+    const n = parseInt(document.getElementById('din-num-equipos').value) || 2;
+    const defs = [
+        { nombre: 'Equipo A', color: '#ef4444' },
+        { nombre: 'Equipo B', color: '#3b82f6' },
+        { nombre: 'Equipo C', color: '#22c55e' },
+        { nombre: 'Equipo D', color: '#f59e0b' }
+    ];
+    const c = document.getElementById('din-equipos-builder');
+    let html = '<div class="col" style="gap:6px;margin-bottom:12px">';
+    QUEENS.forEach(q => {
+        const opts = Array.from({length: n}, (_, i) => `<option value="${i}">${defs[i].nombre}</option>`).join('') + '<option value="-1">Sin equipo</option>';
+        html += `<div style="display:flex;align-items:center;gap:10px"><span style="color:${QUEEN_COLORS[q]||'#fff'};font-weight:700;min-width:80px">${q}</span><select class="select" id="din-eq-assign-${q}" style="flex:1">${opts}</select></div>`;
+    });
+    html += '</div><div class="col" style="gap:8px">';
+    for (let i = 0; i < n; i++) {
+        html += `<div class="row-2"><div><div class="label" style="margin-bottom:4px">Nombre Equipo ${i+1}</div><input class="input" id="din-eq-nombre-${i}" value="${defs[i].nombre}"></div><div><div class="label" style="margin-bottom:4px">Color</div><input type="color" id="din-eq-color-${i}" value="${defs[i].color}" style="width:46px;height:42px;padding:3px;border-radius:8px;border:1px solid var(--border);cursor:pointer;background:var(--surface2)"></div></div>`;
+    }
+    html += '</div>';
+    c.innerHTML = html;
+}
+
+function getEquiposValue() {
+    if (!document.getElementById('din-equipos-activo').checked) return null;
+    const n = parseInt(document.getElementById('din-num-equipos').value) || 2;
+    const ids = ['A', 'B', 'C', 'D'];
+    const equipos = Array.from({length: n}, (_, i) => ({
+        id: ids[i],
+        nombre: document.getElementById('din-eq-nombre-' + i)?.value || 'Equipo ' + ids[i],
+        color: document.getElementById('din-eq-color-' + i)?.value || '#ffffff',
+        miembros: []
+    }));
+    QUEENS.forEach(q => {
+        const sel = document.getElementById('din-eq-assign-' + q);
+        if (sel) { const idx = parseInt(sel.value); if (idx >= 0 && idx < n) equipos[idx].miembros.push(q); }
+    });
+    return equipos.filter(e => e.miembros.length > 0);
+}
+
+function getParticipantesDin() {
+    const tipo = document.getElementById('din-part-tipo').value;
+    if (tipo === 'grupo') return 'grupo:' + document.getElementById('din-part-grupo').value;
+    if (tipo === 'manual') {
+        const sel = [...document.querySelectorAll('#din-part-manual input[type=checkbox]:checked')].map(c => c.value);
+        return sel.length ? 'manual:' + sel.join(',') : 'todas';
+    }
+    return 'todas';
+}
+
+async function guardarDinamica() {
+    const nombre = document.getElementById('din-nombre').value.trim();
+    if (!nombre) return alert('El nombre es requerido');
+    const reglas = {
+        duracion: parseInt(document.getElementById('din-duracion').value) || 3,
+        modo: document.getElementById('din-modo').value,
+        meta: parseInt(document.getElementById('din-meta').value) || 500,
+        max_derrotas: parseInt(document.getElementById('din-max-derrotas').value) || 2,
+        tarjetas: document.getElementById('din-tarjetas').checked,
+        limite_amarilla: parseInt(document.getElementById('din-limite-amarilla').value) || 3,
+    };
+    const equipos = getEquiposValue();
+    if (equipos) reglas.equipos = equipos; else delete reglas.equipos;
+    const body = {
+        nombre,
+        descripcion: document.getElementById('din-desc').value.trim(),
+        icono: getIconoValue(),
+        color: document.getElementById('din-color').value,
+        participantes: getParticipantesDin(),
+        reglas
+    };
+    const url = dinamicaEditandoId ? '/api/dinamicas/editar?id=' + dinamicaEditandoId : '/api/dinamicas/crear';
+    await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+    ocultarFormDinamica();
+    cargarDinamicas();
+}
+
+async function editarDinamicaById(id) {
+    const list = await fetch('/api/dinamicas').then(r => r.json());
+    const d = list.find(x => x.id === id);
+    if (d) mostrarFormDinamica(d);
+}
+
+async function duplicarDinamica(id) {
+    await hacerFetch('/api/dinamicas/duplicar?id=' + id);
+    cargarDinamicas();
+}
+
+async function eliminarDinamica(id) {
+    if (!confirm('¿Eliminar esta dinámica?')) return;
+    await hacerFetch('/api/dinamicas/eliminar?id=' + id);
+    cargarDinamicas();
+}
+
+function iniciarDinamica(id) {
+    hacerFetch('/dinamica/start/' + id);
+}
+
+function renderControlVivo(data) {
+    const c = document.getElementById('din-control-vivo');
+    if (!c) return;
+    if (!data) {
+        c.innerHTML = '<div class="info-box">No hay ninguna dinámica activa en este momento.</div>';
+        return;
+    }
+    const supervivencia = data.config && data.config.reglas && data.config.reglas.modo === 'supervivencia';
+    c.innerHTML = `
+        <div class="info-box" style="margin-bottom:12px">
+            <strong>${data.config.icono} ${data.config.nombre}</strong> — ${getModoLabel(data.config.reglas && data.config.reglas.modo)}
+            <br><span style="font-size:11px">Participantes: ${data.participantes.join(', ')}</span>
+        </div>
+        ${supervivencia ? `<div class="label" style="margin-bottom:8px">Eliminar participante:</div>
+        <div class="row" style="flex-wrap:wrap;gap:6px">
+            ${data.participantes.map(p => `<button class="btn btn-danger btn-sm" onclick="hacerFetch('/dinamica/eliminar?q=${p}')">${p}</button>`).join('')}
+        </div>` : ''}`;
+}
+
+socket.on('dinamicaInicio', (data) => renderControlVivo(data));
+socket.on('dinamicaFin',    () => renderControlVivo(null));
+socket.on('dinamicaCancelada', () => renderControlVivo(null));
+
+// ── Socket: timer acumulado ──
+socket.on('timerAcumulado', (data) => {
+    const c = document.getElementById('timer-acumulado');
+    c.innerHTML = Object.entries(data).map(([q,s])=>{
+        const col = QUEEN_COLORS[q]||'var(--cyan)';
+        const m=Math.floor(s/60), sec=s%60;
+        return `<span style="color:${col};background:var(--surface3);border-radius:6px;padding:3px 8px">${q}: ${m}m${sec.toString().padStart(2,'0')}s</span>`;
+    }).join('');
+});
+
+init();
+        </script>
+    </body>
+</html>

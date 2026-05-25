@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="es">
+    <head>
+        <meta charset="UTF-8">
+        <title>Lista de Regalos</title>
+        <link href="https://fonts.googleapis.com/css2?family=Bangers&display=swap"
+              rel="stylesheet">
+        <style>
+        body { font-family: 'Bangers', cursive; margin: 0; padding: 10px; background: #00FF00; color: white; overflow: hidden; letter-spacing: 1px; }
+        .lista-container { display: flex; flex-direction: column; gap: 8px; background: rgba(0,0,0,0.75); border: 3px solid #39FF14; border-radius: 15px; padding: 14px; width: max-content; box-shadow: 0 0 15px rgba(57,255,20,0.5); }
+        .titulo { color: #39FF14; font-size: 22px; text-align: center; text-shadow: 2px 2px 4px #000; margin: 0 0 6px 0; }
+        .item-regalo { display: flex; align-items: center; gap: 12px; background: rgba(255,255,255,0.08); padding: 5px 14px; border-radius: 10px; border-left: 5px solid; }
+        .item-img { width: 46px; height: 46px; object-fit: contain; border-radius: 6px; }
+        .item-emoji { width: 46px; height: 46px; display: flex; align-items: center; justify-content: center; font-size: 34px; }
+        .info { display: flex; flex-direction: column; line-height: 1.15; }
+        .nombre { font-size: 22px; text-shadow: 1px 1px 3px #000; }
+        .costo { font-size: 14px; color: #FFD700; background: #000; padding: 0 5px; border-radius: 3px; width: fit-content; }
+        .costo-vacio { color: var(--muted, #888); font-size: 12px; }
+        </style>
+    </head>
+    <body>
+        <div class="lista-container">
+            <h3 class="titulo">⏭ SALTA EL TURNO ⏭</h3>
+            <div id="lista"></div>
+        </div>
+        <script src="/socket.io/socket.io.js"></script>
+        <script>
+        const socket = io();
+
+        async function cargar() {
+            const queens = await (await fetch('/api/queens/all')).json();
+            const apodos = await (await fetch('/api/apodos')).json();
+            const lista = document.getElementById('lista');
+            lista.innerHTML = '';
+            queens.filter(q => q.activo).forEach(q => {
+                const nombre = (apodos[q.name] || q.name).toUpperCase();
+                const color = q.color || '#ffffff';
+                const pts = q.regalo_pts || 0;
+                const rawImg = q.regalo_img || '';
+                const img = rawImg && !rawImg.startsWith('/') && !rawImg.startsWith('http') ? '/regalos/' + rawImg : rawImg;
+
+                const mediaHtml = img
+                    ? `<img class="item-img" src="${img}" alt="🎁" onerror="this.style.display='none';this.nextSibling.style.display='flex'">\
+<div class="item-emoji" style="display:none">🎁</div>`
+                    : `<div class="item-emoji">🎁</div>`;
+
+                const costoHtml = pts > 0
+                    ? `<span class="costo">${pts} PTS</span>`
+                    : `<span class="costo-vacio">sin puntos</span>`;
+
+                lista.innerHTML += `
+                    <div class="item-regalo" style="border-color:${color}">
+                        ${mediaHtml}
+                        <div class="info">
+                            <span class="nombre" style="color:${color}">${nombre}</span>
+                            ${costoHtml}
+                        </div>
+                    </div>`;
+            });
+        }
+
+        socket.on('queensActualizadas', cargar);
+        cargar();
+        </script>
+    </body>
+</html>

@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="es">
+    <head>
+        <meta charset="UTF-8">
+        <title>Conociendo a mi Queen</title>
+        <link rel="preconnect" href="https://fonts.googleapis.com">
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link href="https://fonts.googleapis.com/css2?family=Bangers&display=swap"
+              rel="stylesheet">
+        <style>
+        body { font-family: 'Bangers', cursive; text-align: center; overflow: hidden; background: #00FF00; color: white; margin: 0; padding: 20px; letter-spacing: 2px; }
+        
+        .timer-container { display: none; justify-content: center; align-items: flex-start; height: 100vh;}
+        .timer-activo { display: flex; }
+        
+        /* Contenedor ancho tipo banner */
+        .caja-central { 
+            background: rgba(0, 0, 0, 0.85); 
+            border: 4px solid #00FFFF; 
+            border-radius: 20px; 
+            padding: 15px 30px; 
+            width: max-content; 
+            min-width: 500px; 
+            box-shadow: 0 0 30px #00FFFF; 
+            display: flex;
+            flex-direction: column; 
+        }
+
+        .fila-principal { display: flex; align-items: center; justify-content: space-between; gap: 30px; width: 100%;}
+        .titulo-bailando { font-size: 55px; color: #FFF; text-shadow: 3px 3px 5px #000; text-transform: uppercase; margin: 0;}
+        .reloj { font-size: 85px; color: #FFFFFF; text-shadow: 5px 5px 15px #00FFFF; line-height: 1; margin: 0;}
+        
+        /* Barra de Progreso de la Meta */
+        .bar-container { width: 100%; height: 35px; background: #222; border-radius: 15px; border: 2px solid #FFF; margin-top: 15px; position: relative; overflow: hidden; box-shadow: inset 0 0 10px #000;}
+        .bar-fill { height: 100%; width: 0%; transition: width 0.5s ease; background: #00FFFF; }
+        .bar-text { position: absolute; top: 0; left: 0; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; font-size: 26px; font-weight: bold; text-shadow: 2px 2px 4px #000; z-index: 10; color: #FFF;}
+        
+        /* Colores aplicados dinámicamente via JS */
+
+        .parpadeo { animation: parpadeoAnim 0.8s infinite alternate; }
+        @keyframes parpadeoAnim { from { opacity: 1; } to { opacity: 0.3; } }
+        </style>
+    </head>
+    <body>
+        <div class="timer-container" id="contenedor-principal">
+            <div class="caja-central" id="caja-reloj">
+                <div class="fila-principal">
+                    <div class="titulo-bailando">
+                        CONOCIENDO A: <span id="nombre-bailando">RAY</span>
+                    </div>
+                    <div class="reloj" id="timer-display">05:00</div>
+                </div>
+                <div class="bar-container">
+                    <div class="bar-fill" id="barra-meta"></div>
+                    <div class="bar-text">
+                        <span id="puntos-actuales">0</span> / <span id="meta-total">2000</span>
+                    </div>
+                </div>
+            </div>
+            <div class="caja-central" id="caja-transicion" style="display: none;">
+                <div class="fila-principal">
+                    <div class="titulo-bailando" id="texto-transicion">
+                        ¡SIGUIENTE: <span class="t-Amy">AMY</span>!
+                    </div>
+                    <div class="reloj parpadeo" id="countdown-transicion">5</div>
+                </div>
+                <div class="bar-container" style="border-color: #555;">
+                    <div class="bar-text"
+                         style="color: #FFD700;
+                                text-shadow: 1px 1px 2px #000">¡NO LLEGARON A LA META!</div>
+                </div>
+            </div>
+        </div>
+        <script src="/socket.io/socket.io.js"></script>
+        <script>
+        const socket = io();
+        let QUEEN_COLORS = {};
+        let APODOS = {};
+        const contenedor = document.getElementById('contenedor-principal');
+        const cajaReloj = document.getElementById('caja-reloj');
+        const displayReloj = document.getElementById('timer-display');
+        const nombreBailando = document.getElementById('nombre-bailando');
+        const barraMeta = document.getElementById('barra-meta');
+        const txtPuntos = document.getElementById('puntos-actuales');
+        const txtMeta = document.getElementById('meta-total');
+        const cajaTransicion = document.getElementById('caja-transicion');
+        const textoTransicion = document.getElementById('texto-transicion');
+        const countdownTransicion = document.getElementById('countdown-transicion');
+
+        fetch('/api/queens/all').then(r => r.json()).then(all => {
+            all.forEach(q => { QUEEN_COLORS[q.name] = q.color; });
+        });
+        fetch('/api/apodos').then(r => r.json()).then(map => { APODOS = map; });
+
+        socket.on('queensActualizadas', (data) => {
+            if (data.equipos) Object.keys(data.equipos).forEach(n => { QUEEN_COLORS[n] = data.equipos[n].color; });
+            if (data.apodos) APODOS = data.apodos;
+        });
+
+        function lighten(hex) {
+            try {
+                let r = Math.min(255, parseInt(hex.slice(1,3),16)+60);
+                let g = Math.min(255, parseInt(hex.slice(3,5),16)+60);
+                let b = Math.min(255, parseInt(hex.slice(5,7),16)+60);
+                return '#'+[r,g,b].map(x=>x.toString(16).padStart(2,'0')).join('');
+            } catch(e) { return hex; }
+        }
+
+        function formatearTiempo(segundos) {
+            let m = Math.floor(segundos / 60).toString().padStart(2, '0');
+            let s = (segundos % 60).toString().padStart(2, '0');
+            return m + ':' + s;
+        }
+
+        function aplicarColoresChica(chica) {
+            const color = QUEEN_COLORS[chica] || '#00ffff';
+            const light = lighten(color);
+            nombreBailando.innerText = APODOS[chica] || chica;
+            nombreBailando.style.color = color;
+            cajaReloj.style.borderColor = color;
+            cajaReloj.style.boxShadow = `0 0 30px ${color}`;
+            cajaTransicion.style.borderColor = color;
+            cajaTransicion.style.boxShadow = `0 0 30px ${color}`;
+            barraMeta.style.background = `linear-gradient(90deg, ${color}, ${light})`;
+            const brillo = `5px 5px 15px ${color}`;
+            displayReloj.style.textShadow = brillo;
+            countdownTransicion.style.textShadow = brillo;
+        }
+
+        socket.on('conociendoInicio', (data) => {
+            cajaTransicion.style.display = 'none';
+            cajaReloj.style.display = 'flex';
+            contenedor.classList.add('timer-activo');
+            aplicarColoresChica(data.chica);
+            displayReloj.innerText = formatearTiempo(data.tiempo);
+            txtMeta.innerText = data.meta;
+            actualizarBarra(data.puntos, data.meta);
+        });
+
+        socket.on('conociendoTick', (tiempo) => { displayReloj.innerText = formatearTiempo(tiempo); });
+
+        socket.on('conociendoPuntos', (data) => { actualizarBarra(data.puntos, data.meta); });
+
+        socket.on('conociendoTransicion', (data) => {
+            cajaReloj.style.display = 'none';
+            cajaTransicion.style.display = 'flex';
+            contenedor.classList.add('timer-activo');
+            const col = QUEEN_COLORS[data.chica] || '#00ffff';
+            textoTransicion.innerHTML = '¡SIGUIENTE: <span style="color:' + col + '">' + data.chica + '</span>!';
+            countdownTransicion.innerText = data.tiempo;
+            aplicarColoresChica(data.chica); 
+        });
+
+        socket.on('conociendoTransicionTick', (tiempo) => { countdownTransicion.innerText = tiempo; });
+        
+        socket.on('conociendoCancelado', () => { 
+            contenedor.classList.remove('timer-activo'); 
+            cajaReloj.style.display = 'none';
+            cajaTransicion.style.display = 'none';
+        });
+
+        function actualizarBarra(puntos, meta) {
+            txtPuntos.innerText = puntos;
+            let porcentaje = meta === 0 ? 0 : (puntos / meta) * 100;
+            if(porcentaje > 100) porcentaje = 100;
+            barraMeta.style.width = porcentaje + '%';
+        }
+        </script>
+    </body>
+</html>

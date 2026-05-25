@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="es">
+    <head>
+        <meta charset="UTF-8">
+        <title>Ranking Queen</title>
+        <link href="https://fonts.googleapis.com/css2?family=Bangers&display=swap"
+              rel="stylesheet">
+        <style>
+        :root {
+            --fucsia: #FF1493;
+            --cyan: #00FFFF;
+            --dorado: #FFD700;
+            --morado: #b026ff;
+            --bg-cristal: rgba(15, 5, 20, 0.6); 
+        }
+
+        body { 
+            background-color: #00FF00; 
+            font-family: 'Bangers', cursive; 
+            color: white; 
+            margin: 0; 
+            padding: 10px;
+        }
+        
+        .container { 
+            width: 240px; 
+            display: flex;
+            flex-direction: column;
+            gap: 6px; 
+        }
+        
+        .header-titulo { 
+            font-size: 1.8rem; 
+            text-align: center; 
+            margin: 0 0 5px 0; 
+            color: var(--dorado); 
+            text-shadow: 2px 2px 0px #000, 0 0 5px var(--dorado); 
+            letter-spacing: 1px;
+            order: -1;
+            background: var(--bg-cristal);
+            padding: 5px;
+            border-radius: 8px;
+            border: 2px solid var(--cyan);
+            box-shadow: 0 0 8px var(--fucsia);
+            cursor: pointer;
+            user-select: none;
+        }
+        
+        .row { 
+            display: flex; 
+            justify-content: space-between; 
+            align-items: center;
+            background: var(--bg-cristal); 
+            padding: 6px 12px; 
+            border-radius: 8px;
+            border-left: 5px solid;
+            transition: all 0.5s ease;
+        }
+        
+        .name { 
+            font-size: 1.5rem; 
+            letter-spacing: 1px; 
+            text-shadow: 1px 1px 2px #000; 
+            transition: color 0.3s;
+        }
+        .puntos { 
+            font-size: 1.8rem; 
+            color: var(--cyan); 
+            text-shadow: 1px 1px 2px #000, 0 0 5px var(--cyan); 
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.15); color: var(--fucsia); text-shadow: 0 0 10px var(--fucsia); }
+            100% { transform: scale(1); }
+        }
+        .update-anim { animation: pulse 0.4s ease-out; }
+
+        .modo-label {
+            font-size: 0.7rem;
+            color: #aaa;
+            text-align: center;
+            margin-top: -3px;
+            letter-spacing: 2px;
+        }
+        </style>
+    </head>
+    <body>
+        <div class="container" id="ranking-container">
+            <h2 class="header-titulo" id="titulo-ranking" onclick="toggleModo()">👑 QUEEN SEMANAL</h2>
+            <div class="modo-label" id="modo-label">click para cambiar</div>
+        </div>
+        <script src="/socket.io/socket.io.js"></script>
+        <script>
+    const socket = io();
+    let modo = 'semanal'; // 'semanal', 'mensual' o 'diario'
+    let dataSemanal = {};
+    let dataMensual = {};
+    let dataDiario = {};
+    let QUEENS = [];
+    let COLORES = {};
+    let APODOS = {};
+
+    const TITULOS = { semanal: '👑 QUEEN SEMANAL', mensual: '📅 QUEEN MENSUAL', diario: '🌅 QUEEN DEL DÍA' };
+    const CICLO = { semanal: 'mensual', mensual: 'diario', diario: 'semanal' };
+
+    function toggleModo() {
+        modo = CICLO[modo];
+        document.getElementById('titulo-ranking').innerText = TITULOS[modo];
+        reordenarTabla();
+    }
+
+    function getDatos() {
+        if (modo === 'mensual') return dataMensual;
+        if (modo === 'diario') return dataDiario;
+        return dataSemanal;
+    }
+
+    function crearFilas() {
+        const container = document.getElementById('ranking-container');
+        container.querySelectorAll('.row').forEach(r => r.remove());
+
+        QUEENS.forEach(q => {
+            const row = document.createElement('div');
+            row.className = 'row';
+            row.id = 'row-' + q;
+            row.style.borderLeftColor = COLORES[q] || '#fff';
+            const nombre = (APODOS[q] || q).toUpperCase();
+            row.innerHTML = `<span class="name">${nombre}</span><span class="puntos" id="pts-${q}">0</span>`;
+            container.appendChild(row);
+        });
+    }
+
+    function reordenarTabla() {
+        const datos = getDatos();
+        const filas = QUEENS.map(q => ({
+            name: q,
+            pts: datos[q] || 0
+        }));
+        filas.sort((a, b) => b.pts - a.pts);
+
+        filas.forEach((fila, index) => {
+            const rowEl = document.getElementById('row-' + fila.name);
+            const ptsEl = document.getElementById('pts-' + fila.name);
+            const nameEl = rowEl.querySelector('.name');
+            if (!rowEl) return;
+
+            ptsEl.innerText = fila.pts;
+            rowEl.style.order = index;
+
+            const nombreDisplay = (APODOS[fila.name] || fila.name).toUpperCase();
+            if (index === 0 && fila.pts > 0) {
+                nameEl.innerText = "👑 " + nombreDisplay;
+                nameEl.style.color = "#FFD700";
+                rowEl.style.boxShadow = "0 0 12px rgba(255, 215, 0, 0.5)";
+            } else {
+                nameEl.innerText = nombreDisplay;
+                nameEl.style.color = "white";
+                rowEl.style.boxShadow = "none";
+            }
+        });
+    }
+
+    // Carga inicial
+    async function init() {
+        try {
+            const [resQ, resR, resM, resD, resAll, resAp] = await Promise.all([
+                fetch('/api/queens'),
+                fetch('/api/ranking'),
+                fetch('/api/ranking-mensual'),
+                fetch('/api/ranking-diario'),
+                fetch('/api/queens/all'),
+                fetch('/api/apodos')
+            ]);
+            QUEENS = await resQ.json();
+            dataSemanal = await resR.json();
+            dataMensual = await resM.json();
+            dataDiario  = await resD.json();
+            const allQueens = await resAll.json();
+            allQueens.forEach(q => { COLORES[q.name] = q.color; });
+            APODOS = await resAp.json();
+            crearFilas();
+            reordenarTabla();
+        } catch(e) {
+            console.log("Cargado sin datos previos");
+        }
+    }
+
+    init();
+
+    socket.on('actualizarRanking', (data) => {
+        dataSemanal[data.nombre] = data.puntosSemanal;
+        dataMensual[data.nombre] = data.puntosMensual;
+        if (data.puntosDiario !== undefined) dataDiario[data.nombre] = data.puntosDiario;
+
+        const el = document.getElementById('pts-' + data.nombre);
+        if (el) {
+            el.classList.remove('update-anim');
+            void el.offsetWidth;
+            el.classList.add('update-anim');
+        }
+        reordenarTabla();
+    });
+
+    socket.on('resetRanking', () => {
+        QUEENS.forEach(q => dataSemanal[q] = 0);
+        reordenarTabla();
+    });
+
+    socket.on('resetMensual', () => {
+        QUEENS.forEach(q => dataMensual[q] = 0);
+        reordenarTabla();
+    });
+
+    socket.on('resetDiario', () => {
+        QUEENS.forEach(q => dataDiario[q] = 0);
+        reordenarTabla();
+    });
+        </script>
+    </body>
+</html>

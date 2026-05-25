@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="es">
+    <head>
+        <meta charset="UTF-8">
+        <title>Dinámica — Urban Queens</title>
+        <link href="https://fonts.googleapis.com/css2?family=Bangers&display=swap"
+              rel="stylesheet">
+        <style>
+        body { font-family: 'Bangers', cursive; background: #00FF00; color: #fff; margin: 0; padding: 10px; overflow: hidden; letter-spacing: 1px; }
+
+        .container { background: rgba(0,0,0,0.88); border: 4px solid #333; border-radius: 20px; padding: 16px 18px; width: max-content; min-width: 380px; max-width: 98vw; box-shadow: 0 0 24px rgba(0,0,0,0.9); }
+
+        /* header */
+        .header { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-bottom: 12px; }
+        .header-left { display: flex; align-items: center; gap: 10px; }
+        .header-icono { font-size: 46px; line-height: 1; }
+        .header-icono img { width: 52px; height: 52px; object-fit: contain; vertical-align: middle; }
+        .header-nombre { font-size: 34px; color: var(--dc, #FFD700); text-shadow: 2px 2px 4px #000; line-height: 1; }
+        .header-modo { font-size: 13px; color: rgba(255,255,255,0.65); letter-spacing: 0; margin-top: 2px; }
+        .reloj { font-size: 60px; color: #FFD700; text-shadow: 3px 3px 6px #000; min-width: 106px; text-align: right; transition: color .3s; }
+        .reloj.snipe { color: #ff4444; animation: latido .4s infinite alternate; }
+        @keyframes latido { 0%{transform:scale(1)} 100%{transform:scale(1.12)} }
+
+        /* meta bar */
+        .meta-wrap { margin-bottom: 12px; }
+        .meta-label { font-size: 13px; color: rgba(255,255,255,.75); text-align: center; margin-bottom: 4px; letter-spacing: 0; }
+        .meta-bar { height: 14px; background: rgba(255,255,255,.15); border-radius: 20px; overflow: hidden; }
+        .meta-fill { height: 100%; background: var(--dc, #6366f1); border-radius: 20px; transition: width .5s ease; }
+
+        /* individual */
+        .cards { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
+        .queen-card { background: #111; border: 4px solid var(--qc,#fff); border-radius: 16px; padding: 12px 14px; min-width: 130px; display: flex; flex-direction: column; align-items: center; gap: 4px; position: relative; transition: box-shadow .3s; }
+        .queen-card.eliminada { opacity: .3; filter: grayscale(1); }
+        .queen-card.ganadora { animation: glow .8s ease infinite alternate; }
+        @keyframes glow { 0%{box-shadow:none} 100%{box-shadow:0 0 30px var(--qc,#fff), 0 0 60px var(--qc,#fff)} }
+        .q-elim-tag { position: absolute; top: 6px; right: 6px; background: #ef4444; color: #fff; font-size: 10px; padding: 1px 7px; border-radius: 20px; letter-spacing: 0; }
+        .q-nombre { font-size: 26px; color: var(--qc,#fff); text-shadow: 2px 2px 4px #000; }
+        .q-pts { font-size: 70px; line-height: 1; text-shadow: 3px 3px 6px rgba(0,0,0,.6); }
+        .q-minibar { width: 85%; height: 7px; background: rgba(255,255,255,.15); border-radius: 10px; overflow: hidden; }
+        .q-minibar-fill { height: 100%; background: var(--qc,#fff); border-radius: 10px; transition: width .4s; }
+
+        /* teams */
+        .teams { display: flex; align-items: stretch; gap: 0; justify-content: center; }
+        .vs-sep { font-size: 52px; color: rgba(255,255,255,.45); display: flex; align-items: center; padding: 0 10px; }
+        .team-card { background: #111; border: 4px solid var(--tc,#fff); border-radius: 16px; padding: 12px 18px; min-width: 170px; display: flex; flex-direction: column; align-items: center; gap: 6px; transition: box-shadow .3s; }
+        .team-card.ganadora { animation: glow .8s ease infinite alternate; }
+        .team-nombre { font-size: 26px; color: var(--tc,#fff); text-shadow: 2px 2px 4px #000; }
+        .team-pts { font-size: 78px; line-height: 1; text-shadow: 3px 3px 6px rgba(0,0,0,.6); }
+        .team-divider { width: 80%; height: 2px; background: rgba(255,255,255,.15); border-radius: 2px; }
+        .team-members { width: 100%; display: flex; flex-direction: column; gap: 3px; }
+        .member-row { display: flex; justify-content: space-between; align-items: baseline; }
+        .member-name { font-size: 17px; color: var(--mc,rgba(255,255,255,.85)); }
+        .member-pts { font-size: 22px; }
+
+        /* idle */
+        .idle { padding: 30px 50px; text-align: center; }
+        .idle-icono { font-size: 56px; opacity: .4; }
+        .idle-txt { font-size: 18px; opacity: .5; letter-spacing: 0; margin-top: 8px; }
+
+        /* final */
+        .final-overlay { position: fixed; inset: 0; background: rgba(0,0,0,.95); display: none; flex-direction: column; align-items: center; justify-content: center; z-index: 100000; gap: 10px; }
+        .final-tit { font-size: 40px; color: rgba(255,255,255,.6); }
+        .final-trofeo { font-size: 90px; }
+        .final-nombre { font-size: 76px; text-shadow: 0 0 30px currentColor; }
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            <div class="idle" id="idle-state">
+                <div class="idle-icono">⚡</div>
+                <div class="idle-txt">Esperando dinámica...</div>
+            </div>
+            <div id="active-state" style="display:none">
+                <div class="header">
+                    <div class="header-left">
+                        <div class="header-icono" id="h-icono"></div>
+                        <div>
+                            <div class="header-nombre" id="h-nombre">Dinámica</div>
+                            <div class="header-modo" id="h-modo"></div>
+                        </div>
+                    </div>
+                    <div class="reloj" id="reloj">00:00</div>
+                </div>
+                <div class="meta-wrap" id="meta-wrap" style="display:none">
+                    <div class="meta-label" id="meta-label">Meta: 500 pts</div>
+                    <div class="meta-bar">
+                        <div class="meta-fill" id="meta-fill" style="width:0%"></div>
+                    </div>
+                </div>
+                <div id="game-area"></div>
+            </div>
+        </div>
+        <div class="final-overlay" id="pantalla-final">
+            <div class="final-tit">🏆 FIN DE LA DINÁMICA</div>
+            <div class="final-trofeo">🏆</div>
+            <div class="final-nombre" id="final-nombre">-</div>
+        </div>
+        <script src="/socket.io/socket.io.js"></script>
+        <script>
+const socket = io();
+let configActual = null;
+let participantes = [];
+let puntosActuales = {};
+let eliminados = [];
+const colorMap = {};
+
+async function cargarColores() {
+    const all = await fetch('/api/queens/all').then(r => r.json());
+    all.forEach(q => { colorMap[q.name] = q.color; });
+}
+function getColor(n) { return colorMap[n] || '#ffffff'; }
+
+function secsToMMSS(s) {
+    return `${Math.floor(s/60).toString().padStart(2,'0')}:${(s%60).toString().padStart(2,'0')}`;
+}
+
+function renderIcono(icono) {
+    if (!icono) return '⚡';
+    if (icono.startsWith('img:')) return `<img src="/dinamicas/${icono.slice(4)}" onerror="this.outerHTML='⚡'">`;
+    return icono;
+}
+
+function getModoLabel(modo) {
+    return { puntos:'🏆 Más puntos gana', meta:'🎯 Meta de puntos', supervivencia:'💀 Supervivencia' }[modo] || '🏆 Puntos';
+}
+
+function renderGameArea() {
+    const area = document.getElementById('game-area');
+    const reglas = (configActual && configActual.reglas) || {};
+    const modo = reglas.modo || 'puntos';
+    const meta = parseInt(reglas.meta) || 0;
+    const equipos = reglas.equipos;
+
+    if (equipos && equipos.length >= 2) {
+        renderTeams(area, equipos, modo, meta);
+    } else {
+        renderIndividual(area, modo, meta);
+    }
+}
+
+function renderIndividual(area, modo, meta) {
+    area.innerHTML = `<div class="cards" id="cards"></div>`;
+    const c = document.getElementById('cards');
+    c.innerHTML = participantes.map(q => {
+        const pts = puntosActuales[q] || 0;
+        const elim = eliminados.includes(q);
+        const pct = meta > 0 ? Math.min(100, (pts / meta) * 100) : 0;
+        return `
+        <div class="queen-card ${elim ? 'eliminada' : ''}" id="qc-${q}" style="--qc:${getColor(q)}">
+            ${elim ? '<span class="q-elim-tag">ELIMINADA</span>' : ''}
+            <div class="q-nombre">${q}</div>
+            <div class="q-pts">${pts}</div>
+            ${modo === 'meta' && meta > 0 ? `<div class="q-minibar"><div class="q-minibar-fill" style="width:${pct}%"></div></div>` : ''}
+        </div>`;
+    }).join('');
+}
+
+function renderTeams(area, equipos, modo, meta) {
+    const parts = equipos.map((eq, i) => {
+        const totalPts = eq.miembros.reduce((s, m) => s + (puntosActuales[m] || 0), 0);
+        const esGanadora = area._ganadoraTeam === i;
+        const membersHtml = eq.miembros.map(m => {
+            const c = getColor(m);
+            return `<div class="member-row">
+                <span class="member-name" style="--mc:${c}">${m}</span>
+                <span class="member-pts">${puntosActuales[m] || 0}</span>
+            </div>`;
+        }).join('');
+        return `<div class="team-card ${esGanadora ? 'ganadora' : ''}" id="team-${i}" style="--tc:${eq.color}">
+            <div class="team-nombre">${eq.nombre}</div>
+            <div class="team-pts">${totalPts}</div>
+            <div class="team-divider"></div>
+            <div class="team-members">${membersHtml}</div>
+        </div>`;
+    });
+
+    const vsHtml = parts.reduce((acc, p, i) => acc + p + (i < parts.length - 1 ? '<div class="vs-sep">VS</div>' : ''), '');
+    area.innerHTML = `<div class="teams">${vsHtml}</div>`;
+}
+
+socket.on('dinamicaInicio', (data) => {
+    configActual = data.config;
+    participantes = data.participantes;
+    puntosActuales = { ...data.puntos };
+    eliminados = [];
+
+    document.documentElement.style.setProperty('--dc', configActual.color || '#FFD700');
+    document.getElementById('h-icono').innerHTML = renderIcono(configActual.icono);
+    document.getElementById('h-nombre').textContent = configActual.nombre;
+    document.getElementById('h-modo').textContent = getModoLabel(configActual.reglas && configActual.reglas.modo);
+    document.getElementById('reloj').textContent = secsToMMSS(data.tiempo);
+    document.getElementById('reloj').classList.remove('snipe');
+
+    const reglas = configActual.reglas || {};
+    const metaWrap = document.getElementById('meta-wrap');
+    if (reglas.modo === 'meta' && parseInt(reglas.meta) > 0) {
+        metaWrap.style.display = 'block';
+        document.getElementById('meta-label').textContent = `Meta: ${reglas.meta} pts`;
+    } else { metaWrap.style.display = 'none'; }
+
+    document.getElementById('idle-state').style.display = 'none';
+    document.getElementById('active-state').style.display = 'block';
+    document.getElementById('pantalla-final').style.display = 'none';
+    renderGameArea();
+});
+
+socket.on('dinamicaTick', (t) => {
+    const el = document.getElementById('reloj');
+    el.textContent = secsToMMSS(t);
+    el.classList.toggle('snipe', t <= 10 && t > 0);
+});
+
+socket.on('dinamicaPuntos', (data) => {
+    puntosActuales = { ...data.puntos };
+    eliminados = data.eliminados || [];
+    renderGameArea();
+    if (configActual && configActual.reglas && configActual.reglas.modo === 'meta') {
+        const meta = parseInt(configActual.reglas.meta) || 0;
+        const maxPts = Math.max(0, ...participantes.map(p => puntosActuales[p] || 0));
+        const fill = document.getElementById('meta-fill');
+        if (fill) fill.style.width = meta > 0 ? Math.min(100, (maxPts / meta) * 100) + '%' : '0%';
+    }
+});
+
+socket.on('dinamicaFin', (data) => {
+    puntosActuales = data.puntos || puntosActuales;
+    eliminados = data.eliminados || [];
+    renderGameArea();
+
+    const overlay = document.getElementById('pantalla-final');
+    const finNombre = document.getElementById('final-nombre');
+    if (data.ganadora === 'EMPATE') {
+        finNombre.textContent = '¡EMPATE!'; finNombre.style.color = '#fff';
+    } else if (data.ganadora === 'SIN PUNTOS') {
+        finNombre.textContent = 'SIN PUNTOS'; finNombre.style.color = '#888';
+    } else {
+        finNombre.textContent = '¡' + data.ganadora.toUpperCase() + '!';
+        finNombre.style.color = colorMap[data.ganadora] || 'gold';
+    }
+    overlay.style.display = 'flex';
+    setTimeout(() => { overlay.style.display = 'none'; configActual = null; }, 10000);
+});
+
+socket.on('dinamicaCancelada', () => {
+    document.getElementById('active-state').style.display = 'none';
+    document.getElementById('idle-state').style.display = 'block';
+    document.getElementById('pantalla-final').style.display = 'none';
+    configActual = null;
+});
+
+cargarColores();
+        </script>
+    </body>
+</html>
