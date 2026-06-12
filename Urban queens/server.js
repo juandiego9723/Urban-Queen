@@ -234,50 +234,83 @@ function resolverNombre(nombre) {
     return queenDeAlias || null;
 }
 
-// --- FUNCIÓN GLOBAL PARA PROCESAR PUNTOS ---
-function procesarPuntosGlobales(nombre, puntos) {
-    if (puntos === 0 || isNaN(puntos)) return;
+// --- SISTEMA DE BATCHING PARA PUNTOS ---
+let queueUpdate = [];
+
+function procesarPuntosEnLote() {
+    if (queueUpdate.length === 0) return;
     
-    if (nombre && QUEENS.includes(nombre)) {
-        DB.sumarPuntos(nombre, puntos);
+    let rankingDirty = false;
+    let nombresCambiados = new Set();
+    
+    let tareas = [...queueUpdate];
+    queueUpdate = [];
+    
+    for (let t of tareas) {
+        let nombre = t.nombre;
+        let puntos = t.puntos;
         
+        if (nombre && QUEENS.includes(nombre)) {
+            DB.sumarPuntos(nombre, puntos);
+            rankingDirty = true;
+            nombresCambiados.add(nombre);
+        }
+        
+        if (nombre && estadoBatalla === 'activa' && participantesActuales.includes(nombre)) {
+            puntosBatalla[nombre] = Math.max(0, (puntosBatalla[nombre] || 0) + puntos);
+        }
+        
+        if (timerBaile.activo) {
+            if (puntos === 30 && nombre && QUEENS.includes(nombre) && nombre !== timerBaile.chicaActual) {
+                saltarSiguienteChica(nombre);
+            } else if (puntos > 0) { 
+                timerBaile.tiempo += (puntos * 3); 
+            }
+        }
+        
+        if (conociendo.activo) {
+            conociendo.puntos = Math.max(0, conociendo.puntos + puntos);
+        }
+
+        if (dinamicaActiva && nombre && dinamicaActiva.participantes.includes(nombre) && !eliminadosDinamica.includes(nombre)) {
+            puntosDinamica[nombre] = Math.max(0, (puntosDinamica[nombre] || 0) + puntos);
+            if (dinamicaActiva.reglas.modo === 'meta') {
+                const meta = parseInt(dinamicaActiva.reglas.meta) || 500;
+                if (puntosDinamica[nombre] >= meta) { clearInterval(timerDinamica); finalizarDinamica(); }
+            }
+        }
+    }
+    
+    // Emisiones agrupadas (Batched Emits)
+    if (rankingDirty) {
         const ranking = DB.getRanking();
         const rankingMensual = DB.getRankingMensual();
         const rankingDiario = DB.getRankingDiario();
-        io.emit('actualizarRanking', { nombre, puntosSemanal: ranking[nombre], puntosMensual: rankingMensual[nombre], puntosDiario: rankingDiario[nombre] });
+        nombresCambiados.forEach(nombre => {
+            io.emit('actualizarRanking', { nombre, puntosSemanal: ranking[nombre], puntosMensual: rankingMensual[nombre], puntosDiario: rankingDiario[nombre] });
+        });
         io.emit('actualizarCopa', DB.getCopa()); 
     }
     
-    if (nombre && estadoBatalla === 'activa' && participantesActuales.includes(nombre)) {
-        puntosBatalla[nombre] = Math.max(0, (puntosBatalla[nombre] || 0) + puntos);
+    if (estadoBatalla === 'activa') {
         io.emit('batallaPuntos', puntosBatalla);
     }
     
-    if (timerBaile.activo) {
-        if (puntos === 30 && nombre && QUEENS.includes(nombre) && nombre !== timerBaile.chicaActual) {
-            saltarSiguienteChica(nombre);
-        } else if (puntos > 0) { 
-            timerBaile.tiempo += (puntos * 3); 
-            if (timerBaile.estado === 'bailando') { io.emit('timerTick', timerBaile.tiempo); }
-        }
+    if (timerBaile.activo && timerBaile.estado === 'bailando') {
+        io.emit('timerTick', timerBaile.tiempo);
     }
     
-    if (conociendo.activo) {
-        conociendo.puntos = Math.max(0, conociendo.puntos + puntos);
-        if (conociendo.estado === 'activo') {
-            io.emit('conociendoPuntos', { puntos: conociendo.puntos, meta: conociendo.meta });
-        }
+    if (conociendo.activo && conociendo.estado === 'activo') {
+        io.emit('conociendoPuntos', { puntos: conociendo.puntos, meta: conociendo.meta });
     }
-
-    if (dinamicaActiva && nombre && dinamicaActiva.participantes.includes(nombre) && !eliminadosDinamica.includes(nombre)) {
-        puntosDinamica[nombre] = Math.max(0, (puntosDinamica[nombre] || 0) + puntos);
+    
+    if (dinamicaActiva) {
         io.emit('dinamicaPuntos', { puntos: puntosDinamica, eliminados: eliminadosDinamica });
-        if (dinamicaActiva.reglas.modo === 'meta') {
-            const meta = parseInt(dinamicaActiva.reglas.meta) || 500;
-            if (puntosDinamica[nombre] >= meta) { clearInterval(timerDinamica); finalizarDinamica(); }
-        }
     }
 }
+
+// Ejecutar el lote de actualizaciones cada 300ms
+setInterval(procesarPuntosEnLote, 300);
 
 app.all('/update', (req, res) => {
     let nombre = req.query.nombre || (req.body && req.body.nombre);
@@ -288,7 +321,7 @@ app.all('/update', (req, res) => {
     
     if (nombre && !isNaN(puntos)) {
         if (viewer && puntos > 0) lealtadUsuarios[viewer] = nombre; 
-        procesarPuntosGlobales(nombre, puntos);
+        if (puntos !== 0) queueUpdate.push({ nombre, puntos });
         return res.send("OK");
     }
     res.status(400).send("Error");
@@ -299,8 +332,13 @@ app.all('/update-auto', (req, res) => {
     const puntos = parseInt(req.query.puntos || (req.body && req.body.puntos));
     if (!isNaN(puntos) && puntos > 0) {
         let queenAsignada = (viewer && lealtadUsuarios[viewer]) ? lealtadUsuarios[viewer] : null;
-        procesarPuntosGlobales(queenAsignada, puntos);
-        return queenAsignada ? res.send("Asignado a " + queenAsignada) : res.send("Sumado Global"); 
+        if (queenAsignada) {
+            queueUpdate.push({ nombre: queenAsignada, puntos });
+            return res.send("Asignado a " + queenAsignada);
+        } else {
+            queueUpdate.push({ nombre: null, puntos });
+            return res.send("Sumado Global");
+        }
     }
     res.status(400).send("Ignorado");
 });
@@ -369,7 +407,7 @@ app.all('/conociendo/skip', (req, res) => { let target = req.query.c; if(conocie
 app.all('/batalla/start', (req, res) => { 
     tiempoBatalla = (parseInt(req.query.m) || 3) * 60; participantesActuales = req.query.p ? req.query.p.split(',') : [...QUEENS]; 
     puntosBatalla = {}; participantesActuales.forEach(p => puntosBatalla[p] = 0); estadoBatalla = 'activa'; clearInterval(timerBatalla); 
-    let subTickBatalla = 0; let tiempoExtraSnipe = 3; 
+    let subTickBatalla = 0; let tiempoExtraSnipe = 5; 
     const victorias = DB.getVictorias();
     
     io.emit('batallaInicio', { tiempo: tiempoBatalla, puntos: puntosBatalla, victorias, equipos, participantes: participantesActuales }); 
