@@ -367,6 +367,15 @@ function migrarDesdeJSON(filePath) {
     }
 }
 
+function getConfigVal(clave) {
+    const row = queryOne('SELECT valor FROM config WHERE clave = ?', [clave]);
+    return row ? row.valor : null;
+}
+
+function setConfigVal(clave, valor) {
+    runSql('INSERT INTO config (clave, valor) VALUES (?, ?) ON CONFLICT(clave) DO UPDATE SET valor=excluded.valor', [clave, valor]);
+}
+
 function close() {
     if (saveTimer) clearInterval(saveTimer);
     guardarADisco();

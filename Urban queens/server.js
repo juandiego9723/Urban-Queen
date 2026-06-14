@@ -3,6 +3,7 @@ const http = require('http');
 const { Server } = require('socket.io');
 const path = require('path');
 const DB = require('./db');
+const { WebcastPushConnection } = require('tiktok-live-connector');
 
 const app = express();
 
@@ -25,7 +26,7 @@ function reconstruirEquipos() {
     DB.getAllQueensFull().forEach(q => {
         if (q.activo) {
             const display = (q.apodo && q.apodo.trim()) ? q.apodo.trim() : q.name;
-            equipos[q.name] = { nombre: display.toUpperCase(), color: q.color };
+            equipos[q.name] = { nombre: display.toUpperCase(), color: q.color, regalo_img: q.regalo_img || '' };
         }
     });
 }
@@ -54,6 +55,58 @@ let conociendo = { activo: false, tiempo: 0, chicaActual: 'Ray', orden: [...QUEE
 let intervaloConociendo;
 
 let lealtadUsuarios = {};
+
+// ── TIKTOK LIVE ──
+let tiktokConnection = null;
+let tiktokEstado = 'desconectado';
+let tiktokUsuario = '';
+let tiktokMensajeError = '';
+let regalosDetectados = new Set();
+let catalogoRegalos = [];
+
+// Regalos más comunes de TikTok (respaldo cuando no estás en vivo usando las imágenes locales si existen)
+const CATALOGO_RESPALDO = [
+    { id:5655, name:'Rose',             diamondCount:1,     imageUrl:'/regalos/Rosa.png' },
+    { id:6948, name:'TikTok',           diamondCount:1,     imageUrl:'/regalos/tiktok.png' },
+    { id:7493, name:'GG',               diamondCount:1,     imageUrl:'/regalos/GG.png' },
+    { id:6551, name:'Heart',            diamondCount:1,     imageUrl:'/regalos/corazon.png' },
+    { id:6104, name:'Finger Heart',     diamondCount:5,     imageUrl:'/regalos/Hand Hearts.png' },
+    { id:6683, name:'Like',             diamondCount:1,     imageUrl:'' },
+    { id:7494, name:'Super GG',         diamondCount:99,    imageUrl:'' },
+    { id:6435, name:'Mic',              diamondCount:10,    imageUrl:'' },
+    { id:5652, name:'Sunglasses',       diamondCount:199,   imageUrl:'/regalos/gafas verdes.png' },
+    { id:7305, name:'Hand Heart',       diamondCount:100,   imageUrl:'/regalos/Hand Hearts.png' },
+    { id:6812, name:'Soccer Ball',      diamondCount:1,     imageUrl:'' },
+    { id:8525, name:'Cap',              diamondCount:99,    imageUrl:'/regalos/gorra.png' },
+    { id:6056, name:'Lucky Cat',        diamondCount:199,   imageUrl:'' },
+    { id:7394, name:'Ice Cream Cone',   diamondCount:1,     imageUrl:'' },
+    { id:7560, name:'Cake',             diamondCount:299,   imageUrl:'' },
+    { id:8121, name:'Crown',            diamondCount:99,    imageUrl:'/regalos/corona.png' },
+    { id:7572, name:'Yacht',            diamondCount:1000,  imageUrl:'' },
+    { id:8744, name:'Airplane',         diamondCount:1000,  imageUrl:'' },
+    { id:8913, name:'Galaxy',           diamondCount:1000,  imageUrl:'/regalos/Galaxy.png' },
+    { id:7028, name:'Concert',          diamondCount:500,   imageUrl:'' },
+    { id:6557, name:'Lion',             diamondCount:29999, imageUrl:'' },
+    { id:7071, name:'TikTok Universe',  diamondCount:44999, imageUrl:'/regalos/TikTok Universe.png' },
+    { id:8604, name:'Island',           diamondCount:15000, imageUrl:'' },
+    { id:6468, name:'Drama Queen',      diamondCount:5000,  imageUrl:'' },
+    { id:7400, name:'Sports Car',       diamondCount:7000,  imageUrl:'' },
+    { id:7399, name:'Bus',              diamondCount:1000,  imageUrl:'' },
+    { id:8614, name:'Diamond Gun',      diamondCount:2999,  imageUrl:'/regalos/Diamond Gun.png' },
+    { id:6648, name:'Perfume',          diamondCount:20,    imageUrl:'' },
+    { id:7100, name:'Power Pump',       diamondCount:199,   imageUrl:'' },
+    { id:8215, name:'Little Ghost',     diamondCount:299,   imageUrl:'' },
+    { id:7781, name:'Star',             diamondCount:10,    imageUrl:'' },
+    { id:8700, name:'Boxing Gloves',    diamondCount:299,   imageUrl:'' },
+    { id:8701, name:'Corgi',            diamondCount:299,   imageUrl:'/regalos/Corgi.png' },
+    { id:9002, name:'Doughnut',         diamondCount:30,    imageUrl:'/regalos/dona.png' },
+    { id:9003, name:'Headphones',       diamondCount:20,    imageUrl:'' },
+].sort((a,b) => a.name.localeCompare(b.name));
+
+
+ // { id, name, diamondCount, imageUrl }
+
+
 
 // ── DINÁMICAS PERSONALIZADAS ──
 let dinamicaActiva = null;
@@ -315,13 +368,25 @@ setInterval(procesarPuntosEnLote, 300);
 app.all('/update', (req, res) => {
     let nombre = req.query.nombre || (req.body && req.body.nombre);
     const puntos = parseInt(req.query.puntos || (req.body && req.body.puntos));
-    const viewer = req.query.viewer || (req.body && req.body.viewer); 
+    const viewer = req.query.viewer || (req.body && req.body.viewer);
+    const avatar = req.query.avatar || (req.body && req.body.avatar) || '';
     
     nombre = resolverNombre(nombre);
     
     if (nombre && !isNaN(puntos)) {
-        if (viewer && puntos > 0) lealtadUsuarios[viewer] = nombre; 
+        if (viewer && puntos > 0) lealtadUsuarios[viewer] = nombre;
         if (puntos !== 0) queueUpdate.push({ nombre, puntos });
+        // Emitir inmediatamente para el feed de espectadores en batalla
+        if (viewer && puntos > 0 && nombre) {
+            const eq = equipos[nombre] || {};
+            io.emit('nuevoRegalo', {
+                nombre,
+                viewer,
+                avatar,
+                giftImg: eq.regalo_img || '',
+                queenColor: eq.color || '#fff'
+            });
+        }
         return res.send("OK");
     }
     res.status(400).send("Error");
@@ -329,11 +394,14 @@ app.all('/update', (req, res) => {
 
 app.all('/update-auto', (req, res) => {
     const viewer = req.query.viewer || (req.body && req.body.viewer);
+    const avatar = req.query.avatar || (req.body && req.body.avatar) || '';
     const puntos = parseInt(req.query.puntos || (req.body && req.body.puntos));
     if (!isNaN(puntos) && puntos > 0) {
         let queenAsignada = (viewer && lealtadUsuarios[viewer]) ? lealtadUsuarios[viewer] : null;
         if (queenAsignada) {
             queueUpdate.push({ nombre: queenAsignada, puntos });
+            const eq = equipos[queenAsignada] || {};
+            if (viewer) io.emit('nuevoRegalo', { nombre: queenAsignada, viewer, avatar, giftImg: eq.regalo_img || '', queenColor: eq.color || '#fff' });
             return res.send("Asignado a " + queenAsignada);
         } else {
             queueUpdate.push({ nombre: null, puntos });
@@ -341,6 +409,163 @@ app.all('/update-auto', (req, res) => {
         }
     }
     res.status(400).send("Ignorado");
+});
+
+// ── TIKTOK LIVE: Lógica de Conexión ──
+function procesarRegaloTikTok(data) {
+    try {
+        const viewer   = data.uniqueId || 'anon';
+        const avatar   = data.profilePictureUrl || '';
+        const giftName = (data.giftName || '').trim();
+        const coins    = data.diamondCount || 1;
+
+        // Auto-detectar el regalo y notificar al panel
+        if (giftName && !regalosDetectados.has(giftName)) {
+            regalosDetectados.add(giftName);
+            io.emit('regaloDetectado', giftName);
+        }
+
+        const mapaRaw = DB.getConfigVal('tiktok_regalo_mapa');
+        const mapa = mapaRaw ? JSON.parse(mapaRaw) : {};
+        let queenActivadora = mapa[giftName] || null;
+
+        if (queenActivadora && QUEENS.includes(queenActivadora)) {
+            lealtadUsuarios[viewer] = queenActivadora;
+            const eq = equipos[queenActivadora] || {};
+            const pts = eq.regalo_pts || coins;
+            queueUpdate.push({ nombre: queenActivadora, puntos: pts });
+            io.emit('nuevoRegalo', { nombre: queenActivadora, viewer, avatar, giftImg: eq.regalo_img || '', queenColor: eq.color || '#fff' });
+        } else {
+            const queenAsignada = lealtadUsuarios[viewer] || null;
+            if (queenAsignada && QUEENS.includes(queenAsignada)) {
+                queueUpdate.push({ nombre: queenAsignada, puntos: coins });
+                const eq = equipos[queenAsignada] || {};
+                io.emit('nuevoRegalo', { nombre: queenAsignada, viewer, avatar, giftImg: eq.regalo_img || '', queenColor: eq.color || '#fff' });
+            }
+        }
+    } catch(e) {
+        console.error('❌ Error procesando regalo TikTok:', e.message);
+    }
+}
+
+function conectarTikTok(usuario) {
+    if (tiktokConnection) {
+        try { tiktokConnection.disconnect(); } catch(e) {}
+        tiktokConnection = null;
+    }
+
+    tiktokUsuario = usuario;
+    tiktokEstado = 'conectando';
+    tiktokMensajeError = '';
+    io.emit('tiktokEstado', { estado: tiktokEstado, usuario: tiktokUsuario });
+    console.log(`🔗 Conectando a TikTok Live: @${usuario}`);
+
+    tiktokConnection = new WebcastPushConnection(usuario, {
+        processInitialData: false,
+        enableExtendedGiftInfo: true
+    });
+
+    tiktokConnection.connect().then(async () => {
+        tiktokEstado = 'conectado';
+        console.log(`✅ Conectado a TikTok Live: @${usuario}`);
+        DB.setConfigVal('tiktok_usuario', usuario);
+        io.emit('tiktokEstado', { estado: tiktokEstado, usuario: tiktokUsuario });
+        // Cargar catálogo de regalos disponibles
+        try {
+            const gifts = await tiktokConnection.getAvailableGifts();
+            if (gifts && gifts.length > 0) {
+                catalogoRegalos = gifts.map(g => ({
+                    id: g.id,
+                    name: g.name,
+                    diamondCount: g.diamond_count || g.diamondCount || 0,
+                    imageUrl: g.image?.url_list?.[0] || g.image?.url || ''
+                })).sort((a,b) => a.name.localeCompare(b.name));
+                console.log(`🎁 Catálogo de regalos cargado: ${catalogoRegalos.length} regalos`);
+                io.emit('catalogoCargado', catalogoRegalos.length);
+            }
+        } catch(e) {
+            console.warn('⚠️ No se pudo cargar el catálogo de regalos:', e.message);
+        }
+    }).catch(err => {
+        tiktokEstado = 'error';
+        tiktokMensajeError = err.message || 'Error desconocido';
+        console.error(`❌ Error conectando a TikTok: ${tiktokMensajeError}`);
+        io.emit('tiktokEstado', { estado: tiktokEstado, usuario: tiktokUsuario, error: tiktokMensajeError });
+    });
+
+
+    // Evento de regalo (gifType=1 son los que se pueden hacer streak)
+    tiktokConnection.on('gift', (data) => {
+        // Para regalos streak, solo contar cuando termina el combo (repeatEnd)
+        if (data.giftType === 1 && !data.repeatEnd) return;
+        procesarRegaloTikTok(data);
+    });
+
+    tiktokConnection.on('disconnected', () => {
+        tiktokEstado = 'desconectado';
+        console.log('⚠️ TikTok Live desconectado');
+        io.emit('tiktokEstado', { estado: tiktokEstado, usuario: tiktokUsuario });
+    });
+
+    tiktokConnection.on('error', (err) => {
+        tiktokMensajeError = err.message || 'Error';
+        tiktokEstado = 'error';
+        io.emit('tiktokEstado', { estado: tiktokEstado, usuario: tiktokUsuario, error: tiktokMensajeError });
+    });
+}
+
+// ── ENDPOINTS TIKTOK ──
+app.all('/tiktok/conectar', (req, res) => {
+    const usuario = (req.query.usuario || (req.body && req.body.usuario) || '').replace('@', '').trim();
+    if (!usuario) return res.status(400).send('Falta usuario de TikTok');
+    conectarTikTok(usuario);
+    res.send('Conectando...');
+});
+
+app.all('/tiktok/desconectar', (req, res) => {
+    if (tiktokConnection) {
+        try { tiktokConnection.disconnect(); } catch(e) {}
+        tiktokConnection = null;
+    }
+    tiktokEstado = 'desconectado';
+    tiktokUsuario = '';
+    io.emit('tiktokEstado', { estado: tiktokEstado, usuario: '' });
+    res.send('OK');
+});
+
+app.get('/api/tiktok/estado', (req, res) => {
+    res.json({ estado: tiktokEstado, usuario: tiktokUsuario, error: tiktokMensajeError });
+});
+
+app.post('/api/tiktok/mapa', (req, res) => {
+    const body = req.body || {};
+    const mapa = body.mapa; // JSON object { "GG": "Amy", ... }
+    if (!mapa || typeof mapa !== 'object') return res.status(400).send('Falta mapa');
+    DB.setConfigVal('tiktok_regalo_mapa', JSON.stringify(mapa));
+    res.send('OK');
+});
+
+app.get('/api/tiktok/mapa', (req, res) => {
+    const raw = DB.getConfigVal('tiktok_regalo_mapa');
+    res.json(raw ? JSON.parse(raw) : {});
+});
+
+app.get('/api/tiktok/regalos-detectados', (req, res) => {
+    res.json([...regalosDetectados].sort());
+});
+
+app.all('/api/tiktok/regalos-detectados/limpiar', (req, res) => {
+    regalosDetectados.clear();
+    res.send('OK');
+});
+
+app.get('/api/tiktok/catalogo', (req, res) => {
+    const q = (req.query.q || '').toLowerCase();
+    const fuente = catalogoRegalos.length > 0 ? catalogoRegalos : CATALOGO_RESPALDO;
+    const lista = q
+        ? fuente.filter(g => g.name.toLowerCase().includes(q))
+        : fuente;
+    res.json({ regalos: lista.slice(0, 80), esCatalogoCompleto: catalogoRegalos.length > 0 });
 });
 
 function saltarSiguienteChica(chicaEspecifica = null) { 

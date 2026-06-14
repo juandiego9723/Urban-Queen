@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="es">
     <head>
         <title>Urban Queens — Control</title>
@@ -406,6 +406,45 @@
             </div>
             <!-- ══ SISTEMA ══ -->
             <div id="tab-sistema" class="tab-content">
+                <!-- TikTok Live Card -->
+                <div class="card">
+                    <div class="card-title">
+                        🎵 <span class="card-title-accent">TikTok Live — Conexión Directa</span>
+                    </div>
+                    <div class="col">
+                        <div id="tiktok-estado-box" class="info-box" style="display:flex;align-items:center;gap:10px">
+                            <div id="tiktok-dot" style="width:10px;height:10px;border-radius:50%;background:#7e8fa6;flex-shrink:0"></div>
+                            <span id="tiktok-estado-txt" style="font-size:13px;font-weight:600">Desconectado</span>
+                        </div>
+                        <div class="row">
+                            <input id="tiktok-user" class="input" placeholder="Usuario de TikTok (sin @)" style="flex:1">
+                            <button class="btn btn-success" onclick="conectarTikTokPanel()">🔗 Conectar</button>
+                            <button class="btn btn-danger" onclick="hacerFetch('/tiktok/desconectar')">✖ Desconectar</button>
+                        </div>
+
+                        <div class="divider"></div>
+                        <div class="card-title" style="margin-bottom:4px">🎁 Regalos detectados en vivo</div>
+                        <div class="info-box" style="font-size:11px;margin-bottom:8px">
+                            Cuando alguien mande un regalo durante el live, aparecerá aquí automáticamente. Selecciona la queen que corresponde y guarda.
+                        </div>
+                        <div id="regalos-detectados-lista" style="display:flex;flex-direction:column;gap:6px;min-height:32px">
+                            <span style="color:var(--muted);font-size:12px">Ningún regalo detectado aún. Conéctate al live y espera los primeros regalos.</span>
+                        </div>
+                        <div class="row" style="margin-top:4px">
+                            <button class="btn btn-ghost btn-sm" onclick="hacerFetch('/api/tiktok/regalos-detectados/limpiar');document.getElementById('regalos-detectados-lista').innerHTML='<span style=\'color:var(--muted);font-size:12px\'>Lista limpiada.</span>'">🗑 Limpiar lista</button>
+                        </div>
+
+                        <div class="divider"></div>
+                        <div class="card-title" style="margin-bottom:4px">⚙️ Mapa de regalos guardado</div>
+                        <div class="info-box" style="font-size:11px;margin-bottom:8px">
+                            Puedes añadir manualmente si conoces el nombre exacto del regalo. O usa los detectados arriba.
+                        </div>
+                        <div id="mapa-regalos-lista" class="col" style="gap:7px"></div>
+                        <button class="btn btn-ghost btn-sm" onclick="agregarFilaMapa()" style="align-self:flex-start">+ Añadir manualmente</button>
+                        <button class="btn btn-primary btn-full" onclick="guardarMapaRegalos()">💾 Guardar mapa de regalos</button>
+                    </div>
+                </div>
+
                 <div class="card">
                     <div class="card-title">
                         ⚙️ <span class="card-title-accent">Sistema</span>
@@ -442,6 +481,7 @@
                     </div>
                 </div>
             </div>
+
             <!-- ══ DINÁMICAS ══ -->
             <div id="tab-dinamicas" class="tab-content">
                 <div class="card">
@@ -641,6 +681,31 @@ const PAGES = [
 
 let editingQueen = null;
 
+// Lista de imágenes disponibles en /public/regalos/
+const REGALO_IMGS = [
+    'GG.png','tiktok.png','Rosa.png','pistola.png','Rosa 10.png',
+    'TikTok Universe.png','Diamond Gun.png','Dragon Crown.png','Galaxy.png',
+    'Flying Jets.png','Unicorn Fantasy.png','Meteor Shower.png','Manifesting.png',
+    'Hand Hearts.png','Mishka Bear.png','Leon the Kitten.png','DJ Gafas.png',
+    'Confetti.png','Corgi.png','ballena.png','capibara.png','ciervo.png',
+    'cisne.png','corazon.png','corona de flores.png','corona.png','dona.png',
+    'fuegos artificiales.png','gafas verdes.png','gorra.png','manilla.png',
+    'melena de leon.png','msriposazs 299.png','pulpo.png','sombrero vaquero.png','tiktok corona.png'
+];
+
+function prevRegalo(queenName) {
+    const sel = document.getElementById('edit-ri');
+    const img = document.getElementById('prev-regalo-' + queenName);
+    if (!sel || !img) return;
+    if (sel.value) {
+        img.src = '/regalos/' + encodeURIComponent(sel.value);
+        img.style.display = 'block';
+    } else {
+        img.style.display = 'none';
+    }
+}
+
+
 function isLightColor(hex) {
     try { const r=parseInt(hex.slice(1,3),16),g=parseInt(hex.slice(3,5),16),b=parseInt(hex.slice(5,7),16); return (r*299+g*587+b*114)/1000>140; } catch(e){return false;}
 }
@@ -669,7 +734,218 @@ async function init() {
     cargarSonidos();
     cargarBailarinas();
     cargarDinamicas();
+    cargarTikTokPanel();
 }
+
+// ── TikTok Live Panel ──
+function actualizarEstadoTikTok(data) {
+    const dot = document.getElementById('tiktok-dot');
+    const txt = document.getElementById('tiktok-estado-txt');
+    if (!dot || !txt) return;
+    const colores = { conectado:'#39FF14', conectando:'#FFD700', desconectado:'#7e8fa6', error:'#ff4444' };
+    const labels  = { conectado:'✅ Conectado', conectando:'⏳ Conectando...', desconectado:'⚫ Desconectado', error:'❌ Error' };
+    dot.style.background = colores[data.estado] || '#7e8fa6';
+    let label = labels[data.estado] || data.estado;
+    if (data.usuario) label += ` → @${data.usuario}`;
+    if (data.error) label += ` (${data.error})`;
+    txt.textContent = label;
+}
+
+async function cargarTikTokPanel() {
+    const estado = await (await fetch('/api/tiktok/estado')).json();
+    actualizarEstadoTikTok(estado);
+    if (estado.usuario) document.getElementById('tiktok-user').value = estado.usuario;
+    const mapa = await (await fetch('/api/tiktok/mapa')).json();
+    renderMapaRegalos(mapa);
+    // Cargar regalos ya detectados (si el server llevaba un rato corriendo)
+    const detectados = await (await fetch('/api/tiktok/regalos-detectados')).json();
+    const c = document.getElementById('regalos-detectados-lista');
+    if (detectados.length > 0) {
+        c.innerHTML = '';
+        detectados.forEach(g => renderRegaloDetectado(g, mapa));
+    }
+}
+
+function renderRegaloDetectado(giftName, mapaActual) {
+    const c = document.getElementById('regalos-detectados-lista');
+    // Evitar duplicados
+    if (document.getElementById('gift-chip-' + CSS.escape(giftName))) return;
+    // Quitar el placeholder de "ningún regalo"
+    const placeholder = c.querySelector('span');
+    if (placeholder) placeholder.remove();
+
+    const queenAsignada = (mapaActual || {})[giftName] || '';
+    const fila = document.createElement('div');
+    fila.id = 'gift-chip-' + giftName;
+    fila.style.cssText = 'display:flex;align-items:center;gap:8px;background:var(--surface2);border-radius:10px;padding:7px 10px;border:1px solid var(--border)';
+    fila.innerHTML = `
+        <span style="font-size:13px;font-weight:700;color:var(--fg);flex:1">🎁 ${giftName}</span>
+        <select class="select" style="flex:1;font-size:12px" onchange="asignarRegaloRapido('${giftName.replace(/'/g,"\\'")}', this.value)">
+            <option value="">— Sin asignar —</option>
+            ${QUEENS.map(q => `<option value="${q}" ${q===queenAsignada?'selected':''}>${q}</option>`).join('')}
+        </select>`;
+    c.appendChild(fila);
+}
+
+async function asignarRegaloRapido(giftName, queen) {
+    // Leer mapa actual, actualizar y guardar
+    const mapa = await (await fetch('/api/tiktok/mapa')).json();
+    if (queen) mapa[giftName] = queen;
+    else delete mapa[giftName];
+    await fetch('/api/tiktok/mapa', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ mapa })
+    });
+    // Refrescar la tabla del mapa guardado
+    renderMapaRegalos(mapa);
+}
+
+socket.on('tiktokEstado', actualizarEstadoTikTok);
+socket.on('regaloDetectado', (giftName) => {
+    fetch('/api/tiktok/mapa').then(r=>r.json()).then(mapa => {
+        renderRegaloDetectado(giftName, mapa);
+    });
+});
+
+
+
+let _catalogoCache = [];
+
+async function cargarCatalogo() {
+    if (_catalogoCache.length > 0) return _catalogoCache;
+    const data = await (await fetch('/api/tiktok/catalogo')).json();
+    _catalogoCache = data.regalos || [];
+    return _catalogoCache;
+}
+
+function agregarFilaMapa(giftName='', queen='', giftData=null) {
+    const c = document.getElementById('mapa-regalos-lista');
+    const uid = 'mapa-fila-' + Date.now() + '-' + Math.random().toString(36).slice(2);
+    const img = giftData && giftData.imageUrl ? `<img src="${giftData.imageUrl}" style="width:22px;height:22px;object-fit:contain;border-radius:4px">` : '';
+    const coins = giftData ? `<span style="font-size:10px;color:var(--muted)">${giftData.diamondCount} 💎</span>` : '';
+
+    const fila = document.createElement('div');
+    fila.className = 'row';
+    fila.id = uid;
+    fila.style.gap = '6px';
+    fila.style.alignItems = 'center';
+    fila.innerHTML = `
+        <div style="flex:1.5;position:relative">
+            <div id="${uid}-display" style="display:flex;align-items:center;gap:8px;background:var(--surface3);border:1px solid var(--border);border-radius:10px;padding:7px 10px;cursor:pointer;min-height:40px" onclick="abrirBuscadorRegalo('${uid}')">
+                <span id="${uid}-img">${img}</span>
+                <span id="${uid}-label" style="font-size:13px;font-weight:600;flex:1">${giftName || 'Elegir un regalo...'}</span>
+                ${coins ? `<span id="${uid}-coins">${coins}</span>` : `<span id="${uid}-coins"></span>`}
+                <span style="color:var(--muted)">▾</span>
+            </div>
+            <input type="hidden" class="mapa-gift" id="${uid}-val" value="${giftName}">
+            <div id="${uid}-dropdown" style="display:none;position:absolute;top:44px;left:0;right:0;background:var(--surface2);border:1px solid var(--border);border-radius:12px;z-index:999;box-shadow:0 8px 24px rgba(0,0,0,0.4);max-height:260px;overflow:hidden;flex-direction:column">
+                <div style="padding:8px">
+                    <input id="${uid}-search" class="input" placeholder="Buscar regalo..." style="width:100%;font-size:13px" oninput="filtrarCatalogo('${uid}', this.value)" autocomplete="off">
+                </div>
+                <div id="${uid}-results" style="overflow-y:auto;max-height:200px;padding:4px 8px 8px"></div>
+            </div>
+        </div>
+        <select class="select mapa-queen" style="flex:1">
+            ${QUEENS.map(q=>`<option value="${q}" ${q===queen?'selected':''}>${q}</option>`).join('')}
+        </select>
+        <button class="btn btn-danger btn-sm" onclick="document.getElementById('${uid}').remove()">🗑</button>`;
+    c.appendChild(fila);
+    // Cerrar dropdown al hacer clic fuera
+    document.addEventListener('click', (e) => {
+        const dd = document.getElementById(uid+'-dropdown');
+        const disp = document.getElementById(uid+'-display');
+        if (dd && disp && !dd.contains(e.target) && !disp.contains(e.target)) dd.style.display = 'none';
+    });
+}
+
+async function abrirBuscadorRegalo(uid) {
+    const dd = document.getElementById(uid+'-dropdown');
+    if (!dd) return;
+    const isOpen = dd.style.display === 'flex';
+    dd.style.display = isOpen ? 'none' : 'flex';
+    if (!isOpen) {
+        const searchEl = document.getElementById(uid+'-search');
+        if (searchEl) { searchEl.value = ''; searchEl.focus(); }
+        await filtrarCatalogo(uid, '');
+    }
+}
+
+async function filtrarCatalogo(uid, q) {
+    const results = document.getElementById(uid+'-results');
+    if (!results) return;
+    results.innerHTML = '<div style="padding:8px;color:var(--muted);font-size:12px">Cargando...</div>';
+    let lista;
+    if (_catalogoCache.length > 0) {
+        lista = q ? _catalogoCache.filter(g => g.name.toLowerCase().includes(q.toLowerCase())) : _catalogoCache;
+        lista = lista.slice(0, 80);
+    } else {
+        const url = q ? `/api/tiktok/catalogo?q=${encodeURIComponent(q)}` : '/api/tiktok/catalogo';
+        const data = await (await fetch(url)).json();
+        lista = data.regalos || [];
+    }
+    if (lista.length === 0) {
+        results.innerHTML = '<div style="padding:8px;color:var(--muted);font-size:12px">Sin resultados</div>';
+        return;
+    }
+    results.innerHTML = lista.map(g => `
+        <div onclick="seleccionarRegalo('${uid}', ${JSON.stringify(g).replace(/"/g, '&quot;')})" 
+             style="display:flex;align-items:center;gap:10px;padding:7px 8px;border-radius:8px;cursor:pointer;transition:background 0.15s"
+             onmouseover="this.style.background='var(--surface3)'" onmouseout="this.style.background=''">
+            ${g.imageUrl ? `<img src="${g.imageUrl}" style="width:30px;height:30px;object-fit:contain;border-radius:6px;flex-shrink:0" onerror="this.style.display='none'">` : '<div style="width:30px;height:30px;background:var(--surface3);border-radius:6px;flex-shrink:0"></div>'}
+            <div style="flex:1;min-width:0">
+                <div style="font-size:13px;font-weight:700;color:var(--fg);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${g.name}</div>
+                <div style="font-size:11px;color:var(--muted)">${g.diamondCount} 💎</div>
+            </div>
+        </div>`).join('');
+}
+
+function seleccionarRegalo(uid, gift) {
+    document.getElementById(uid+'-val').value = gift.name;
+    document.getElementById(uid+'-label').textContent = gift.name;
+    document.getElementById(uid+'-img').innerHTML = gift.imageUrl
+        ? `<img src="${gift.imageUrl}" style="width:22px;height:22px;object-fit:contain;border-radius:4px">`
+        : '';
+    document.getElementById(uid+'-coins').innerHTML = `<span style="font-size:10px;color:var(--muted)">${gift.diamondCount} 💎</span>`;
+    document.getElementById(uid+'-dropdown').style.display = 'none';
+}
+
+function renderMapaRegalos(mapa) {
+    document.getElementById('mapa-regalos-lista').innerHTML = '';
+    const entries = Object.entries(mapa);
+    if (entries.length === 0) { agregarFilaMapa(); return; }
+    entries.forEach(([g, q]) => agregarFilaMapa(g, q));
+    // Precargar catálogo en background
+    cargarCatalogo();
+}
+
+async function guardarMapaRegalos() {
+    const mapa = {};
+    document.querySelectorAll('#mapa-regalos-lista .row').forEach(fila => {
+        const gInput = fila.querySelector('.mapa-gift');
+        const qSelect = fila.querySelector('.mapa-queen');
+        if (gInput && qSelect && gInput.value.trim() && qSelect.value) {
+            mapa[gInput.value.trim()] = qSelect.value;
+        }
+    });
+    await fetch('/api/tiktok/mapa', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ mapa })
+    });
+    alert('✅ Mapa de regalos guardado');
+}
+
+
+function conectarTikTokPanel() {
+    const usuario = document.getElementById('tiktok-user').value.replace('@','').trim();
+    if (!usuario) return alert('Escribe tu usuario de TikTok');
+    fetch('/tiktok/conectar?usuario=' + encodeURIComponent(usuario));
+    actualizarEstadoTikTok({ estado: 'conectando', usuario });
+}
+
+socket.on('tiktokEstado', actualizarEstadoTikTok);
+
 
 function renderPantallas() {
     const c = document.getElementById('page-grid');
@@ -782,10 +1058,19 @@ async function cargarBailarinas() {
                     <span class="label" style="min-width:52px">Apodo</span>
                     <input id="edit-a" class="input" value="${q.apodo||''}" placeholder="Apodo en pantalla (opcional)..." style="flex:1">
                 </div>
-                <div class="row">
-                    <span class="label" style="min-width:52px">Regalo</span>
-                    <input id="edit-ri" class="input" value="${q.regalo_img||''}" placeholder="URL o nombre de imagen..." style="flex:1">
-                    <input id="edit-rp" type="number" class="input" value="${q.regalo_pts||0}" placeholder="Pts" style="width:64px" min="0">
+                <div style="display:flex;flex-direction:column;gap:6px">
+                    <div class="row" style="align-items:center">
+                        <span class="label" style="min-width:52px">Regalo</span>
+                        <div style="flex:1;display:flex;gap:8px;align-items:center">
+                            <select id="edit-ri" class="select" style="flex:1" onchange="prevRegalo('${q.name}')">
+                                <option value="">— Sin imagen —</option>
+                                ${REGALO_IMGS.map(img => `<option value="${img}" ${q.regalo_img===img?'selected':''}>${img.replace('.png','').replace('.jpg','')}</option>`).join('')}
+                            </select>
+                            <img id="prev-regalo-${q.name}" src="${q.regalo_img ? '/regalos/'+encodeURIComponent(q.regalo_img) : ''}"
+                                 style="width:40px;height:40px;object-fit:contain;border-radius:8px;background:var(--surface3);padding:3px;${q.regalo_img ? '' : 'display:none'}">
+                        </div>
+                        <input id="edit-rp" type="number" class="input" value="${q.regalo_pts||0}" placeholder="Pts" style="width:64px" min="0">
+                    </div>
                 </div>
                 <div class="row">
                     <span class="label" style="min-width:52px">Color</span>
