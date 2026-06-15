@@ -314,8 +314,8 @@ function procesarPuntosEnLote() {
         }
         
         if (timerBaile.activo) {
-            if (puntos === 30 && nombre && QUEENS.includes(nombre) && nombre !== timerBaile.chicaActual) {
-                saltarSiguienteChica(nombre);
+            if (t.saltaTurno && QUEENS.includes(t.saltaTurno) && t.saltaTurno !== timerBaile.chicaActual) {
+                saltarSiguienteChica(t.saltaTurno);
             } else if (puntos > 0) { 
                 timerBaile.tiempo += (puntos * 3); 
             }
@@ -417,7 +417,12 @@ function procesarRegaloTikTok(data) {
         const viewer   = data.uniqueId || 'anon';
         const avatar   = data.profilePictureUrl || '';
         const giftName = (data.giftName || '').trim();
-        const coins    = data.diamondCount || 1;
+        
+        // Multiplicar por el repeatCount para que los streaks (combos) sumen el total correcto
+        const baseDiamond = data.diamondCount || 1;
+        const repeat = data.repeatCount || 1;
+        const coins = baseDiamond * repeat;
+        const giftImgSrc = data.giftPictureUrl || '';
 
         // Auto-detectar el regalo y notificar al panel
         if (giftName && !regalosDetectados.has(giftName)) {
@@ -429,18 +434,30 @@ function procesarRegaloTikTok(data) {
         const mapa = mapaRaw ? JSON.parse(mapaRaw) : {};
         let queenActivadora = mapa[giftName] || null;
 
+        const timerMapaRaw = DB.getConfigVal('tiktok_timer_mapa');
+        const timerMapa = timerMapaRaw ? JSON.parse(timerMapaRaw) : {};
+        let queenSalto = timerMapa[giftName] || null;
+
         if (queenActivadora && QUEENS.includes(queenActivadora)) {
             lealtadUsuarios[viewer] = queenActivadora;
             const eq = equipos[queenActivadora] || {};
-            const pts = eq.regalo_pts || coins;
-            queueUpdate.push({ nombre: queenActivadora, puntos: pts });
-            io.emit('nuevoRegalo', { nombre: queenActivadora, viewer, avatar, giftImg: eq.regalo_img || '', queenColor: eq.color || '#fff' });
+            // Si tiene puntos configurados, multiplicarlo por la racha. Si no, usar los coins totales.
+            const pts = eq.regalo_pts ? (eq.regalo_pts * repeat) : coins;
+            // Quitamos esActivador de acá porque ahora el salto se maneja por queenSalto independiente
+            queueUpdate.push({ nombre: queenActivadora, puntos: pts, saltaTurno: queenSalto });
+            io.emit('nuevoRegalo', { nombre: queenActivadora, viewer, avatar, giftImg: eq.regalo_img || giftImgSrc, queenColor: eq.color || '#fff' });
         } else {
             const queenAsignada = lealtadUsuarios[viewer] || null;
             if (queenAsignada && QUEENS.includes(queenAsignada)) {
-                queueUpdate.push({ nombre: queenAsignada, puntos: coins });
+                queueUpdate.push({ nombre: queenAsignada, puntos: coins, saltaTurno: queenSalto });
                 const eq = equipos[queenAsignada] || {};
-                io.emit('nuevoRegalo', { nombre: queenAsignada, viewer, avatar, giftImg: eq.regalo_img || '', queenColor: eq.color || '#fff' });
+                io.emit('nuevoRegalo', { nombre: queenAsignada, viewer, avatar, giftImg: giftImgSrc, queenColor: eq.color || '#fff' });
+            } else if (queenSalto && QUEENS.includes(queenSalto)) {
+                // Si mandan un regalo de salto PERO no tienen lealtad asignada aún,
+                // enviamos los puntos directo a la queenSalto para no perderlos, y ejecutamos el salto.
+                queueUpdate.push({ nombre: queenSalto, puntos: coins, saltaTurno: queenSalto });
+                const eq = equipos[queenSalto] || {};
+                io.emit('nuevoRegalo', { nombre: queenSalto, viewer, avatar, giftImg: giftImgSrc, queenColor: eq.color || '#fff' });
             }
         }
     } catch(e) {
@@ -472,7 +489,7 @@ function conectarTikTok(usuario) {
         io.emit('tiktokEstado', { estado: tiktokEstado, usuario: tiktokUsuario });
         // Cargar catálogo de regalos disponibles
         try {
-            const gifts = await tiktokConnection.getAvailableGifts();
+            const gifts = await tiktokConnection.fetchAvailableGifts();
             if (gifts && gifts.length > 0) {
                 catalogoRegalos = gifts.map(g => ({
                     id: g.id,
@@ -538,10 +555,21 @@ app.get('/api/tiktok/estado', (req, res) => {
 });
 
 app.post('/api/tiktok/mapa', (req, res) => {
-    const body = req.body || {};
-    const mapa = body.mapa; // JSON object { "GG": "Amy", ... }
-    if (!mapa || typeof mapa !== 'object') return res.status(400).send('Falta mapa');
+    const mapa = req.body.mapa || req.body;
     DB.setConfigVal('tiktok_regalo_mapa', JSON.stringify(mapa));
+    io.emit('mapaRegalosCambiado', mapa);
+    res.send('OK');
+});
+
+app.get('/api/tiktok/timer_mapa', (req, res) => {
+    const v = DB.getConfigVal('tiktok_timer_mapa');
+    res.json(v ? JSON.parse(v) : {});
+});
+
+app.post('/api/tiktok/timer_mapa', (req, res) => {
+    const mapa = req.body.mapa || req.body;
+    DB.setConfigVal('tiktok_timer_mapa', JSON.stringify(mapa));
+    io.emit('mapaTimerCambiado', mapa);
     res.send('OK');
 });
 
@@ -561,14 +589,24 @@ app.all('/api/tiktok/regalos-detectados/limpiar', (req, res) => {
 
 app.get('/api/tiktok/catalogo', (req, res) => {
     const q = (req.query.q || '').toLowerCase();
-    const fuente = catalogoRegalos.length > 0 ? catalogoRegalos : CATALOGO_RESPALDO;
+    
+    let fuente = CATALOGO_RESPALDO;
+    if (catalogoRegalos.length > 0) {
+        // Combinar asegurando que los del respaldo (con nuestras imágenes y precios verificados) prevalezcan
+        const nombresRespaldo = new Set(CATALOGO_RESPALDO.map(r => r.name.toLowerCase()));
+        const extra = catalogoRegalos.filter(r => !nombresRespaldo.has(r.name.toLowerCase()));
+        fuente = [...CATALOGO_RESPALDO, ...extra].sort((a,b) => a.name.localeCompare(b.name));
+    }
+
     const lista = q
         ? fuente.filter(g => g.name.toLowerCase().includes(q))
         : fuente;
-    res.json({ regalos: lista.slice(0, 80), esCatalogoCompleto: catalogoRegalos.length > 0 });
+    
+    res.json({ regalos: lista, esCatalogoCompleto: catalogoRegalos.length > 0 });
 });
 
 function saltarSiguienteChica(chicaEspecifica = null) { 
+    if (timerBaile.orden.length === 0) timerBaile.orden = [...QUEENS];
     if (chicaEspecifica) timerBaile.chicaActual = chicaEspecifica; 
     else { let idx = timerBaile.orden.indexOf(timerBaile.chicaActual); timerBaile.chicaActual = timerBaile.orden[(idx + 1) % timerBaile.orden.length]; } 
     timerBaile.estado = 'transicion'; 
@@ -579,6 +617,7 @@ function saltarSiguienteChica(chicaEspecifica = null) {
 
 app.all('/timer/start', (req, res) => { 
     const tiempoBase = parseInt(req.query.t) || 30;
+    timerBaile.orden = [...QUEENS];
     timerBaile.activo = true; timerBaile.tiempo = tiempoBase; timerBaile.chicaActual = QUEENS[0] || 'Ray'; timerBaile.estado = 'bailando'; 
     tiempoAcumulado = {}; QUEENS.forEach(q => tiempoAcumulado[q] = 0);
     let subTickBaile = 0; let snipeBaile = 3; clearInterval(intervaloTimerBaile); 
@@ -605,9 +644,10 @@ app.all('/timer/start', (req, res) => {
 app.all('/timer/stop', (req, res) => { timerBaile.activo = false; timerBaile.estado = 'inactivo'; clearInterval(intervaloTimerBaile); io.emit('timerCancelado'); res.send("OK"); });
 app.all('/timer/skip', (req, res) => { let target = req.query.c; if(timerBaile.activo && target) saltarSiguienteChica(target); res.send("OK"); });
 
-function saltarConociendo(chicaEspecifica = null) { if (chicaEspecifica) conociendo.chicaActual = chicaEspecifica; else { let idx = conociendo.orden.indexOf(conociendo.chicaActual); conociendo.chicaActual = conociendo.orden[(idx + 1) % conociendo.orden.length]; } conociendo.estado = 'transicion'; conociendo.tiempoTransicion = 5; conociendo.puntos = 0; io.emit('conociendoTransicion', { chica: conociendo.chicaActual, tiempo: conociendo.tiempoTransicion }); }
+function saltarConociendo(chicaEspecifica = null) { if (conociendo.orden.length === 0) conociendo.orden = [...QUEENS]; if (chicaEspecifica) conociendo.chicaActual = chicaEspecifica; else { let idx = conociendo.orden.indexOf(conociendo.chicaActual); conociendo.chicaActual = conociendo.orden[(idx + 1) % conociendo.orden.length]; } conociendo.estado = 'transicion'; conociendo.tiempoTransicion = 5; conociendo.puntos = 0; io.emit('conociendoTransicion', { chica: conociendo.chicaActual, tiempo: conociendo.tiempoTransicion }); }
 
 app.all('/conociendo/start', (req, res) => { 
+    conociendo.orden = [...QUEENS];
     conociendo.activo = true; conociendo.meta = parseInt(req.query.meta) || 2000; conociendo.tiempo = 300; conociendo.puntos = 0; conociendo.chicaActual = QUEENS[0] || 'Ray'; conociendo.estado = 'activo'; 
     let subTickConociendo = 0; let snipeConociendo = 3; clearInterval(intervaloConociendo); 
     io.emit('conociendoInicio', { chica: conociendo.chicaActual, tiempo: conociendo.tiempo, meta: conociendo.meta, puntos: conociendo.puntos }); 

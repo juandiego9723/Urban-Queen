@@ -435,13 +435,22 @@
                         </div>
 
                         <div class="divider"></div>
-                        <div class="card-title" style="margin-bottom:4px">⚙️ Mapa de regalos guardado</div>
+                        <div class="card-title" style="margin-bottom:4px">⚙️ Regalos Activadores (Para sumar a la Bailarina)</div>
                         <div class="info-box" style="font-size:11px;margin-bottom:8px">
-                            Puedes añadir manualmente si conoces el nombre exacto del regalo. O usa los detectados arriba.
+                            Estos regalos enviarán los puntos acumulados a la bailarina asignada.
                         </div>
                         <div id="mapa-regalos-lista" class="col" style="gap:7px"></div>
                         <button class="btn btn-ghost btn-sm" onclick="agregarFilaMapa()" style="align-self:flex-start">+ Añadir manualmente</button>
-                        <button class="btn btn-primary btn-full" onclick="guardarMapaRegalos()">💾 Guardar mapa de regalos</button>
+                        <button class="btn btn-primary btn-full" onclick="guardarMapaRegalos()">💾 Guardar mapa de activadores</button>
+
+                        <div class="divider"></div>
+                        <div class="card-title" style="margin-bottom:4px">⚡ Regalos para Saltar Turno (Timer Baile)</div>
+                        <div class="info-box" style="font-size:11px;margin-bottom:8px">
+                            Estos regalos cambiarán inmediatamente el turno de baile a la bailarina asignada (y también sumarán segundos/puntos).
+                        </div>
+                        <div id="mapa-timer-lista" class="col" style="gap:7px"></div>
+                        <button class="btn btn-ghost btn-sm" onclick="agregarFilaMapaTimer()" style="align-self:flex-start">+ Añadir manualmente</button>
+                        <button class="btn btn-primary btn-full" onclick="guardarMapaTimer()">💾 Guardar mapa de Timer</button>
                     </div>
                 </div>
 
@@ -757,6 +766,10 @@ async function cargarTikTokPanel() {
     if (estado.usuario) document.getElementById('tiktok-user').value = estado.usuario;
     const mapa = await (await fetch('/api/tiktok/mapa')).json();
     renderMapaRegalos(mapa);
+
+    const timerMapa = await (await fetch('/api/tiktok/timer_mapa')).json();
+    renderMapaTimer(timerMapa);
+
     // Cargar regalos ya detectados (si el server llevaba un rato corriendo)
     const detectados = await (await fetch('/api/tiktok/regalos-detectados')).json();
     const c = document.getElementById('regalos-detectados-lista');
@@ -797,8 +810,13 @@ async function asignarRegaloRapido(giftName, queen) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ mapa })
     });
-    // Refrescar la tabla del mapa guardado
-    renderMapaRegalos(mapa);
+    const res = await fetch('/api/tiktok/mapa');
+    const nuevoMapa = await res.json();
+    renderMapaRegalos(nuevoMapa);
+    
+    const resTimer = await fetch('/api/tiktok/timer_mapa');
+    const mapaTimer = await resTimer.json();
+    renderMapaTimer(mapaTimer);
 }
 
 socket.on('tiktokEstado', actualizarEstadoTikTok);
@@ -808,7 +826,10 @@ socket.on('regaloDetectado', (giftName) => {
     });
 });
 
-
+socket.on('catalogoCargado', (count) => {
+    _catalogoCache = []; // Limpiar caché
+    cargarCatalogo();    // Recargar con los datos reales
+});
 
 let _catalogoCache = [];
 
@@ -933,7 +954,71 @@ async function guardarMapaRegalos() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ mapa })
     });
-    alert('✅ Mapa de regalos guardado');
+    alert('✅ Mapa de activadores guardado');
+}
+
+function agregarFilaMapaTimer(giftName='', queen='', giftData=null) {
+    const c = document.getElementById('mapa-timer-lista');
+    const uid = 'mapa-timer-fila-' + Date.now() + '-' + Math.random().toString(36).slice(2);
+    const img = giftData && giftData.imageUrl ? `<img src="${giftData.imageUrl}" style="width:22px;height:22px;object-fit:contain;border-radius:4px">` : '';
+    const coins = giftData ? `<span style="font-size:10px;color:var(--muted)">${giftData.diamondCount} 💎</span>` : '';
+
+    const fila = document.createElement('div');
+    fila.className = 'row';
+    fila.id = uid;
+    fila.style.gap = '6px';
+    fila.style.alignItems = 'center';
+    fila.innerHTML = `
+        <div style="flex:1.5;position:relative">
+            <div id="${uid}-display" style="display:flex;align-items:center;gap:8px;background:var(--surface3);border:1px solid var(--border);border-radius:10px;padding:7px 10px;cursor:pointer;min-height:40px" onclick="abrirBuscadorRegalo('${uid}')">
+                <span id="${uid}-img">${img}</span>
+                <span id="${uid}-label" style="font-size:13px;font-weight:600;flex:1">${giftName || 'Elegir un regalo...'}</span>
+                ${coins ? `<span id="${uid}-coins">${coins}</span>` : `<span id="${uid}-coins"></span>`}
+                <span style="color:var(--muted)">▾</span>
+            </div>
+            <input type="hidden" class="mapa-timer-gift" id="${uid}-val" value="${giftName}">
+            <div id="${uid}-dropdown" style="display:none;position:absolute;top:44px;left:0;right:0;background:var(--surface2);border:1px solid var(--border);border-radius:12px;z-index:999;box-shadow:0 8px 24px rgba(0,0,0,0.4);max-height:260px;overflow:hidden;flex-direction:column">
+                <div style="padding:8px">
+                    <input id="${uid}-search" class="input" placeholder="Buscar regalo..." style="width:100%;font-size:13px" oninput="filtrarCatalogo('${uid}', this.value)" autocomplete="off">
+                </div>
+                <div id="${uid}-results" style="overflow-y:auto;max-height:200px;padding:4px 8px 8px"></div>
+            </div>
+        </div>
+        <select class="select mapa-timer-queen" style="flex:1">
+            ${QUEENS.map(q=>`<option value="${q}" ${q===queen?'selected':''}>${q}</option>`).join('')}
+        </select>
+        <button class="btn btn-danger btn-sm" onclick="document.getElementById('${uid}').remove()">🗑</button>`;
+    c.appendChild(fila);
+    // Cerrar dropdown al hacer clic fuera
+    document.addEventListener('click', (e) => {
+        const dd = document.getElementById(uid+'-dropdown');
+        const disp = document.getElementById(uid+'-display');
+        if (dd && disp && !dd.contains(e.target) && !disp.contains(e.target)) dd.style.display = 'none';
+    });
+}
+
+function renderMapaTimer(mapa) {
+    document.getElementById('mapa-timer-lista').innerHTML = '';
+    const entries = Object.entries(mapa);
+    if (entries.length === 0) { agregarFilaMapaTimer(); return; }
+    entries.forEach(([g, q]) => agregarFilaMapaTimer(g, q));
+}
+
+async function guardarMapaTimer() {
+    const mapa = {};
+    document.querySelectorAll('#mapa-timer-lista .row').forEach(fila => {
+        const gInput = fila.querySelector('.mapa-timer-gift');
+        const qSelect = fila.querySelector('.mapa-timer-queen');
+        if (gInput && qSelect && gInput.value.trim() && qSelect.value) {
+            mapa[gInput.value.trim()] = qSelect.value;
+        }
+    });
+    await fetch('/api/tiktok/timer_mapa', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ mapa })
+    });
+    alert('✅ Mapa de Timer guardado');
 }
 
 

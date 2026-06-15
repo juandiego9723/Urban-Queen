@@ -30,23 +30,47 @@
         async function cargar() {
             const queens = await (await fetch('/api/queens/all')).json();
             const apodos = await (await fetch('/api/apodos')).json();
+            const mapaRaw = await (await fetch('/api/tiktok/timer_mapa')).json();
+            const catData = await (await fetch('/api/tiktok/catalogo')).json();
+            const catalogo = catData.regalos || [];
+
+            // Invertir mapa (Queen -> GiftName)
+            const reinaAregalo = {};
+            for (let gift in mapaRaw) {
+                const queenName = mapaRaw[gift];
+                if (!reinaAregalo[queenName]) reinaAregalo[queenName] = gift;
+            }
+
             const lista = document.getElementById('lista');
             lista.innerHTML = '';
+            
             queens.filter(q => q.activo).forEach(q => {
                 const nombre = (apodos[q.name] || q.name).toUpperCase();
                 const color = q.color || '#ffffff';
-                const pts = q.regalo_pts || 0;
-                const rawImg = q.regalo_img || '';
-                const img = rawImg && !rawImg.startsWith('/') && !rawImg.startsWith('http') ? '/regalos/' + rawImg : rawImg;
+                
+                // Buscar si tiene regalo asignado en TikTok
+                const giftName = reinaAregalo[q.name];
+                const giftOficial = giftName ? catalogo.find(g => g.name === giftName) : null;
+                
+                let img = '';
+                let pts = q.regalo_pts || 0; // fallback a puntos configurados
+                let costoHtml = '';
+
+                if (giftOficial) {
+                    img = giftOficial.imageUrl || '';
+                    pts = giftOficial.diamondCount || pts;
+                    costoHtml = pts > 0 ? `<span class="costo">${pts} 💎</span>` : '';
+                } else {
+                    // Fallback a imagen preconfigurada si no está mapeada en TikTok
+                    const rawImg = q.regalo_img || '';
+                    img = rawImg && !rawImg.startsWith('/') && !rawImg.startsWith('http') ? '/regalos/' + rawImg : rawImg;
+                    costoHtml = pts > 0 ? `<span class="costo">${pts} PTS</span>` : `<span class="costo-vacio">sin asignar</span>`;
+                }
 
                 const mediaHtml = img
                     ? `<img class="item-img" src="${img}" alt="🎁" onerror="this.style.display='none';this.nextSibling.style.display='flex'">\
 <div class="item-emoji" style="display:none">🎁</div>`
                     : `<div class="item-emoji">🎁</div>`;
-
-                const costoHtml = pts > 0
-                    ? `<span class="costo">${pts} PTS</span>`
-                    : `<span class="costo-vacio">sin puntos</span>`;
 
                 lista.innerHTML += `
                     <div class="item-regalo" style="border-color:${color}">
