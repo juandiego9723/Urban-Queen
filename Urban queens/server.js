@@ -4,6 +4,8 @@ const { Server } = require('socket.io');
 const path = require('path');
 const DB = require('./db');
 const { WebcastPushConnection } = require('tiktok-live-connector');
+const fs = require('fs');
+const crypto = require('crypto');
 
 const app = express();
 
@@ -117,8 +119,8 @@ let rachasDinamica = {};
 let amarillasDinamica = {};
 let eliminadosDinamica = []; 
 
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+app.use(express.json({ limit: '50mb' }));
+app.use(express.urlencoded({ limit: '50mb', extended: true }));
 app.use(express.static(path.join(__dirname, 'public')));
 
 // --- RUTAS DE PANTALLAS ---
@@ -132,6 +134,7 @@ app.get('/copa',          (req, res) => res.sendFile(pub('copa.html')));
 app.get('/lista-regalos', (req, res) => res.sendFile(pub('lista-regalos.html')));
 app.get('/control',       (req, res) => res.sendFile(pub('control.html')));
 app.get('/dinamica',      (req, res) => res.sendFile(pub('dinamica.html')));
+app.get('/gestor-regalos',(req, res) => res.sendFile(pub('gestor-regalos.html')));
 
 // --- APIs DE DATOS ---
 app.get('/api/queens', (req, res) => res.json(QUEENS));
@@ -788,6 +791,56 @@ app.all('/api/dinamicas/duplicar', (req, res) => {
     const id = parseInt(req.query.id || (req.body && req.body.id));
     if (!id) return res.status(400).send('Falta id');
     DB.duplicarDinamica(id);
+    res.send('OK');
+});
+
+// ── CRUD REGALOS CUSTOM ──
+app.get('/api/regalos-custom', (req, res) => res.json(DB.getRegalosCustom()));
+
+function procesarImagenBase64(base64Str) {
+    if (!base64Str || !base64Str.startsWith('data:image')) return base64Str;
+    try {
+        const matches = base64Str.match(/^data:image\/([A-Za-z-+\/]+);base64,(.+)$/);
+        if (matches.length !== 3) return base64Str;
+        const ext = matches[1] === 'jpeg' ? 'jpg' : matches[1];
+        const buffer = Buffer.from(matches[2], 'base64');
+        const filename = `custom_${crypto.randomUUID()}.${ext}`;
+        const filepath = path.join(__dirname, 'public', 'regalos', filename);
+        if (!fs.existsSync(path.join(__dirname, 'public', 'regalos'))) {
+            fs.mkdirSync(path.join(__dirname, 'public', 'regalos'), { recursive: true });
+        }
+        fs.writeFileSync(filepath, buffer);
+        return `/regalos/${filename}`;
+    } catch (e) {
+        console.error('Error procesando imagen base64:', e);
+        return base64Str;
+    }
+}
+
+app.all('/api/regalos-custom/crear', (req, res) => {
+    const data = req.body || {};
+    if (!data.nombre) return res.status(400).send('Falta nombre');
+    data.imagen = procesarImagenBase64(data.imagen);
+    DB.crearRegaloCustom(data);
+    io.emit('regalosCustomActualizados', DB.getRegalosCustom());
+    res.send('OK');
+});
+
+app.all('/api/regalos-custom/editar', (req, res) => {
+    const data = req.body || {};
+    const id = parseInt(req.query.id || data.id);
+    if (!id || !data.nombre) return res.status(400).send('Datos incompletos');
+    data.imagen = procesarImagenBase64(data.imagen);
+    DB.editarRegaloCustom(id, data);
+    io.emit('regalosCustomActualizados', DB.getRegalosCustom());
+    res.send('OK');
+});
+
+app.all('/api/regalos-custom/eliminar', (req, res) => {
+    const id = parseInt(req.query.id || (req.body && req.body.id));
+    if (!id) return res.status(400).send('Falta id');
+    DB.eliminarRegaloCustom(id);
+    io.emit('regalosCustomActualizados', DB.getRegalosCustom());
     res.send('OK');
 });
 

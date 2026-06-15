@@ -115,6 +115,14 @@ async function init() {
         valor TEXT NOT NULL DEFAULT ''
     )`);
 
+    db.run(`CREATE TABLE IF NOT EXISTS regalos_custom (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        nombre TEXT NOT NULL,
+        accion TEXT DEFAULT '',
+        imagen TEXT NOT NULL,
+        creado_en TEXT DEFAULT CURRENT_TIMESTAMP
+    )`);
+
     dirty = true;
     guardarADisco();
 
@@ -376,6 +384,25 @@ function setConfigVal(clave, valor) {
     runSql('INSERT INTO config (clave, valor) VALUES (?, ?) ON CONFLICT(clave) DO UPDATE SET valor=excluded.valor', [clave, valor]);
 }
 
+// Regalos Custom
+function getRegalosCustom() {
+    return queryAll('SELECT * FROM regalos_custom ORDER BY id DESC');
+}
+
+function crearRegaloCustom(data) {
+    runSql(`INSERT INTO regalos_custom (nombre, accion, imagen) VALUES (?, ?, ?)`,
+        [data.nombre, data.accion || '', data.imagen || '']);
+}
+
+function editarRegaloCustom(id, data) {
+    runSql(`UPDATE regalos_custom SET nombre=?, accion=?, imagen=? WHERE id=?`,
+        [data.nombre, data.accion || '', data.imagen || '', id]);
+}
+
+function eliminarRegaloCustom(id) {
+    runSql('DELETE FROM regalos_custom WHERE id = ?', [id]);
+}
+
 function close() {
     if (saveTimer) clearInterval(saveTimer);
     guardarADisco();
@@ -394,5 +421,6 @@ module.exports = {
     getSonidos, setSonido,
     getDinamicas, getDinamica, crearDinamica, editarDinamica, eliminarDinamica, duplicarDinamica,
     getConfigVal, setConfigVal,
+    getRegalosCustom, crearRegaloCustom, editarRegaloCustom, eliminarRegaloCustom,
     migrarDesdeJSON, close
 };

@@ -1,0 +1,421 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestor Dinámico de Regalos</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-gradient: linear-gradient(135deg, #a4c8ff 0%, #b2f5ea 100%);
+            --card-bg: rgba(71, 126, 139, 0.85);
+            --card-hover: rgba(85, 145, 160, 0.95);
+            --text-color: #ffffff;
+            --accent: #ff4785;
+        }
+
+        body {
+            margin: 0;
+            padding: 20px;
+            font-family: 'Inter', sans-serif;
+            background: #00FF00; /* Chroma green */
+            min-height: 100vh;
+            color: var(--text-color);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        h1 { display: none; }
+
+        /* Contenedor del Grid */
+        .grid-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 20px;
+            justify-content: center;
+            max-width: 1000px;
+        }
+
+        /* Tarjeta de Regalo (Estilo TikTok Live) */
+        .card {
+            width: 120px;
+            height: 140px;
+            background: var(--card-bg);
+            border-radius: 20px;
+            border: 1px solid rgba(255, 255, 255, 0.4);
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: flex-end;
+            padding-bottom: 15px;
+            position: relative;
+            cursor: pointer;
+            transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275), background 0.3s, box-shadow 0.3s;
+            overflow: hidden;
+        }
+
+        .card:hover {
+            transform: translateY(-10px) scale(1.05);
+            background: var(--card-hover);
+            box-shadow: 0 15px 30px rgba(0, 0, 0, 0.25);
+            z-index: 10;
+        }
+
+        /* Anillo circular de la imagen */
+        .card-img-container {
+            position: absolute;
+            top: 15px;
+            width: 70px;
+            height: 70px;
+            border-radius: 50%;
+            border: 2px solid rgba(255,255,255,0.6);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: radial-gradient(circle, rgba(255,255,255,0.2) 0%, rgba(255,255,255,0) 70%);
+            box-shadow: inset 0 0 15px rgba(255,255,255,0.3), 0 0 10px rgba(255,255,255,0.2);
+        }
+
+        .card-img {
+            width: 80%;
+            height: 80%;
+            object-fit: contain;
+            filter: drop-shadow(0 4px 6px rgba(0,0,0,0.3));
+        }
+
+        .card-title {
+            font-size: 11px;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            text-align: center;
+            width: 90%;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            z-index: 2;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.6);
+        }
+
+        /* Badge superior derecho */
+        .card-badge {
+            position: absolute;
+            top: 8px;
+            right: 8px;
+            background: rgba(0,0,0,0.4);
+            color: #fff;
+            font-size: 10px;
+            font-weight: bold;
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: 1px solid rgba(255,255,255,0.3);
+            z-index: 5;
+        }
+
+        /* Accion eliminada */
+
+        .btn-delete {
+            background: #ff4757;
+            color: white;
+            border: none;
+            padding: 5px 10px;
+            border-radius: 5px;
+            font-size: 10px;
+            font-weight: bold;
+            cursor: pointer;
+            text-transform: uppercase;
+            transition: background 0.2s;
+        }
+
+        .btn-delete:hover {
+            background: #ff6b81;
+        }
+
+        /* Tarjeta de Añadir Nuevo */
+        .card-add {
+            background: rgba(255, 255, 255, 0.2);
+            border: 2px dashed rgba(255, 255, 255, 0.6);
+            justify-content: center;
+        }
+        .card-add:hover {
+            background: rgba(255, 255, 255, 0.3);
+        }
+        .card-add .plus {
+            font-size: 50px;
+            color: white;
+            font-weight: 200;
+        }
+
+        /* Modal */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0, 0, 0, 0.6);
+            backdrop-filter: blur(5px);
+            z-index: 100;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal.active {
+            display: flex;
+            animation: fadeIn 0.3s ease;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        .modal-content {
+            background: white;
+            color: #333;
+            padding: 30px;
+            border-radius: 20px;
+            width: 90%;
+            max-width: 400px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.3);
+            position: relative;
+        }
+
+        .modal-title {
+            margin: 0 0 20px 0;
+            font-size: 24px;
+            color: #1f3b4d;
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 600;
+            font-size: 14px;
+        }
+
+        .form-control {
+            width: 100%;
+            padding: 10px;
+            border: 2px solid #eee;
+            border-radius: 10px;
+            font-size: 14px;
+            box-sizing: border-box;
+            transition: border-color 0.3s;
+            font-family: 'Inter', sans-serif;
+        }
+
+        .form-control:focus {
+            border-color: #00a8ff;
+            outline: none;
+        }
+
+        .preview-img {
+            width: 80px;
+            height: 80px;
+            object-fit: contain;
+            background: #f1f2f6;
+            border-radius: 10px;
+            margin-top: 10px;
+            display: none;
+        }
+
+        .btn-save {
+            width: 100%;
+            padding: 12px;
+            background: linear-gradient(135deg, #00a8ff, #0097e6);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+            margin-top: 10px;
+        }
+
+        .btn-save:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0, 168, 255, 0.4);
+        }
+
+        .btn-close {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            background: none;
+            border: none;
+            font-size: 24px;
+            color: #999;
+            cursor: pointer;
+        }
+
+        .btn-close:hover {
+            color: #333;
+        }
+
+    </style>
+</head>
+<body>
+
+    <h1>Tus Regalos Dinámicos</h1>
+
+    <div class="grid-container" id="grid">
+        <!-- Cards render here -->
+    </div>
+
+    <!-- Modal para Añadir Regalo -->
+    <div class="modal" id="modal">
+        <div class="modal-content">
+            <button class="btn-close" onclick="cerrarModal()">&times;</button>
+            <h2 class="modal-title">Nuevo Regalo</h2>
+            
+            <div class="form-group">
+                <label>Imagen del Regalo</label>
+                <input type="file" id="fileInput" accept="image/*" class="form-control" onchange="previsualizarImagen(event)">
+                <img id="preview" class="preview-img">
+            </div>
+
+            <div class="form-group">
+                <label>Nombre del Regalo</label>
+                <input type="text" id="nombreInput" class="form-control" placeholder="Ej. KARAOKE, BAILE MAIA">
+            </div>
+
+            <div class="form-group">
+                <label>¿Qué hace este regalo? (Acción)</label>
+                <textarea id="accionInput" class="form-control" rows="3" placeholder="Ej. La reina debe cantar una canción de karaoke..."></textarea>
+            </div>
+
+            <button class="btn-save" onclick="guardarRegalo()">Guardar Regalo</button>
+        </div>
+    </div>
+
+    <!-- Socket.IO para actualizaciones en tiempo real -->
+    <script src="/socket.io/socket.io.js"></script>
+    <script>
+        const socket = io();
+        let base64Image = '';
+
+        async function cargarRegalos() {
+            try {
+                const res = await fetch('/api/regalos-custom');
+                const regalos = await res.json();
+                renderGrid(regalos);
+            } catch (e) {
+                console.error("Error cargando regalos:", e);
+            }
+        }
+
+        function renderGrid(regalos) {
+            const grid = document.getElementById('grid');
+            grid.innerHTML = '';
+            
+            regalos.forEach((r, index) => {
+                const card = document.createElement('div');
+                card.className = 'card';
+                card.innerHTML = `
+                    <div class="card-badge">1</div>
+                    <div class="card-img-container">
+                        <img src="${r.imagen}" class="card-img" alt="${r.nombre}">
+                    </div>
+                    <div class="card-title">${r.nombre}</div>
+                `;
+                grid.appendChild(card);
+            });
+        }
+
+        function abrirModal() {
+            document.getElementById('modal').classList.add('active');
+            document.getElementById('nombreInput').value = '';
+            document.getElementById('accionInput').value = '';
+            document.getElementById('fileInput').value = '';
+            document.getElementById('preview').style.display = 'none';
+            base64Image = '';
+        }
+
+        function cerrarModal() {
+            document.getElementById('modal').classList.remove('active');
+        }
+
+        function previsualizarImagen(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                base64Image = e.target.result;
+                const preview = document.getElementById('preview');
+                preview.src = base64Image;
+                preview.style.display = 'block';
+            };
+            reader.readAsDataURL(file);
+        }
+
+        async function guardarRegalo() {
+            const nombre = document.getElementById('nombreInput').value.trim();
+            const accion = document.getElementById('accionInput').value.trim();
+
+            if (!nombre) {
+                alert("Por favor ingresa un nombre.");
+                return;
+            }
+            if (!base64Image) {
+                alert("Por favor selecciona una imagen.");
+                return;
+            }
+
+            const btn = document.querySelector('.btn-save');
+            btn.textContent = 'Guardando...';
+            btn.disabled = true;
+
+            try {
+                await fetch('/api/regalos-custom/crear', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ nombre, accion, imagen: base64Image })
+                });
+                cerrarModal();
+                cargarRegalos();
+            } catch (e) {
+                console.error("Error guardando:", e);
+                alert("Error al guardar el regalo.");
+            } finally {
+                btn.textContent = 'Guardar Regalo';
+                btn.disabled = false;
+            }
+        }
+
+        async function eliminarRegalo(event, id) {
+            event.stopPropagation();
+            if (!confirm("¿Estás seguro de eliminar este regalo?")) return;
+            
+            try {
+                await fetch('/api/regalos-custom/eliminar', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ id })
+                });
+                cargarRegalos();
+            } catch (e) {
+                console.error("Error eliminando:", e);
+            }
+        }
+
+        // Actualización en tiempo real
+        socket.on('regalosCustomActualizados', (regalos) => {
+            renderGrid(regalos);
+        });
+
+        // Cargar al inicio
+        cargarRegalos();
+    </script>
+</body>
+</html>
