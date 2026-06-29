@@ -199,6 +199,20 @@ app.get('/api/ranking', (req, res) => res.json(DB.getRanking()));
 app.get('/api/ranking-mensual', (req, res) => res.json(DB.getRankingMensual()));
 app.get('/api/ranking-diario', (req, res) => res.json(DB.getRankingDiario()));
 app.get('/api/copa', (req, res) => res.json({ copa: DB.getCopa(), equipos }));
+
+// --- API FUTBOL CONFIG ---
+app.get('/api/futbol/config', (req, res) => {
+    res.json(DB.getFutbolConfig());
+});
+
+app.post('/api/futbol/config', express.json(), (req, res) => {
+    const config = req.body;
+    if(!config || !config.equipo1 || !config.equipo2) return res.status(400).send('Invalid config');
+    DB.setFutbolConfig(config);
+    io.emit('futbolConfigActualizada', config);
+    res.send('OK');
+});
+
 app.get('/api/victorias', (req, res) => res.json(DB.getVictorias()));
 
 // --- APIs ALIASES ---

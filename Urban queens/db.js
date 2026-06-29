@@ -409,7 +409,28 @@ function close() {
     if (db) db.close();
 }
 
+
+function getFutbolConfig() {
+    const raw = getConfigVal('futbol_config');
+    if(raw) {
+        try {
+            return JSON.parse(raw);
+        } catch(e){}
+    }
+    // Defaults (BARCELONA vs REAL MADRID)
+    return {
+        equipo1: { nombre: 'BARCELONA', color1: '#004D98', color2: '#A50044', miembros: ['Ray', 'Nucita'] },
+        equipo2: { nombre: 'REAL MADRID', color1: '#FFFFFF', color2: '#CCCCCC', miembros: ['Amy', 'Venus'] }
+    };
+}
+
+function setFutbolConfig(configObj) {
+    setConfigVal('futbol_config', JSON.stringify(configObj));
+}
+
 module.exports = {
+    getFutbolConfig,
+    setFutbolConfig,
     init,
     initQueens, getActiveQueenNames, getAllQueensFull,
     crearQueen, editarQueen, toggleQueenActivo, renombrarQueen, eliminarQueen, getApodosMap,

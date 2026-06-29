@@ -175,6 +175,7 @@
         </div>
         <div class="tabs">
             <div class="tab active"  onclick="cambiarTab('batallas',this)">⚔️ Batallas</div>
+            <div class="tab" onclick="cambiarTab('clasico',this)">⚽ Clásico</div>
             <div class="tab" onclick="cambiarTab('puntos',this)">🏆 Puntos</div>
             <div class="tab" onclick="cambiarTab('timer',this)">💃 Timer</div>
             <div class="tab" onclick="cambiarTab('pantallas',this)">📺 Pantallas</div>
@@ -215,29 +216,8 @@
                             <button class="btn btn-danger" onclick="hacerFetch('/batalla/stop')">⏹ Cancelar</button>
                             <button class="btn btn-ghost" onclick="hacerFetch('/batalla/reset-wins')">👑 Reset victorias</button>
                         </div>
-                    </div>
                 </div>
-                <div class="card">
-                    <div class="card-title">
-                        ⚽ <span class="card-title-accent">El Clásico (Fútbol)</span>
-                    </div>
-                    <div class="col">
-                        <div class="info-box">
-                            <div class="row" style="gap:12px;flex-wrap:nowrap;">
-                                <span>🟨 Derrotas para amarilla:</span>
-                                <input type="number" id="faltasA" value="3" class="input input-num">
-                            </div>
-                            <div style="margin-top:6px;font-size:11px;color:var(--muted)">2 amarillas = 🟥 roja automática</div>
-                        </div>
-                        <div class="row-2">
-                            <button class="btn btn-success" onclick="guardarReglasFutbol()">💾 Guardar reglas</button>
-                            <button class="btn btn-danger"
-                                    onclick="uiConfirm('¿Limpiar tarjetas?', () => hacerFetch('/futbol/reset-tarjetas'))">
-                                🔄 Limpiar tarjetas
-                            </button>
-                        </div>
-                    </div>
-                </div>
+            </div>
                 <div class="card">
                     <div class="card-title">
                         👑 <span class="card-title-accent">Conociendo a mi Queen</span>
@@ -254,6 +234,72 @@
                         <button class="btn btn-danger btn-full"
                                 onclick="hacerFetch('/conociendo/stop')">⏹ Cancelar</button>
                         <div id="btns-conociendo" class="row" style="justify-content:center"></div>
+                    </div>
+                </div>
+            
+
+            </div>
+            <!-- ══ CLÁSICO ══ -->
+            <div id="tab-clasico" class="tab-content">
+                <div class="card">
+                    <div class="card-title">
+                        ⚽ <span class="card-title-accent">Constructor de Equipos</span>
+                    </div>
+                    <div class="col">
+                        <div class="info-box">Personaliza los nombres, colores y participantes de los dos equipos que se enfrentan en la modalidad Fútbol y Copa.</div>
+                        <div class="row-2">
+                            <!-- EQUIPO 1 -->
+                            <div class="col" style="background:var(--surface2); padding:15px; border-radius:12px; border:1px solid var(--border);">
+                                <div class="label">EQUIPO 1</div>
+                                <input type="text" id="eq1Nombre" class="input" placeholder="Nombre (ej. BARÇA)">
+                                <div class="row">
+                                    <div class="label" style="flex:1">Colores:</div>
+                                    <input type="color" id="eq1Color1" value="#004D98" style="width:30px;height:30px;border-radius:4px;border:none;cursor:pointer;">
+                                    <input type="color" id="eq1Color2" value="#A50044" style="width:30px;height:30px;border-radius:4px;border:none;cursor:pointer;">
+                                </div>
+                                <div class="label" style="margin-top:5px;">Miembros (Checkboxes):</div>
+                                <div id="eq1Miembros" class="col" style="gap:5px; max-height:120px; overflow-y:auto; padding:5px; background:var(--bg); border-radius:8px;"></div>
+                            </div>
+                            <!-- EQUIPO 2 -->
+                            <div class="col" style="background:var(--surface2); padding:15px; border-radius:12px; border:1px solid var(--border);">
+                                <div class="label">EQUIPO 2</div>
+                                <input type="text" id="eq2Nombre" class="input" placeholder="Nombre (ej. MADRID)">
+                                <div class="row">
+                                    <div class="label" style="flex:1">Colores:</div>
+                                    <input type="color" id="eq2Color1" value="#ffffff" style="width:30px;height:30px;border-radius:4px;border:none;cursor:pointer;">
+                                    <input type="color" id="eq2Color2" value="#cccccc" style="width:30px;height:30px;border-radius:4px;border:none;cursor:pointer;">
+                                </div>
+                                <div class="label" style="margin-top:5px;">Miembros (Checkboxes):</div>
+                                <div id="eq2Miembros" class="col" style="gap:5px; max-height:120px; overflow-y:auto; padding:5px; background:var(--bg); border-radius:8px;"></div>
+                            </div>
+                        </div>
+                        <div class="row-3" style="margin-top:10px">
+                            <button class="btn btn-primary btn-full" onclick="guardarFutbolConfig()">💾 Guardar Equipos</button>
+                            <button class="btn btn-warning btn-full" onclick="iniciarClasico()">▶ Iniciar Partido</button>
+                            <button class="btn btn-danger btn-full" onclick="hacerFetch('/batalla/stop')">⏹ Detener</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-title">
+                        ⚖️ <span class="card-title-accent">Reglas del Partido</span>
+                    </div>
+                    <div class="col">
+                        <div class="info-box">
+                            <div class="row" style="gap:12px;flex-wrap:nowrap;">
+                                <span>🟨 Derrotas para amarilla:</span>
+                                <input type="number" id="faltasA" value="3" class="input input-num">
+                            </div>
+                            <div style="margin-top:6px;font-size:11px;color:var(--muted)">2 amarillas = 🟥 roja automática</div>
+                        </div>
+                        <div class="row-2">
+                            <button class="btn btn-success" onclick="guardarReglasFutbol()">💾 Guardar reglas</button>
+                            <button class="btn btn-danger"
+                                    onclick="uiConfirm('¿Limpiar tarjetas?', () => hacerFetch('/futbol/reset-tarjetas'))">
+                                🔄 Limpiar tarjetas
+                            </button>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -774,6 +820,81 @@ function cambiarTab(nombre, el) {
     if(el) el.classList.add('active');
 }
 
+// ── EL CLÁSICO (FUTBOL) CONFIG ──
+let futbolConfigCache = null;
+
+async function cargarFutbolConfig() {
+    try {
+        const res = await fetch('/api/futbol/config');
+        if(!res.ok) return;
+        const config = await res.json();
+        futbolConfigCache = config;
+
+        document.getElementById('eq1Nombre').value = config.equipo1.nombre || '';
+        document.getElementById('eq1Color1').value = config.equipo1.color1 || '#004D98';
+        document.getElementById('eq1Color2').value = config.equipo1.color2 || '#A50044';
+        
+        document.getElementById('eq2Nombre').value = config.equipo2.nombre || '';
+        document.getElementById('eq2Color1').value = config.equipo2.color1 || '#ffffff';
+        document.getElementById('eq2Color2').value = config.equipo2.color2 || '#cccccc';
+
+        const eq1Miembros = config.equipo1.miembros || [];
+        const eq2Miembros = config.equipo2.miembros || [];
+
+        const renderChecks = (eqMiembros, containerId) => {
+            const container = document.getElementById(containerId);
+            container.innerHTML = QUEENS.map(q => {
+                const checked = eqMiembros.includes(q) ? 'checked' : '';
+                return `<label style="display:flex;align-items:center;gap:5px;cursor:pointer;font-size:13px;padding:2px 0;">
+                    <input type="checkbox" value="${q}" ${checked}> ${q}
+                </label>`;
+            }).join('');
+        };
+
+        renderChecks(eq1Miembros, 'eq1Miembros');
+        renderChecks(eq2Miembros, 'eq2Miembros');
+    } catch(e) {
+        console.error("Error al cargar config de futbol:", e);
+    }
+}
+
+async function guardarFutbolConfig() {
+    const getChecked = (containerId) => {
+        const inputs = document.getElementById(containerId).querySelectorAll('input[type="checkbox"]:checked');
+        return Array.from(inputs).map(inp => inp.value);
+    };
+
+    const config = {
+        equipo1: {
+            nombre: document.getElementById('eq1Nombre').value.trim(),
+            color1: document.getElementById('eq1Color1').value,
+            color2: document.getElementById('eq1Color2').value,
+            miembros: getChecked('eq1Miembros')
+        },
+        equipo2: {
+            nombre: document.getElementById('eq2Nombre').value.trim(),
+            color1: document.getElementById('eq2Color1').value,
+            color2: document.getElementById('eq2Color2').value,
+            miembros: getChecked('eq2Miembros')
+        }
+    };
+
+    if(!config.equipo1.nombre || !config.equipo2.nombre) {
+        return alert('Los nombres de los equipos son obligatorios.');
+    }
+
+    try {
+        await fetch('/api/futbol/config', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(config)
+        });
+        alert('✅ Equipos guardados exitosamente');
+    } catch(e) {
+        alert('Error al guardar equipos.');
+    }
+}
+
 async function init() {
     const res = await fetch('/api/queens');
     QUEENS = await res.json();
@@ -786,6 +907,7 @@ async function init() {
     cargarGrupos();
     cargarSonidos();
     cargarBailarinas();
+    cargarFutbolConfig();
     cargarDinamicas();
     cargarTikTokPanel();
 }
@@ -1738,6 +1860,20 @@ function eliminarRegaloCustom(id) {
 
 init();
 cargarGestorRegalos();
+
+async function iniciarClasico() {
+    try {
+        const config = await (await fetch('/api/futbol/config')).json();
+        const miembros = [...config.equipo1.miembros, ...config.equipo2.miembros];
+        if (miembros.length === 0) {
+            return alert('No hay miembros configurados en los equipos.');
+        }
+        const m = document.getElementById('tiempoBatalla') ? document.getElementById('tiempoBatalla').value : 3;
+        hacerFetch(`/batalla/start?mins=${m}&queens=${miembros.join(',')}`);
+    } catch(e) {
+        alert('Error al iniciar el Clásico.');
+    }
+}
         </script>
     </body>
 </html>

@@ -133,36 +133,42 @@
         const listaClasico = document.getElementById('lista-clasico');
 
         // Memorias de puntos para saber cuándo animar
-        let prevPuntos = { madrid: 0, barca: 0 };
-        let currPuntos = { madrid: 0, barca: 0 };
+        let prevPuntos = { eq1: 0, eq2: 0 };
+        let currPuntos = { eq1: 0, eq2: 0 };
 
-        // Definimos los equipos fijos para el clásico
-        const EQUIPOS_CLÁSICO = [
-            {
-                id: 'madrid',
-                nombre: 'REAL MADRID',
-                integrantes: 'AMY Y VENUS',
-                colorPrincipal: '#ffffff',
-                colorSecundario: '#aaaaaa', // Blanco/Plata
-                borde: '#ffffff',
-                chicas: ['Amy', 'Venus']
-            },
-            {
-                id: 'barca',
-                nombre: 'BARÇA',
-                integrantes: 'NUCITA Y RAY',
-                colorPrincipal: '#004D98', // Azul Barça
-                colorSecundario: '#A50044', // Grana Barça
-                borde: '#FFD700',
-                chicas: ['Nucita', 'Ray']
-            }
-        ];
+        
+        let futbolConfig = null;
+
+        function buildEquipos() {
+            if(!futbolConfig) return [];
+            return [
+                {
+                    id: 'eq1',
+                    nombre: futbolConfig.equipo1.nombre,
+                    integrantes: futbolConfig.equipo1.miembros.join(' Y '),
+                    colorPrincipal: futbolConfig.equipo1.color1,
+                    colorSecundario: futbolConfig.equipo1.color2,
+                    borde: futbolConfig.equipo1.color2,
+                    chicas: futbolConfig.equipo1.miembros
+                },
+                {
+                    id: 'eq2',
+                    nombre: futbolConfig.equipo2.nombre,
+                    integrantes: futbolConfig.equipo2.miembros.join(' Y '),
+                    colorPrincipal: futbolConfig.equipo2.color1,
+                    colorSecundario: futbolConfig.equipo2.color2,
+                    borde: futbolConfig.equipo2.color1,
+                    chicas: futbolConfig.equipo2.miembros
+                }
+            ];
+        }
+
 
         function renderClasico() {
             listaClasico.innerHTML = '';
 
             // Ordenamos: el que tenga más puntos va arriba
-            let ordenados = [...EQUIPOS_CLÁSICO].sort((a, b) => currPuntos[b.id] - currPuntos[a.id]);
+            let ordenados = buildEquipos().sort((a, b) => currPuntos[b.id] - currPuntos[a.id]);
 
             ordenados.forEach((equipo, index) => {
                 const pts = currPuntos[equipo.id];
@@ -193,14 +199,19 @@
         }
 
         function procesarDatosCopa(copaData) {
+            lastCopaData = copaData;
+            
             // Sumamos los puntos de la memoria del servidor
-            let puntosMadrid = (copaData.Amy || 0) + (copaData.Venus || 0);
-            let puntosBarca = (copaData.Nucita || 0) + (copaData.Ray || 0);
-
-            currPuntos = { madrid: puntosMadrid, barca: puntosBarca };
+            let eq1 = 0; let eq2 = 0;
+            if(futbolConfig) {
+                futbolConfig.equipo1.miembros.forEach(m => eq1 += (copaData[m]||0));
+                futbolConfig.equipo2.miembros.forEach(m => eq2 += (copaData[m]||0));
+            }
+            currPuntos = { eq1: eq1, eq2: eq2 };
 
             // Comprobamos si hubo un GOL (aumento de puntos)
-            ['madrid', 'barca'].forEach(idEquipo => {
+            ['eq1', 'eq2'].forEach(idEquipo => {
+
                 if(currPuntos[idEquipo] > prevPuntos[idEquipo]) {
                     setTimeout(() => {
                         const filaEl = document.getElementById(`fila-${idEquipo}`);
@@ -229,15 +240,25 @@
             prevPuntos = {...currPuntos};
         }
 
-        // Carga inicial
-        fetch('/api/copa').then(res => res.json()).then(data => {
-            if(data.copa) {
-                // Sincronizamos memorias al cargar la página
-                let pMad = (data.copa.Amy || 0) + (data.copa.Venus || 0);
-                let pBar = (data.copa.Nucita || 0) + (data.copa.Ray || 0);
-                prevPuntos = { madrid: pMad, barca: pBar };
-                procesarDatosCopa(data.copa);
-            }
+        
+        let lastCopaData = null;
+        fetch('/api/futbol/config').then(r=>r.json()).then(conf => {
+            futbolConfig = conf;
+            fetch('/api/copa').then(res => res.json()).then(data => {
+                if(data.copa) {
+                    lastCopaData = data.copa;
+                    let eq1 = 0; let eq2 = 0;
+                    futbolConfig.equipo1.miembros.forEach(m => eq1 += (data.copa[m]||0));
+                    futbolConfig.equipo2.miembros.forEach(m => eq2 += (data.copa[m]||0));
+                    prevPuntos = { eq1, eq2 };
+                    procesarDatosCopa(data.copa);
+                }
+            });
+        });
+
+        socket.on('futbolConfigActualizada', (conf) => {
+            futbolConfig = conf;
+            if(lastCopaData) procesarDatosCopa(lastCopaData);
         });
 
         // Actualización en vivo (recibe de server.js y el botón "Reiniciar Copa")

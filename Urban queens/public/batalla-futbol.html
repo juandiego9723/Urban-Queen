@@ -42,20 +42,26 @@
             font-size: 22px; color: gold; text-shadow: 0 0 8px #000; z-index: 5;
         }
 
-        .barra-barca {
-            width: 50%; height: 100%; background: linear-gradient(90deg, #004D98, #A50044);
+        .barra-eq1 {
+            width: 50%; height: 100%; 
             transition: width 0.6s cubic-bezier(0.25, 1, 0.5, 1);
             display: flex; align-items: center; justify-content: flex-start; padding-left: 15px;
             box-shadow: inset -5px 0 15px rgba(0,0,0,0.5);
         }
-        .barra-madrid {
+        .barra-eq2 {
             width: 50%; height: 100%; background: linear-gradient(90deg, #CCCCCC, #FFFFFF);
             transition: width 0.6s cubic-bezier(0.25, 1, 0.5, 1);
             display: flex; align-items: center; justify-content: flex-end; padding-right: 15px;
             box-shadow: inset 5px 0 15px rgba(0,0,0,0.5);
         }
 
-        /* CONTENEDOR DE EQUIPOS COMPACTO */
+        
+        /* Estilos dinámicos para el texto según la luminosidad del color */
+        .text-dark { color: #000 !important; text-shadow: none !important; }
+        .text-light { color: #fff !important; text-shadow: 2px 2px 5px #000 !important; }
+        .bg-dark { background: rgba(0,0,0,0.4) !important; color: white !important; }
+        .bg-light { background: rgba(255,255,255,0.7) !important; color: black !important; }
+/* CONTENEDOR DE EQUIPOS COMPACTO */
         .clasico-vs { display: flex; justify-content: center; align-items: center; gap: 20px; width: 85%; max-width: 1000px; height: 160px; }
 
         .team-card {
@@ -66,13 +72,13 @@
         }
 
         /* ESTILOS DE EQUIPOS */
-        .barca { background: linear-gradient(135deg, #004D98 0%, #A50044 100%); border-color: #EDBB00; }
-        .madrid { background: linear-gradient(135deg, #FFFFFF 0%, #CCCCCC 100%); border-color: #004D98; color: #000; }
-        .madrid .puntos, .madrid .nombre-equipo { color: #000; text-shadow: none; }
+        .eq1 { background: linear-gradient(135deg, #004D98 0%, #A50044 100%); border-color: #EDBB00; }
+        .eq2 { background: linear-gradient(135deg, #FFFFFF 0%, #CCCCCC 100%); border-color: #004D98; color: #000; }
+        .eq2 .puntos, .eq2 .nombre-equipo { color: #000; text-shadow: none; }
 
         .nombre-equipo { font-size: 38px; text-transform: uppercase; margin-top: 5px; text-shadow: 2px 2px 5px #000; z-index: 2; line-height: 1;}
         .integrantes { font-size: 15px; margin-top: -5px; opacity: 0.9; background: rgba(0,0,0,0.3); padding: 3px 15px; border-radius: 12px; z-index: 2;}
-        .madrid .integrantes { color: white; }
+        .eq2 .integrantes { color: white; }
         .puntos { font-size: 85px; line-height: 0.9; margin: 0; text-shadow: 3px 3px 10px rgba(0,0,0,0.5); z-index: 2;}
 
         /* ✨⚽ ANIMACIÓN DEL BALONAZO AJUSTADA ⚽✨ */
@@ -128,23 +134,23 @@
         </div>
 
         <div class="barra-poder-container">
-            <div class="barra-barca" id="barra-barca"></div>
-            <div class="barra-madrid" id="barra-madrid"></div>
+            <div class="barra-eq1" id="barra-eq1"></div>
+            <div class="barra-eq2" id="barra-eq2"></div>
         </div>
 
         <div class="clasico-vs">
-            <div class="team-card barca" id="card-barca">
-                <div class="balon-gol" id="balon-barca">⚽</div>
-                <div class="nombre-equipo">BARCELONA</div>
-                <div class="integrantes">RAY & NUCITA</div>
-                <div class="puntos" id="pts-barca">0</div>
+            <div class="team-card eq1" id="card-eq1">
+                <div class="balon-gol" id="balon-eq1">⚽</div>
+                <div class="nombre-equipo" id="nombre-eq1">EQUIPO 1</div>
+                <div class="integrantes" id="miembros-eq1">RAY & NUCITA</div>
+                <div class="puntos" id="pts-eq1">0</div>
             </div>
 
-            <div class="team-card madrid" id="card-madrid">
-                <div class="balon-gol" id="balon-madrid">⚽</div>
-                <div class="nombre-equipo">REAL MADRID</div>
-                <div class="integrantes">AMY & VENUS</div>
-                <div class="puntos" id="pts-madrid">0</div>
+            <div class="team-card eq2" id="card-eq2">
+                <div class="balon-gol" id="balon-eq2">⚽</div>
+                <div class="nombre-equipo" id="nombre-eq2">EQUIPO 2</div>
+                <div class="integrantes" id="miembros-eq2">AMY & VENUS</div>
+                <div class="puntos" id="pts-eq2">0</div>
             </div>
         </div>
     </div>
@@ -157,47 +163,115 @@
     <div class="final-overlay" id="pantalla-final">
         <h2 style="font-size: 40px; margin: 0;">¡FIN DEL ENCUENTRO!</h2>
         <div style="font-size: 100px; margin: 10px 0;">🏆</div>
-        <h1 class="ganador-nombre" id="ganador-texto">¡BARCELONA!</h1>
+        <h1 class="ganador-nombre" id="ganador-texto">¡EQUIPO 1!</h1>
     </div>
 
     <script src="/socket.io/socket.io.js"></script>
     <script>
         const socket = io();
-        const ptsBarca = document.getElementById('pts-barca');
-        const ptsMadrid = document.getElementById('pts-madrid');
-        const cardBarca = document.getElementById('card-barca');
-        const cardMadrid = document.getElementById('card-madrid');
-        const barraBarca = document.getElementById('barra-barca');
-        const barraMadrid = document.getElementById('barra-madrid');
-        const balonBarca = document.getElementById('balon-barca');
-        const balonMadrid = document.getElementById('balon-madrid');
+        const ptsBarca = document.getElementById('pts-eq1');
+        const ptsMadrid = document.getElementById('pts-eq2');
+        const cardBarca = document.getElementById('card-eq1');
+        const cardMadrid = document.getElementById('card-eq2');
+        const barraBarca = document.getElementById('barra-eq1');
+        const barraMadrid = document.getElementById('barra-eq2');
+        const balonBarca = document.getElementById('balon-eq1');
+        const balonMadrid = document.getElementById('balon-eq2');
         const reloj = document.getElementById('reloj');
         
-        let lastPoints = { barca: 0, madrid: 0 };
+        
+        let futbolConfig = {
+            equipo1: { nombre: 'EQUIPO 1', color1: '#004D98', color2: '#A50044', miembros: [] },
+            equipo2: { nombre: 'EQUIPO 2', color1: '#FFFFFF', color2: '#CCCCCC', miembros: [] }
+        };
+
+        // Utilidad para saber si un color es oscuro o claro y ajustar el texto
+        function isLightColor(color) {
+            const hex = color.replace('#', '');
+            if (hex.length !== 6) return false;
+            const r = parseInt(hex.substr(0, 2), 16);
+            const g = parseInt(hex.substr(2, 2), 16);
+            const b = parseInt(hex.substr(4, 2), 16);
+            const brightness = (r * 299 + g * 587 + b * 114) / 1000;
+            return brightness > 155; // threshold
+        }
+
+        function aplicarConfiguracion(config) {
+            futbolConfig = config;
+            
+            // Textos
+            document.getElementById('nombre-eq1').innerText = config.equipo1.nombre;
+            document.getElementById('miembros-eq1').innerText = config.equipo1.miembros.join(' & ');
+            
+            document.getElementById('nombre-eq2').innerText = config.equipo2.nombre;
+            document.getElementById('miembros-eq2').innerText = config.equipo2.miembros.join(' & ');
+
+            // Colores
+            const c1_1 = config.equipo1.color1; const c1_2 = config.equipo1.color2;
+            const c2_1 = config.equipo2.color1; const c2_2 = config.equipo2.color2;
+
+            barraBarca.style.background = `linear-gradient(90deg, ${c1_1}, ${c1_2})`;
+            barraMadrid.style.background = `linear-gradient(90deg, ${c2_1}, ${c2_2})`;
+
+            cardBarca.style.background = `linear-gradient(135deg, ${c1_1} 0%, ${c1_2} 100%)`;
+            cardMadrid.style.background = `linear-gradient(135deg, ${c2_1} 0%, ${c2_2} 100%)`;
+
+            cardBarca.style.borderColor = c1_2;
+            cardMadrid.style.borderColor = c2_1;
+
+            // Ajuste de legibilidad (texto oscuro si el fondo es claro)
+            const light1 = isLightColor(c1_1);
+            const light2 = isLightColor(c2_1);
+
+            document.getElementById('nombre-eq1').className = 'nombre-equipo ' + (light1 ? 'text-dark' : 'text-light');
+            document.getElementById('pts-eq1').className = 'puntos ' + (light1 ? 'text-dark' : 'text-light');
+            document.getElementById('miembros-eq1').className = 'integrantes ' + (light1 ? 'bg-light' : 'bg-dark');
+
+            document.getElementById('nombre-eq2').className = 'nombre-equipo ' + (light2 ? 'text-dark' : 'text-light');
+            document.getElementById('pts-eq2').className = 'puntos ' + (light2 ? 'text-dark' : 'text-light');
+            document.getElementById('miembros-eq2').className = 'integrantes ' + (light2 ? 'bg-light' : 'bg-dark');
+        }
+
+        // Cargar config al iniciar
+        fetch('/api/futbol/config').then(r => r.json()).then(aplicarConfiguracion);
+        
+        socket.on('futbolConfigActualizada', (config) => {
+            aplicarConfiguracion(config);
+            calcularPuntos(lastPuntosReales); // recalcular si cambiaron miembros
+        });
+
+        let lastPoints = { eq1: 0, eq2: 0 };
+        let lastPuntosReales = {};
 
         function calcularPuntos(puntos) {
-            // Barça = Ray + Nucita
-            const barca = (puntos['Ray'] || 0) + (puntos['Nucita'] || 0);
-            // Madrid = Amy + Venus
-            const madrid = (puntos['Amy'] || 0) + (puntos['Venus'] || 0);
+            lastPuntosReales = puntos || {};
+            let eq1 = 0;
+            if (futbolConfig && futbolConfig.equipo1) {
+                futbolConfig.equipo1.miembros.forEach(m => eq1 += (puntos[m] || 0));
+            }
+            
+            let eq2 = 0;
+            if (futbolConfig && futbolConfig.equipo2) {
+                futbolConfig.equipo2.miembros.forEach(m => eq2 += (puntos[m] || 0));
+            }
             
             // Lógica de la Barra de Poder
-            let totalPuntos = barca + madrid;
-            let porcentajeBarca = totalPuntos === 0 ? 50 : (barca / totalPuntos) * 100;
-            let porcentajeMadrid = totalPuntos === 0 ? 50 : (madrid / totalPuntos) * 100;
+            let totalPuntos = eq1 + eq2;
+            let porcentajeBarca = totalPuntos === 0 ? 50 : (eq1 / totalPuntos) * 100;
+            let porcentajeMadrid = totalPuntos === 0 ? 50 : (eq2 / totalPuntos) * 100;
             
             barraBarca.style.width = porcentajeBarca + '%';
             barraMadrid.style.width = porcentajeMadrid + '%';
 
             // Animación de Balonazo y Vibración
-            if (barca > lastPoints.barca) { 
+            if (eq1 > lastPoints.eq1) { 
                 cardBarca.classList.add('vibrar-gol'); 
                 balonBarca.classList.remove('disparar');
                 void balonBarca.offsetWidth; 
                 balonBarca.classList.add('disparar');
                 setTimeout(() => cardBarca.classList.remove('vibrar-gol'), 600); 
             }
-            if (madrid > lastPoints.madrid) { 
+            if (eq2 > lastPoints.eq2) { 
                 cardMadrid.classList.add('vibrar-gol'); 
                 balonMadrid.classList.remove('disparar');
                 void balonMadrid.offsetWidth; 
@@ -205,9 +279,9 @@
                 setTimeout(() => cardMadrid.classList.remove('vibrar-gol'), 600); 
             }
             
-            lastPoints = { barca, madrid };
-            ptsBarca.innerText = barca;
-            ptsMadrid.innerText = madrid;
+            lastPoints = { eq1, eq2 };
+            ptsBarca.innerText = eq1;
+            ptsMadrid.innerText = eq2;
         }
 
         socket.on('batallaInicio', (data) => {
@@ -236,8 +310,8 @@
             const texto = document.getElementById('ganador-texto');
             
             let ganador = "EMPATE";
-            if (lastPoints.barca > lastPoints.madrid) ganador = "¡BARCELONA!";
-            else if (lastPoints.madrid > lastPoints.barca) ganador = "¡REAL MADRID!";
+            if (lastPoints.eq1 > lastPoints.eq2) ganador = "¡" + futbolConfig.equipo1.nombre + "!";
+            else if (lastPoints.eq2 > lastPoints.eq1) ganador = "¡" + futbolConfig.equipo2.nombre + "!";
             
             texto.innerText = ganador;
             overlay.style.display = 'flex';
@@ -259,7 +333,7 @@
                 if (i >= lista.length) { overlay.style.display = 'none'; return; }
                 
                 const t = lista[i];
-                const equipo = (t.chica === 'Ray' || t.chica === 'Nucita') ? 'BARÇA' : 'MADRID';
+                const equipo = (futbolConfig.equipo1.miembros.includes(t.chica)) ? futbolConfig.equipo1.nombre : futbolConfig.equipo2.nombre;
                 
                 overlay.className = 'notif-tarjeta ' + (t.tipo === 'AMARILLA' ? 'amarilla-bg' : 'roja-bg');
                 colorDiv.className = 'tarjeta-img ' + (t.tipo === 'AMARILLA' ? 'amarilla-card' : 'roja-card');
