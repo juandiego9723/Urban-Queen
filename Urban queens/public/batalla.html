@@ -141,57 +141,54 @@
             letter-spacing: 0.5px;
         }
 
-        /* ── FEED DE ESPECTADORES ── */
-        #viewer-feed {
+        /* ── FEED DEBAJO DEL NOMBRE ── */
+        .feed-debajo {
             display: flex;
+            flex-direction: column;
             align-items: center;
-            gap: 6px;
-            min-height: 36px;
-            flex-wrap: nowrap;
-            overflow: hidden;
-            padding: 2px 4px;
-            justify-content: center;
+            gap: 4px;
+            margin-top: 4px;
+            min-height: 80px;
         }
 
-        .viewer-chip {
+        .bar-viewer-chip {
             display: flex;
             align-items: center;
-            gap: 5px;
+            gap: 4px;
             background: rgba(0,0,0,0.65);
-            border: 1px solid rgba(255,255,255,0.2);
-            border-radius: 30px;
-            padding: 3px 10px 3px 4px;
-            animation: slide-in 0.3s ease;
-            flex-shrink: 0;
+            border: 1px solid rgba(255,255,255,0.15);
+            border-radius: 15px;
+            padding: 2px 8px 2px 2px;
+            animation: slide-in-bar 0.3s ease;
+            white-space: nowrap;
         }
-        @keyframes slide-in {
-            from { opacity: 0; transform: scale(0.6) translateY(8px); }
-            to   { opacity: 1; transform: scale(1) translateY(0); }
+        @keyframes slide-in-bar {
+            from { opacity: 0; transform: translateY(-5px) scale(0.9); }
+            to   { opacity: 1; transform: translateY(0) scale(1); }
         }
 
-        .viewer-avatar {
-            width: 26px;
-            height: 26px;
+        .bar-viewer-avatar {
+            width: 20px;
+            height: 20px;
             border-radius: 50%;
             object-fit: cover;
-            border: 2px solid rgba(255,255,255,0.4);
+            border: 1px solid rgba(255,255,255,0.4);
             background: #333;
         }
 
-        .viewer-nick {
+        .bar-viewer-nick {
             font-size: 11px;
             font-weight: 800;
             color: #fff;
-            text-shadow: 1px 1px 2px #000;
-            max-width: 75px;
+            text-shadow: 1px 1px 1px #000;
+            max-width: 70px;
             overflow: hidden;
             text-overflow: ellipsis;
-            white-space: nowrap;
         }
 
-        .viewer-gift-icon {
-            width: 16px;
-            height: 16px;
+        .bar-viewer-gift {
+            width: 14px;
+            height: 14px;
             object-fit: contain;
         }
 
@@ -235,8 +232,6 @@
         <!-- Nombres y victorias -->
         <div id="names-row"></div>
 
-        <!-- Feed de espectadores -->
-        <div id="viewer-feed"></div>
     </div>
 
     <div id="anuncio-fin"></div>
@@ -249,16 +244,15 @@
     let APODOS = {};
     let puntosActuales = {};
 
-    // Feed de espectadores: máximo 8 chips visibles
-    const MAX_VIEWERS = 8;
-    let feedViewers = []; // [{nick, avatar, giftImg, color}]
+    // Feed de espectadores por barra (máximo 3 chips visibles por bailarina)
+    const MAX_VIEWERS = 3;
+    let feedViewers = {}; // { [chica]: [{nick, avatar, giftImg}] }
 
     const timerEl    = document.getElementById('timer');
     const anuncio    = document.getElementById('anuncio-fin');
     const giftRow    = document.getElementById('gift-row');
     const barOuter   = document.getElementById('bar-outer');
     const namesRow   = document.getElementById('names-row');
-    const viewerFeed = document.getElementById('viewer-feed');
 
     // ── helpers ──
     function lightenColor(hex) {
@@ -279,6 +273,7 @@
         participantesActivos = participantes;
         equiposInfo = equipos;
         puntosActuales = { ...puntos };
+        feedViewers = {}; // Reset feed en cada render
 
         const pct = 100 / participantes.length;
 
@@ -320,6 +315,7 @@
                 <div class="queen-name-slot">
                     <span class="queen-label" style="color:${eq.color}">${label}</span>
                     <span class="queen-vics" id="vic-${chica}">👑 X${victorias[chica] || 0}</span>
+                    <div class="feed-debajo" id="feed-${chica}"></div>
                 </div>`;
         });
     }
@@ -342,15 +338,17 @@
     }
 
     // ── Feed de espectadores ──
-    function agregarViewer(nick, avatar, giftImg, queenColor) {
-        // Evitar duplicados consecutivos
-        if (feedViewers.length && feedViewers[0].nick === nick) return;
-        feedViewers.unshift({ nick, avatar, giftImg, queenColor });
-        if (feedViewers.length > MAX_VIEWERS) feedViewers.pop();
-        renderFeed();
+    function agregarViewer(nick, avatar, giftImg, chica) {
+        if (!feedViewers[chica]) feedViewers[chica] = [];
+        const fv = feedViewers[chica];
+        // Evitar duplicados consecutivos en la misma barra
+        if (fv.length && fv[0].nick === nick) return;
+        fv.unshift({ nick, avatar, giftImg });
+        if (fv.length > MAX_VIEWERS) fv.pop();
+        renderFeed(chica);
         // Animar imagen del regalo
         if (giftImg) {
-            const gifEl = Array.from(document.querySelectorAll('.gift-img')).find(img => img.src.includes(encodeURIComponent(giftImg)));
+            const gifEl = document.getElementById('gift-' + chica);
             if (gifEl) {
                 gifEl.classList.remove('bounce');
                 void gifEl.offsetWidth;
@@ -359,17 +357,20 @@
         }
     }
 
-    function renderFeed() {
-        viewerFeed.innerHTML = feedViewers.map(v => {
+    function renderFeed(chica) {
+        const feedContainer = document.getElementById('feed-' + chica);
+        if (!feedContainer) return;
+        
+        feedContainer.innerHTML = feedViewers[chica].map(v => {
             const avatarHtml = v.avatar
-                ? `<img class="viewer-avatar" src="${v.avatar}" onerror="this.src='/regalos/corazon.png'">`
-                : `<div class="viewer-avatar" style="background:${v.queenColor||'#555'};display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;color:#fff">${v.nick.slice(0,1).toUpperCase()}</div>`;
+                ? `<img class="bar-viewer-avatar" src="${v.avatar}" onerror="this.src='/regalos/corazon.png'">`
+                : `<div class="bar-viewer-avatar" style="background:#555;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:800;color:#fff">${v.nick.slice(0,1).toUpperCase()}</div>`;
             const giftHtml = v.giftImg
-                ? `<img class="viewer-gift-icon" src="/regalos/${encodeURIComponent(v.giftImg)}" onerror="this.style.display='none'">`
+                ? `<img class="bar-viewer-gift" src="/regalos/${encodeURIComponent(v.giftImg)}" onerror="this.style.display='none'">`
                 : '';
-            return `<div class="viewer-chip" style="border-color:${v.queenColor||'rgba(255,255,255,0.15)'}40">
+            return `<div class="bar-viewer-chip">
                 ${avatarHtml}
-                <span class="viewer-nick">${v.nick}</span>
+                <span class="bar-viewer-nick">${v.nick}</span>
                 ${giftHtml}
             </div>`;
         }).join('');
@@ -380,8 +381,7 @@
         anuncio.style.display = 'none';
         timerEl.classList.remove('urgente');
         timerEl.style.color = '#FFD700';
-        feedViewers = [];
-        viewerFeed.innerHTML = '';
+        feedViewers = {};
         renderBatalla(data.participantes, data.equipos || equiposInfo, data.victorias || {}, data.puntos || {});
     });
 
@@ -398,8 +398,7 @@
     socket.on('nuevoRegalo', (data) => {
         // data = { nombre, viewer, avatar, giftImg, queenColor }
         if (data.viewer && participantesActivos.includes(data.nombre)) {
-            const col = (equiposInfo[data.nombre] || {}).color || '#fff';
-            agregarViewer(data.viewer, data.avatar || '', data.giftImg || '', col);
+            agregarViewer(data.viewer, data.avatar || '', data.giftImg || '', data.nombre);
         }
     });
 

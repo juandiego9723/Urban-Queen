@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="es">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -18,7 +19,8 @@
             margin: 0;
             padding: 20px;
             font-family: 'Inter', sans-serif;
-            background: #00FF00; /* Chroma green */
+            background: #00FF00;
+            /* Chroma green */
             min-height: 100vh;
             color: var(--text-color);
             display: flex;
@@ -26,7 +28,9 @@
             align-items: center;
         }
 
-        h1 { display: none; }
+        h1 {
+            display: none;
+        }
 
         /* Contenedor del Grid */
         .grid-container {
@@ -66,27 +70,27 @@
         /* Anillo circular de la imagen */
         .card-img-container {
             position: absolute;
-            top: 15px;
-            width: 70px;
-            height: 70px;
+            top: 10px;
+            width: 85px;
+            height: 85px;
             border-radius: 50%;
-            border: 2px solid rgba(255,255,255,0.6);
+            border: 2px solid rgba(255, 255, 255, 0.6);
             display: flex;
             align-items: center;
             justify-content: center;
-            background: radial-gradient(circle, rgba(255,255,255,0.2) 0%, rgba(255,255,255,0) 70%);
-            box-shadow: inset 0 0 15px rgba(255,255,255,0.3), 0 0 10px rgba(255,255,255,0.2);
+            background: radial-gradient(circle, rgba(255, 255, 255, 0.2) 0%, rgba(255, 255, 255, 0) 70%);
+            box-shadow: inset 0 0 15px rgba(255, 255, 255, 0.3), 0 0 10px rgba(255, 255, 255, 0.2);
         }
 
         .card-img {
-            width: 80%;
-            height: 80%;
+            width: 94%;
+            height: 140%;
             object-fit: contain;
-            filter: drop-shadow(0 4px 6px rgba(0,0,0,0.3));
+            filter: drop-shadow(0 4px 6px rgba(0, 0, 0, 0.3));
         }
 
         .card-title {
-            font-size: 11px;
+            font-size: 18px;
             font-weight: 800;
             text-transform: uppercase;
             letter-spacing: 0.5px;
@@ -96,26 +100,7 @@
             overflow: hidden;
             text-overflow: ellipsis;
             z-index: 2;
-            text-shadow: 0 2px 4px rgba(0,0,0,0.6);
-        }
-
-        /* Badge superior derecho */
-        .card-badge {
-            position: absolute;
-            top: 8px;
-            right: 8px;
-            background: rgba(0,0,0,0.4);
-            color: #fff;
-            font-size: 10px;
-            font-weight: bold;
-            width: 18px;
-            height: 18px;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            border: 1px solid rgba(255,255,255,0.3);
-            z-index: 5;
+            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.6);
         }
 
         /* Accion eliminada */
@@ -143,9 +128,11 @@
             border: 2px dashed rgba(255, 255, 255, 0.6);
             justify-content: center;
         }
+
         .card-add:hover {
             background: rgba(255, 255, 255, 0.3);
         }
+
         .card-add .plus {
             font-size: 50px;
             color: white;
@@ -156,7 +143,10 @@
         .modal {
             display: none;
             position: fixed;
-            top: 0; left: 0; right: 0; bottom: 0;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
             background: rgba(0, 0, 0, 0.6);
             backdrop-filter: blur(5px);
             z-index: 100;
@@ -170,8 +160,13 @@
         }
 
         @keyframes fadeIn {
-            from { opacity: 0; }
-            to { opacity: 1; }
+            from {
+                opacity: 0;
+            }
+
+            to {
+                opacity: 1;
+            }
         }
 
         .modal-content {
@@ -181,7 +176,7 @@
             border-radius: 20px;
             width: 90%;
             max-width: 400px;
-            box-shadow: 0 20px 40px rgba(0,0,0,0.3);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
             position: relative;
         }
 
@@ -261,9 +256,9 @@
         .btn-close:hover {
             color: #333;
         }
-
     </style>
 </head>
+
 <body>
 
     <h1>Tus Regalos Dinámicos</h1>
@@ -277,10 +272,11 @@
         <div class="modal-content">
             <button class="btn-close" onclick="cerrarModal()">&times;</button>
             <h2 class="modal-title">Nuevo Regalo</h2>
-            
+
             <div class="form-group">
                 <label>Imagen del Regalo</label>
-                <input type="file" id="fileInput" accept="image/*" class="form-control" onchange="previsualizarImagen(event)">
+                <input type="file" id="fileInput" accept="image/*" class="form-control"
+                    onchange="previsualizarImagen(event)">
                 <img id="preview" class="preview-img">
             </div>
 
@@ -291,7 +287,8 @@
 
             <div class="form-group">
                 <label>¿Qué hace este regalo? (Acción)</label>
-                <textarea id="accionInput" class="form-control" rows="3" placeholder="Ej. La reina debe cantar una canción de karaoke..."></textarea>
+                <textarea id="accionInput" class="form-control" rows="3"
+                    placeholder="Ej. La reina debe cantar una canción de karaoke..."></textarea>
             </div>
 
             <button class="btn-save" onclick="guardarRegalo()">Guardar Regalo</button>
@@ -317,12 +314,11 @@
         function renderGrid(regalos) {
             const grid = document.getElementById('grid');
             grid.innerHTML = '';
-            
+
             regalos.forEach((r, index) => {
                 const card = document.createElement('div');
                 card.className = 'card';
                 card.innerHTML = `
-                    <div class="card-badge">1</div>
                     <div class="card-img-container">
                         <img src="${r.imagen}" class="card-img" alt="${r.nombre}">
                     </div>
@@ -348,9 +344,9 @@
         function previsualizarImagen(event) {
             const file = event.target.files[0];
             if (!file) return;
-            
+
             const reader = new FileReader();
-            reader.onload = function(e) {
+            reader.onload = function (e) {
                 base64Image = e.target.result;
                 const preview = document.getElementById('preview');
                 preview.src = base64Image;
@@ -396,7 +392,7 @@
         async function eliminarRegalo(event, id) {
             event.stopPropagation();
             if (!confirm("¿Estás seguro de eliminar este regalo?")) return;
-            
+
             try {
                 await fetch('/api/regalos-custom/eliminar', {
                     method: 'POST',
@@ -418,4 +414,5 @@
         cargarRegalos();
     </script>
 </body>
+
 </html>
