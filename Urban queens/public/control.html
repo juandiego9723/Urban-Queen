@@ -780,17 +780,18 @@ const PAGES = [
 
 let editingQueen = null;
 
-// Lista de imágenes disponibles en /public/regalos/
-const REGALO_IMGS = [
-    'GG.png','tiktok.png','Rosa.png','pistola.png','Rosa 10.png',
-    'TikTok Universe.png','Diamond Gun.png','Dragon Crown.png','Galaxy.png',
-    'Flying Jets.png','Unicorn Fantasy.png','Meteor Shower.png','Manifesting.png',
-    'Hand Hearts.png','Mishka Bear.png','Leon the Kitten.png','DJ Gafas.png',
-    'Confetti.png','Corgi.png','ballena.png','capibara.png','ciervo.png',
-    'cisne.png','corazon.png','corona de flores.png','corona.png','dona.png',
-    'fuegos artificiales.png','gafas verdes.png','gorra.png','manilla.png',
-    'melena de leon.png','msriposazs 299.png','pulpo.png','sombrero vaquero.png','tiktok corona.png'
-];
+// Lista de imágenes disponibles en /public/regalos/ — se carga dinámicamente desde el servidor
+let REGALO_IMGS = [];
+
+async function cargarRegaloImgs() {
+    try {
+        const res = await fetch('/api/regalos-imgs');
+        REGALO_IMGS = await res.json();
+    } catch(e) {
+        console.warn('No se pudo cargar la lista de imágenes de regalos:', e);
+        REGALO_IMGS = [];
+    }
+}
 
 function prevRegalo(queenName) {
     const sel = document.getElementById('edit-ri');
@@ -899,6 +900,7 @@ async function init() {
     const res = await fetch('/api/queens');
     QUEENS = await res.json();
     await cargarColores();
+    await cargarRegaloImgs();   // Carga dinámica de imágenes de regalos
     renderPantallas();
     renderPuntos();
     renderBatallaOptions();
