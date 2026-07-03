@@ -195,6 +195,16 @@ app.all('/api/queens/toggle', (req, res) => {
     io.emit('queensActualizadas', { queens: QUEENS, equipos, apodos: DB.getApodosMap() });
     res.json({ activo: nuevoEstado });
 });
+// --- API IMÁGENES DE REGALOS ---
+app.get('/api/regalos-imgs', (req, res) => {
+    const dir = path.join(__dirname, 'public', 'regalos');
+    fs.readdir(dir, (err, files) => {
+        if (err) return res.json([]);
+        const imgs = files.filter(f => /\.(png|jpg|jpeg|gif|webp)$/i.test(f)).sort();
+        res.json(imgs);
+    });
+});
+
 app.get('/api/ranking', (req, res) => res.json(DB.getRanking()));
 app.get('/api/ranking-mensual', (req, res) => res.json(DB.getRankingMensual()));
 app.get('/api/ranking-diario', (req, res) => res.json(DB.getRankingDiario()));
