@@ -483,6 +483,11 @@ function procesarRegaloTikTok(data) {
 }
 
 function conectarTikTok(usuario) {
+    if (tiktokEstado === 'conectando') {
+        console.log('⚠️ Ya hay un intento de conexión en progreso, ignorando nuevo intento.');
+        return;
+    }
+
     if (tiktokConnection) {
         try { tiktokConnection.disconnect(); } catch(e) {}
         tiktokConnection = null;
