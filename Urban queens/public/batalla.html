@@ -1,13 +1,19 @@
 <!DOCTYPE html>
 <html lang="es">
+
 <head>
     <meta charset="UTF-8">
     <title>Modo Batalla Urban Queens</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Bangers&family=Inter:wght@700;800;900&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Bangers&family=Inter:wght@700;800;900&display=swap"
+        rel="stylesheet">
     <style>
-        * { box-sizing: border-box; margin: 0; padding: 0; }
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
 
         body {
             background: #00FF00;
@@ -36,15 +42,30 @@
             font-family: 'Bangers', cursive;
             font-size: 58px;
             color: #FFD700;
-            text-shadow: 3px 3px 0 #000, 0 0 20px rgba(255,215,0,0.6);
+            text-shadow: 3px 3px 0 #000, 0 0 20px rgba(255, 215, 0, 0.6);
             letter-spacing: 3px;
             text-align: center;
             transition: color 0.3s;
             line-height: 1;
             margin-bottom: 4px;
         }
-        #timer.urgente { color: #ff4444; animation: pulso 0.6s infinite; }
-        @keyframes pulso { 0%,100%{transform:scale(1)} 50%{transform:scale(1.08)} }
+
+        #timer.urgente {
+            color: #ff4444;
+            animation: pulso 0.6s infinite;
+        }
+
+        @keyframes pulso {
+
+            0%,
+            100% {
+                transform: scale(1)
+            }
+
+            50% {
+                transform: scale(1.08)
+            }
+        }
 
         /* ── FILA IMÁGENES DE REGALO ── */
         #gift-row {
@@ -66,17 +87,30 @@
             width: 56px;
             height: 56px;
             object-fit: contain;
-            filter: drop-shadow(0 0 10px rgba(255,255,255,0.7)) drop-shadow(2px 2px 4px rgba(0,0,0,0.8));
+            filter: drop-shadow(0 0 10px rgba(255, 255, 255, 0.7)) drop-shadow(2px 2px 4px rgba(0, 0, 0, 0.8));
             transition: transform 0.2s;
         }
+
         .gift-img.bounce {
             animation: gift-bounce 0.45s ease;
         }
+
         @keyframes gift-bounce {
-            0%   { transform: scale(1); }
-            40%  { transform: scale(1.5) rotate(-6deg); }
-            70%  { transform: scale(0.9) rotate(3deg); }
-            100% { transform: scale(1); }
+            0% {
+                transform: scale(1);
+            }
+
+            40% {
+                transform: scale(1.5) rotate(-6deg);
+            }
+
+            70% {
+                transform: scale(0.9) rotate(3deg);
+            }
+
+            100% {
+                transform: scale(1);
+            }
         }
 
         /* ── BARRA DE PUNTOS ── */
@@ -85,8 +119,8 @@
             border-radius: 25px;
             overflow: hidden;
             display: flex;
-            box-shadow: 0 4px 20px rgba(0,0,0,0.5), inset 0 2px 6px rgba(0,0,0,0.3);
-            border: 3px solid rgba(0,0,0,0.4);
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5), inset 0 2px 6px rgba(0, 0, 0, 0.3);
+            border: 3px solid rgba(0, 0, 0, 0.4);
         }
 
         .queen-bar {
@@ -98,16 +132,19 @@
             font-size: 28px;
             letter-spacing: 1px;
             color: #fff;
-            text-shadow: 2px 2px 4px rgba(0,0,0,0.9);
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.9);
             transition: width 0.6s cubic-bezier(0.4, 0, 0.2, 1);
             position: relative;
         }
+
         .queen-bar::after {
             content: '';
             position: absolute;
-            top: 0; left: 0; right: 0;
+            top: 0;
+            left: 0;
+            right: 0;
             height: 45%;
-            background: linear-gradient(180deg, rgba(255,255,255,0.25) 0%, transparent 100%);
+            background: linear-gradient(180deg, rgba(255, 255, 255, 0.25) 0%, transparent 100%);
             pointer-events: none;
         }
 
@@ -127,14 +164,14 @@
 
         .queen-label {
             font-family: 'Bangers', cursive;
-            font-size: 22px;
+            font-size: 35px;
             letter-spacing: 1px;
-            text-shadow: 2px 2px 0 #000, 0 0 10px rgba(0,0,0,0.6);
+            text-shadow: 2px 2px 0 #000, 0 0 10px rgba(0, 0, 0, 0.6);
             line-height: 1;
         }
 
         .queen-vics {
-            font-size: 11px;
+            font-size: 21px;
             font-weight: 800;
             color: #FFD700;
             text-shadow: 1px 1px 0 #000;
@@ -155,24 +192,32 @@
             display: flex;
             align-items: center;
             gap: 4px;
-            background: rgba(0,0,0,0.65);
-            border: 1px solid rgba(255,255,255,0.15);
+            background: rgba(0, 0, 0, 0.65);
+            border: 1px solid rgba(255, 255, 255, 0.15);
             border-radius: 15px;
             padding: 2px 8px 2px 2px;
             animation: slide-in-bar 0.3s ease;
             white-space: nowrap;
         }
+
         @keyframes slide-in-bar {
-            from { opacity: 0; transform: translateY(-5px) scale(0.9); }
-            to   { opacity: 1; transform: translateY(0) scale(1); }
+            from {
+                opacity: 0;
+                transform: translateY(-5px) scale(0.9);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0) scale(1);
+            }
         }
 
         .bar-viewer-avatar {
-            width: 20px;
-            height: 20px;
+            width: 30px;
+            height: 30px;
             border-radius: 50%;
             object-fit: cover;
-            border: 1px solid rgba(255,255,255,0.4);
+            border: 1px solid rgba(255, 255, 255, 0.4);
             background: #333;
         }
 
@@ -192,6 +237,14 @@
             object-fit: contain;
         }
 
+        .bar-viewer-coins {
+            font-size: 10px;
+            font-weight: 900;
+            color: #FFD700;
+            text-shadow: 1px 1px 0 #000;
+            letter-spacing: 0.3px;
+        }
+
         /* ── ANUNCIO FINAL ── */
         #anuncio-fin {
             display: none;
@@ -202,10 +255,10 @@
             font-family: 'Bangers', cursive;
             font-size: 72px;
             color: #FFD700;
-            text-shadow: 0 0 30px rgba(255,215,0,0.9), 5px 5px 0 #000;
+            text-shadow: 0 0 30px rgba(255, 215, 0, 0.9), 5px 5px 0 #000;
             letter-spacing: 4px;
             text-align: center;
-            background: rgba(0,0,0,0.88);
+            background: rgba(0, 0, 0, 0.88);
             padding: 20px 40px;
             border-radius: 20px;
             border: 3px solid #FFD700;
@@ -213,12 +266,21 @@
             white-space: nowrap;
             animation: zoom-in 0.4s ease;
         }
+
         @keyframes zoom-in {
-            from { transform: translate(-50%,-50%) scale(0.5); opacity: 0; }
-            to   { transform: translate(-50%,-50%) scale(1);   opacity: 1; }
+            from {
+                transform: translate(-50%, -50%) scale(0.5);
+                opacity: 0;
+            }
+
+            to {
+                transform: translate(-50%, -50%) scale(1);
+                opacity: 1;
+            }
         }
     </style>
 </head>
+
 <body>
     <div id="batalla-wrap">
         <div id="timer">ESPERANDO BATALLA...</div>
@@ -238,215 +300,216 @@
 
     <script src="/socket.io/socket.io.js"></script>
     <script>
-    const socket = io();
-    let participantesActivos = [];
-    let equiposInfo = {};
-    let APODOS = {};
-    let puntosActuales = {};
+        const socket = io();
+        let participantesActivos = [];
+        let equiposInfo = {};
+        let APODOS = {};
+        let puntosActuales = {};
 
-    // Feed de espectadores por barra (máximo 3 chips visibles por bailarina)
-    const MAX_VIEWERS = 3;
-    let feedViewers = {}; // { [chica]: [{nick, avatar, giftImg}] }
+        // Feed de espectadores por barra (máximo 3 chips visibles por bailarina)
+        const MAX_VIEWERS = 3;
+        let feedViewers = {}; // { [chica]: [{nick, avatar, giftImg, coins}] }
 
-    const timerEl    = document.getElementById('timer');
-    const anuncio    = document.getElementById('anuncio-fin');
-    const giftRow    = document.getElementById('gift-row');
-    const barOuter   = document.getElementById('bar-outer');
-    const namesRow   = document.getElementById('names-row');
+        const timerEl = document.getElementById('timer');
+        const anuncio = document.getElementById('anuncio-fin');
+        const giftRow = document.getElementById('gift-row');
+        const barOuter = document.getElementById('bar-outer');
+        const namesRow = document.getElementById('names-row');
 
-    // ── helpers ──
-    function lightenColor(hex) {
-        try {
-            let r = parseInt(hex.slice(1,3),16), g = parseInt(hex.slice(3,5),16), b = parseInt(hex.slice(5,7),16);
-            r = Math.min(255,r+60); g = Math.min(255,g+60); b = Math.min(255,b+60);
-            return '#'+[r,g,b].map(x=>x.toString(16).padStart(2,'0')).join('');
-        } catch(e) { return hex; }
-    }
+        // ── helpers ──
+        function lightenColor(hex) {
+            try {
+                let r = parseInt(hex.slice(1, 3), 16), g = parseInt(hex.slice(3, 5), 16), b = parseInt(hex.slice(5, 7), 16);
+                r = Math.min(255, r + 60); g = Math.min(255, g + 60); b = Math.min(255, b + 60);
+                return '#' + [r, g, b].map(x => x.toString(16).padStart(2, '0')).join('');
+            } catch (e) { return hex; }
+        }
 
-    function isLight(hex) {
-        try { const r=parseInt(hex.slice(1,3),16),g=parseInt(hex.slice(3,5),16),b=parseInt(hex.slice(5,7),16); return (r*299+g*587+b*114)/1000>150; }
-        catch(e){return false;}
-    }
+        function isLight(hex) {
+            try { const r = parseInt(hex.slice(1, 3), 16), g = parseInt(hex.slice(3, 5), 16), b = parseInt(hex.slice(5, 7), 16); return (r * 299 + g * 587 + b * 114) / 1000 > 150; }
+            catch (e) { return false; }
+        }
 
-    // ── Render completo de la batalla ──
-    function renderBatalla(participantes, equipos, victorias, puntos) {
-        participantesActivos = participantes;
-        equiposInfo = equipos;
-        puntosActuales = { ...puntos };
-        feedViewers = {}; // Reset feed en cada render
+        // ── Render completo de la batalla ──
+        function renderBatalla(participantes, equipos, victorias, puntos) {
+            participantesActivos = participantes;
+            equiposInfo = equipos;
+            puntosActuales = { ...puntos };
+            feedViewers = {}; // Reset feed en cada render
 
-        const pct = 100 / participantes.length;
+            const pct = 100 / participantes.length;
 
-        // Imágenes de regalo
-        giftRow.innerHTML = '';
-        participantes.forEach(chica => {
-            const eq = equipos[chica] || { nombre: chica, color: '#fff', regalo_img: '' };
-            const imgSrc = eq.regalo_img ? `/regalos/${encodeURIComponent(eq.regalo_img)}` : '';
-            giftRow.innerHTML += `
+            // Imágenes de regalo
+            giftRow.innerHTML = '';
+            participantes.forEach(chica => {
+                const eq = equipos[chica] || { nombre: chica, color: '#fff', regalo_img: '' };
+                const imgSrc = eq.regalo_img ? `/regalos/${encodeURIComponent(eq.regalo_img)}` : '';
+                giftRow.innerHTML += `
                 <div class="gift-slot">
                     ${imgSrc
                         ? `<img id="gift-${chica}" class="gift-img" src="${imgSrc}" alt="${chica}" onerror="this.style.display='none'">`
                         : `<div style="width:52px;height:52px"></div>`
                     }
                 </div>`;
-        });
+            });
 
-        // Barra de puntos
-        barOuter.innerHTML = '';
-        participantes.forEach(chica => {
-            const eq = equipos[chica] || { nombre: chica, color: '#aaa' };
-            const light = lightenColor(eq.color);
-            const pts = puntos[chica] || 0;
-            const bar = document.createElement('div');
-            bar.id = 'bar-' + chica;
-            bar.className = 'queen-bar';
-            bar.style.background = `linear-gradient(90deg, ${eq.color}, ${light})`;
-            bar.style.width = pct + '%';
-            bar.textContent = pts;
-            barOuter.appendChild(bar);
-        });
+            // Barra de puntos
+            barOuter.innerHTML = '';
+            participantes.forEach(chica => {
+                const eq = equipos[chica] || { nombre: chica, color: '#aaa' };
+                const light = lightenColor(eq.color);
+                const pts = puntos[chica] || 0;
+                const bar = document.createElement('div');
+                bar.id = 'bar-' + chica;
+                bar.className = 'queen-bar';
+                bar.style.background = `linear-gradient(90deg, ${eq.color}, ${light})`;
+                bar.style.width = pct + '%';
+                bar.textContent = pts;
+                barOuter.appendChild(bar);
+            });
 
-        // Nombres
-        namesRow.innerHTML = '';
-        participantes.forEach(chica => {
-            const eq = equipos[chica] || { nombre: chica, color: '#fff' };
-            const label = APODOS[chica] || eq.nombre || chica.toUpperCase();
-            namesRow.innerHTML += `
+            // Nombres
+            namesRow.innerHTML = '';
+            participantes.forEach(chica => {
+                const eq = equipos[chica] || { nombre: chica, color: '#fff' };
+                const label = APODOS[chica] || eq.nombre || chica.toUpperCase();
+                namesRow.innerHTML += `
                 <div class="queen-name-slot">
                     <span class="queen-label" style="color:${eq.color}">${label}</span>
                     <span class="queen-vics" id="vic-${chica}">👑 X${victorias[chica] || 0}</span>
                     <div class="feed-debajo" id="feed-${chica}"></div>
                 </div>`;
-        });
-    }
+            });
+        }
 
-    // ── Actualizar barras ──
-    function actualizarBarras(puntos) {
-        puntosActuales = { ...puntos };
-        let total = 0;
-        participantesActivos.forEach(c => { total += (puntos[c] || 0); });
-        const pct = 100 / participantesActivos.length;
-        participantesActivos.forEach(chica => {
-            const barEl = document.getElementById('bar-' + chica);
-            if (barEl) {
-                let p = total === 0 ? pct : ((puntos[chica] || 0) / total) * 100;
-                p = Math.max(2, p); // mínimo visual
-                barEl.style.width = p + '%';
-                barEl.textContent = puntos[chica] || 0;
-            }
-        });
-    }
+        // ── Actualizar barras ──
+        function actualizarBarras(puntos) {
+            puntosActuales = { ...puntos };
+            let total = 0;
+            participantesActivos.forEach(c => { total += (puntos[c] || 0); });
+            const pct = 100 / participantesActivos.length;
+            participantesActivos.forEach(chica => {
+                const barEl = document.getElementById('bar-' + chica);
+                if (barEl) {
+                    let p = total === 0 ? pct : ((puntos[chica] || 0) / total) * 100;
+                    p = Math.max(2, p); // mínimo visual
+                    barEl.style.width = p + '%';
+                    barEl.textContent = puntos[chica] || 0;
+                }
+            });
+        }
 
-    // ── Feed de espectadores ──
-    function agregarViewer(nick, avatar, giftImg, chica) {
-        if (!feedViewers[chica]) feedViewers[chica] = [];
-        const fv = feedViewers[chica];
-        // Evitar duplicados consecutivos en la misma barra
-        if (fv.length && fv[0].nick === nick) return;
-        fv.unshift({ nick, avatar, giftImg });
-        if (fv.length > MAX_VIEWERS) fv.pop();
-        renderFeed(chica);
-        // Animar imagen del regalo
-        if (giftImg) {
-            const gifEl = document.getElementById('gift-' + chica);
-            if (gifEl) {
-                gifEl.classList.remove('bounce');
-                void gifEl.offsetWidth;
-                gifEl.classList.add('bounce');
+        // ── Feed de espectadores ──
+        function agregarViewer(nick, avatar, giftImg, chica, coins) {
+            if (!feedViewers[chica]) feedViewers[chica] = [];
+            const fv = feedViewers[chica];
+            // Evitar duplicados consecutivos en la misma barra
+            if (fv.length && fv[0].nick === nick) return;
+            fv.unshift({ nick, avatar, giftImg, coins: coins || 0 });
+            if (fv.length > MAX_VIEWERS) fv.pop();
+            renderFeed(chica);
+            // Animar imagen del regalo
+            if (giftImg) {
+                const gifEl = document.getElementById('gift-' + chica);
+                if (gifEl) {
+                    gifEl.classList.remove('bounce');
+                    void gifEl.offsetWidth;
+                    gifEl.classList.add('bounce');
+                }
             }
         }
-    }
 
-    function renderFeed(chica) {
-        const feedContainer = document.getElementById('feed-' + chica);
-        if (!feedContainer) return;
-        
-        feedContainer.innerHTML = feedViewers[chica].map(v => {
-            const avatarHtml = v.avatar
-                ? `<img class="bar-viewer-avatar" src="${v.avatar}" onerror="this.src='/regalos/corazon.png'">`
-                : `<div class="bar-viewer-avatar" style="background:#555;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:800;color:#fff">${v.nick.slice(0,1).toUpperCase()}</div>`;
-            const giftHtml = v.giftImg
-                ? `<img class="bar-viewer-gift" src="/regalos/${encodeURIComponent(v.giftImg)}" onerror="this.style.display='none'">`
-                : '';
-            return `<div class="bar-viewer-chip">
+        function renderFeed(chica) {
+            const feedContainer = document.getElementById('feed-' + chica);
+            if (!feedContainer) return;
+
+            feedContainer.innerHTML = feedViewers[chica].map(v => {
+                const avatarHtml = v.avatar
+                    ? `<img class="bar-viewer-avatar" src="${v.avatar}" onerror="this.src='/regalos/corazon.png'">`
+                    : `<div class="bar-viewer-avatar" style="background:#555;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:800;color:#fff">${v.nick.slice(0, 1).toUpperCase()}</div>`;
+                const coinsHtml = v.coins > 0
+                    ? `<span class="bar-viewer-coins">💎${v.coins}</span>`
+                    : '';
+                return `<div class="bar-viewer-chip">
                 ${avatarHtml}
                 <span class="bar-viewer-nick">${v.nick}</span>
-                ${giftHtml}
+                ${coinsHtml}
             </div>`;
-        }).join('');
-    }
-
-    // ── SOCKET EVENTS ──
-    socket.on('batallaInicio', (data) => {
-        anuncio.style.display = 'none';
-        timerEl.classList.remove('urgente');
-        timerEl.style.color = '#FFD700';
-        feedViewers = {};
-        renderBatalla(data.participantes, data.equipos || equiposInfo, data.victorias || {}, data.puntos || {});
-    });
-
-    socket.on('batallaTick', (tiempo) => {
-        let m = Math.floor(tiempo / 60).toString().padStart(2,'0');
-        let s = (tiempo % 60).toString().padStart(2,'0');
-        timerEl.textContent = m + ':' + s;
-        if (tiempo <= 10) { timerEl.classList.add('urgente'); }
-        else { timerEl.classList.remove('urgente'); }
-    });
-
-    socket.on('batallaPuntos', actualizarBarras);
-
-    socket.on('nuevoRegalo', (data) => {
-        // data = { nombre, viewer, avatar, giftImg, queenColor }
-        if (data.viewer && participantesActivos.includes(data.nombre)) {
-            agregarViewer(data.viewer, data.avatar || '', data.giftImg || '', data.nombre);
+            }).join('');
         }
-    });
 
-    socket.on('batallaFin', (data) => {
-        const esEmpate = (data.ganadora === 'EMPATE' || data.ganadora === 'SIN PUNTOS');
-        const nombreDisplay = esEmpate ? data.ganadora : (APODOS[data.ganadora] || data.ganadora);
-        const texto = esEmpate ? nombreDisplay : '🏆 ¡GANÓ ' + nombreDisplay + '!';
-        timerEl.textContent = texto;
-        timerEl.classList.remove('urgente');
-        anuncio.textContent = texto;
-        anuncio.style.color = esEmpate ? '#fff' : '#FFD700';
-        anuncio.style.borderColor = esEmpate ? '#fff' : '#FFD700';
-        anuncio.style.display = 'block';
-        if (!esEmpate && data.victorias) {
-            const vicEl = document.getElementById('vic-' + data.ganadora);
-            if (vicEl) vicEl.textContent = '👑 X' + data.victorias[data.ganadora];
-        }
-        setTimeout(() => { anuncio.style.display = 'none'; }, 6000);
-    });
+        // ── SOCKET EVENTS ──
+        socket.on('batallaInicio', (data) => {
+            anuncio.style.display = 'none';
+            timerEl.classList.remove('urgente');
+            timerEl.style.color = '#FFD700';
+            feedViewers = {};
+            renderBatalla(data.participantes, data.equipos || equiposInfo, data.victorias || {}, data.puntos || {});
+        });
 
-    socket.on('batallaCancelada', () => {
-        timerEl.textContent = 'ESPERANDO BATALLA...';
-        timerEl.classList.remove('urgente');
-        anuncio.style.display = 'none';
-    });
+        socket.on('batallaTick', (tiempo) => {
+            let m = Math.floor(tiempo / 60).toString().padStart(2, '0');
+            let s = (tiempo % 60).toString().padStart(2, '0');
+            timerEl.textContent = m + ':' + s;
+            if (tiempo <= 10) { timerEl.classList.add('urgente'); }
+            else { timerEl.classList.remove('urgente'); }
+        });
 
-    socket.on('queensActualizadas', (data) => {
-        equiposInfo = data.equipos || equiposInfo;
-        if (data.apodos) APODOS = data.apodos;
-    });
+        socket.on('batallaPuntos', actualizarBarras);
 
-    // ── Carga inicial ──
-    async function init() {
-        const all = await (await fetch('/api/queens/all')).json();
-        all.forEach(q => {
-            if (q.activo) {
-                const display = (q.apodo && q.apodo.trim()) ? q.apodo.trim() : q.name;
-                equiposInfo[q.name] = {
-                    nombre: display.toUpperCase(),
-                    color: q.color,
-                    regalo_img: q.regalo_img || ''
-                };
+        socket.on('nuevoRegalo', (data) => {
+            // data = { nombre, viewer, avatar, giftImg, queenColor, coins, giftName }
+            if (data.viewer && participantesActivos.includes(data.nombre)) {
+                agregarViewer(data.viewer, data.avatar || '', data.giftImg || '', data.nombre, data.coins || 0);
             }
         });
-        const apodosMap = await (await fetch('/api/apodos')).json();
-        APODOS = apodosMap;
-    }
-    init();
+
+        socket.on('batallaFin', (data) => {
+            const esEmpate = (data.ganadora === 'EMPATE' || data.ganadora === 'SIN PUNTOS');
+            const nombreDisplay = esEmpate ? data.ganadora : (APODOS[data.ganadora] || data.ganadora);
+            const texto = esEmpate ? nombreDisplay : '🏆 ¡GANÓ ' + nombreDisplay + '!';
+            timerEl.textContent = texto;
+            timerEl.classList.remove('urgente');
+            anuncio.textContent = texto;
+            anuncio.style.color = esEmpate ? '#fff' : '#FFD700';
+            anuncio.style.borderColor = esEmpate ? '#fff' : '#FFD700';
+            anuncio.style.display = 'block';
+            if (!esEmpate && data.victorias) {
+                const vicEl = document.getElementById('vic-' + data.ganadora);
+                if (vicEl) vicEl.textContent = '👑 X' + data.victorias[data.ganadora];
+            }
+            setTimeout(() => { anuncio.style.display = 'none'; }, 6000);
+        });
+
+        socket.on('batallaCancelada', () => {
+            timerEl.textContent = 'ESPERANDO BATALLA...';
+            timerEl.classList.remove('urgente');
+            anuncio.style.display = 'none';
+        });
+
+        socket.on('queensActualizadas', (data) => {
+            equiposInfo = data.equipos || equiposInfo;
+            if (data.apodos) APODOS = data.apodos;
+        });
+
+        // ── Carga inicial ──
+        async function init() {
+            const all = await (await fetch('/api/queens/all')).json();
+            all.forEach(q => {
+                if (q.activo) {
+                    const display = (q.apodo && q.apodo.trim()) ? q.apodo.trim() : q.name;
+                    equiposInfo[q.name] = {
+                        nombre: display.toUpperCase(),
+                        color: q.color,
+                        regalo_img: q.regalo_img || ''
+                    };
+                }
+            });
+            const apodosMap = await (await fetch('/api/apodos')).json();
+            APODOS = apodosMap;
+        }
+        init();
     </script>
 </body>
+
 </html>

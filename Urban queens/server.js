@@ -411,7 +411,9 @@ app.all('/update', (req, res) => {
                 viewer,
                 avatar,
                 giftImg: eq.regalo_img || '',
-                queenColor: eq.color || '#fff'
+                queenColor: eq.color || '#fff',
+                coins: puntos,
+                giftName: ''
             });
         }
         return res.send("OK");
@@ -428,7 +430,7 @@ app.all('/update-auto', (req, res) => {
         if (queenAsignada) {
             queueUpdate.push({ nombre: queenAsignada, puntos });
             const eq = equipos[queenAsignada] || {};
-            if (viewer) io.emit('nuevoRegalo', { nombre: queenAsignada, viewer, avatar, giftImg: eq.regalo_img || '', queenColor: eq.color || '#fff' });
+            if (viewer) io.emit('nuevoRegalo', { nombre: queenAsignada, viewer, avatar, giftImg: eq.regalo_img || '', queenColor: eq.color || '#fff', coins: puntos, giftName: '' });
             return res.send("Asignado a " + queenAsignada);
         } else {
             queueUpdate.push({ nombre: null, puntos });
@@ -472,19 +474,19 @@ function procesarRegaloTikTok(data) {
             const pts = eq.regalo_pts ? (eq.regalo_pts * repeat) : coins;
             // Quitamos esActivador de acá porque ahora el salto se maneja por queenSalto independiente
             queueUpdate.push({ nombre: queenActivadora, puntos: pts, saltaTurno: queenSalto });
-            io.emit('nuevoRegalo', { nombre: queenActivadora, viewer, avatar, giftImg: eq.regalo_img || giftImgSrc, queenColor: eq.color || '#fff' });
+            io.emit('nuevoRegalo', { nombre: queenActivadora, viewer, avatar, giftImg: eq.regalo_img || giftImgSrc, queenColor: eq.color || '#fff', coins, giftName });
         } else {
             const queenAsignada = lealtadUsuarios[viewer] || null;
             if (queenAsignada && QUEENS.includes(queenAsignada)) {
                 queueUpdate.push({ nombre: queenAsignada, puntos: coins, saltaTurno: queenSalto });
                 const eq = equipos[queenAsignada] || {};
-                io.emit('nuevoRegalo', { nombre: queenAsignada, viewer, avatar, giftImg: giftImgSrc, queenColor: eq.color || '#fff' });
+                io.emit('nuevoRegalo', { nombre: queenAsignada, viewer, avatar, giftImg: giftImgSrc, queenColor: eq.color || '#fff', coins, giftName });
             } else if (queenSalto && QUEENS.includes(queenSalto)) {
                 // Si mandan un regalo de salto PERO no tienen lealtad asignada aún,
                 // enviamos los puntos directo a la queenSalto para no perderlos, y ejecutamos el salto.
                 queueUpdate.push({ nombre: queenSalto, puntos: coins, saltaTurno: queenSalto });
                 const eq = equipos[queenSalto] || {};
-                io.emit('nuevoRegalo', { nombre: queenSalto, viewer, avatar, giftImg: giftImgSrc, queenColor: eq.color || '#fff' });
+                io.emit('nuevoRegalo', { nombre: queenSalto, viewer, avatar, giftImg: giftImgSrc, queenColor: eq.color || '#fff', coins, giftName });
             }
         }
     } catch(e) {
