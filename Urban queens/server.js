@@ -2,7 +2,8 @@ const express = require('express');
 const http = require('http');
 const { Server } = require('socket.io');
 const path = require('path');
-const DB = require('./db');
+const { initSQL, DBInstance } = require('./db');
+const MasterDB = require('./masterDb');
 const { WebcastPushConnection } = require('tiktok-live-connector');
 const fs = require('fs');
 const crypto = require('crypto');
@@ -17,56 +18,862 @@ app.use((req, res, next) => {
     next();
 });
 
+// Middleware de sesiones simple basado en cookies en memoria
+const sessions = {}; // sessionToken -> { user: username, name: display_name }
+
+app.use((req, res, next) => {
+    const list = {};
+    const cookieHeader = req.headers.cookie;
+    if (cookieHeader) {
+        cookieHeader.split(';').forEach(cookie => {
+            const parts = cookie.split('=');
+            if (parts[0]) {
+                list[parts[0].trim()] = decodeURIComponent(parts[1] || '').trim();
+            }
+        });
+    }
+    req.cookies = list;
+    
+    const sessionToken = req.cookies['session_token'];
+    if (sessionToken && sessions[sessionToken]) {
+        req.session = sessions[sessionToken];
+    } else {
+        req.session = {};
+    }
+    
+    res.setSession = (username, data = {}) => {
+        const token = crypto.randomBytes(32).toString('hex');
+        sessions[token] = { user: username, ...data };
+        res.cookie('session_token', token, { httpOnly: true, path: '/' });
+    };
+    
+    res.clearSession = () => {
+        if (sessionToken) {
+            delete sessions[sessionToken];
+        }
+        res.clearCookie('session_token');
+    };
+    
+    next();
+});
+
 const server = http.createServer(app);
 const io = new Server(server);
 
-let QUEENS = []; // cargado dinámicamente desde DB
-let equipos = {}; // { name: { nombre, color } } — construido desde DB
+// Mapeo de sesiones activas (estado en memoria y DB de cada usuario/academia)
+const activeSessions = {};
 
-function reconstruirEquipos() {
-    equipos = {};
-    DB.getAllQueensFull().forEach(q => {
+function getUserId(req) {
+    if (req.query && req.query.user) return req.query.user;
+    if (req.body && req.body.user) return req.body.user;
+    if (req.session && req.session.user) return req.session.user;
+    return null;
+}
+
+function getSocketUser(socket) {
+    if (socket.handshake.query && socket.handshake.query.user) {
+        return socket.handshake.query.user;
+    }
+    
+    const cookieHeader = socket.handshake.headers.cookie;
+    if (cookieHeader) {
+        const list = {};
+        cookieHeader.split(';').forEach(cookie => {
+            const parts = cookie.split('=');
+            if (parts[0]) {
+                list[parts[0].trim()] = decodeURIComponent(parts[1] || '').trim();
+            }
+        });
+        const sessionToken = list['session_token'];
+        if (sessionToken && sessions[sessionToken]) {
+            return sessions[sessionToken].user;
+        }
+    }
+    return null;
+}
+
+function getUserSession(username) {
+    if (!username) return null;
+    if (!activeSessions[username]) {
+        const dbPath = path.join(__dirname, `database_${username}.db`);
+        const dbInstance = new DBInstance(dbPath);
+        dbInstance.init();
+        
+        // Cargar Queens iniciales si no existen
+        dbInstance.initQueens(['Amy', 'Ray', 'Nucita', 'Venus']);
+        
+        // Migración inicial para 'admin' o primer usuario registrado si existe datos.json
+        if (username === 'admin' || username === 'master') {
+            dbInstance.migrarDesdeJSON(path.join(__dirname, 'datos.json'));
+        }
+        
+        const initialQueens = dbInstance.getActiveQueenNames();
+        const initialEquipos = {};
+        dbInstance.getAllQueensFull().forEach(q => {
+            if (q.activo) {
+                const display = (q.apodo && q.apodo.trim()) ? q.apodo.trim() : q.name;
+                initialEquipos[q.name] = { nombre: display.toUpperCase(), color: q.color, regalo_img: q.regalo_img || '' };
+            }
+        });
+
+        const session = {
+            db: dbInstance,
+            QUEENS: initialQueens,
+            equipos: initialEquipos,
+            rachasPerdidas: {},
+            amarillasAcumuladas: {},
+            configFutbol: { limiteAmarilla: parseInt(dbInstance.getConfigVal('limiteAmarilla')) || 3 },
+            estadoBatalla: 'inactiva',
+            tiempoBatalla: 0,
+            puntosBatalla: {},
+            participantesActuales: [...initialQueens],
+            timerBatalla: null,
+            timerBaile: { activo: false, tiempo: 0, chicaActual: '', orden: [...initialQueens], estado: 'inactivo', tiempoTransicion: 0 },
+            intervaloTimerBaile: null,
+            tiempoAcumulado: {},
+            conociendo: { activo: false, tiempo: 0, chicaActual: '', orden: [...initialQueens], estado: 'inactivo', tiempoTransicion: 0, meta: 2000, puntos: 0 },
+            intervaloConociendo: null,
+            lealtadUsuarios: {},
+            tiktokConnection: null,
+            tiktokEstado: 'desconectado',
+            tiktokUsuario: '',
+            tiktokMensajeError: '',
+            regalosDetectados: new Set(),
+            catalogoRegalos: [],
+            dinamicaActiva: null,
+            timerDinamica: null,
+            tiempoDinamica: 0,
+            puntosDinamica: {},
+            rachasDinamica: {},
+            amarillasDinamica: {},
+            eliminadosDinamica: [],
+            queueUpdate: []
+        };
+        
+        initialQueens.forEach(q => {
+            session.rachasPerdidas[q] = 0;
+            session.amarillasAcumuladas[q] = 0;
+            session.tiempoAcumulado[q] = 0;
+        });
+        
+        // Procesar puntos en lote cada 300ms para este usuario
+        session.batchInterval = setInterval(() => {
+            procesarPuntosEnLote(username);
+        }, 300);
+
+        activeSessions[username] = session;
+    }
+    return activeSessions[username];
+}
+
+io.on('connection', (socket) => {
+    const username = getSocketUser(socket);
+    if (!username) {
+        socket.disconnect();
+        return;
+    }
+    
+    socket.join(username);
+    const session = getUserSession(username);
+    
+    if (session) {
+        if (session.estadoBatalla === 'activa') {
+            const victorias = session.db.getVictorias();
+            socket.emit('batallaInicio', { 
+                tiempo: session.tiempoBatalla, 
+                puntos: session.puntosBatalla, 
+                victorias, 
+                equipos: session.equipos, 
+                participantes: session.participantesActuales 
+            });
+        }
+        socket.emit('tiktokEstado', { estado: session.tiktokEstado, usuario: session.tiktokUsuario });
+        
+        if (session.dinamicaActiva) {
+            socket.emit('dinamicaInicio', {
+                config: session.dinamicaActiva,
+                participantes: session.dinamicaActiva.participantes,
+                puntos: session.puntosDinamica,
+                tiempo: session.tiempoDinamica
+            });
+        }
+    }
+});
+
+function reconstruirEquipos(session) {
+    session.equipos = {};
+    session.db.getAllQueensFull().forEach(q => {
         if (q.activo) {
             const display = (q.apodo && q.apodo.trim()) ? q.apodo.trim() : q.name;
-            equipos[q.name] = { nombre: display.toUpperCase(), color: q.color, regalo_img: q.regalo_img || '' };
+            session.equipos[q.name] = { nombre: display.toUpperCase(), color: q.color, regalo_img: q.regalo_img || '' };
         }
     });
 }
 
-function reconstruirQueens() {
-    QUEENS = DB.getActiveQueenNames();
-    reconstruirEquipos();
+function reconstruirQueens(session) {
+    session.QUEENS = session.db.getActiveQueenNames();
+    reconstruirEquipos(session);
 }
 
-// 🛡️ SISTEMA DE JUSTICIA (en memoria, no persistente)
-let rachasPerdidas = {};
-let amarillasAcumuladas = {};
-let configFutbol = { limiteAmarilla: 3 };
+// 🛡️ Middleware para requerir sesión válida
+function requireSession(req, res, next) {
+    const username = getUserId(req);
+    if (!username) {
+        return res.status(401).send('No autorizado: Falta especificar usuario');
+    }
+    const session = getUserSession(username);
+    if (!session) {
+        return res.status(404).send('Usuario no encontrado');
+    }
+    req.userSession = session;
+    req.username = username;
+    next();
+}
 
-let estadoBatalla = 'inactiva'; 
-let tiempoBatalla = 0; 
-let puntosBatalla = { Amy: 0, Ray: 0, Nucita: 0, Venus: 0 }; 
-let participantesActuales = [...QUEENS]; 
-let timerBatalla;
+app.use(express.json({ limit: '50mb' }));
+app.use(express.urlencoded({ limit: '50mb', extended: true }));
 
-let timerBaile = { activo: false, tiempo: 0, chicaActual: 'Ray', orden: [...QUEENS], estado: 'inactivo', tiempoTransicion: 0 }; 
-let intervaloTimerBaile;
-let tiempoAcumulado = { Amy: 0, Ray: 0, Nucita: 0, Venus: 0 };
+// --- RUTAS DE AUTENTICACIÓN ---
+const pub = (f) => path.join(__dirname, 'public', f);
 
-let conociendo = { activo: false, tiempo: 0, chicaActual: 'Ray', orden: [...QUEENS], estado: 'inactivo', tiempoTransicion: 0, meta: 2000, puntos: 0 }; 
-let intervaloConociendo;
+app.get('/login', (req, res) => res.sendFile(pub('login.html')));
+app.post('/login', (req, res) => {
+    const { username, password } = req.body;
+    if (!username || !password) return res.status(400).send('Faltan datos');
+    const user = MasterDB.verificarCredenciales(username, password);
+    if (!user) return res.status(401).send('Usuario o contraseña incorrectos');
+    res.setSession(user.username, { name: user.name });
+    res.send('OK');
+});
 
-let lealtadUsuarios = {};
+app.get('/register', (req, res) => res.sendFile(pub('register.html')));
+app.post('/register', (req, res) => {
+    const { name, username, password } = req.body;
+    if (!name || !username || !password) return res.status(400).send('Todos los campos son obligatorios');
+    try {
+        MasterDB.registrarUsuario(username, password, name);
+        res.setSession(username, { name });
+        res.send('OK');
+    } catch(e) {
+        res.status(400).send(e.message || 'Error registrando usuario');
+    }
+});
 
-// ── TIKTOK LIVE ──
-let tiktokConnection = null;
-let tiktokEstado = 'desconectado';
-let tiktokUsuario = '';
-let tiktokMensajeError = '';
-let regalosDetectados = new Set();
-let catalogoRegalos = [];
+app.all('/logout', (req, res) => {
+    res.clearSession();
+    res.redirect('/login');
+});
 
-// Regalos más comunes de TikTok (respaldo cuando no estás en vivo usando las imágenes locales si existen)
+// Proteger el panel de control
+app.get('/control', (req, res, next) => {
+    if (!req.session || !req.session.user) {
+        return res.redirect('/login');
+    }
+    next();
+});
+
+app.use(express.static(path.join(__dirname, 'public')));
+
+// --- RUTAS DE PANTALLAS ---
+app.get('/',              (req, res) => res.sendFile(pub('ranking.html')));
+app.get('/batalla',       (req, res) => res.sendFile(pub('batalla.html')));
+app.get('/batalla-futbol',(req, res) => res.sendFile(pub('batalla-futbol.html')));
+app.get('/batalla-pk',    (req, res) => res.sendFile(pub('batalla-pk.html')));
+app.get('/timer',         (req, res) => res.sendFile(pub('timer.html')));
+app.get('/conociendo',    (req, res) => res.sendFile(pub('conociendo.html')));
+app.get('/copa',          (req, res) => res.sendFile(pub('copa.html')));
+app.get('/lista-regalos', (req, res) => res.sendFile(pub('lista-regalos.html')));
+app.get('/control',       (req, res) => res.sendFile(pub('control.html')));
+app.get('/dinamica',      (req, res) => res.sendFile(pub('dinamica.html')));
+app.get('/gestor-regalos',(req, res) => res.sendFile(pub('gestor-regalos.html')));
+app.get('/multicam',       (req, res) => res.sendFile(pub('multicam.html')));
+
+// --- APIs DE DATOS ---
+app.get('/api/me', requireSession, (req, res) => {
+    res.json({ username: req.username, name: req.session.name });
+});
+
+app.get('/api/queens', requireSession, (req, res) => res.json(req.userSession.QUEENS));
+app.get('/api/queens/all', requireSession, (req, res) => res.json(req.userSession.db.getAllQueensFull()));
+app.get('/api/apodos', requireSession, (req, res) => res.json(req.userSession.db.getApodosMap()));
+
+// --- CRUD QUEENS ---
+app.all('/api/queens/crear', requireSession, (req, res) => {
+    const s = req.userSession;
+    const nombre = (req.query.nombre || (req.body && req.body.nombre) || '').trim();
+    const color = req.query.color || (req.body && req.body.color) || '#ffffff';
+    const apodo = (req.query.apodo || (req.body && req.body.apodo) || '').trim();
+    const regaloImg = req.query.regalo_img || (req.body && req.body.regalo_img) || '';
+    const regaloPts = parseInt(req.query.regalo_pts || (req.body && req.body.regalo_pts) || '0') || 0;
+    if (!nombre) return res.status(400).send('Falta nombre');
+    s.db.crearQueen(nombre, color, apodo, regaloImg, regaloPts);
+    reconstruirQueens(s);
+    s.QUEENS.forEach(q => { if (!s.rachasPerdidas[q]) s.rachasPerdidas[q] = 0; if (!s.amarillasAcumuladas[q]) s.amarillasAcumuladas[q] = 0; });
+    io.to(req.username).emit('queensActualizadas', { queens: s.QUEENS, equipos: s.equipos, apodos: s.db.getApodosMap() });
+    res.send('OK');
+});
+
+app.all('/api/queens/editar', requireSession, (req, res) => {
+    const s = req.userSession;
+    const p      = (k) => req.query[k] !== undefined ? req.query[k] : (req.body && req.body[k] !== undefined ? req.body[k] : null);
+    const nombre = p('nombre');
+    const color  = p('color');
+    const apodo  = p('apodo');
+    const regImg = p('regalo_img');
+    const regPts = p('regalo_pts') !== null ? parseInt(p('regalo_pts')) : null;
+    if (!nombre || !color) return res.status(400).send('Faltan datos');
+    s.db.editarQueen(nombre, color, apodo, regImg, regPts);
+    reconstruirEquipos(s);
+    io.to(req.username).emit('queensActualizadas', { queens: s.QUEENS, equipos: s.equipos, apodos: s.db.getApodosMap() });
+    res.send('OK');
+});
+
+app.all('/api/queens/renombrar', requireSession, (req, res) => {
+    const s = req.userSession;
+    const nombre = (req.query.nombre || (req.body && req.body.nombre) || '').trim();
+    const nuevo  = (req.query.nuevo  || (req.body && req.body.nuevo)  || '').trim();
+    if (!nombre || !nuevo) return res.status(400).send('Faltan datos');
+    if (nombre === nuevo) return res.send('OK');
+    s.db.renombrarQueen(nombre, nuevo);
+    reconstruirQueens(s);
+    io.to(req.username).emit('queensActualizadas', { queens: s.QUEENS, equipos: s.equipos, apodos: s.db.getApodosMap() });
+    res.send('OK');
+});
+
+app.all('/api/queens/eliminar', requireSession, (req, res) => {
+    const s = req.userSession;
+    const nombre = (req.query.nombre || (req.body && req.body.nombre) || '').trim();
+    if (!nombre) return res.status(400).send('Falta nombre');
+    s.db.eliminarQueen(nombre);
+    reconstruirQueens(s);
+    io.to(req.username).emit('queensActualizadas', { queens: s.QUEENS, equipos: s.equipos, apodos: s.db.getApodosMap() });
+    res.send('OK');
+});
+
+app.all('/api/queens/toggle', requireSession, (req, res) => {
+    const s = req.userSession;
+    const nombre = req.query.nombre || (req.body && req.body.nombre);
+    if (!nombre) return res.status(400).send('Falta nombre');
+    const nuevoEstado = s.db.toggleQueenActivo(nombre);
+    reconstruirQueens(s);
+    io.to(req.username).emit('queensActualizadas', { queens: s.QUEENS, equipos: s.equipos, apodos: s.db.getApodosMap() });
+    res.json({ activo: nuevoEstado });
+});
+
+// --- API IMÁGENES DE REGALOS ---
+app.get('/api/regalos-imgs', (req, res) => {
+    const dir = path.join(__dirname, 'public', 'regalos');
+    fs.readdir(dir, (err, files) => {
+        if (err) return res.json([]);
+        const imgs = files.filter(f => /\.(png|jpg|jpeg|gif|webp)$/i.test(f)).sort();
+        res.json(imgs);
+    });
+});
+
+app.get('/api/ranking', requireSession, (req, res) => res.json(req.userSession.db.getRanking()));
+app.get('/api/ranking-mensual', requireSession, (req, res) => res.json(req.userSession.db.getRankingMensual()));
+app.get('/api/ranking-diario', requireSession, (req, res) => res.json(req.userSession.db.getRankingDiario()));
+app.get('/api/copa', requireSession, (req, res) => res.json({ copa: req.userSession.db.getCopa(), equipos: req.userSession.equipos }));
+
+// --- API FUTBOL CONFIG ---
+app.get('/api/futbol/config', requireSession, (req, res) => {
+    res.json(req.userSession.db.getFutbolConfig());
+});
+
+app.post('/api/futbol/config', requireSession, express.json(), (req, res) => {
+    const s = req.userSession;
+    const config = req.body;
+    if(!config || !config.equipo1 || !config.equipo2) return res.status(400).send('Invalid config');
+    s.db.setFutbolConfig(config);
+    io.to(req.username).emit('futbolConfigActualizada', config);
+    res.send('OK');
+});
+
+app.get('/api/victorias', requireSession, (req, res) => res.json(req.userSession.db.getVictorias()));
+
+// --- APIs ALIASES ---
+app.get('/api/aliases', requireSession, (req, res) => res.json(req.userSession.db.getAliases()));
+app.all('/api/aliases/add', requireSession, (req, res) => {
+    const s = req.userSession;
+    const alias = req.query.alias || (req.body && req.body.alias);
+    const queen = req.query.queen || (req.body && req.body.queen);
+    if (alias && queen && s.QUEENS.includes(queen)) {
+        s.db.agregarAlias(alias, queen);
+        return res.send("OK");
+    }
+    res.status(400).send("Error");
+});
+app.all('/api/aliases/delete', requireSession, (req, res) => {
+    const alias = req.query.alias || (req.body && req.body.alias);
+    if (alias) { req.userSession.db.eliminarAlias(alias); return res.send("OK"); }
+    res.status(400).send("Error");
+});
+
+// --- APIs GRUPOS ---
+app.get('/api/grupos', requireSession, (req, res) => res.json(req.userSession.db.getGrupos()));
+app.all('/api/grupos/crear', requireSession, (req, res) => {
+    const s = req.userSession;
+    const nombre = req.query.nombre || (req.body && req.body.nombre);
+    const color = req.query.color || (req.body && req.body.color) || '#39FF14';
+    if (nombre) {
+        try { s.db.crearGrupo(nombre, color); return res.send("OK"); }
+        catch(e) { return res.status(400).send("Grupo ya existe"); }
+    }
+    res.status(400).send("Error");
+});
+app.all('/api/grupos/eliminar', requireSession, (req, res) => {
+    const id = parseInt(req.query.id || (req.body && req.body.id));
+    if (id) { req.userSession.db.eliminarGrupo(id); return res.send("OK"); }
+    res.status(400).send("Error");
+});
+app.all('/api/grupos/agregar-miembro', requireSession, (req, res) => {
+    const id = parseInt(req.query.id || (req.body && req.body.id));
+    const queen = req.query.queen || (req.body && req.body.queen);
+    if (id && queen) { req.userSession.db.agregarMiembro(id, queen); return res.send("OK"); }
+    res.status(400).send("Error");
+});
+app.all('/api/grupos/remover-miembro', requireSession, (req, res) => {
+    const id = parseInt(req.query.id || (req.body && req.body.id));
+    const queen = req.query.queen || (req.body && req.body.queen);
+    if (id && queen) { req.userSession.db.removerMiembro(id, queen); return res.send("OK"); }
+    res.status(400).send("Error");
+});
+
+// --- APIs SONIDOS ---
+app.get('/api/sonidos', requireSession, (req, res) => res.json(req.userSession.db.getSonidos()));
+app.all('/api/sonidos/set', requireSession, (req, res) => {
+    const s = req.userSession;
+    const evento = req.query.evento || (req.body && req.body.evento);
+    const url = req.query.url || (req.body && req.body.url);
+    if (evento && url) { s.db.setSonido(evento, url); return res.send("OK"); }
+    res.status(400).send("Error");
+});
+
+// ── LÓGICA TIKTOK LIVE Y BATCHING MULTI-TENANT (ZUKAA STYLE) ──
+function conectarTikTok(username, usuarioTikTok) {
+    const session = activeSessions[username];
+    if (!session) return;
+
+    if (session.tiktokConnection) {
+        try { session.tiktokConnection.disconnect(); } catch(e) {}
+        session.tiktokConnection = null;
+    }
+
+    session.tiktokEstado = 'conectando';
+    session.tiktokUsuario = usuarioTikTok;
+    session.tiktokMensajeError = '';
+    io.to(username).emit('tiktokEstado', { estado: 'conectando', usuario: usuarioTikTok });
+
+    const connection = new WebcastPushConnection(usuarioTikTok, {
+        enableExtendedGiftInfo: true
+    });
+
+    session.tiktokConnection = connection;
+
+    connection.connect().then(state => {
+        session.tiktokEstado = 'conectado';
+        session.tiktokMensajeError = '';
+        io.to(username).emit('tiktokEstado', { estado: 'conectado', usuario: usuarioTikTok });
+        connection.fetchAvailableGifts().then(gifts => {
+            session.catalogoRegalos = (gifts || []).map(g => ({
+                id: g.id || g.giftId,
+                name: g.name,
+                diamondCount: g.diamond_count || g.diamondCount || g.cost || 0,
+                imageUrl: g.image?.url_list?.[0] || g.imageUrl || ''
+            }));
+            io.to(username).emit('catalogoCargado', session.catalogoRegalos.length);
+        }).catch(err => {
+            console.error('Error cargando catálogo de regalos de TikTok:', err);
+        });
+    }).catch(err => {
+        console.error('Error al conectar TikTok:', err);
+        session.tiktokEstado = 'error';
+        session.tiktokMensajeError = err.message || (err.toString ? err.toString() : 'Error desconocido');
+        io.to(username).emit('tiktokEstado', { estado: 'error', usuario: usuarioTikTok, error: session.tiktokMensajeError });
+        session.tiktokConnection = null;
+    });
+
+    connection.on('gift', (data) => {
+        procesarRegaloTikTok(username, data);
+    });
+
+    connection.on('chat', (data) => {
+        io.to(username).emit('tiktokLiveEvent', { tipo: 'chat', usuario: data.uniqueId, comentario: data.comment, avatar: data.profilePictureUrl });
+    });
+
+    connection.on('like', (data) => {
+        io.to(username).emit('tiktokLiveEvent', { tipo: 'like', usuario: data.uniqueId, cantidad: data.likeCount, avatar: data.profilePictureUrl });
+    });
+
+    connection.on('social', (data) => {
+        const subtipo = data.displayType.includes('follow') ? 'follow' : 'share';
+        io.to(username).emit('tiktokLiveEvent', { tipo: subtipo, usuario: data.uniqueId, descripcion: data.label, avatar: data.profilePictureUrl });
+    });
+
+    connection.on('member', (data) => {
+        io.to(username).emit('tiktokLiveEvent', { tipo: 'join', usuario: data.uniqueId, avatar: data.profilePictureUrl });
+    });
+
+    connection.on('disconnected', () => {
+        session.tiktokEstado = 'desconectado';
+        session.tiktokUsuario = '';
+        io.to(username).emit('tiktokEstado', { estado: 'desconectado', usuario: '' });
+        session.tiktokConnection = null;
+    });
+
+    connection.on('streamEnd', () => {
+        session.tiktokEstado = 'desconectado';
+        session.tiktokUsuario = '';
+        io.to(username).emit('tiktokEstado', { estado: 'desconectado', usuario: '' });
+        session.tiktokConnection = null;
+    });
+}
+
+function procesarRegaloTikTok(username, data) {
+    const session = activeSessions[username];
+    if (!session) return;
+    
+    const viewer = data.uniqueId;
+    const avatar = data.profilePictureUrl || '';
+    const giftName = data.giftName;
+    const coins = (data.diamondCount || 1) * (data.repeatCount || 1);
+    const repeat = data.repeatCount || 1;
+    const giftImgSrc = data.giftPictureUrl || '';
+    
+    session.regalosDetectados.add(giftName);
+    io.to(username).emit('regaloDetectado', giftName);
+    
+    let rawMapa = session.db.getConfigVal('tiktok_regalo_mapa');
+    let mapa = rawMapa ? JSON.parse(rawMapa) : {};
+    
+    let rawTimerMapa = session.db.getConfigVal('tiktok_timer_mapa');
+    let timerMapa = rawTimerMapa ? JSON.parse(rawTimerMapa) : {};
+    
+    let queenActivadora = mapa[giftName] || null;
+    let queenSalto = timerMapa[giftName] || null;
+    
+    if (data.toUser && data.toUser.uniqueId) {
+        const dest = resolverNombre(session, data.toUser.uniqueId);
+        if (dest) {
+            queenActivadora = dest;
+        }
+    }
+    
+    try {
+        let destinatarioFinal = 'Global';
+        if (queenActivadora && session.QUEENS.includes(queenActivadora)) {
+            const eq = session.equipos[queenActivadora] || {};
+            const pts = eq.regalo_pts ? (eq.regalo_pts * repeat) : coins;
+            destinatarioFinal = queenActivadora;
+            
+            session.queueUpdate.push({ nombre: queenActivadora, puntos: pts, saltaTurno: queenSalto });
+            session.db.registrarRegalo(queenActivadora, giftName, pts, viewer);
+            
+            io.to(username).emit('nuevoRegalo', {
+                nombre: queenActivadora,
+                viewer,
+                avatar,
+                giftImg: eq.regalo_img || giftImgSrc,
+                queenColor: eq.color || '#fff',
+                coins: pts,
+                giftName
+            });
+        } else {
+            const queenAsignada = session.lealtadUsuarios[viewer] || null;
+            if (queenAsignada && session.QUEENS.includes(queenAsignada)) {
+                destinatarioFinal = queenAsignada;
+                session.queueUpdate.push({ nombre: queenAsignada, puntos: coins, saltaTurno: queenSalto });
+                session.db.registrarRegalo(queenAsignada, giftName, coins, viewer);
+                const eq = session.equipos[queenAsignada] || {};
+                
+                io.to(username).emit('nuevoRegalo', {
+                    nombre: queenAsignada,
+                    viewer,
+                    avatar,
+                    giftImg: eq.regalo_img || giftImgSrc,
+                    queenColor: eq.color || '#fff',
+                    coins,
+                    giftName
+                });
+            } else if (queenSalto && session.QUEENS.includes(queenSalto)) {
+                destinatarioFinal = queenSalto;
+                session.queueUpdate.push({ nombre: queenSalto, puntos: coins, saltaTurno: queenSalto });
+                session.db.registrarRegalo(queenSalto, giftName, coins, viewer);
+                const eq = session.equipos[queenSalto] || {};
+                
+                io.to(username).emit('nuevoRegalo', {
+                    nombre: queenSalto,
+                    viewer,
+                    avatar,
+                    giftImg: eq.regalo_img || giftImgSrc,
+                    queenColor: eq.color || '#fff',
+                    coins,
+                    giftName
+                });
+            } else {
+                session.queueUpdate.push({ nombre: null, puntos: coins, saltaTurno: queenSalto });
+            }
+        }
+
+        io.to(username).emit('tiktokLiveEvent', {
+            tipo: 'gift',
+            usuario: viewer,
+            avatar,
+            giftName,
+            coins,
+            destinatario: destinatarioFinal,
+            giftImg: giftImgSrc
+        });
+    } catch(e) {
+        console.error('Error procesando regalo de TikTok:', e);
+    }
+}
+
+function procesarPuntosEnLote(username) {
+    const session = activeSessions[username];
+    if (!session || session.queueUpdate.length === 0) return;
+    
+    const temp = [...session.queueUpdate];
+    session.queueUpdate = [];
+    
+    const sumas = {};
+    let pointsBatallaDelta = {};
+    let pointsDinamicaDelta = {};
+    let saltaTurnoPara = null;
+    
+    temp.forEach(item => {
+        if (item.nombre) {
+            sumas[item.nombre] = (sumas[item.nombre] || 0) + item.puntos;
+            if (session.estadoBatalla === 'activa' && session.participantesActuales.includes(item.nombre)) {
+                pointsBatallaDelta[item.nombre] = (pointsBatallaDelta[item.nombre] || 0) + item.puntos;
+            }
+            if (session.dinamicaActiva && session.dinamicaActiva.participantes.includes(item.nombre) && !session.eliminadosDinamica.includes(item.nombre)) {
+                pointsDinamicaDelta[item.nombre] = (pointsDinamicaDelta[item.nombre] || 0) + item.puntos;
+            }
+        }
+        if (item.saltaTurno) {
+            saltaTurnoPara = item.saltaTurno;
+        }
+    });
+    
+    for (const queen in sumas) {
+        session.db.sumarPuntos(queen, sumas[queen]);
+    }
+    
+    io.to(username).emit('rankingActualizado');
+    
+    if (session.estadoBatalla === 'activa') {
+        let actualizados = false;
+        for (const queen in pointsBatallaDelta) {
+            session.puntosBatalla[queen] = (session.puntosBatalla[queen] || 0) + pointsBatallaDelta[queen];
+            actualizados = true;
+        }
+        if (actualizados) {
+            io.to(username).emit('batallaPuntos', session.puntosBatalla);
+        }
+    }
+    
+    if (session.dinamicaActiva) {
+        let actualizados = false;
+        for (const queen in pointsDinamicaDelta) {
+            session.puntosDinamica[queen] = (session.puntosDinamica[queen] || 0) + pointsDinamicaDelta[queen];
+            actualizados = true;
+        }
+        if (actualizados) {
+            io.to(username).emit('dinamicaPuntos', { puntos: session.puntosDinamica, eliminados: session.eliminadosDinamica });
+        }
+    }
+    
+    if (saltaTurnoPara) {
+        if (session.timerBaile.activo) {
+            saltarSiguienteChica(username, saltaTurnoPara);
+        }
+        if (session.conociendo.activo) {
+            saltarConociendo(username, saltaTurnoPara);
+        }
+    }
+}
+
+function resolverParticipantesDinamica(session, participantes) {
+    if (!participantes || participantes === 'todas') return [...session.QUEENS];
+    if (participantes.startsWith('grupo:')) {
+        const grupoId = parseInt(participantes.split(':')[1]);
+        const grupo = session.db.getGrupos().find(g => g.id === grupoId);
+        return grupo ? grupo.miembros.filter(m => session.QUEENS.includes(m)) : [...session.QUEENS];
+    }
+    if (participantes.startsWith('manual:')) {
+        return participantes.split(':')[1].split(',').map(n => n.trim()).filter(n => session.QUEENS.includes(n));
+    }
+    return [...session.QUEENS];
+}
+
+function finalizarDinamica(username) {
+    const session = activeSessions[username];
+    if (!session || !session.dinamicaActiva) return;
+    const activos = session.dinamicaActiva.participantes.filter(p => !session.eliminadosDinamica.includes(p));
+    let maxPts = 0;
+    activos.forEach(p => { if ((session.puntosDinamica[p] || 0) > maxPts) maxPts = session.puntosDinamica[p] || 0; });
+    const ganadoras = activos.filter(p => (session.puntosDinamica[p] || 0) === maxPts);
+    const ganadora = ganadoras.length === 1 && maxPts > 0 ? ganadoras[0] : maxPts === 0 ? 'SIN PUNTOS' : 'EMPATE';
+    const payload = { ganadora, puntos: session.puntosDinamica, eliminados: session.eliminadosDinamica };
+    io.to(username).emit('dinamicaFin', payload);
+    setTimeout(() => io.to(username).emit('dinamicaFin', payload), 300);
+    session.dinamicaActiva = null;
+}
+
+function resolverNombre(session, nombre) {
+    if (!nombre) return null;
+    if (session.QUEENS.includes(nombre)) return nombre;
+    const queenDeAlias = session.db.resolverAlias(nombre);
+    return queenDeAlias || null;
+}
+
+// BATCHING DE PUNTOS POR USUARIO
+// Se ejecuta cada 300ms para cada sesión activa (definido en getUserSession)
+
+app.all('/update', requireSession, (req, res) => {
+    const s = req.userSession;
+    let nombre = req.query.nombre || (req.body && req.body.nombre);
+    const puntos = parseInt(req.query.puntos || (req.body && req.body.puntos));
+    const viewer = req.query.viewer || (req.body && req.body.viewer);
+    const avatar = req.query.avatar || (req.body && req.body.avatar) || '';
+    
+    nombre = resolverNombre(s, nombre);
+    
+    if (nombre && !isNaN(puntos)) {
+        if (viewer && puntos > 0) s.lealtadUsuarios[viewer] = nombre;
+        if (puntos !== 0) s.queueUpdate.push({ nombre, puntos });
+        
+        if (puntos > 0) {
+            const vName = viewer || 'Admin';
+            s.db.registrarRegalo(nombre, 'Regalo Manual', puntos, vName);
+            if (viewer) {
+                const eq = s.equipos[nombre] || {};
+                io.to(req.username).emit('nuevoRegalo', {
+                    nombre,
+                    viewer,
+                    avatar,
+                    giftImg: eq.regalo_img || '',
+                    queenColor: eq.color || '#fff',
+                    coins: puntos,
+                    giftName: 'Regalo Manual'
+                });
+            }
+        }
+        return res.send("OK");
+    }
+    res.status(400).send("Error");
+});
+
+app.all('/update-auto', requireSession, (req, res) => {
+    const s = req.userSession;
+    const viewer = req.query.viewer || (req.body && req.body.viewer);
+    const avatar = req.query.avatar || (req.body && req.body.avatar) || '';
+    const puntos = parseInt(req.query.puntos || (req.body && req.body.puntos));
+    if (!isNaN(puntos) && puntos > 0) {
+        let queenAsignada = (viewer && s.lealtadUsuarios[viewer]) ? s.lealtadUsuarios[viewer] : null;
+        if (queenAsignada) {
+            s.queueUpdate.push({ nombre: queenAsignada, puntos });
+            const vName = viewer || 'Auto';
+            s.db.registrarRegalo(queenAsignada, 'Regalo Auto', puntos, vName);
+            const eq = s.equipos[queenAsignada] || {};
+            if (viewer) {
+                io.to(req.username).emit('nuevoRegalo', { nombre: queenAsignada, viewer, avatar, giftImg: eq.regalo_img || '', queenColor: eq.color || '#fff', coins: puntos, giftName: 'Regalo Auto' });
+            }
+            return res.send("Asignado a " + queenAsignada);
+        } else {
+            s.queueUpdate.push({ nombre: null, puntos });
+            return res.send("Sumado Global");
+        }
+    }
+    res.status(400).send("Ignorado");
+});
+
+// TIKTOK CONNECTION LOGIC: Implementada a nivel de usuario en getUserSession
+// y conectarTikTok (ver arriba)
+
+app.all('/tiktok/conectar', requireSession, (req, res) => {
+    const usuario = (req.query.usuario || (req.body && req.body.usuario) || '').replace('@', '').trim();
+    if (!usuario) return res.status(400).send('Falta usuario de TikTok');
+    conectarTikTok(req.username, usuario);
+    res.send('Conectando...');
+});
+
+app.all('/tiktok/desconectar', requireSession, (req, res) => {
+    const s = req.userSession;
+    if (s.tiktokConnection) {
+        try { s.tiktokConnection.disconnect(); } catch(e) {}
+        s.tiktokConnection = null;
+    }
+    s.tiktokEstado = 'desconectado';
+    s.tiktokUsuario = '';
+    io.to(req.username).emit('tiktokEstado', { estado: s.tiktokEstado, usuario: '' });
+    res.send('OK');
+});
+
+app.get('/tiktok/test-gift', requireSession, (req, res) => {
+    const giftName = req.query.gift || 'Rose';
+    const repeat = parseInt(req.query.repeat || '1');
+    const destName = req.query.to || '';
+    const viewer = req.query.viewer || 'TesterUnique';
+    const fakeData = {
+        uniqueId: viewer,
+        profilePictureUrl: 'https://p16-sign-va.tiktokcdn.com/tos-maliva-avt-0068/7311145620163350534~tplv-tiktok-shrink:100:100.webp',
+        giftName: giftName,
+        diamondCount: 10,
+        repeatCount: repeat,
+        giftPictureUrl: 'https://p19-webcast.tiktokcdn.com/img/webcast/5f8efc0f4f9f6e72c84285fbfe4e2b00.png~tplv-obj.image'
+    };
+    if (destName) {
+        fakeData.toUser = {
+            uniqueId: destName.toLowerCase(),
+            nickname: destName + '💙'
+        };
+    }
+    procesarRegaloTikTok(req.username, fakeData);
+    res.send({ status: 'OK', simulatedData: fakeData });
+});
+
+app.get('/api/tiktok/estado', requireSession, (req, res) => {
+    const s = req.userSession;
+    res.json({ estado: s.tiktokEstado, usuario: s.tiktokUsuario, error: s.tiktokMensajeError });
+});
+
+app.post('/api/tiktok/mapa', requireSession, (req, res) => {
+    const s = req.userSession;
+    const mapa = req.body.mapa || req.body;
+    s.db.setConfigVal('tiktok_regalo_mapa', JSON.stringify(mapa));
+    io.to(req.username).emit('mapaRegalosCambiado', mapa);
+    res.send('OK');
+});
+
+app.get('/api/tiktok/timer_mapa', requireSession, (req, res) => {
+    const v = req.userSession.db.getConfigVal('tiktok_timer_mapa');
+    res.json(v ? JSON.parse(v) : {});
+});
+
+app.post('/api/tiktok/timer_mapa', requireSession, (req, res) => {
+    const s = req.userSession;
+    const mapa = req.body.mapa || req.body;
+    s.db.setConfigVal('tiktok_timer_mapa', JSON.stringify(mapa));
+    io.to(req.username).emit('mapaTimerCambiado', mapa);
+    res.send('OK');
+});
+
+app.get('/api/tiktok/mapa', requireSession, (req, res) => {
+    const raw = req.userSession.db.getConfigVal('tiktok_regalo_mapa');
+    res.json(raw ? JSON.parse(raw) : {});
+});
+
+app.get('/api/tiktok/regalos-detectados', requireSession, (req, res) => {
+    res.json([...req.userSession.regalosDetectados].sort());
+});
+
+app.all('/api/tiktok/regalos-detectados/limpiar', requireSession, (req, res) => {
+    req.userSession.regalosDetectados.clear();
+    res.send('OK');
+});
+
 const CATALOGO_RESPALDO = [
     { id:5655, name:'Rose',             diamondCount:1,     imageUrl:'/regalos/Rosa.png' },
     { id:6948, name:'TikTok',           diamondCount:1,     imageUrl:'/regalos/tiktok.png' },
@@ -105,682 +912,326 @@ const CATALOGO_RESPALDO = [
     { id:9003, name:'Headphones',       diamondCount:20,    imageUrl:'' },
 ].sort((a,b) => a.name.localeCompare(b.name));
 
-
- // { id, name, diamondCount, imageUrl }
-
-
-
-// ── DINÁMICAS PERSONALIZADAS ──
-let dinamicaActiva = null;
-let timerDinamica = null;
-let tiempoDinamica = 0;
-let puntosDinamica = {};
-let rachasDinamica = {};
-let amarillasDinamica = {};
-let eliminadosDinamica = []; 
-
-app.use(express.json({ limit: '50mb' }));
-app.use(express.urlencoded({ limit: '50mb', extended: true }));
-app.use(express.static(path.join(__dirname, 'public')));
-
-// --- RUTAS DE PANTALLAS ---
-const pub = (f) => path.join(__dirname, 'public', f);
-app.get('/',              (req, res) => res.sendFile(pub('ranking.html')));
-app.get('/batalla',       (req, res) => res.sendFile(pub('batalla.html')));
-app.get('/batalla-futbol',(req, res) => res.sendFile(pub('batalla-futbol.html')));
-app.get('/timer',         (req, res) => res.sendFile(pub('timer.html')));
-app.get('/conociendo',    (req, res) => res.sendFile(pub('conociendo.html')));
-app.get('/copa',          (req, res) => res.sendFile(pub('copa.html')));
-app.get('/lista-regalos', (req, res) => res.sendFile(pub('lista-regalos.html')));
-app.get('/control',       (req, res) => res.sendFile(pub('control.html')));
-app.get('/dinamica',      (req, res) => res.sendFile(pub('dinamica.html')));
-app.get('/gestor-regalos',(req, res) => res.sendFile(pub('gestor-regalos.html')));
-
-// --- APIs DE DATOS ---
-app.get('/api/queens', (req, res) => res.json(QUEENS));
-app.get('/api/queens/all', (req, res) => res.json(DB.getAllQueensFull()));
-app.get('/api/apodos', (req, res) => res.json(DB.getApodosMap()));
-
-// --- CRUD QUEENS ---
-app.all('/api/queens/crear', (req, res) => {
-    const nombre = (req.query.nombre || (req.body && req.body.nombre) || '').trim();
-    const color = req.query.color || (req.body && req.body.color) || '#ffffff';
-    if (!nombre) return res.status(400).send('Falta nombre');
-    DB.crearQueen(nombre, color);
-    reconstruirQueens();
-    QUEENS.forEach(q => { if (!rachasPerdidas[q]) rachasPerdidas[q] = 0; if (!amarillasAcumuladas[q]) amarillasAcumuladas[q] = 0; });
-    io.emit('queensActualizadas', { queens: QUEENS, equipos, apodos: DB.getApodosMap() });
-    res.send('OK');
-});
-
-app.all('/api/queens/editar', (req, res) => {
-    const p      = (k) => req.query[k] !== undefined ? req.query[k] : (req.body && req.body[k] !== undefined ? req.body[k] : null);
-    const nombre = p('nombre');
-    const color  = p('color');
-    const apodo  = p('apodo');
-    const regImg = p('regalo_img');
-    const regPts = p('regalo_pts') !== null ? parseInt(p('regalo_pts')) : null;
-    if (!nombre || !color) return res.status(400).send('Faltan datos');
-    DB.editarQueen(nombre, color, apodo, regImg, regPts);
-    reconstruirEquipos();
-    io.emit('queensActualizadas', { queens: QUEENS, equipos, apodos: DB.getApodosMap() });
-    res.send('OK');
-});
-
-app.all('/api/queens/renombrar', (req, res) => {
-    const nombre = (req.query.nombre || (req.body && req.body.nombre) || '').trim();
-    const nuevo  = (req.query.nuevo  || (req.body && req.body.nuevo)  || '').trim();
-    if (!nombre || !nuevo) return res.status(400).send('Faltan datos');
-    if (nombre === nuevo) return res.send('OK');
-    DB.renombrarQueen(nombre, nuevo);
-    reconstruirQueens();
-    io.emit('queensActualizadas', { queens: QUEENS, equipos, apodos: DB.getApodosMap() });
-    res.send('OK');
-});
-
-app.all('/api/queens/eliminar', (req, res) => {
-    const nombre = (req.query.nombre || (req.body && req.body.nombre) || '').trim();
-    if (!nombre) return res.status(400).send('Falta nombre');
-    DB.eliminarQueen(nombre);
-    reconstruirQueens();
-    io.emit('queensActualizadas', { queens: QUEENS, equipos, apodos: DB.getApodosMap() });
-    res.send('OK');
-});
-
-app.all('/api/queens/toggle', (req, res) => {
-    const nombre = req.query.nombre || (req.body && req.body.nombre);
-    if (!nombre) return res.status(400).send('Falta nombre');
-    const nuevoEstado = DB.toggleQueenActivo(nombre);
-    reconstruirQueens();
-    io.emit('queensActualizadas', { queens: QUEENS, equipos, apodos: DB.getApodosMap() });
-    res.json({ activo: nuevoEstado });
-});
-// --- API IMÁGENES DE REGALOS ---
-app.get('/api/regalos-imgs', (req, res) => {
-    const dir = path.join(__dirname, 'public', 'regalos');
-    fs.readdir(dir, (err, files) => {
-        if (err) return res.json([]);
-        const imgs = files.filter(f => /\.(png|jpg|jpeg|gif|webp)$/i.test(f)).sort();
-        res.json(imgs);
-    });
-});
-
-app.get('/api/ranking', (req, res) => res.json(DB.getRanking()));
-app.get('/api/ranking-mensual', (req, res) => res.json(DB.getRankingMensual()));
-app.get('/api/ranking-diario', (req, res) => res.json(DB.getRankingDiario()));
-app.get('/api/copa', (req, res) => res.json({ copa: DB.getCopa(), equipos }));
-
-// --- API FUTBOL CONFIG ---
-app.get('/api/futbol/config', (req, res) => {
-    res.json(DB.getFutbolConfig());
-});
-
-app.post('/api/futbol/config', express.json(), (req, res) => {
-    const config = req.body;
-    if(!config || !config.equipo1 || !config.equipo2) return res.status(400).send('Invalid config');
-    DB.setFutbolConfig(config);
-    io.emit('futbolConfigActualizada', config);
-    res.send('OK');
-});
-
-app.get('/api/victorias', (req, res) => res.json(DB.getVictorias()));
-
-// --- APIs ALIASES ---
-app.get('/api/aliases', (req, res) => res.json(DB.getAliases()));
-app.all('/api/aliases/add', (req, res) => {
-    const alias = req.query.alias || (req.body && req.body.alias);
-    const queen = req.query.queen || (req.body && req.body.queen);
-    if (alias && queen && QUEENS.includes(queen)) {
-        DB.agregarAlias(alias, queen);
-        return res.send("OK");
-    }
-    res.status(400).send("Error");
-});
-app.all('/api/aliases/delete', (req, res) => {
-    const alias = req.query.alias || (req.body && req.body.alias);
-    if (alias) { DB.eliminarAlias(alias); return res.send("OK"); }
-    res.status(400).send("Error");
-});
-
-// --- APIs GRUPOS ---
-app.get('/api/grupos', (req, res) => res.json(DB.getGrupos()));
-app.all('/api/grupos/crear', (req, res) => {
-    const nombre = req.query.nombre || (req.body && req.body.nombre);
-    const color = req.query.color || (req.body && req.body.color) || '#39FF14';
-    if (nombre) {
-        try { DB.crearGrupo(nombre, color); return res.send("OK"); }
-        catch(e) { return res.status(400).send("Grupo ya existe"); }
-    }
-    res.status(400).send("Error");
-});
-app.all('/api/grupos/eliminar', (req, res) => {
-    const id = parseInt(req.query.id || (req.body && req.body.id));
-    if (id) { DB.eliminarGrupo(id); return res.send("OK"); }
-    res.status(400).send("Error");
-});
-app.all('/api/grupos/agregar-miembro', (req, res) => {
-    const id = parseInt(req.query.id || (req.body && req.body.id));
-    const queen = req.query.queen || (req.body && req.body.queen);
-    if (id && queen) { DB.agregarMiembro(id, queen); return res.send("OK"); }
-    res.status(400).send("Error");
-});
-app.all('/api/grupos/remover-miembro', (req, res) => {
-    const id = parseInt(req.query.id || (req.body && req.body.id));
-    const queen = req.query.queen || (req.body && req.body.queen);
-    if (id && queen) { DB.removerMiembro(id, queen); return res.send("OK"); }
-    res.status(400).send("Error");
-});
-
-// --- APIs SONIDOS ---
-app.get('/api/sonidos', (req, res) => res.json(DB.getSonidos()));
-app.all('/api/sonidos/set', (req, res) => {
-    const evento = req.query.evento || (req.body && req.body.evento);
-    const url = req.query.url || (req.body && req.body.url);
-    if (evento && url) { DB.setSonido(evento, url); return res.send("OK"); }
-    res.status(400).send("Error");
-});
-
-function resolverParticipantesDinamica(participantes) {
-    if (!participantes || participantes === 'todas') return [...QUEENS];
-    if (participantes.startsWith('grupo:')) {
-        const grupoId = parseInt(participantes.split(':')[1]);
-        const grupo = DB.getGrupos().find(g => g.id === grupoId);
-        return grupo ? grupo.miembros.filter(m => QUEENS.includes(m)) : [...QUEENS];
-    }
-    if (participantes.startsWith('manual:')) {
-        return participantes.split(':')[1].split(',').map(n => n.trim()).filter(n => QUEENS.includes(n));
-    }
-    return [...QUEENS];
-}
-
-function finalizarDinamica() {
-    if (!dinamicaActiva) return;
-    const activos = dinamicaActiva.participantes.filter(p => !eliminadosDinamica.includes(p));
-    let maxPts = 0;
-    activos.forEach(p => { if ((puntosDinamica[p] || 0) > maxPts) maxPts = puntosDinamica[p] || 0; });
-    const ganadoras = activos.filter(p => (puntosDinamica[p] || 0) === maxPts);
-    const ganadora = ganadoras.length === 1 && maxPts > 0 ? ganadoras[0] : maxPts === 0 ? 'SIN PUNTOS' : 'EMPATE';
-    const payload = { ganadora, puntos: puntosDinamica, eliminados: eliminadosDinamica };
-    io.emit('dinamicaFin', payload);
-    setTimeout(() => io.emit('dinamicaFin', payload), 300);
-    dinamicaActiva = null;
-}
-
-// --- FUNCIÓN: Resolver nombre (busca alias si no es queen directa) ---
-function resolverNombre(nombre) {
-    if (!nombre) return null;
-    if (QUEENS.includes(nombre)) return nombre;
-    const queenDeAlias = DB.resolverAlias(nombre);
-    return queenDeAlias || null;
-}
-
-// --- SISTEMA DE BATCHING PARA PUNTOS ---
-let queueUpdate = [];
-
-function procesarPuntosEnLote() {
-    if (queueUpdate.length === 0) return;
-    
-    let rankingDirty = false;
-    let nombresCambiados = new Set();
-    
-    let tareas = [...queueUpdate];
-    queueUpdate = [];
-    
-    for (let t of tareas) {
-        let nombre = t.nombre;
-        let puntos = t.puntos;
-        
-        if (nombre && QUEENS.includes(nombre)) {
-            DB.sumarPuntos(nombre, puntos);
-            rankingDirty = true;
-            nombresCambiados.add(nombre);
-        }
-        
-        if (nombre && estadoBatalla === 'activa' && participantesActuales.includes(nombre)) {
-            puntosBatalla[nombre] = Math.max(0, (puntosBatalla[nombre] || 0) + puntos);
-        }
-        
-        if (timerBaile.activo) {
-            if (t.saltaTurno && QUEENS.includes(t.saltaTurno) && t.saltaTurno !== timerBaile.chicaActual) {
-                saltarSiguienteChica(t.saltaTurno);
-            } else if (puntos > 0) { 
-                timerBaile.tiempo += (puntos * 3); 
-            }
-        }
-        
-        if (conociendo.activo) {
-            conociendo.puntos = Math.max(0, conociendo.puntos + puntos);
-        }
-
-        if (dinamicaActiva && nombre && dinamicaActiva.participantes.includes(nombre) && !eliminadosDinamica.includes(nombre)) {
-            puntosDinamica[nombre] = Math.max(0, (puntosDinamica[nombre] || 0) + puntos);
-            if (dinamicaActiva.reglas.modo === 'meta') {
-                const meta = parseInt(dinamicaActiva.reglas.meta) || 500;
-                if (puntosDinamica[nombre] >= meta) { clearInterval(timerDinamica); finalizarDinamica(); }
-            }
-        }
-    }
-    
-    // Emisiones agrupadas (Batched Emits)
-    if (rankingDirty) {
-        const ranking = DB.getRanking();
-        const rankingMensual = DB.getRankingMensual();
-        const rankingDiario = DB.getRankingDiario();
-        nombresCambiados.forEach(nombre => {
-            io.emit('actualizarRanking', { nombre, puntosSemanal: ranking[nombre], puntosMensual: rankingMensual[nombre], puntosDiario: rankingDiario[nombre] });
-        });
-        io.emit('actualizarCopa', DB.getCopa()); 
-    }
-    
-    if (estadoBatalla === 'activa') {
-        io.emit('batallaPuntos', puntosBatalla);
-    }
-    
-    if (timerBaile.activo && timerBaile.estado === 'bailando') {
-        io.emit('timerTick', timerBaile.tiempo);
-    }
-    
-    if (conociendo.activo && conociendo.estado === 'activo') {
-        io.emit('conociendoPuntos', { puntos: conociendo.puntos, meta: conociendo.meta });
-    }
-    
-    if (dinamicaActiva) {
-        io.emit('dinamicaPuntos', { puntos: puntosDinamica, eliminados: eliminadosDinamica });
-    }
-}
-
-// Ejecutar el lote de actualizaciones cada 300ms
-setInterval(procesarPuntosEnLote, 300);
-
-app.all('/update', (req, res) => {
-    let nombre = req.query.nombre || (req.body && req.body.nombre);
-    const puntos = parseInt(req.query.puntos || (req.body && req.body.puntos));
-    const viewer = req.query.viewer || (req.body && req.body.viewer);
-    const avatar = req.query.avatar || (req.body && req.body.avatar) || '';
-    
-    nombre = resolverNombre(nombre);
-    
-    if (nombre && !isNaN(puntos)) {
-        if (viewer && puntos > 0) lealtadUsuarios[viewer] = nombre;
-        if (puntos !== 0) queueUpdate.push({ nombre, puntos });
-        // Emitir inmediatamente para el feed de espectadores en batalla
-        if (viewer && puntos > 0 && nombre) {
-            const eq = equipos[nombre] || {};
-            io.emit('nuevoRegalo', {
-                nombre,
-                viewer,
-                avatar,
-                giftImg: eq.regalo_img || '',
-                queenColor: eq.color || '#fff',
-                coins: puntos,
-                giftName: ''
-            });
-        }
-        return res.send("OK");
-    }
-    res.status(400).send("Error");
-});
-
-app.all('/update-auto', (req, res) => {
-    const viewer = req.query.viewer || (req.body && req.body.viewer);
-    const avatar = req.query.avatar || (req.body && req.body.avatar) || '';
-    const puntos = parseInt(req.query.puntos || (req.body && req.body.puntos));
-    if (!isNaN(puntos) && puntos > 0) {
-        let queenAsignada = (viewer && lealtadUsuarios[viewer]) ? lealtadUsuarios[viewer] : null;
-        if (queenAsignada) {
-            queueUpdate.push({ nombre: queenAsignada, puntos });
-            const eq = equipos[queenAsignada] || {};
-            if (viewer) io.emit('nuevoRegalo', { nombre: queenAsignada, viewer, avatar, giftImg: eq.regalo_img || '', queenColor: eq.color || '#fff', coins: puntos, giftName: '' });
-            return res.send("Asignado a " + queenAsignada);
-        } else {
-            queueUpdate.push({ nombre: null, puntos });
-            return res.send("Sumado Global");
-        }
-    }
-    res.status(400).send("Ignorado");
-});
-
-// ── TIKTOK LIVE: Lógica de Conexión ──
-function procesarRegaloTikTok(data) {
-    try {
-        const viewer   = data.uniqueId || 'anon';
-        const avatar   = data.profilePictureUrl || '';
-        const giftName = (data.giftName || '').trim();
-        
-        // Multiplicar por el repeatCount para que los streaks (combos) sumen el total correcto
-        const baseDiamond = data.diamondCount || 1;
-        const repeat = data.repeatCount || 1;
-        const coins = baseDiamond * repeat;
-        const giftImgSrc = data.giftPictureUrl || '';
-
-        // Auto-detectar el regalo y notificar al panel
-        if (giftName && !regalosDetectados.has(giftName)) {
-            regalosDetectados.add(giftName);
-            io.emit('regaloDetectado', giftName);
-        }
-
-        const mapaRaw = DB.getConfigVal('tiktok_regalo_mapa');
-        const mapa = mapaRaw ? JSON.parse(mapaRaw) : {};
-        let queenActivadora = mapa[giftName] || null;
-
-        const timerMapaRaw = DB.getConfigVal('tiktok_timer_mapa');
-        const timerMapa = timerMapaRaw ? JSON.parse(timerMapaRaw) : {};
-        let queenSalto = timerMapa[giftName] || null;
-
-        if (queenActivadora && QUEENS.includes(queenActivadora)) {
-            lealtadUsuarios[viewer] = queenActivadora;
-            const eq = equipos[queenActivadora] || {};
-            // Si tiene puntos configurados, multiplicarlo por la racha. Si no, usar los coins totales.
-            const pts = eq.regalo_pts ? (eq.regalo_pts * repeat) : coins;
-            // Quitamos esActivador de acá porque ahora el salto se maneja por queenSalto independiente
-            queueUpdate.push({ nombre: queenActivadora, puntos: pts, saltaTurno: queenSalto });
-            io.emit('nuevoRegalo', { nombre: queenActivadora, viewer, avatar, giftImg: eq.regalo_img || giftImgSrc, queenColor: eq.color || '#fff', coins, giftName });
-        } else {
-            const queenAsignada = lealtadUsuarios[viewer] || null;
-            if (queenAsignada && QUEENS.includes(queenAsignada)) {
-                queueUpdate.push({ nombre: queenAsignada, puntos: coins, saltaTurno: queenSalto });
-                const eq = equipos[queenAsignada] || {};
-                io.emit('nuevoRegalo', { nombre: queenAsignada, viewer, avatar, giftImg: giftImgSrc, queenColor: eq.color || '#fff', coins, giftName });
-            } else if (queenSalto && QUEENS.includes(queenSalto)) {
-                // Si mandan un regalo de salto PERO no tienen lealtad asignada aún,
-                // enviamos los puntos directo a la queenSalto para no perderlos, y ejecutamos el salto.
-                queueUpdate.push({ nombre: queenSalto, puntos: coins, saltaTurno: queenSalto });
-                const eq = equipos[queenSalto] || {};
-                io.emit('nuevoRegalo', { nombre: queenSalto, viewer, avatar, giftImg: giftImgSrc, queenColor: eq.color || '#fff', coins, giftName });
-            }
-        }
-    } catch(e) {
-        console.error('❌ Error procesando regalo TikTok:', e.message);
-    }
-}
-
-function conectarTikTok(usuario) {
-    if (tiktokEstado === 'conectando') {
-        console.log('⚠️ Ya hay un intento de conexión en progreso, ignorando nuevo intento.');
-        return;
-    }
-
-    if (tiktokConnection) {
-        try { tiktokConnection.disconnect(); } catch(e) {}
-        tiktokConnection = null;
-    }
-
-    tiktokUsuario = usuario;
-    tiktokEstado = 'conectando';
-    tiktokMensajeError = '';
-    io.emit('tiktokEstado', { estado: tiktokEstado, usuario: tiktokUsuario });
-    console.log(`🔗 Conectando a TikTok Live: @${usuario}`);
-
-    tiktokConnection = new WebcastPushConnection(usuario, {
-        processInitialData: false,
-        enableExtendedGiftInfo: true
-    });
-
-    tiktokConnection.connect().then(async () => {
-        tiktokEstado = 'conectado';
-        console.log(`✅ Conectado a TikTok Live: @${usuario}`);
-        DB.setConfigVal('tiktok_usuario', usuario);
-        io.emit('tiktokEstado', { estado: tiktokEstado, usuario: tiktokUsuario });
-        // Cargar catálogo de regalos disponibles
-        try {
-            const gifts = await tiktokConnection.fetchAvailableGifts();
-            if (gifts && gifts.length > 0) {
-                catalogoRegalos = gifts.map(g => ({
-                    id: g.id,
-                    name: g.name,
-                    diamondCount: g.diamond_count || g.diamondCount || 0,
-                    imageUrl: g.image?.url_list?.[0] || g.image?.url || ''
-                })).sort((a,b) => a.name.localeCompare(b.name));
-                console.log(`🎁 Catálogo de regalos cargado: ${catalogoRegalos.length} regalos`);
-                io.emit('catalogoCargado', catalogoRegalos.length);
-            }
-        } catch(e) {
-            console.warn('⚠️ No se pudo cargar el catálogo de regalos:', e.message);
-        }
-    }).catch(err => {
-        tiktokEstado = 'error';
-        tiktokMensajeError = err.message || 'Error desconocido';
-        console.error(`❌ Error conectando a TikTok: ${tiktokMensajeError}`);
-        io.emit('tiktokEstado', { estado: tiktokEstado, usuario: tiktokUsuario, error: tiktokMensajeError });
-    });
-
-
-    // Evento de regalo (gifType=1 son los que se pueden hacer streak)
-    tiktokConnection.on('gift', (data) => {
-        // Para regalos streak, solo contar cuando termina el combo (repeatEnd)
-        if (data.giftType === 1 && !data.repeatEnd) return;
-        procesarRegaloTikTok(data);
-    });
-
-    tiktokConnection.on('disconnected', () => {
-        tiktokEstado = 'desconectado';
-        console.log('⚠️ TikTok Live desconectado');
-        io.emit('tiktokEstado', { estado: tiktokEstado, usuario: tiktokUsuario });
-    });
-
-    tiktokConnection.on('error', (err) => {
-        tiktokMensajeError = err.message || 'Error';
-        tiktokEstado = 'error';
-        io.emit('tiktokEstado', { estado: tiktokEstado, usuario: tiktokUsuario, error: tiktokMensajeError });
-    });
-}
-
-// ── ENDPOINTS TIKTOK ──
-app.all('/tiktok/conectar', (req, res) => {
-    const usuario = (req.query.usuario || (req.body && req.body.usuario) || '').replace('@', '').trim();
-    if (!usuario) return res.status(400).send('Falta usuario de TikTok');
-    conectarTikTok(usuario);
-    res.send('Conectando...');
-});
-
-app.all('/tiktok/desconectar', (req, res) => {
-    if (tiktokConnection) {
-        try { tiktokConnection.disconnect(); } catch(e) {}
-        tiktokConnection = null;
-    }
-    tiktokEstado = 'desconectado';
-    tiktokUsuario = '';
-    io.emit('tiktokEstado', { estado: tiktokEstado, usuario: '' });
-    res.send('OK');
-});
-
-app.get('/api/tiktok/estado', (req, res) => {
-    res.json({ estado: tiktokEstado, usuario: tiktokUsuario, error: tiktokMensajeError });
-});
-
-app.post('/api/tiktok/mapa', (req, res) => {
-    const mapa = req.body.mapa || req.body;
-    DB.setConfigVal('tiktok_regalo_mapa', JSON.stringify(mapa));
-    io.emit('mapaRegalosCambiado', mapa);
-    res.send('OK');
-});
-
-app.get('/api/tiktok/timer_mapa', (req, res) => {
-    const v = DB.getConfigVal('tiktok_timer_mapa');
-    res.json(v ? JSON.parse(v) : {});
-});
-
-app.post('/api/tiktok/timer_mapa', (req, res) => {
-    const mapa = req.body.mapa || req.body;
-    DB.setConfigVal('tiktok_timer_mapa', JSON.stringify(mapa));
-    io.emit('mapaTimerCambiado', mapa);
-    res.send('OK');
-});
-
-app.get('/api/tiktok/mapa', (req, res) => {
-    const raw = DB.getConfigVal('tiktok_regalo_mapa');
-    res.json(raw ? JSON.parse(raw) : {});
-});
-
-app.get('/api/tiktok/regalos-detectados', (req, res) => {
-    res.json([...regalosDetectados].sort());
-});
-
-app.all('/api/tiktok/regalos-detectados/limpiar', (req, res) => {
-    regalosDetectados.clear();
-    res.send('OK');
-});
-
-app.get('/api/tiktok/catalogo', (req, res) => {
+app.get('/api/tiktok/catalogo', requireSession, (req, res) => {
+    const s = req.userSession;
     const q = (req.query.q || '').toLowerCase();
     
     let fuente = CATALOGO_RESPALDO;
-    if (catalogoRegalos.length > 0) {
-        // Combinar asegurando que los del respaldo (con nuestras imágenes y precios verificados) prevalezcan
+    if (s.catalogoRegalos.length > 0) {
+        const mapaDinamico = {};
+        s.catalogoRegalos.forEach(r => {
+            mapaDinamico[r.name.toLowerCase()] = r;
+        });
+
+        fuente = CATALOGO_RESPALDO.map(r => {
+            const din = mapaDinamico[r.name.toLowerCase()];
+            if (din) {
+                return {
+                    id: din.id || r.id,
+                    name: din.name || r.name,
+                    diamondCount: din.diamondCount || r.diamondCount,
+                    imageUrl: din.imageUrl || r.imageUrl
+                };
+            }
+            return r;
+        });
+
         const nombresRespaldo = new Set(CATALOGO_RESPALDO.map(r => r.name.toLowerCase()));
-        const extra = catalogoRegalos.filter(r => !nombresRespaldo.has(r.name.toLowerCase()));
-        fuente = [...CATALOGO_RESPALDO, ...extra].sort((a,b) => a.name.localeCompare(b.name));
+        const extra = s.catalogoRegalos.filter(r => !nombresRespaldo.has(r.name.toLowerCase()));
+        fuente = [...fuente, ...extra].sort((a,b) => a.name.localeCompare(b.name));
     }
 
     const lista = q
         ? fuente.filter(g => g.name.toLowerCase().includes(q))
         : fuente;
     
-    res.json({ regalos: lista, esCatalogoCompleto: catalogoRegalos.length > 0 });
+    res.json({ regalos: lista, esCatalogoCompleto: s.catalogoRegalos.length > 0 });
 });
 
-function saltarSiguienteChica(chicaEspecifica = null) { 
-    if (timerBaile.orden.length === 0) timerBaile.orden = [...QUEENS];
-    if (chicaEspecifica) timerBaile.chicaActual = chicaEspecifica; 
-    else { let idx = timerBaile.orden.indexOf(timerBaile.chicaActual); timerBaile.chicaActual = timerBaile.orden[(idx + 1) % timerBaile.orden.length]; } 
-    timerBaile.estado = 'transicion'; 
-    timerBaile.tiempoTransicion = 5; 
-    timerBaile.tiempo = 0; 
-    io.emit('timerTransicion', { chica: timerBaile.chicaActual, tiempo: timerBaile.tiempoTransicion }); 
+function saltarSiguienteChica(username, chicaEspecifica = null) { 
+    const session = activeSessions[username];
+    if (!session) return;
+    if (session.timerBaile.orden.length === 0) session.timerBaile.orden = [...session.QUEENS];
+    if (chicaEspecifica) session.timerBaile.chicaActual = chicaEspecifica; 
+    else { 
+        let idx = session.timerBaile.orden.indexOf(session.timerBaile.chicaActual); 
+        session.timerBaile.chicaActual = session.timerBaile.orden[(idx + 1) % session.timerBaile.orden.length]; 
+    } 
+    session.timerBaile.estado = 'transicion'; 
+    session.timerBaile.tiempoTransicion = 5; 
+    session.timerBaile.tiempo = 0; 
+    io.to(username).emit('timerTransicion', { chica: session.timerBaile.chicaActual, tiempo: session.timerBaile.tiempoTransicion }); 
 }
 
-app.all('/timer/start', (req, res) => { 
+app.all('/timer/start', requireSession, (req, res) => { 
+    const s = req.userSession;
+    const user = req.username;
     const tiempoBase = parseInt(req.query.t) || 30;
-    timerBaile.orden = [...QUEENS];
-    timerBaile.activo = true; timerBaile.tiempo = tiempoBase; timerBaile.chicaActual = QUEENS[0] || 'Ray'; timerBaile.estado = 'bailando'; 
-    tiempoAcumulado = {}; QUEENS.forEach(q => tiempoAcumulado[q] = 0);
-    let subTickBaile = 0; let snipeBaile = 3; clearInterval(intervaloTimerBaile); 
-    io.emit('timerInicio', { chica: timerBaile.chicaActual, tiempo: timerBaile.tiempo }); 
-    intervaloTimerBaile = setInterval(() => { 
-        if (timerBaile.estado === 'transicion') { 
-            timerBaile.tiempoTransicion--; io.emit('timerTransicionTick', timerBaile.tiempoTransicion); 
-            if (timerBaile.tiempoTransicion <= 0) { 
-                timerBaile.estado = 'bailando'; 
-                timerBaile.tiempo += tiempoBase; 
-                snipeBaile = 3; subTickBaile = 0; 
-                io.emit('timerInicio', { chica: timerBaile.chicaActual, tiempo: timerBaile.tiempo }); 
+    s.timerBaile.orden = [...s.QUEENS];
+    s.timerBaile.activo = true; 
+    s.timerBaile.tiempo = tiempoBase; 
+    s.timerBaile.chicaActual = s.QUEENS[0] || 'Ray'; 
+    s.timerBaile.estado = 'bailando'; 
+    s.tiempoAcumulado = {}; 
+    s.QUEENS.forEach(q => s.tiempoAcumulado[q] = 0);
+    let subTickBaile = 0; 
+    let snipeBaile = 3; 
+    clearInterval(s.intervaloTimerBaile); 
+    
+    io.to(user).emit('timerInicio', { chica: s.timerBaile.chicaActual, tiempo: s.timerBaile.tiempo }); 
+    
+    s.intervaloTimerBaile = setInterval(() => { 
+        if (s.timerBaile.estado === 'transicion') { 
+            s.timerBaile.tiempoTransicion--; 
+            io.to(user).emit('timerTransicionTick', s.timerBaile.tiempoTransicion); 
+            if (s.timerBaile.tiempoTransicion <= 0) { 
+                s.timerBaile.estado = 'bailando'; 
+                s.timerBaile.tiempo += tiempoBase; 
+                snipeBaile = 3; 
+                subTickBaile = 0; 
+                io.to(user).emit('timerInicio', { chica: s.timerBaile.chicaActual, tiempo: s.timerBaile.tiempo }); 
             } 
-        } else if (timerBaile.estado === 'bailando') { 
-            tiempoAcumulado[timerBaile.chicaActual] = (tiempoAcumulado[timerBaile.chicaActual] || 0) + 1;
-            io.emit('timerAcumulado', tiempoAcumulado);
-            if (timerBaile.tiempo > 3) { timerBaile.tiempo--; io.emit('timerTick', timerBaile.tiempo); } 
-            else if (timerBaile.tiempo > 0) { subTickBaile++; if(subTickBaile >= 2) { timerBaile.tiempo--; subTickBaile = 0; } io.emit('timerTick', timerBaile.tiempo); } 
-            else { io.emit('timerTick', 0); snipeBaile--; if(snipeBaile <= 0) { saltarSiguienteChica(); snipeBaile = 3; subTickBaile = 0; } }
+        } else if (s.timerBaile.estado === 'bailando') { 
+            s.tiempoAcumulado[s.timerBaile.chicaActual] = (s.tiempoAcumulado[s.timerBaile.chicaActual] || 0) + 1;
+            io.to(user).emit('timerAcumulado', s.tiempoAcumulado);
+            if (s.timerBaile.tiempo > 3) { 
+                s.timerBaile.tiempo--; 
+                io.to(user).emit('timerTick', s.timerBaile.tiempo); 
+            } else if (s.timerBaile.tiempo > 0) { 
+                subTickBaile++; 
+                if(subTickBaile >= 2) { 
+                    s.timerBaile.tiempo--; 
+                    subTickBaile = 0; 
+                } 
+                io.to(user).emit('timerTick', s.timerBaile.tiempo); 
+            } else { 
+                io.to(user).emit('timerTick', 0); 
+                snipeBaile--; 
+                if(snipeBaile <= 0) { 
+                    saltarSiguienteChica(user); 
+                    snipeBaile = 3; 
+                    subTickBaile = 0; 
+                } 
+            }
         } 
-    }, 1000); res.send("OK"); 
+    }, 1000); 
+    res.send("OK"); 
 });
 
-app.all('/timer/stop', (req, res) => { timerBaile.activo = false; timerBaile.estado = 'inactivo'; clearInterval(intervaloTimerBaile); io.emit('timerCancelado'); res.send("OK"); });
-app.all('/timer/skip', (req, res) => { let target = req.query.c; if(timerBaile.activo && target) saltarSiguienteChica(target); res.send("OK"); });
-
-function saltarConociendo(chicaEspecifica = null) { if (conociendo.orden.length === 0) conociendo.orden = [...QUEENS]; if (chicaEspecifica) conociendo.chicaActual = chicaEspecifica; else { let idx = conociendo.orden.indexOf(conociendo.chicaActual); conociendo.chicaActual = conociendo.orden[(idx + 1) % conociendo.orden.length]; } conociendo.estado = 'transicion'; conociendo.tiempoTransicion = 5; conociendo.puntos = 0; io.emit('conociendoTransicion', { chica: conociendo.chicaActual, tiempo: conociendo.tiempoTransicion }); }
-
-app.all('/conociendo/start', (req, res) => { 
-    conociendo.orden = [...QUEENS];
-    conociendo.activo = true; conociendo.meta = parseInt(req.query.meta) || 2000; conociendo.tiempo = 300; conociendo.puntos = 0; conociendo.chicaActual = QUEENS[0] || 'Ray'; conociendo.estado = 'activo'; 
-    let subTickConociendo = 0; let snipeConociendo = 3; clearInterval(intervaloConociendo); 
-    io.emit('conociendoInicio', { chica: conociendo.chicaActual, tiempo: conociendo.tiempo, meta: conociendo.meta, puntos: conociendo.puntos }); 
-    intervaloConociendo = setInterval(() => { 
-        if(conociendo.estado === 'transicion') { 
-            conociendo.tiempoTransicion--; io.emit('conociendoTransicionTick', conociendo.tiempoTransicion); 
-            if(conociendo.tiempoTransicion <= 0) { conociendo.estado = 'activo'; conociendo.tiempo = 300; snipeConociendo = 3; subTickConociendo = 0; io.emit('conociendoInicio', { chica: conociendo.chicaActual, tiempo: conociendo.tiempo, meta: conociendo.meta, puntos: conociendo.puntos }); } 
-        } else if(conociendo.estado === 'activo') { 
-            if (conociendo.tiempo > 3) { conociendo.tiempo--; io.emit('conociendoTick', conociendo.tiempo); } 
-            else if (conociendo.tiempo > 0) { subTickConociendo++; if(subTickConociendo >= 2) { conociendo.tiempo--; subTickConociendo = 0; } io.emit('conociendoTick', conociendo.tiempo); } 
-            else { io.emit('conociendoTick', 0); snipeConociendo--; if(snipeConociendo <= 0) { 
-                if (conociendo.puntos >= conociendo.meta) { conociendo.tiempo = 300; conociendo.puntos = 0; io.emit('conociendoInicio', { chica: conociendo.chicaActual, tiempo: conociendo.tiempo, meta: conociendo.meta, puntos: conociendo.puntos }); } else { saltarConociendo(); } 
-                snipeConociendo = 3; subTickConociendo = 0; 
-            } }
-        } 
-    }, 1000); res.send("OK"); 
+app.all('/timer/stop', requireSession, (req, res) => { 
+    const s = req.userSession;
+    s.timerBaile.activo = false; 
+    s.timerBaile.estado = 'inactivo'; 
+    clearInterval(s.intervaloTimerBaile); 
+    io.to(req.username).emit('timerCancelado'); 
+    res.send("OK"); 
 });
 
-app.all('/conociendo/stop', (req, res) => { conociendo.activo = false; conociendo.estado = 'inactivo'; clearInterval(intervaloConociendo); io.emit('conociendoCancelado'); res.send("OK"); });
-app.all('/conociendo/skip', (req, res) => { let target = req.query.c; if(conociendo.activo) saltarConociendo(target); res.send("OK"); });
+app.all('/timer/skip', requireSession, (req, res) => { 
+    const s = req.userSession;
+    let target = req.query.c; 
+    if(s.timerBaile.activo) saltarSiguienteChica(req.username, target || null); 
+    res.send("OK"); 
+});
 
-app.all('/batalla/start', (req, res) => { 
-    tiempoBatalla = (parseInt(req.query.m) || 3) * 60; participantesActuales = req.query.p ? req.query.p.split(',') : [...QUEENS]; 
-    puntosBatalla = {}; participantesActuales.forEach(p => puntosBatalla[p] = 0); estadoBatalla = 'activa'; clearInterval(timerBatalla); 
-    let subTickBatalla = 0; let tiempoExtraSnipe = 5; 
-    const victorias = DB.getVictorias();
+function saltarConociendo(username, chicaEspecifica = null) { 
+    const session = activeSessions[username];
+    if (!session) return;
+    if (session.conociendo.orden.length === 0) session.conociendo.orden = [...session.QUEENS]; 
+    if (chicaEspecifica) session.conociendo.chicaActual = chicaEspecifica; 
+    else { 
+        let idx = session.conociendo.orden.indexOf(session.conociendo.chicaActual); 
+        session.conociendo.chicaActual = session.conociendo.orden[(idx + 1) % session.conociendo.orden.length]; 
+    } 
+    session.conociendo.estado = 'transicion'; 
+    session.conociendo.tiempoTransicion = 5; 
+    session.conociendo.puntos = 0; 
+    io.to(username).emit('conociendoTransicion', { chica: session.conociendo.chicaActual, tiempo: session.conociendo.tiempoTransicion }); 
+}
+
+app.all('/conociendo/start', requireSession, (req, res) => { 
+    const s = req.userSession;
+    const user = req.username;
+    s.conociendo.orden = [...s.QUEENS];
+    s.conociendo.activo = true; 
+    s.conociendo.meta = parseInt(req.query.meta) || 2000; 
+    s.conociendo.tiempo = 300; 
+    s.conociendo.puntos = 0; 
+    s.conociendo.chicaActual = s.QUEENS[0] || 'Ray'; 
+    s.conociendo.estado = 'activo'; 
+    let subTickConociendo = 0; 
+    let snipeConociendo = 3; 
+    clearInterval(s.intervaloConociendo); 
     
-    io.emit('batallaInicio', { tiempo: tiempoBatalla, puntos: puntosBatalla, victorias, equipos, participantes: participantesActuales }); 
+    io.to(user).emit('conociendoInicio', { chica: s.conociendo.chicaActual, tiempo: s.conociendo.tiempo, meta: s.conociendo.meta, puntos: s.conociendo.puntos }); 
     
-    timerBatalla = setInterval(() => { 
-        if (tiempoBatalla > 3) { tiempoBatalla--; io.emit('batallaTick', tiempoBatalla); } 
-        else if (tiempoBatalla > 0) { subTickBatalla++; if (subTickBatalla >= 2) { tiempoBatalla--; subTickBatalla = 0; } io.emit('batallaTick', tiempoBatalla); } 
-        else { io.emit('batallaTick', 0); tiempoExtraSnipe--; 
+    s.intervaloConociendo = setInterval(() => { 
+        if(s.conociendo.estado === 'transicion') { 
+            s.conociendo.tiempoTransicion--; 
+            io.to(user).emit('conociendoTransicionTick', s.conociendo.tiempoTransicion); 
+            if(s.conociendo.tiempoTransicion <= 0) { 
+                s.conociendo.estado = 'activo'; 
+                s.conociendo.tiempo = 300; 
+                snipeConociendo = 3; 
+                subTickConociendo = 0; 
+                io.to(user).emit('conociendoInicio', { chica: s.conociendo.chicaActual, tiempo: s.conociendo.tiempo, meta: s.conociendo.meta, puntos: s.conociendo.puntos }); 
+            } 
+        } else if(s.conociendo.estado === 'activo') { 
+            if (s.conociendo.tiempo > 3) { 
+                s.conociendo.tiempo--; 
+                io.to(user).emit('conociendoTick', s.conociendo.tiempo); 
+            } else if (s.conociendo.tiempo > 0) { 
+                subTickConociendo++; 
+                if(subTickConociendo >= 2) { 
+                    s.conociendo.tiempo--; 
+                    subTickConociendo = 0; 
+                } 
+                io.to(user).emit('conociendoTick', s.conociendo.tiempo); 
+            } else { 
+                io.to(user).emit('conociendoTick', 0); 
+                snipeConociendo--; 
+                if(snipeConociendo <= 0) { 
+                    if (s.conociendo.puntos >= s.conociendo.meta) { 
+                        s.conociendo.tiempo = 300; 
+                        s.conociendo.puntos = 0; 
+                        io.to(user).emit('conociendoInicio', { chica: s.conociendo.chicaActual, tiempo: s.conociendo.tiempo, meta: s.conociendo.meta, puntos: s.conociendo.puntos }); 
+                    } else { 
+                        saltarConociendo(user); 
+                    } 
+                    snipeConociendo = 3; 
+                    subTickConociendo = 0; 
+                } 
+            }
+        } 
+    }, 1000); 
+    res.send("OK"); 
+});
+
+app.all('/conociendo/stop', requireSession, (req, res) => { 
+    const s = req.userSession;
+    s.conociendo.activo = false; 
+    s.conociendo.estado = 'inactivo'; 
+    clearInterval(s.intervaloConociendo); 
+    io.to(req.username).emit('conociendoCancelado'); 
+    res.send("OK"); 
+});
+
+app.all('/conociendo/skip', requireSession, (req, res) => { 
+    const s = req.userSession;
+    let target = req.query.c; 
+    if(s.conociendo.activo) saltarConociendo(req.username, target); 
+    res.send("OK"); 
+});
+
+app.all('/batalla/start', requireSession, (req, res) => { 
+    const s = req.userSession;
+    const user = req.username;
+    s.tiempoBatalla = (parseInt(req.query.m) || 3) * 60; 
+    s.participantesActuales = req.query.p ? req.query.p.split(',') : [...s.QUEENS]; 
+    s.puntosBatalla = {}; 
+    s.participantesActuales.forEach(p => s.puntosBatalla[p] = 0); 
+    s.estadoBatalla = 'activa'; 
+    clearInterval(s.timerBatalla); 
+    let subTickBatalla = 0; 
+    let tiempoExtraSnipe = 5; 
+    const victorias = s.db.getVictorias();
+    
+    io.to(user).emit('batallaInicio', { tiempo: s.tiempoBatalla, puntos: s.puntosBatalla, victorias, equipos: s.equipos, participantes: s.participantesActuales }); 
+    
+    s.timerBatalla = setInterval(() => { 
+        if (s.tiempoBatalla > 3) { 
+            s.tiempoBatalla--; 
+            io.to(user).emit('batallaTick', s.tiempoBatalla); 
+        } else if (s.tiempoBatalla > 0) { 
+            subTickBatalla++; 
+            if (subTickBatalla >= 2) { 
+                s.tiempoBatalla--; 
+                subTickBatalla = 0; 
+            } 
+            io.to(user).emit('batallaTick', s.tiempoBatalla); 
+        } else { 
+            io.to(user).emit('batallaTick', 0); 
+            tiempoExtraSnipe--; 
             if (tiempoExtraSnipe <= 0) { 
-                clearInterval(timerBatalla); estadoBatalla = 'finalizada'; 
-                let maxPts = 0; participantesActuales.forEach(p => { if (puntosBatalla[p] > maxPts) maxPts = puntosBatalla[p]; }); 
-                let ganadoras = participantesActuales.filter(c => puntosBatalla[c] === maxPts); 
+                clearInterval(s.timerBatalla); 
+                s.estadoBatalla = 'finalizada'; 
+                let maxPts = 0; 
+                s.participantesActuales.forEach(p => { if (s.puntosBatalla[p] > maxPts) maxPts = s.puntosBatalla[p]; }); 
+                let ganadoras = s.participantesActuales.filter(c => s.puntosBatalla[c] === maxPts); 
                 let ganadora = (ganadoras.length === 1 && maxPts > 0) ? ganadoras[0] : (maxPts === 0 ? 'SIN PUNTOS' : 'EMPATE'); 
                 
                 if (ganadora !== 'EMPATE' && ganadora !== 'SIN PUNTOS') { 
-                    DB.sumarVictoria(ganadora);
+                    s.db.sumarVictoria(ganadora);
+                    s.participantesActuales.forEach(p => {
+                        if (p !== ganadora) {
+                            s.db.sumarDerrota(p);
+                        }
+                    });
+                } else {
+                    s.participantesActuales.forEach(p => {
+                        s.db.sumarEmpate(p);
+                    });
                 } 
                 
-                const victoriasActuales = DB.getVictorias();
+                const victoriasActuales = s.db.getVictorias();
                 let reporteTarjetas = [];
-                participantesActuales.forEach(chica => {
+                s.participantesActuales.forEach(chica => {
                     if (ganadoras.includes(chica) && maxPts > 0) { 
-                        rachasPerdidas[chica] = 0; 
+                        s.rachasPerdidas[chica] = 0; 
                     } else {
-                        rachasPerdidas[chica]++; 
-                        if (rachasPerdidas[chica] >= configFutbol.limiteAmarilla) { 
-                            amarillasAcumuladas[chica]++; 
-                            if (amarillasAcumuladas[chica] >= 2) { 
-                                reporteTarjetas.push({ chica, equipo: equipos[chica].nombre, tipo: 'ROJA' }); 
-                                amarillasAcumuladas[chica] = 0; 
+                        s.rachasPerdidas[chica]++; 
+                        if (s.rachasPerdidas[chica] >= s.configFutbol.limiteAmarilla) { 
+                            s.amarillasAcumuladas[chica]++; 
+                            if (s.amarillasAcumuladas[chica] >= 2) { 
+                                reporteTarjetas.push({ chica, equipo: s.equipos[chica]?.nombre || 'BAILARINA', tipo: 'ROJA' }); 
+                                s.amarillasAcumuladas[chica] = 0; 
                             } else {
-                                reporteTarjetas.push({ chica, equipo: equipos[chica].nombre, tipo: 'AMARILLA' }); 
+                                reporteTarjetas.push({ chica, equipo: s.equipos[chica]?.nombre || 'BAILARINA', tipo: 'AMARILLA' }); 
                             }
-                            rachasPerdidas[chica] = 0; 
+                            s.rachasPerdidas[chica] = 0; 
                         }
                     }
                 });
                 
-                const payloadFin = { ganadora, victorias: victoriasActuales, reporteTarjetas, participantes: participantesActuales };
-                io.emit('batallaFin', payloadFin);
-                setTimeout(() => io.emit('batallaFin', payloadFin), 300);
-                setTimeout(() => io.emit('batallaFin', payloadFin), 600);
+                const payloadFin = { ganadora, victorias: victoriasActuales, reporteTarjetas, participantes: s.participantesActuales };
+                io.to(user).emit('batallaFin', payloadFin);
+                setTimeout(() => io.to(user).emit('batallaFin', payloadFin), 300);
+                setTimeout(() => io.to(user).emit('batallaFin', payloadFin), 600);
             } 
         } 
-    }, 1000); res.send("OK"); 
-});
-
-app.all('/batalla/stop', (req, res) => { 
-    clearInterval(timerBatalla); 
-    estadoBatalla = 'inactiva'; 
-    io.emit('batallaCancelada'); 
-    setTimeout(() => io.emit('batallaCancelada'), 300);
-    setTimeout(() => io.emit('batallaCancelada'), 600);
+    }, 1000); 
     res.send("OK"); 
 });
 
-app.all('/batalla/reset-wins', (req, res) => { 
-    DB.resetVictorias();
+app.all('/batalla/stop', requireSession, (req, res) => { 
+    const s = req.userSession;
+    clearInterval(s.timerBatalla); 
+    s.estadoBatalla = 'inactiva'; 
+    io.to(req.username).emit('batallaCancelada'); 
+    setTimeout(() => io.to(req.username).emit('batallaCancelada'), 300);
+    setTimeout(() => io.to(req.username).emit('batallaCancelada'), 600);
     res.send("OK"); 
 });
 
-// ⚽ RUTA: Solo guarda la configuración de faltas
-app.all('/futbol/reglas', (req, res) => { 
+app.all('/batalla/reset-wins', requireSession, (req, res) => { 
+    req.userSession.db.resetVictorias();
+    res.send("OK"); 
+});
+
+app.all('/futbol/reglas', requireSession, (req, res) => { 
+    const s = req.userSession;
     if(req.query.fa) {
-        configFutbol.limiteAmarilla = parseInt(req.query.fa);
-        DB.setConfigVal('limiteAmarilla', configFutbol.limiteAmarilla);
+        s.configFutbol.limiteAmarilla = parseInt(req.query.fa);
+        s.db.setConfigVal('limiteAmarilla', s.configFutbol.limiteAmarilla);
     }
     res.send("OK"); 
 });
 
 // ── CRUD DINÁMICAS ──
-app.get('/api/dinamicas', (req, res) => res.json(DB.getDinamicas()));
+app.get('/api/dinamicas', requireSession, (req, res) => res.json(req.userSession.db.getDinamicas()));
 
-app.all('/api/dinamicas/crear', (req, res) => {
+app.all('/api/dinamicas/crear', requireSession, (req, res) => {
+    const s = req.userSession;
     const body = req.body || {};
     const data = {
         nombre: body.nombre,
@@ -791,11 +1242,12 @@ app.all('/api/dinamicas/crear', (req, res) => {
         reglas: typeof body.reglas === 'object' ? body.reglas : {}
     };
     if (!data.nombre) return res.status(400).send('Falta nombre');
-    DB.crearDinamica(data);
+    s.db.crearDinamica(data);
     res.send('OK');
 });
 
-app.all('/api/dinamicas/editar', (req, res) => {
+app.all('/api/dinamicas/editar', requireSession, (req, res) => {
+    const s = req.userSession;
     const body = req.body || {};
     const id = parseInt(req.query.id || body.id);
     const data = {
@@ -807,26 +1259,26 @@ app.all('/api/dinamicas/editar', (req, res) => {
         reglas: typeof body.reglas === 'object' ? body.reglas : {}
     };
     if (!id || !data.nombre) return res.status(400).send('Datos incompletos');
-    DB.editarDinamica(id, data);
+    s.db.editarDinamica(id, data);
     res.send('OK');
 });
 
-app.all('/api/dinamicas/eliminar', (req, res) => {
+app.all('/api/dinamicas/eliminar', requireSession, (req, res) => {
     const id = parseInt(req.query.id || (req.body && req.body.id));
     if (!id) return res.status(400).send('Falta id');
-    DB.eliminarDinamica(id);
+    req.userSession.db.eliminarDinamica(id);
     res.send('OK');
 });
 
-app.all('/api/dinamicas/duplicar', (req, res) => {
+app.all('/api/dinamicas/duplicar', requireSession, (req, res) => {
     const id = parseInt(req.query.id || (req.body && req.body.id));
     if (!id) return res.status(400).send('Falta id');
-    DB.duplicarDinamica(id);
+    req.userSession.db.duplicarDinamica(id);
     res.send('OK');
 });
 
 // ── CRUD REGALOS CUSTOM ──
-app.get('/api/regalos-custom', (req, res) => res.json(DB.getRegalosCustom()));
+app.get('/api/regalos-custom', requireSession, (req, res) => res.json(req.userSession.db.getRegalosCustom()));
 
 function procesarImagenBase64(base64Str) {
     if (!base64Str || !base64Str.startsWith('data:image')) return base64Str;
@@ -848,143 +1300,204 @@ function procesarImagenBase64(base64Str) {
     }
 }
 
-app.all('/api/regalos-custom/crear', (req, res) => {
+app.all('/api/regalos-custom/crear', requireSession, (req, res) => {
+    const s = req.userSession;
     const data = req.body || {};
     if (!data.nombre) return res.status(400).send('Falta nombre');
     data.imagen = procesarImagenBase64(data.imagen);
-    DB.crearRegaloCustom(data);
-    io.emit('regalosCustomActualizados', DB.getRegalosCustom());
+    s.db.crearRegaloCustom(data);
+    io.to(req.username).emit('regalosCustomActualizados', s.db.getRegalosCustom());
     res.send('OK');
 });
 
-app.all('/api/regalos-custom/editar', (req, res) => {
+app.all('/api/regalos-custom/editar', requireSession, (req, res) => {
+    const s = req.userSession;
     const data = req.body || {};
     const id = parseInt(req.query.id || data.id);
     if (!id || !data.nombre) return res.status(400).send('Datos incompletos');
     data.imagen = procesarImagenBase64(data.imagen);
-    DB.editarRegaloCustom(id, data);
-    io.emit('regalosCustomActualizados', DB.getRegalosCustom());
+    s.db.editarRegaloCustom(id, data);
+    io.to(req.username).emit('regalosCustomActualizados', s.db.getRegalosCustom());
     res.send('OK');
 });
 
-app.all('/api/regalos-custom/eliminar', (req, res) => {
+app.all('/api/regalos-custom/eliminar', requireSession, (req, res) => {
+    const s = req.userSession;
     const id = parseInt(req.query.id || (req.body && req.body.id));
     if (!id) return res.status(400).send('Falta id');
-    DB.eliminarRegaloCustom(id);
-    io.emit('regalosCustomActualizados', DB.getRegalosCustom());
+    s.db.eliminarRegaloCustom(id);
+    io.to(req.username).emit('regalosCustomActualizados', s.db.getRegalosCustom());
     res.send('OK');
+});
+
+// ── API ANALYTICS ──
+app.get('/api/analytics/resumen', requireSession, (req, res) => {
+    try {
+        res.json(req.userSession.db.getResumenAnalytics());
+    } catch(e) {
+        res.status(500).send(e.message);
+    }
+});
+
+app.get('/api/analytics/historial', requireSession, (req, res) => {
+    try {
+        const limite = parseInt(req.query.limite) || 50;
+        res.json(req.userSession.db.getHistorialRegalos(limite));
+    } catch(e) {
+        res.status(500).send(e.message);
+    }
+});
+
+app.get('/api/analytics/top-gifters', requireSession, (req, res) => {
+    try {
+        const limite = parseInt(req.query.limite) || 5;
+        res.json(req.userSession.db.getTopGifters(limite));
+    } catch(e) {
+        res.status(500).send(e.message);
+    }
+});
+
+app.get('/api/analytics/grafica', requireSession, (req, res) => {
+    try {
+        res.json(req.userSession.db.getRegalosPorDia());
+    } catch(e) {
+        res.status(500).send(e.message);
+    }
 });
 
 // ── RUNTIME DINÁMICAS ──
-app.all('/dinamica/start/:id', (req, res) => {
-    const config = DB.getDinamica(parseInt(req.params.id));
+app.all('/dinamica/start/:id', requireSession, (req, res) => {
+    const s = req.userSession;
+    const user = req.username;
+    const config = s.db.getDinamica(parseInt(req.params.id));
     if (!config) return res.status(404).send('Dinámica no encontrada');
-    const participantes = resolverParticipantesDinamica(config.participantes);
+    const participantes = resolverParticipantesDinamica(s, config.participantes);
     if (participantes.length < 2) return res.status(400).send('Se necesitan al menos 2 participantes activos');
     const reglas = config.reglas || {};
-    clearInterval(timerDinamica);
-    dinamicaActiva = { ...config, participantes };
-    tiempoDinamica = (parseInt(reglas.duracion) || 3) * 60;
-    puntosDinamica = {};
-    rachasDinamica = {};
-    amarillasDinamica = {};
-    eliminadosDinamica = [];
-    participantes.forEach(p => { puntosDinamica[p] = 0; rachasDinamica[p] = 0; amarillasDinamica[p] = 0; });
-    const payload = { config: dinamicaActiva, participantes, puntos: puntosDinamica, tiempo: tiempoDinamica };
-    io.emit('dinamicaInicio', payload);
-    timerDinamica = setInterval(() => {
-        if (tiempoDinamica > 0) {
-            tiempoDinamica--;
-            io.emit('dinamicaTick', tiempoDinamica);
+    clearInterval(s.timerDinamica);
+    s.dinamicaActiva = { ...config, participantes };
+    s.tiempoDinamica = (parseInt(reglas.duracion) || 3) * 60;
+    s.puntosDinamica = {};
+    s.rachasDinamica = {};
+    s.amarillasDinamica = {};
+    s.eliminadosDinamica = [];
+    participantes.forEach(p => { s.puntosDinamica[p] = 0; s.rachasDinamica[p] = 0; s.amarillasDinamica[p] = 0; });
+    const payload = { config: s.dinamicaActiva, participantes, puntos: s.puntosDinamica, tiempo: s.tiempoDinamica };
+    io.to(user).emit('dinamicaInicio', payload);
+    
+    s.timerDinamica = setInterval(() => {
+        if (s.tiempoDinamica > 0) {
+            s.tiempoDinamica--;
+            io.to(user).emit('dinamicaTick', s.tiempoDinamica);
         } else {
-            clearInterval(timerDinamica);
-            finalizarDinamica();
+            clearInterval(s.timerDinamica);
+            finalizarDinamica(user);
         }
     }, 1000);
     res.send('OK');
 });
 
-app.all('/dinamica/stop', (req, res) => {
-    clearInterval(timerDinamica);
-    dinamicaActiva = null;
-    io.emit('dinamicaCancelada');
+app.all('/dinamica/stop', requireSession, (req, res) => {
+    const s = req.userSession;
+    clearInterval(s.timerDinamica);
+    s.dinamicaActiva = null;
+    io.to(req.username).emit('dinamicaCancelada');
     res.send('OK');
 });
 
-app.all('/dinamica/eliminar', (req, res) => {
+app.all('/dinamica/eliminar', requireSession, (req, res) => {
+    const s = req.userSession;
+    const user = req.username;
     const q = req.query.q || (req.body && req.body.q);
-    if (!q || !dinamicaActiva) return res.status(400).send('Sin dinámica activa o falta nombre');
-    if (!eliminadosDinamica.includes(q)) eliminadosDinamica.push(q);
-    io.emit('dinamicaPuntos', { puntos: puntosDinamica, eliminados: eliminadosDinamica });
-    const activos = dinamicaActiva.participantes.filter(p => !eliminadosDinamica.includes(p));
-    if (activos.length <= 1) { clearInterval(timerDinamica); finalizarDinamica(); }
+    if (!q || !s.dinamicaActiva) return res.status(400).send('Sin dinámica activa o falta nombre');
+    if (!s.eliminadosDinamica.includes(q)) s.eliminadosDinamica.push(q);
+    io.to(user).emit('dinamicaPuntos', { puntos: s.puntosDinamica, eliminados: s.eliminadosDinamica });
+    const activos = s.dinamicaActiva.participantes.filter(p => !s.eliminadosDinamica.includes(p));
+    if (activos.length <= 1) { clearInterval(s.timerDinamica); finalizarDinamica(user); }
     res.send('OK');
 });
 
-app.all('/futbol/reset-tarjetas', (req, res) => { 
-    QUEENS.forEach(q => { rachasPerdidas[q] = 0; amarillasAcumuladas[q] = 0; });
-    io.emit('resetTarjetas'); res.send("OK");
+app.all('/futbol/reset-tarjetas', requireSession, (req, res) => { 
+    const s = req.userSession;
+    s.QUEENS.forEach(q => { s.rachasPerdidas[q] = 0; s.amarillasAcumuladas[q] = 0; });
+    io.to(req.username).emit('resetTarjetas'); res.send("OK");
 });
 
-app.all('/reset-semanal', (req, res) => { 
-    DB.resetSemanal();
-    io.emit('resetRanking'); res.send("OK"); 
+app.all('/reset-semanal', requireSession, (req, res) => { 
+    req.userSession.db.resetSemanal();
+    io.to(req.username).emit('resetRanking'); res.send("OK"); 
 });
 
-app.all('/reset-diario', (req, res) => { 
-    DB.resetDiario();
-    io.emit('resetDiario'); res.send("OK"); 
+app.all('/reset-diario', requireSession, (req, res) => { 
+    req.userSession.db.resetDiario();
+    io.to(req.username).emit('resetDiario'); res.send("OK"); 
 });
 
-app.all('/reset-mensual', (req, res) => { 
-    DB.resetMensual();
-    io.emit('resetMensual'); res.send("OK"); 
+app.all('/reset-mensual', requireSession, (req, res) => { 
+    req.userSession.db.resetMensual();
+    io.to(req.username).emit('resetMensual'); res.send("OK"); 
 });
 
-app.all('/copa/reset', (req, res) => { 
-    DB.resetCopa();
-    io.emit('actualizarCopa', DB.getCopa()); 
+app.all('/copa/reset', requireSession, (req, res) => { 
+    const s = req.userSession;
+    s.db.resetCopa();
+    io.to(req.username).emit('actualizarCopa', s.db.getCopa()); 
     res.send("OK"); 
 });
 
-app.all('/reset-total', (req, res) => {
-    DB.resetSemanal();
-    DB.resetMensual();
-    DB.resetDiario();
-    DB.resetCopa();
-    DB.resetVictorias();
-    QUEENS.forEach(q => { rachasPerdidas[q] = 0; amarillasAcumuladas[q] = 0; });
-    io.emit('resetRanking');
-    io.emit('resetMensual');
-    io.emit('resetDiario');
-    io.emit('actualizarCopa', DB.getCopa());
+app.all('/reset-total', requireSession, (req, res) => {
+    const s = req.userSession;
+    const user = req.username;
+    s.db.resetSemanal();
+    s.db.resetMensual();
+    s.db.resetDiario();
+    s.db.resetCopa();
+    s.db.resetVictorias();
+    s.QUEENS.forEach(q => { s.rachasPerdidas[q] = 0; s.amarillasAcumuladas[q] = 0; });
+    io.to(user).emit('resetRanking');
+    io.to(user).emit('resetMensual');
+    io.to(user).emit('resetDiario');
+    io.to(user).emit('actualizarCopa', s.db.getCopa());
     res.send("OK");
 });
 
 // Compatibilidad: /datos.json para overlays viejos que lo pidan
-app.get('/datos.json', (req, res) => {
-    res.json({ ranking: DB.getRanking(), victorias: DB.getVictorias(), copa: DB.getCopa() });
+app.get('/datos.json', requireSession, (req, res) => {
+    const s = req.userSession;
+    res.json({ ranking: s.db.getRanking(), victorias: s.db.getVictorias(), copa: s.db.getCopa() });
 });
 
 process.on('uncaughtException', (err) => { console.error('🚨 ESCUDO ACTIVADO:', err.message); });
 process.on('unhandledRejection', (reason) => { console.error('🚨 ESCUDO ACTIVADO:', reason); });
 
-process.on('SIGINT', () => { DB.close(); process.exit(0); });
-process.on('SIGTERM', () => { DB.close(); process.exit(0); });
+function cleanupAllSessions() {
+    console.log('🧹 Cerrando bases de datos de todas las sesiones...');
+    Object.keys(activeSessions).forEach(username => {
+        const session = activeSessions[username];
+        if (session) {
+            clearInterval(session.batchInterval);
+            if (session.tiktokConnection) {
+                try { session.tiktokConnection.disconnect(); } catch(e) {}
+            }
+            if (session.db) {
+                session.db.close();
+            }
+        }
+    });
+}
+
+process.on('SIGINT', () => { cleanupAllSessions(); process.exit(0); });
+process.on('SIGTERM', () => { cleanupAllSessions(); process.exit(0); });
 
 // --- ARRANQUE ASYNC: Inicializar DB y luego levantar servidor ---
 (async () => {
     try {
-        await DB.init();
-        DB.initQueens(['Amy', 'Ray', 'Nucita', 'Venus']);
-        DB.migrarDesdeJSON(path.join(__dirname, 'datos.json'));
-        reconstruirQueens();
-        QUEENS.forEach(q => { rachasPerdidas[q] = 0; amarillasAcumuladas[q] = 0; });
-        configFutbol.limiteAmarilla = parseInt(DB.getConfigVal('limiteAmarilla')) || 3;
+        const SQLInstance = await initSQL();
+        await MasterDB.initMasterDB(SQLInstance);
         
         server.listen(3000, '0.0.0.0', () => console.log('🚀 Urban Queens con SQLite activo en puerto 3000'));
     } catch (err) {
-        console.error('❌ Error iniciando la base de datos:', err);
+        console.error('❌ Error iniciando el servidor:', err);
         process.exit(1);
     }
 })();

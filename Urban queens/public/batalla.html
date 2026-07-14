@@ -2,6 +2,47 @@
 <html lang="es">
 
 <head>
+    <!-- Inyección de multi-cuenta -->
+    <script>
+        (function() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const user = urlParams.get('user');
+            if (user) {
+                const originalFetch = window.fetch;
+                window.fetch = function(url, options) {
+                    if (typeof url === 'string' && !url.includes('user=')) {
+                        const sep = url.includes('?') ? '&' : '?';
+                        url = url + sep + 'user=' + encodeURIComponent(user);
+                    }
+                    return originalFetch(url, options);
+                };
+                const originalIo = window.io;
+                if (originalIo) {
+                    window.io = function(opts) {
+                        opts = opts || {};
+                        opts.query = opts.query || {};
+                        opts.query.user = user;
+                        return originalIo(opts);
+                    };
+                } else {
+                    let _io = undefined;
+                    Object.defineProperty(window, 'io', {
+                        get: function() { return _io; },
+                        set: function(val) {
+                            _io = function(opts) {
+                                opts = opts || {};
+                                opts.query = opts.query || {};
+                                opts.query.user = user;
+                                return val(opts);
+                            };
+                        },
+                        configurable: true
+                    });
+                }
+            }
+        })();
+    </script>
+
     <meta charset="UTF-8">
     <title>Modo Batalla Urban Queens</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -16,7 +57,7 @@
         }
 
         body {
-            background: #00FF00;
+            background: #00FF00; /* Fondo chroma verde para OBS */
             font-family: 'Inter', sans-serif;
             overflow: hidden;
             width: 100vw;
@@ -30,40 +71,43 @@
 
         /* ── WRAPPER PRINCIPAL ── */
         #batalla-wrap {
-            width: 92%;
-            max-width: 900px;
+            width: 94%;
+            max-width: 920px;
             display: flex;
             flex-direction: column;
-            gap: 6px;
+            gap: 10px;
+            filter: drop-shadow(0 10px 20px rgba(0, 0, 0, 0.4));
         }
 
-        /* ── TIMER ── */
+        /* ── TIMER HUD NEÓN ── */
         #timer {
             font-family: 'Bangers', cursive;
-            font-size: 58px;
+            font-size: 64px;
             color: #FFD700;
-            text-shadow: 3px 3px 0 #000, 0 0 20px rgba(255, 215, 0, 0.6);
-            letter-spacing: 3px;
+            text-shadow: 0 0 10px rgba(0, 0, 0, 0.9),
+                         0 0 20px rgba(255, 215, 0, 0.4),
+                         3px 3px 0px #000;
+            letter-spacing: 4px;
             text-align: center;
-            transition: color 0.3s;
+            transition: all 0.3s ease;
             line-height: 1;
-            margin-bottom: 4px;
+            margin-bottom: 6px;
         }
 
         #timer.urgente {
-            color: #ff4444;
-            animation: pulso 0.6s infinite;
+            color: #ff3b30;
+            text-shadow: 0 0 10px rgba(0, 0, 0, 0.9),
+                         0 0 25px rgba(255, 59, 48, 0.7),
+                         3px 3px 0px #000;
+            animation: pulso-critico 0.6s infinite alternate;
         }
 
-        @keyframes pulso {
-
-            0%,
-            100% {
-                transform: scale(1)
+        @keyframes pulso-critico {
+            0% {
+                transform: scale(1);
             }
-
-            50% {
-                transform: scale(1.08)
+            100% {
+                transform: scale(1.1);
             }
         }
 
@@ -73,7 +117,7 @@
             justify-content: space-around;
             align-items: flex-end;
             gap: 4px;
-            min-height: 60px;
+            min-height: 70px;
         }
 
         .gift-slot {
@@ -84,43 +128,52 @@
         }
 
         .gift-img {
-            width: 56px;
-            height: 56px;
+            width: 64px;
+            height: 64px;
             object-fit: contain;
-            filter: drop-shadow(0 0 10px rgba(255, 255, 255, 0.7)) drop-shadow(2px 2px 4px rgba(0, 0, 0, 0.8));
-            transition: transform 0.2s;
+            filter: drop-shadow(0 0 12px rgba(255, 255, 255, 0.8)) 
+                    drop-shadow(3px 3px 5px rgba(0, 0, 0, 0.7));
+            transition: transform 0.2s ease;
         }
 
         .gift-img.bounce {
-            animation: gift-bounce 0.45s ease;
+            animation: gift-bounce-resorte 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
         }
 
-        @keyframes gift-bounce {
+        @keyframes gift-bounce-resorte {
             0% {
-                transform: scale(1);
+                transform: scale(1) rotate(0deg);
             }
-
-            40% {
-                transform: scale(1.5) rotate(-6deg);
+            30% {
+                transform: scale(1.6) rotate(-10deg);
             }
-
-            70% {
-                transform: scale(0.9) rotate(3deg);
+            60% {
+                transform: scale(0.85) rotate(5deg);
             }
-
+            80% {
+                transform: scale(1.1) rotate(-2deg);
+            }
             100% {
-                transform: scale(1);
+                transform: scale(1) rotate(0deg);
             }
         }
 
-        /* ── BARRA DE PUNTOS ── */
+        /* ── BARRA DE PUNTOS GLASSMORPHISM ── */
         #bar-outer {
-            height: 50px;
-            border-radius: 25px;
+            height: 56px;
+            border-radius: 28px;
             overflow: hidden;
             display: flex;
-            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5), inset 0 2px 6px rgba(0, 0, 0, 0.3);
-            border: 3px solid rgba(0, 0, 0, 0.4);
+            background: rgba(0, 0, 0, 0.75);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.7),
+                        inset 0 4px 12px rgba(0, 0, 0, 0.6),
+                        0 0 0 1px rgba(255, 255, 255, 0.08);
+            border: 3px solid rgba(255, 255, 255, 0.05);
+            padding: 3px;
+            position: relative;
+            transition: border-color 0.5s ease, box-shadow 0.5s ease;
         }
 
         .queen-bar {
@@ -129,23 +182,51 @@
             align-items: center;
             justify-content: center;
             font-family: 'Bangers', cursive;
-            font-size: 28px;
-            letter-spacing: 1px;
+            font-size: 30px;
+            letter-spacing: 1.5px;
             color: #fff;
-            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.9);
-            transition: width 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.9), 0 0 10px rgba(255,255,255,0.3);
+            transition: width 0.8s cubic-bezier(0.25, 1, 0.5, 1);
             position: relative;
+            overflow: hidden;
+            border-radius: 22px;
         }
 
+        /* Efecto Glossy Superior */
         .queen-bar::after {
             content: '';
             position: absolute;
             top: 0;
             left: 0;
             right: 0;
-            height: 45%;
-            background: linear-gradient(180deg, rgba(255, 255, 255, 0.25) 0%, transparent 100%);
+            height: 40%;
+            background: linear-gradient(180deg, rgba(255, 255, 255, 0.22) 0%, transparent 100%);
             pointer-events: none;
+            z-index: 2;
+        }
+
+        /* Barrido de luz diagonal animado */
+        .queen-bar::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -150%;
+            width: 150%;
+            height: 100%;
+            background: linear-gradient(90deg, 
+                transparent 30%, 
+                rgba(255, 255, 255, 0.35) 50%, 
+                transparent 70%
+            );
+            transform: skewX(-25deg);
+            animation: sweep-light 4s infinite ease-in-out;
+            z-index: 1;
+        }
+
+        @keyframes sweep-light {
+            0% { left: -150%; }
+            50% { left: 150%; }
+            100% { left: 150%; }
         }
 
         /* ── FILA DE NOMBRES ── */
@@ -159,93 +240,114 @@
             display: flex;
             flex-direction: column;
             align-items: center;
-            gap: 1px;
+            gap: 2px;
+            transition: transform 0.2s ease;
+        }
+
+        .queen-name-slot:hover {
+            transform: translateY(-2px);
         }
 
         .queen-label {
             font-family: 'Bangers', cursive;
-            font-size: 35px;
-            letter-spacing: 1px;
-            text-shadow: 2px 2px 0 #000, 0 0 10px rgba(0, 0, 0, 0.6);
+            font-size: 38px;
+            letter-spacing: 1.5px;
+            text-shadow: 2px 2px 0px #000,
+                         0 0 15px rgba(0, 0, 0, 0.8);
             line-height: 1;
         }
 
+        /* Medallas Doradas de Victorias */
         .queen-vics {
             font-size: 21px;
-            font-weight: 800;
+            font-weight: 900;
             color: #FFD700;
-            text-shadow: 1px 1px 0 #000;
+            background: linear-gradient(135deg, #FFE066 0%, #F5B041 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.8);
+            filter: drop-shadow(0 2px 3px rgba(0,0,0,0.6));
             letter-spacing: 0.5px;
+            animation: latido-suave 2.5s infinite ease-in-out;
         }
 
-        /* ── FEED DEBAJO DEL NOMBRE ── */
+        @keyframes latido-suave {
+            0%, 100% { transform: scale(1); filter: brightness(1) drop-shadow(0 2px 3px rgba(0,0,0,0.6)); }
+            50% { transform: scale(1.06); filter: brightness(1.2) drop-shadow(0 4px 6px rgba(0,0,0,0.7)); }
+        }
+
+        /* ── FEED DE ESPECTADORES NEÓN ── */
         .feed-debajo {
             display: flex;
             flex-direction: column;
             align-items: center;
-            gap: 4px;
-            margin-top: 4px;
-            min-height: 80px;
+            gap: 5px;
+            margin-top: 6px;
+            min-height: 90px;
         }
 
         .bar-viewer-chip {
             display: flex;
             align-items: center;
-            gap: 4px;
-            background: rgba(0, 0, 0, 0.65);
-            border: 1px solid rgba(255, 255, 255, 0.15);
-            border-radius: 15px;
-            padding: 2px 8px 2px 2px;
-            animation: slide-in-bar 0.3s ease;
+            gap: 6px;
+            background: rgba(0, 0, 0, 0.78);
+            backdrop-filter: blur(5px);
+            -webkit-backdrop-filter: blur(5px);
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            border-radius: 18px;
+            padding: 3px 10px 3px 3px;
+            animation: slide-in-elastic 0.45s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
             white-space: nowrap;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+            transform-origin: center bottom;
         }
 
-        @keyframes slide-in-bar {
+        @keyframes slide-in-elastic {
             from {
                 opacity: 0;
-                transform: translateY(-5px) scale(0.9);
+                transform: translateY(20px) scale(0.8) rotateX(-15deg);
             }
-
             to {
                 opacity: 1;
-                transform: translateY(0) scale(1);
+                transform: translateY(0) scale(1) rotateX(0deg);
             }
         }
 
         .bar-viewer-avatar {
-            width: 30px;
-            height: 30px;
+            width: 32px;
+            height: 32px;
             border-radius: 50%;
             object-fit: cover;
-            border: 1px solid rgba(255, 255, 255, 0.4);
-            background: #333;
+            border: 2px solid rgba(255, 255, 255, 0.6);
+            box-shadow: 0 0 6px rgba(255, 255, 255, 0.25);
+            background: #222;
         }
 
         .bar-viewer-nick {
-            font-size: 11px;
+            font-size: 12px;
             font-weight: 800;
             color: #fff;
-            text-shadow: 1px 1px 1px #000;
-            max-width: 70px;
+            text-shadow: 1px 1px 2px #000;
+            max-width: 80px;
             overflow: hidden;
             text-overflow: ellipsis;
         }
 
         .bar-viewer-gift {
-            width: 14px;
-            height: 14px;
+            width: 16px;
+            height: 16px;
             object-fit: contain;
         }
 
         .bar-viewer-coins {
-            font-size: 10px;
+            font-size: 11px;
             font-weight: 900;
             color: #FFD700;
             text-shadow: 1px 1px 0 #000;
             letter-spacing: 0.3px;
         }
 
-        /* ── ANUNCIO FINAL ── */
+        /* ── BANNER GANADOR PREMIUM CON CONFETI ── */
         #anuncio-fin {
             display: none;
             position: fixed;
@@ -253,29 +355,82 @@
             left: 50%;
             transform: translate(-50%, -50%);
             font-family: 'Bangers', cursive;
-            font-size: 72px;
+            font-size: 80px;
             color: #FFD700;
             text-shadow: 0 0 30px rgba(255, 215, 0, 0.9), 5px 5px 0 #000;
             letter-spacing: 4px;
             text-align: center;
-            background: rgba(0, 0, 0, 0.88);
-            padding: 20px 40px;
-            border-radius: 20px;
-            border: 3px solid #FFD700;
+            background: rgba(0, 0, 0, 0.94);
+            backdrop-filter: blur(15px);
+            -webkit-backdrop-filter: blur(15px);
+            padding: 35px 70px;
+            border-radius: 30px;
+            border: 4px solid #FFD700;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.95), 
+                        0 0 40px rgba(255, 215, 0, 0.35);
             z-index: 9999;
             white-space: nowrap;
-            animation: zoom-in 0.4s ease;
+            animation: zoom-in-bounce 0.65s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            overflow: hidden;
         }
 
-        @keyframes zoom-in {
+        #anuncio-fin::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -60%;
+            width: 30%;
+            height: 200%;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.25), transparent);
+            transform: rotate(30deg);
+            animation: sweep-banner 4s infinite linear;
+            z-index: 5;
+        }
+
+        @keyframes sweep-banner {
+            0% { left: -60%; }
+            100% { left: 160%; }
+        }
+
+        @keyframes zoom-in-bounce {
             from {
-                transform: translate(-50%, -50%) scale(0.5);
+                transform: translate(-50%, -50%) scale(0.3);
                 opacity: 0;
             }
-
             to {
                 transform: translate(-50%, -50%) scale(1);
                 opacity: 1;
+            }
+        }
+
+        /* Contenedor de confeti */
+        .confetti-container {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            pointer-events: none;
+            z-index: 1;
+        }
+
+        .confetti-particle {
+            position: absolute;
+            opacity: 0.85;
+            border-radius: 2px;
+        }
+
+        @keyframes fall-confetti {
+            0% {
+                top: -20px;
+                transform: translateY(0) rotate(0deg);
+                opacity: 1;
+            }
+            100% {
+                top: 110%;
+                transform: translateY(220px) rotate(720deg);
+                opacity: 0;
             }
         }
     </style>
@@ -388,15 +543,34 @@
             let total = 0;
             participantesActivos.forEach(c => { total += (puntos[c] || 0); });
             const pct = 100 / participantesActivos.length;
+            
+            let lider = null;
+            let maxPts = -1;
+            
             participantesActivos.forEach(chica => {
                 const barEl = document.getElementById('bar-' + chica);
+                const pts = puntos[chica] || 0;
+                if (pts > maxPts) {
+                    maxPts = pts;
+                    lider = chica;
+                }
                 if (barEl) {
-                    let p = total === 0 ? pct : ((puntos[chica] || 0) / total) * 100;
+                    let p = total === 0 ? pct : (pts / total) * 100;
                     p = Math.max(2, p); // mínimo visual
                     barEl.style.width = p + '%';
-                    barEl.textContent = puntos[chica] || 0;
+                    barEl.textContent = pts;
                 }
             });
+
+            // Hacer brillar el marco de la barra con el color del líder activo
+            if (lider && equiposInfo[lider] && maxPts > 0) {
+                const liderColor = equiposInfo[lider].color;
+                barOuter.style.boxShadow = `0 8px 32px rgba(0, 0, 0, 0.7), 0 0 25px ${liderColor}66`;
+                barOuter.style.borderColor = `${liderColor}80`;
+            } else {
+                barOuter.style.boxShadow = '';
+                barOuter.style.borderColor = '';
+            }
         }
 
         // ── Feed de espectadores ──
@@ -438,6 +612,27 @@
             }).join('');
         }
 
+        // Generar partículas de confeti de forma dinámica
+        function crearConfeti() {
+            const container = document.querySelector('.confetti-container');
+            if (!container) return;
+            container.innerHTML = '';
+            const colores = ['#FFD700', '#FF5733', '#33FF57', '#3357FF', '#FF33FF', '#33FFFF'];
+            for (let i = 0; i < 60; i++) {
+                const p = document.createElement('div');
+                p.className = 'confetti-particle';
+                p.style.left = Math.random() * 100 + '%';
+                p.style.top = -10 - Math.random() * 20 + 'px';
+                p.style.backgroundColor = colores[Math.floor(Math.random() * colores.length)];
+                p.style.width = 6 + Math.random() * 8 + 'px';
+                p.style.height = 6 + Math.random() * 8 + 'px';
+                p.style.transform = `rotate(${Math.random() * 360}deg)`;
+                p.style.animation = `fall-confetti ${1.5 + Math.random() * 2}s linear infinite`;
+                p.style.animationDelay = Math.random() * 1.5 + 's';
+                container.appendChild(p);
+            }
+        }
+
         // ── SOCKET EVENTS ──
         socket.on('batallaInicio', (data) => {
             anuncio.style.display = 'none';
@@ -470,10 +665,16 @@
             const texto = esEmpate ? nombreDisplay : '🏆 ¡GANÓ ' + nombreDisplay + '!';
             timerEl.textContent = texto;
             timerEl.classList.remove('urgente');
-            anuncio.textContent = texto;
+            
+            // Inyectar contenedor de confeti y texto con z-index
+            anuncio.innerHTML = `<div class="confetti-container"></div><div style="position:relative; z-index: 10;">${texto}</div>`;
+            
             anuncio.style.color = esEmpate ? '#fff' : '#FFD700';
             anuncio.style.borderColor = esEmpate ? '#fff' : '#FFD700';
             anuncio.style.display = 'block';
+            
+            crearConfeti();
+            
             if (!esEmpate && data.victorias) {
                 const vicEl = document.getElementById('vic-' + data.ganadora);
                 if (vicEl) vicEl.textContent = '👑 X' + data.victorias[data.ganadora];

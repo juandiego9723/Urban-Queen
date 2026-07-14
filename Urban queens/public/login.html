@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Urban Queens — Iniciar Sesión</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+        :root {
+            --bg: #090b11;
+            --surface: #101422;
+            --surface2: #161c2f;
+            --border: rgba(255, 255, 255, 0.06);
+            --text: #f1f5f9;
+            --muted: #64748b;
+            --pink: #ec4899;
+            --indigo: #6366f1;
+            --shadow: 0 10px 30px rgba(0, 0, 0, 0.6);
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            background: var(--bg);
+            color: var(--text);
+            font-family: 'Inter', system-ui, sans-serif;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        .login-card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 40px;
+            width: 100%;
+            max-width: 420px;
+            box-shadow: var(--shadow);
+            position: relative;
+            overflow: hidden;
+        }
+        .login-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 4px;
+            background: linear-gradient(90deg, var(--pink), var(--indigo));
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .logo {
+            font-size: 24px;
+            font-weight: 800;
+            letter-spacing: -0.8px;
+            color: var(--text);
+        }
+        .logo span {
+            color: var(--pink);
+            text-shadow: 0 0 12px rgba(236, 72, 153, 0.4);
+        }
+        .subtitle {
+            font-size: 13px;
+            color: var(--muted);
+            margin-top: 6px;
+        }
+        .form-group {
+            margin-bottom: 20px;
+        }
+        .label {
+            display: block;
+            font-size: 11px;
+            font-weight: 700;
+            color: var(--muted);
+            text-transform: uppercase;
+            letter-spacing: 0.8px;
+            margin-bottom: 8px;
+        }
+        .input {
+            background: var(--surface2);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 12px 14px;
+            color: var(--text);
+            font-size: 14px;
+            font-family: inherit;
+            outline: none;
+            transition: border-color .15s, box-shadow .15s;
+            width: 100%;
+        }
+        .input:focus {
+            border-color: var(--indigo);
+            box-shadow: 0 0 0 3px rgba(99,102,241,.18);
+        }
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 100%;
+            padding: 12px 20px;
+            border-radius: 8px;
+            font-weight: 600;
+            font-size: 14px;
+            cursor: pointer;
+            border: none;
+            transition: all .2s ease;
+            background: var(--indigo);
+            color: #fff;
+            margin-top: 10px;
+        }
+        .btn:hover {
+            box-shadow: 0 0 15px rgba(99, 102, 241, 0.4);
+            filter: brightness(1.1);
+        }
+        .btn:active {
+            transform: scale(.98);
+        }
+        .footer-link {
+            text-align: center;
+            margin-top: 24px;
+            font-size: 13px;
+            color: var(--muted);
+        }
+        .footer-link a {
+            color: var(--pink);
+            text-decoration: none;
+            font-weight: 600;
+            transition: color 0.15s;
+        }
+        .footer-link a:hover {
+            color: #f472b6;
+        }
+        .error-box {
+            background: rgba(239, 68, 68, 0.1);
+            border: 1px solid rgba(239, 68, 68, 0.2);
+            color: #f87171;
+            padding: 12px;
+            border-radius: 8px;
+            font-size: 13px;
+            margin-bottom: 20px;
+            display: none;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+    <div class="login-card">
+        <div class="header">
+            <div class="logo">Urban <span>Queens</span></div>
+            <div class="subtitle">Gestión de Cuentas de Baile y Rankings</div>
+        </div>
+
+        <div id="error-message" class="error-box"></div>
+
+        <form id="login-form">
+            <div class="form-group">
+                <label class="label">Nombre de Usuario</label>
+                <input type="text" id="username" class="input" placeholder="ej: mi_academia" required autocomplete="username">
+            </div>
+            <div class="form-group">
+                <label class="label">Contraseña</label>
+                <input type="password" id="password" class="input" placeholder="••••••••" required autocomplete="current-password">
+            </div>
+            <button type="submit" class="btn">Iniciar Sesión</button>
+        </form>
+
+        <div class="footer-link">
+            ¿No tienes cuenta? <a href="/register">Regístrate aquí</a>
+        </div>
+    </div>
+
+    <script>
+        // Check for error in query param
+        const urlParams = new URLSearchParams(window.location.search);
+        if (urlParams.get('error')) {
+            const errBox = document.getElementById('error-message');
+            errBox.textContent = decodeURIComponent(urlParams.get('error'));
+            errBox.style.display = 'block';
+        }
+
+        document.getElementById('login-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const username = document.getElementById('username').value.trim();
+            const password = document.getElementById('password').value;
+            const errBox = document.getElementById('error-message');
+
+            try {
+                const res = await fetch('/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username, password })
+                });
+
+                if (res.ok) {
+                    window.location.href = '/control';
+                } else {
+                    const text = await res.text();
+                    errBox.textContent = text;
+                    errBox.style.display = 'block';
+                }
+            } catch (err) {
+                errBox.textContent = 'Error de conexión con el servidor';
+                errBox.style.display = 'block';
+            }
+        });
+    </script>
+</body>
+</html>

@@ -1,128 +1,469 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
+    <!-- Inyección de multi-cuenta -->
+    <script>
+        (function() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const user = urlParams.get('user');
+            if (user) {
+                const originalFetch = window.fetch;
+                window.fetch = function(url, options) {
+                    if (typeof url === 'string' && !url.includes('user=')) {
+                        const sep = url.includes('?') ? '&' : '?';
+                        url = url + sep + 'user=' + encodeURIComponent(user);
+                    }
+                    return originalFetch(url, options);
+                };
+                const originalIo = window.io;
+                if (originalIo) {
+                    window.io = function(opts) {
+                        opts = opts || {};
+                        opts.query = opts.query || {};
+                        opts.query.user = user;
+                        return originalIo(opts);
+                    };
+                } else {
+                    let _io = undefined;
+                    Object.defineProperty(window, 'io', {
+                        get: function() { return _io; },
+                        set: function(val) {
+                            _io = function(opts) {
+                                opts = opts || {};
+                                opts.query = opts.query || {};
+                                opts.query.user = user;
+                                return val(opts);
+                            };
+                        },
+                        configurable: true
+                    });
+                }
+            }
+        })();
+    </script>
+
     <meta charset="UTF-8">
     <title>El Clásico Compacto - Urban Queens</title>
     <link href="https://fonts.googleapis.com/css2?family=Bangers&display=swap" rel="stylesheet">
     <style>
         /* 🟩 FONDO CHROMA 🟩 */
-        body { font-family: 'Bangers', cursive; text-align: center; background: #00FF00; color: white; margin: 0; overflow: hidden; letter-spacing: 1px; }
+        body { 
+            font-family: 'Bangers', cursive; 
+            text-align: center; 
+            background: #00FF00; 
+            color: white; 
+            margin: 0; 
+            overflow: hidden; 
+            letter-spacing: 1.5px; 
+        }
         
         /* Contenedor más ajustado */
-        .container { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; width: 100vw; gap: 12px; }
+        .container { 
+            display: flex; 
+            flex-direction: column; 
+            align-items: center; 
+            justify-content: center; 
+            height: 100vh; 
+            width: 100vw; 
+            gap: 16px; 
+            filter: drop-shadow(0 10px 25px rgba(0, 0, 0, 0.45));
+        }
 
-        /* HEADER COMPACTO */
+        /* HEADER COMPACTO TIPO HUD */
         .timer-header { 
-            display: flex; align-items: center; justify-content: center; gap: 20px; 
-            background: linear-gradient(180deg, #111, #000); 
-            padding: 8px 35px; border-radius: 40px; border: 4px solid #FFD700; 
-            box-shadow: 0 0 20px rgba(255, 215, 0, 0.5); min-width: 320px;
+            display: flex; 
+            align-items: center; 
+            justify-content: center; 
+            gap: 22px; 
+            background: linear-gradient(180deg, rgba(17, 17, 17, 0.95), rgba(0, 0, 0, 0.98)); 
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            padding: 10px 40px; 
+            border-radius: 40px; 
+            border: 4px solid #FFD700; 
+            box-shadow: 0 0 25px rgba(255, 215, 0, 0.4), 
+                        inset 0 4px 10px rgba(255, 255, 255, 0.1); 
+            min-width: 340px;
             z-index: 10;
         }
-        .reloj { font-size: 65px; color: #FFF; text-shadow: 0 0 10px rgba(255,255,255,0.5); margin-bottom: -5px;}
-        .titulo-clasico { font-size: 30px; color: #FFD700; line-height: 0.9; text-align: left;}
+        
+        .reloj { 
+            font-size: 70px; 
+            color: #FFF; 
+            text-shadow: 0 0 15px rgba(255,255,255,0.6), 2px 2px 0px #000; 
+            margin-bottom: -5px;
+            transition: all 0.3s ease;
+        }
+        
+        .titulo-clasico { 
+            font-size: 32px; 
+            color: #FFD700; 
+            line-height: 0.95; 
+            text-align: left;
+            text-shadow: 2px 2px 0px #000;
+        }
 
         /* MODO SNIPE EXTREMO */
         .snipe-mode { 
-            color: #ff0000 !important; 
+            color: #ff3b30 !important; 
             animation: latidoFuerte 0.4s infinite alternate; 
-            text-shadow: 0 0 20px #ff0000;
+            text-shadow: 0 0 25px #ff3b30, 2px 2px 0px #000;
         }
-        @keyframes latidoFuerte { 0% { transform: scale(1); } 100% { transform: scale(1.15); } }
+        
+        @keyframes latidoFuerte { 
+            0% { transform: scale(1); } 
+            100% { transform: scale(1.16); } 
+        }
 
         /* 📊 BARRA DE PODER (TUG-OF-WAR) REDUCIDA 📊 */
         .barra-poder-container {
-            width: 80%; max-width: 900px; height: 30px; background: #222; border: 4px solid white; border-radius: 20px;
-            display: flex; overflow: hidden; box-shadow: 0 5px 15px rgba(0,0,0,0.8); z-index: 10;
+            width: 82%; 
+            max-width: 900px; 
+            height: 34px; 
+            background: rgba(0, 0, 0, 0.85); 
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+            border: 4px solid white; 
+            border-radius: 25px;
+            display: flex; 
+            overflow: hidden; 
+            box-shadow: 0 8px 30px rgba(0,0,0,0.8),
+                        inset 0 4px 8px rgba(0,0,0,0.5); 
+            z-index: 10;
             position: relative;
+            box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.05);
         }
         
         .barra-poder-container::after {
-            content: 'VS'; position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%);
-            font-size: 22px; color: gold; text-shadow: 0 0 8px #000; z-index: 5;
+            content: 'VS'; 
+            position: absolute; 
+            left: 50%; 
+            top: 50%; 
+            transform: translate(-50%, -50%);
+            font-size: 20px; 
+            font-family: 'Bangers', cursive;
+            background: linear-gradient(135deg, #FFE066 0%, #F5B041 100%);
+            color: #000;
+            padding: 1px 12px;
+            border-radius: 12px;
+            border: 2px solid #000;
+            box-shadow: 0 0 10px rgba(255, 215, 0, 0.8);
+            z-index: 5;
+            letter-spacing: 0.5px;
         }
 
         .barra-eq1 {
-            width: 50%; height: 100%; 
-            transition: width 0.6s cubic-bezier(0.25, 1, 0.5, 1);
-            display: flex; align-items: center; justify-content: flex-start; padding-left: 15px;
-            box-shadow: inset -5px 0 15px rgba(0,0,0,0.5);
+            width: 50%; 
+            height: 100%; 
+            transition: width 0.8s cubic-bezier(0.25, 1, 0.5, 1);
+            display: flex; 
+            align-items: center; 
+            justify-content: flex-start; 
+            padding-left: 15px;
+            box-shadow: inset -5px 0 15px rgba(0,0,0,0.4);
+            position: relative;
+            overflow: hidden;
         }
+        
         .barra-eq2 {
-            width: 50%; height: 100%; background: linear-gradient(90deg, #CCCCCC, #FFFFFF);
-            transition: width 0.6s cubic-bezier(0.25, 1, 0.5, 1);
-            display: flex; align-items: center; justify-content: flex-end; padding-right: 15px;
-            box-shadow: inset 5px 0 15px rgba(0,0,0,0.5);
+            width: 50%; 
+            height: 100%; 
+            background: linear-gradient(90deg, #CCCCCC, #FFFFFF);
+            transition: width 0.8s cubic-bezier(0.25, 1, 0.5, 1);
+            display: flex; 
+            align-items: center; 
+            justify-content: flex-end; 
+            padding-right: 15px;
+            box-shadow: inset 5px 0 15px rgba(0,0,0,0.4);
+            position: relative;
+            overflow: hidden;
         }
 
+        /* Efecto Glossy y Barrido de Luz en Barras Tug-of-War */
+        .barra-eq1::after, .barra-eq2::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 40%;
+            background: linear-gradient(180deg, rgba(255, 255, 255, 0.2) 0%, transparent 100%);
+            pointer-events: none;
+            z-index: 2;
+        }
+
+        .barra-eq1::before, .barra-eq2::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -150%;
+            width: 150%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.25), transparent);
+            transform: skewX(-20deg);
+            animation: sweep-light 4s infinite ease-in-out;
+            z-index: 1;
+        }
+
+        @keyframes sweep-light {
+            0% { left: -150%; }
+            50% { left: 150%; }
+            100% { left: 150%; }
+        }
         
         /* Estilos dinámicos para el texto según la luminosidad del color */
         .text-dark { color: #000 !important; text-shadow: none !important; }
-        .text-light { color: #fff !important; text-shadow: 2px 2px 5px #000 !important; }
+        .text-light { color: #fff !important; text-shadow: 2px 2px 4px #000 !important; }
         .bg-dark { background: rgba(0,0,0,0.4) !important; color: white !important; }
-        .bg-light { background: rgba(255,255,255,0.7) !important; color: black !important; }
-/* CONTENEDOR DE EQUIPOS COMPACTO */
-        .clasico-vs { display: flex; justify-content: center; align-items: center; gap: 20px; width: 85%; max-width: 1000px; height: 160px; }
+        .bg-light { background: rgba(255,255,255,0.78) !important; color: black !important; }
 
-        .team-card {
-            flex: 1; height: 100%; border-radius: 25px; border: 5px solid white;
-            display: flex; flex-direction: column; align-items: center; justify-content: space-around;
-            position: relative; overflow: hidden; transition: all 0.3s ease;
-            box-shadow: 0 10px 25px rgba(0,0,0,0.8); padding: 10px 0;
+        /* CONTENEDOR DE EQUIPOS COMPACTO */
+        .clasico-vs { 
+            display: flex; 
+            justify-content: center; 
+            align-items: center; 
+            gap: 24px; 
+            width: 85%; 
+            max-width: 1000px; 
+            height: 180px; 
         }
 
-        /* ESTILOS DE EQUIPOS */
+        /* TARJETAS DE EQUIPO */
+        .team-card {
+            flex: 1; 
+            height: 100%; 
+            border-radius: 30px; 
+            border: 5px solid rgba(255, 255, 255, 0.8);
+            display: flex; 
+            flex-direction: column; 
+            align-items: center; 
+            justify-content: space-around;
+            position: relative; 
+            overflow: hidden; 
+            transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            box-shadow: 0 15px 35px rgba(0,0,0,0.85); 
+            padding: 12px 0;
+        }
+
+        /* Glossy en tarjetas */
+        .team-card::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 45%;
+            background: linear-gradient(180deg, rgba(255, 255, 255, 0.18) 0%, transparent 100%);
+            pointer-events: none;
+            z-index: 1;
+        }
+
+        /* Destellos al anotar goles */
+        .eq-flash {
+            animation: card-flash-glow 0.6s ease-out;
+        }
+
+        @keyframes card-flash-glow {
+            0% { filter: brightness(1); }
+            30% { filter: brightness(1.7) saturate(1.2); box-shadow: 0 0 40px rgba(255,255,255,0.9); }
+            100% { filter: brightness(1); }
+        }
+
+        /* ESTILOS DE EQUIPOS POR DEFECTO */
         .eq1 { background: linear-gradient(135deg, #004D98 0%, #A50044 100%); border-color: #EDBB00; }
         .eq2 { background: linear-gradient(135deg, #FFFFFF 0%, #CCCCCC 100%); border-color: #004D98; color: #000; }
         .eq2 .puntos, .eq2 .nombre-equipo { color: #000; text-shadow: none; }
 
-        .nombre-equipo { font-size: 38px; text-transform: uppercase; margin-top: 5px; text-shadow: 2px 2px 5px #000; z-index: 2; line-height: 1;}
-        .integrantes { font-size: 15px; margin-top: -5px; opacity: 0.9; background: rgba(0,0,0,0.3); padding: 3px 15px; border-radius: 12px; z-index: 2;}
+        .nombre-equipo { 
+            font-size: 40px; 
+            text-transform: uppercase; 
+            margin-top: 5px; 
+            text-shadow: 2px 2px 5px #000; 
+            z-index: 2; 
+            line-height: 1;
+        }
+        
+        .integrantes { 
+            font-size: 16px; 
+            margin-top: -5px; 
+            opacity: 0.95; 
+            background: rgba(0,0,0,0.38); 
+            padding: 4px 18px; 
+            border-radius: 15px; 
+            z-index: 2;
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+        
         .eq2 .integrantes { color: white; }
-        .puntos { font-size: 85px; line-height: 0.9; margin: 0; text-shadow: 3px 3px 10px rgba(0,0,0,0.5); z-index: 2;}
+        .puntos { 
+            font-size: 90px; 
+            line-height: 0.9; 
+            margin: 0; 
+            text-shadow: 3px 3px 10px rgba(0,0,0,0.6); 
+            z-index: 2;
+        }
 
-        /* ✨⚽ ANIMACIÓN DEL BALONAZO AJUSTADA ⚽✨ */
+        /* ✨⚽ ANIMACIÓN DEL BALONAZO ⚽✨ */
         .balon-gol {
-            position: absolute; top: 50%; left: 50%;
+            position: absolute; 
+            top: 50%; 
+            left: 50%;
             transform: translate(-50%, -50%) scale(0);
-            font-size: 130px; opacity: 0; z-index: 50;
-            pointer-events: none; filter: drop-shadow(0 10px 10px rgba(0,0,0,0.8));
+            font-size: 140px; 
+            opacity: 0; 
+            z-index: 50;
+            pointer-events: none; 
+            filter: drop-shadow(0 0 20px rgba(255, 255, 255, 0.9)) 
+                    drop-shadow(0 15px 15px rgba(0,0,0,0.8));
         }
 
         @keyframes balonazoStrike {
-            0% { transform: translate(-50%, -50%) scale(3) rotate(-180deg); opacity: 0; }
-            20% { transform: translate(-50%, -50%) scale(1.3) rotate(-45deg); opacity: 1; filter: drop-shadow(0 0 30px white); }
-            40% { transform: translate(-50%, -50%) scale(0.8) rotate(10deg); opacity: 1; }
-            60% { transform: translate(-50%, -50%) scale(1.1) rotate(0deg); opacity: 1; }
+            0% { transform: translate(-50%, -50%) scale(3.5) rotate(-180deg); opacity: 0; }
+            20% { transform: translate(-50%, -50%) scale(1.4) rotate(-45deg); opacity: 1; filter: drop-shadow(0 0 35px white); }
+            40% { transform: translate(-50%, -50%) scale(0.85) rotate(10deg); opacity: 1; }
+            60% { transform: translate(-50%, -50%) scale(1.15) rotate(0deg); opacity: 1; }
             100% { transform: translate(-50%, -50%) scale(0); opacity: 0; }
         }
 
-        .disparar { animation: balonazoStrike 0.8s cubic-bezier(0.25, 1, 0.5, 1) forwards; }
+        .disparar { 
+            animation: balonazoStrike 0.85s cubic-bezier(0.25, 1, 0.5, 1) forwards; 
+        }
 
         /* VIBRACIÓN DE LA TARJETA AL RECIBIR EL GOL */
-        .vibrar-gol { animation: shake 0.5s cubic-bezier(.36,.07,.19,.97) both; }
-        @keyframes shake { 10%, 90% { transform: translate3d(-2px, 0, 0); } 20%, 80% { transform: translate3d(4px, 0, 0); } 30%, 50%, 70% { transform: translate3d(-6px, 0, 0); } 40%, 60% { transform: translate3d(6px, 0, 0); } }
+        .vibrar-gol { 
+            animation: shake-card 0.55s cubic-bezier(.36,.07,.19,.97) both; 
+        }
+        
+        @keyframes shake-card { 
+            10%, 90% { transform: translate3d(-3px, 0, 0) rotate(-0.5deg); } 
+            20%, 80% { transform: translate3d(5px, 0, 0) rotate(0.5deg); } 
+            30%, 50%, 70% { transform: translate3d(-7px, 0, 0) rotate(-1deg); } 
+            40%, 60% { transform: translate3d(7px, 0, 0) rotate(1deg); } 
+        }
 
-        /* TARJETAS GIGANTES AJUSTADAS A PANTALLA */
+        /* TARJETAS GIGANTES DE FALTAS EN 3D */
         .notif-tarjeta { 
-            position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; 
-            z-index: 50000; display: none; flex-direction: column; align-items: center; justify-content: center;
-            animation: flashOverlay 0.5s ease;
+            position: fixed; 
+            top: 0; 
+            left: 0; 
+            width: 100vw; 
+            height: 100vh; 
+            z-index: 50000; 
+            display: none; 
+            flex-direction: column; 
+            align-items: center; 
+            justify-content: center;
+            background: rgba(0, 0, 0, 0.78);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            animation: fadeInOverlay 0.35s ease-out;
         }
-        .tarjeta-img { width: 220px; height: 310px; border-radius: 20px; border: 8px solid white; box-shadow: 0 0 50px rgba(0,0,0,1); transform: rotate(-5deg); margin-bottom: 20px; }
-        .tarjeta-texto { font-size: 50px; text-transform: uppercase; background: rgba(0,0,0,0.9); padding: 8px 30px; border-radius: 15px; border: 4px solid white; }
+        
+        @keyframes fadeInOverlay {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+        
+        .tarjeta-img { 
+            width: 230px; 
+            height: 330px; 
+            border-radius: 22px; 
+            border: 8px solid white; 
+            box-shadow: 0 25px 60px rgba(0,0,0,0.9),
+                        0 0 40px rgba(255, 255, 255, 0.25); 
+            transform: rotate(-6deg); 
+            margin-bottom: 25px; 
+            animation: card-rotate-reveal 0.65s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+            transform-origin: center bottom;
+        }
 
-        .amarilla-bg { background: rgba(255, 215, 0, 0.4); }
-        .roja-bg { background: rgba(255, 0, 0, 0.4); }
-        .amarilla-card { background: #FFD700; }
-        .roja-card { background: #FF0000; }
+        @keyframes card-rotate-reveal {
+            0% { transform: translateY(180px) rotate(25deg) scale(0.5); opacity: 0; }
+            100% { transform: translateY(0) rotate(-6deg) scale(1); opacity: 1; }
+        }
+        
+        .tarjeta-texto { 
+            font-size: 52px; 
+            text-transform: uppercase; 
+            background: rgba(0,0,0,0.94); 
+            padding: 10px 40px; 
+            border-radius: 20px; 
+            border: 4px solid white; 
+            box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+            animation: textReveal 0.5s ease-out;
+        }
+        
+        @keyframes textReveal {
+            from { transform: scale(0.8); opacity: 0; }
+            to { transform: scale(1); opacity: 1; }
+        }
 
-        /* LETRERO FINAL AJUSTADO */
+        .amarilla-bg { background: rgba(255, 215, 0, 0.35); }
+        .roja-bg { background: rgba(255, 0, 0, 0.35); }
+        .amarilla-card { background: linear-gradient(135deg, #FFE066 0%, #FFD700 100%); }
+        .roja-card { background: linear-gradient(135deg, #FF3B30 0%, #E60000 100%); }
+
+        /* LETRERO FINAL AJUSTADO CON CONFETI */
         .final-overlay {
-            position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.95);
-            display: none; flex-direction: column; align-items: center; justify-content: center; z-index: 100000;
+            position: fixed; 
+            top: 0; 
+            left: 0; 
+            width: 100vw; 
+            height: 100vh; 
+            background: rgba(0,0,0,0.96);
+            backdrop-filter: blur(15px);
+            -webkit-backdrop-filter: blur(15px);
+            display: none; 
+            flex-direction: column; 
+            align-items: center; 
+            justify-content: center; 
+            z-index: 100000;
+            animation: fadeInOverlay 0.5s ease-in-out;
         }
-        .ganador-nombre { font-size: 90px; text-shadow: 0 0 30px gold; margin: 0; }
+        
+        .ganador-nombre { 
+            font-size: 96px; 
+            color: #FFD700;
+            text-shadow: 0 0 35px rgba(255, 215, 0, 0.85), 5px 5px 0 #000; 
+            margin: 15px 0; 
+            animation: pulse-winning 2s infinite ease-in-out;
+        }
+        
+        @keyframes pulse-winning {
+            0%, 100% { transform: scale(1); filter: brightness(1); }
+            50% { transform: scale(1.04); filter: brightness(1.2); }
+        }
+
+        /* Confeti */
+        .confetti-container {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            pointer-events: none;
+            z-index: 1;
+        }
+
+        .confetti-particle {
+            position: absolute;
+            opacity: 0.85;
+            border-radius: 2px;
+        }
+
+        @keyframes fall-confetti {
+            0% {
+                top: -20px;
+                transform: translateY(0) rotate(0deg);
+                opacity: 1;
+            }
+            100% {
+                top: 110%;
+                transform: translateY(220px) rotate(720deg);
+                opacity: 0;
+            }
+        }
     </style>
 </head>
 <body>
@@ -161,9 +502,12 @@
     </div>
 
     <div class="final-overlay" id="pantalla-final">
-        <h2 style="font-size: 40px; margin: 0;">¡FIN DEL ENCUENTRO!</h2>
-        <div style="font-size: 100px; margin: 10px 0;">🏆</div>
-        <h1 class="ganador-nombre" id="ganador-texto">¡EQUIPO 1!</h1>
+        <div class="confetti-container"></div>
+        <div style="position:relative; z-index: 10; display: flex; flex-direction: column; align-items: center; justify-content: center;">
+            <h2 style="font-size: 40px; margin: 0; font-family: 'Bangers', cursive; letter-spacing: 2px;">¡FIN DEL ENCUENTRO!</h2>
+            <div style="font-size: 100px; margin: 10px 0; filter: drop-shadow(0 0 15px rgba(255, 215, 0, 0.5));">🏆</div>
+            <h1 class="ganador-nombre" id="ganador-texto">¡EQUIPO 1!</h1>
+        </div>
     </div>
 
     <script src="/socket.io/socket.io.js"></script>
@@ -266,17 +610,25 @@
             // Animación de Balonazo y Vibración
             if (eq1 > lastPoints.eq1) { 
                 cardBarca.classList.add('vibrar-gol'); 
+                cardBarca.classList.add('eq-flash');
                 balonBarca.classList.remove('disparar');
                 void balonBarca.offsetWidth; 
                 balonBarca.classList.add('disparar');
-                setTimeout(() => cardBarca.classList.remove('vibrar-gol'), 600); 
+                setTimeout(() => {
+                    cardBarca.classList.remove('vibrar-gol');
+                    cardBarca.classList.remove('eq-flash');
+                }, 600); 
             }
             if (eq2 > lastPoints.eq2) { 
                 cardMadrid.classList.add('vibrar-gol'); 
+                cardMadrid.classList.add('eq-flash');
                 balonMadrid.classList.remove('disparar');
                 void balonMadrid.offsetWidth; 
                 balonMadrid.classList.add('disparar');
-                setTimeout(() => cardMadrid.classList.remove('vibrar-gol'), 600); 
+                setTimeout(() => {
+                    cardMadrid.classList.remove('vibrar-gol');
+                    cardMadrid.classList.remove('eq-flash');
+                }, 600); 
             }
             
             lastPoints = { eq1, eq2 };
@@ -315,6 +667,8 @@
             
             texto.innerText = ganador;
             overlay.style.display = 'flex';
+            
+            crearConfeti();
 
             if (data.reporteTarjetas && data.reporteTarjetas.length > 0) {
                 setTimeout(() => { mostrarTarjetasGigantes(data.reporteTarjetas); }, 2500);
@@ -322,6 +676,27 @@
             
             setTimeout(() => overlay.style.display = 'none', 10000);
         });
+
+        // Generar confeti dinámicamente en el overlay final
+        function crearConfeti() {
+            const container = document.querySelector('.confetti-container');
+            if (!container) return;
+            container.innerHTML = '';
+            const colores = ['#FFD700', '#FF5733', '#33FF57', '#3357FF', '#FF33FF', '#33FFFF'];
+            for (let i = 0; i < 70; i++) {
+                const p = document.createElement('div');
+                p.className = 'confetti-particle';
+                p.style.left = Math.random() * 100 + '%';
+                p.style.top = -10 - Math.random() * 20 + 'px';
+                p.style.backgroundColor = colores[Math.floor(Math.random() * colores.length)];
+                p.style.width = 6 + Math.random() * 8 + 'px';
+                p.style.height = 6 + Math.random() * 8 + 'px';
+                p.style.transform = `rotate(${Math.random() * 360}deg)`;
+                p.style.animation = `fall-confetti ${1.5 + Math.random() * 2}s linear infinite`;
+                p.style.animationDelay = Math.random() * 1.5 + 's';
+                container.appendChild(p);
+            }
+        }
 
         function mostrarTarjetasGigantes(lista) {
             const overlay = document.getElementById('pantalla-tarjeta');

@@ -1,0 +1,487 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <!-- Inyección de multi-cuenta -->
+    <script>
+        (function() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const user = urlParams.get('user');
+            if (user) {
+                const originalFetch = window.fetch;
+                window.fetch = function(url, options) {
+                    if (typeof url === 'string' && !url.includes('user=')) {
+                        const sep = url.includes('?') ? '&' : '?';
+                        url = url + sep + 'user=' + encodeURIComponent(user);
+                    }
+                    return originalFetch(url, options);
+                };
+                const originalIo = window.io;
+                if (originalIo) {
+                    window.io = function(opts) {
+                        opts = opts || {};
+                        opts.query = opts.query || {};
+                        opts.query.user = user;
+                        return originalIo(opts);
+                    };
+                } else {
+                    let _io = undefined;
+                    Object.defineProperty(window, 'io', {
+                        get: function() { return _io; },
+                        set: function(val) {
+                            _io = function(opts) {
+                                opts = opts || {};
+                                opts.query = opts.query || {};
+                                opts.query.user = user;
+                                return val(opts);
+                            };
+                        },
+                        configurable: true
+                    });
+                }
+            }
+        })();
+    </script>
+    <meta charset="UTF-8">
+    <title>Multi-cam Grid (Zukaa Style)</title>
+    <link href="https://fonts.googleapis.com/css2?family=Bangers&family=Inter:wght@400;700;900&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --border-glow: 4px;
+            --neon-shadow: 0 0 15px;
+        }
+        body {
+            margin: 0;
+            padding: 0;
+            width: 100vw;
+            height: 100vh;
+            background: transparent;
+            font-family: 'Inter', sans-serif;
+            overflow: hidden;
+            box-sizing: border-box;
+        }
+        
+        /* Opcional: fondo chroma verde si se pasa ?chroma=1 */
+        body.chroma {
+            background-color: #00FF00 !important;
+        }
+
+        .grid-container {
+            display: grid;
+            width: 100%;
+            height: 100%;
+            gap: 16px;
+            padding: 16px;
+            box-sizing: border-box;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            grid-template-rows: repeat(auto-fit, minmax(200px, 1fr));
+        }
+
+        .cam-slot {
+            position: relative;
+            border-radius: 16px;
+            border: 3px solid #ffffff;
+            box-shadow: var(--neon-shadow) rgba(255, 255, 255, 0.2);
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            transition: all 0.5s ease;
+            /* El centro es transparente para ver la cámara de OBS */
+            background: transparent;
+        }
+
+        /* Efecto Congelado (Icy Clash) */
+        .cam-slot.frozen::after {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(173, 216, 230, 0.45);
+            backdrop-filter: blur(4px);
+            z-index: 10;
+            pointer-events: none;
+            animation: freezePulse 2s infinite alternate;
+        }
+        
+        .cam-slot.frozen::before {
+            content: '❄️ CONGELADA';
+            position: absolute;
+            top: 50%; left: 50%;
+            transform: translate(-50%, -50%);
+            font-family: 'Bangers', cursive;
+            font-size: 2rem;
+            color: #e0f7fa;
+            text-shadow: 0 0 10px #00e5ff, 0 0 20px #00838f;
+            z-index: 11;
+            letter-spacing: 2px;
+        }
+
+        @keyframes freezePulse {
+            0% { background: rgba(173, 216, 230, 0.35); }
+            100% { background: rgba(173, 216, 230, 0.55); }
+        }
+
+        /* Eliminada de Dinámica */
+        .cam-slot.eliminated::after {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(239, 68, 68, 0.4);
+            backdrop-filter: grayscale(1) blur(2px);
+            z-index: 10;
+            pointer-events: none;
+        }
+        .cam-slot.eliminated::before {
+            content: '❌ ELIMINADA';
+            position: absolute;
+            top: 50%; left: 50%;
+            transform: translate(-50%, -50%);
+            font-family: 'Bangers', cursive;
+            font-size: 2.2rem;
+            color: #ffebee;
+            text-shadow: 0 0 10px #ff1744, 0 0 20px #d50000;
+            z-index: 11;
+            letter-spacing: 2px;
+        }
+
+        /* Banner inferior de estadísticas (Glassmorphism) */
+        .cam-info-banner {
+            background: rgba(10, 12, 22, 0.7);
+            backdrop-filter: blur(12px);
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+            padding: 10px 14px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            z-index: 5;
+            margin-top: auto;
+        }
+
+        .cam-girl-name {
+            font-weight: 900;
+            color: #ffffff;
+            font-size: 1.1rem;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.8);
+            letter-spacing: -0.5px;
+            text-transform: uppercase;
+        }
+        
+        .cam-girl-apodo {
+            font-size: 11px;
+            color: #b0bac9;
+            font-weight: 500;
+        }
+
+        .cam-score-badge {
+            font-family: 'Bangers', cursive;
+            font-size: 1.4rem;
+            color: #ffffff;
+            background: rgba(255, 255, 255, 0.1);
+            padding: 4px 10px;
+            border-radius: 8px;
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            letter-spacing: 1px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.25);
+        }
+
+        /* Mini estadísticas W/D/L */
+        .cam-mini-stats {
+            display: flex;
+            gap: 8px;
+            font-size: 10.5px;
+            font-weight: 700;
+            color: #b0bac9;
+            text-shadow: 0 1px 2px rgba(0,0,0,0.8);
+        }
+        .stat-w { color: #10b981; }
+        .stat-d { color: #6366f1; }
+        .stat-l { color: #ec4899; }
+
+        /* Popups de regalo flotantes (Alertas de regalos) */
+        .gift-alert-container {
+            position: absolute;
+            top: 12px;
+            left: 12px;
+            right: 12px;
+            height: 60px;
+            pointer-events: none;
+            z-index: 15;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .gift-alert-card {
+            background: rgba(10, 12, 22, 0.85);
+            backdrop-filter: blur(8px);
+            border: 1.5px solid var(--border-color, #fbbf24);
+            box-shadow: 0 0 10px var(--border-color, rgba(251, 191, 36, 0.3));
+            border-radius: 10px;
+            padding: 6px 12px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            animation: giftPopIn 0.35s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards,
+                       giftFadeOut 0.4s ease-in 3.5s forwards;
+        }
+
+        @keyframes giftPopIn {
+            from { opacity: 0; transform: translateY(-20px) scale(0.8); }
+            to { opacity: 1; transform: translateY(0) scale(1); }
+        }
+        @keyframes giftFadeOut {
+            from { opacity: 1; transform: translateY(0) scale(1); }
+            to { opacity: 0; transform: translateY(-10px) scale(0.9); }
+        }
+
+        .gift-img {
+            width: 32px;
+            height: 32px;
+            object-fit: contain;
+            background: rgba(255,255,255,0.05);
+            border-radius: 6px;
+            padding: 2px;
+        }
+        .gift-detail {
+            flex: 1;
+            color: #fff;
+            font-size: 11px;
+            line-height: 1.3;
+        }
+        .gift-coins {
+            font-family: 'Bangers', cursive;
+            color: #fbbf24;
+            font-size: 1.2rem;
+            text-shadow: 0 0 4px rgba(251,191,36,0.3);
+        }
+    </style>
+</head>
+<body>
+    <div class="grid-container" id="cam-grid">
+        <!-- Renderizado dinámico de celdas de cámara -->
+    </div>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script>
+        const urlParams = new URLSearchParams(window.location.search);
+        const user = urlParams.get('user');
+        
+        // Habilitar fondo chroma si ?chroma=1
+        if (urlParams.get('chroma') === '1') {
+            document.body.classList.add('chroma');
+        }
+
+        const socket = io();
+        let queensList = [];
+        let equiposMap = {};
+        
+        async function fetchDancers() {
+            try {
+                // Obtener datos de todas las bailarinas activas
+                const res = await fetch('/api/queens/all');
+                if (!res.ok) return;
+                const allQueens = await res.json();
+                
+                // Filtrar solo las activas
+                queensList = allQueens.filter(q => q.activo === 1 || q.activo === true);
+                
+                // Reconstruir mapa de equipos
+                equiposMap = {};
+                queensList.forEach(q => {
+                    const apodo = (q.apodo && q.apodo.trim()) ? q.apodo.trim() : q.name;
+                    equiposMap[q.name] = {
+                        nombre: apodo.toUpperCase(),
+                        color: q.color || '#ffffff',
+                        victorias: q.victorias || 0,
+                        empates: q.empates || 0,
+                        derrotas: q.derrotas || 0
+                    };
+                });
+                
+                renderGrid();
+                fetchRanking();
+            } catch(e) {
+                console.error("Error cargando bailarinas:", e);
+            }
+        }
+
+        async function fetchRanking() {
+            try {
+                // Obtener acumulados en tiempo real
+                const res = await fetch('/api/ranking');
+                if (!res.ok) return;
+                const ranking = await res.json();
+                
+                ranking.forEach(item => {
+                    const valEl = document.getElementById(`score-${item.name}`);
+                    if (valEl) {
+                        valEl.textContent = item.puntos || 0;
+                    }
+                });
+            } catch(e) {}
+        }
+
+        function renderGrid() {
+            const grid = document.getElementById('cam-grid');
+            if (queensList.length === 0) {
+                grid.innerHTML = '<div style="color:#fff;grid-column:1/-1;text-align:center;font-size:18px;margin-top:100px;font-weight:700">Sin bailarinas activas</div>';
+                return;
+            }
+            
+            // Ajustar columnas de la rejilla según la cantidad
+            const count = queensList.length;
+            if (count === 1) {
+                grid.style.gridTemplateColumns = '1fr';
+            } else if (count === 2) {
+                grid.style.gridTemplateColumns = '1fr 1fr';
+            } else if (count <= 4) {
+                grid.style.gridTemplateColumns = '1fr 1fr';
+            } else {
+                grid.style.gridTemplateColumns = 'repeat(3, 1fr)';
+            }
+
+            grid.innerHTML = queensList.map(q => {
+                const color = q.color || '#ffffff';
+                const apodo = q.apodo || q.name;
+                return `
+                    <div class="cam-slot" id="slot-${q.name}" style="border-color:${color}; box-shadow: 0 0 15px ${color}44">
+                        <div class="gift-alert-container" id="gifts-${q.name}"></div>
+                        
+                        <div class="cam-info-banner">
+                            <div style="flex:1; min-width:0; margin-right:8px">
+                                <div class="cam-girl-name">${q.name}</div>
+                                <div class="cam-girl-apodo">@${apodo}</div>
+                                <div class="cam-mini-stats">
+                                    <span class="stat-w">W: ${q.victorias || 0}</span>
+                                    <span class="stat-d">D: ${q.empates || 0}</span>
+                                    <span class="stat-l">L: ${q.derrotas || 0}</span>
+                                </div>
+                            </div>
+                            <div class="cam-score-badge" id="score-${q.name}">0</div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        // Mostrar popup flotante de regalo
+        function triggerGiftAlert(queenName, viewer, giftName, coins, giftImg) {
+            const container = document.getElementById(`gifts-${queenName}`);
+            if (!container) return;
+
+            const card = document.createElement('div');
+            card.className = 'gift-alert-card';
+            card.style.setProperty('--border-color', queensList.find(q => q.name === queenName)?.color || '#fbbf24');
+            
+            const imageHtml = giftImg 
+                ? `<img class="gift-img" src="${giftImg}" onerror="this.style.display='none'">`
+                : `<div class="gift-img" style="display:flex;align-items:center;justify-content:center;font-size:18px">🎁</div>`;
+
+            card.innerHTML = `
+                ${imageHtml}
+                <div class="gift-detail">
+                    <div style="font-weight:900;color:#fff;font-size:12px">@${viewer}</div>
+                    <div style="color:var(--muted)">Envió ${giftName}</div>
+                </div>
+                <div class="gift-coins">${coins}💎</div>
+            `;
+
+            container.appendChild(card);
+            
+            // Eliminar elemento después de la animación de salida (4 segundos en total)
+            setTimeout(() => {
+                card.remove();
+            }, 4000);
+        }
+
+        // --- MANEJO DE SOCKETS ---
+        socket.on('nuevoRegalo', (data) => {
+            if (data.nombre) {
+                triggerGiftAlert(data.nombre, data.viewer, data.giftName, data.coins, data.giftImg);
+            }
+            fetchRanking();
+        });
+
+        socket.on('rankingActualizado', () => {
+            fetchRanking();
+        });
+
+        socket.on('queensActualizadas', () => {
+            fetchDancers();
+        });
+
+        // ── Soporte Icy Clash (Efecto congelado basado en el Timer) ──
+        socket.on('timerInicio', (data) => {
+            // El timer inicia para una bailarina. Ella está descongelada, todas las demás se congelan
+            queensList.forEach(q => {
+                const el = document.getElementById(`slot-${q.name}`);
+                if (el) {
+                    if (q.name === data.chica) {
+                        el.classList.remove('frozen');
+                    } else {
+                        el.classList.add('frozen');
+                    }
+                }
+            });
+        });
+
+        socket.on('timerTransicion', () => {
+            // Durante la transición, todas las bailarinas se congelan
+            queensList.forEach(q => {
+                const el = document.getElementById(`slot-${q.name}`);
+                if (el) el.classList.add('frozen');
+            });
+        });
+
+        socket.on('timerCancelado', () => {
+            // Al detener el timer, todas se descongelan
+            queensList.forEach(q => {
+                const el = document.getElementById(`slot-${q.name}`);
+                if (el) el.classList.remove('frozen');
+            });
+        });
+
+        socket.on('batallaInicio', () => {
+            // En batallas todas están descongeladas y listas
+            queensList.forEach(q => {
+                const el = document.getElementById(`slot-${q.name}`);
+                if (el) el.classList.remove('frozen');
+            });
+        });
+
+        // ── Soporte Eliminación en Dinámicas ──
+        socket.on('dinamicaInicio', (data) => {
+            queensList.forEach(q => {
+                const el = document.getElementById(`slot-${q.name}`);
+                if (el) {
+                    el.classList.remove('eliminated');
+                    el.classList.remove('frozen');
+                }
+            });
+        });
+
+        socket.on('dinamicaPuntos', (data) => {
+            const eliminados = data.eliminados || [];
+            queensList.forEach(q => {
+                const el = document.getElementById(`slot-${q.name}`);
+                if (el) {
+                    if (eliminados.includes(q.name)) {
+                        el.classList.add('eliminated');
+                    } else {
+                        el.classList.remove('eliminated');
+                    }
+                }
+            });
+        });
+
+        socket.on('dinamicaCancelada', () => {
+            queensList.forEach(q => {
+                const el = document.getElementById(`slot-${q.name}`);
+                if (el) el.classList.remove('eliminated');
+            });
+        });
+
+        // Carga inicial
+        fetchDancers();
+    </script>
+</body>
+</html>

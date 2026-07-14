@@ -1,0 +1,742 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <!-- Inyección de multi-cuenta -->
+    <script>
+        (function() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const user = urlParams.get('user');
+            if (user) {
+                const originalFetch = window.fetch;
+                window.fetch = function(url, options) {
+                    if (typeof url === 'string' && !url.includes('user=')) {
+                        const sep = url.includes('?') ? '&' : '?';
+                        url = url + sep + 'user=' + encodeURIComponent(user);
+                    }
+                    return originalFetch(url, options);
+                };
+                const originalIo = window.io;
+                if (originalIo) {
+                    window.io = function(opts) {
+                        opts = opts || {};
+                        opts.query = opts.query || {};
+                        opts.query.user = user;
+                        return originalIo(opts);
+                    };
+                } else {
+                    let _io = undefined;
+                    Object.defineProperty(window, 'io', {
+                        get: function() { return _io; },
+                        set: function(val) {
+                            _io = function(opts) {
+                                opts = opts || {};
+                                opts.query = opts.query || {};
+                                opts.query.user = user;
+                                return val(opts);
+                            };
+                        },
+                        configurable: true
+                    });
+                }
+            }
+        })();
+    </script>
+
+    <meta charset="UTF-8">
+    <title>PK Battle Overlay — Urban Queens</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Bangers&family=Inter:wght@700;800;900&display=swap" rel="stylesheet">
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            background: #00FF00; /* Chroma verde para OBS */
+            font-family: 'Inter', sans-serif;
+            overflow: hidden;
+            width: 100vw;
+            height: 100vh;
+            position: relative;
+            color: #fff;
+        }
+
+        /* ── ESTRUCTURA SPLIT-SCREEN 50/50 ── */
+        #split-container {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            display: flex;
+            z-index: 1;
+            pointer-events: none;
+        }
+
+        .camera-half {
+            width: 50%;
+            height: 100%;
+            position: relative;
+        }
+
+        /* ── LÍNEA LÁSER VERTICAL CENTRAL ── */
+        #laser-divider {
+            position: absolute;
+            top: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 4px;
+            height: 100%;
+            background: #00ffff;
+            box-shadow: 0 0 10px #00ffff, 0 0 20px #00ffff, 0 0 35px #00e5ff;
+            z-index: 10;
+            animation: laser-pulse 1.5s infinite alternate ease-in-out;
+        }
+
+        @keyframes laser-pulse {
+            0% {
+                background: #00ffff;
+                box-shadow: 0 0 10px #00ffff, 0 0 20px #00ffff, 0 0 30px #00e5ff;
+            }
+            50% {
+                background: #ff1493;
+                box-shadow: 0 0 12px #ff1493, 0 0 24px #ff1493, 0 0 36px #c71585;
+            }
+            100% {
+                background: #00e5ff;
+                box-shadow: 0 0 10px #00e5ff, 0 0 20px #00e5ff, 0 0 35px #0083b0;
+            }
+        }
+
+        /* ── CABEZAL PK SUPERIOR (TUG-OF-WAR) ── */
+        #pk-header {
+            position: absolute;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 92%;
+            max-width: 820px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            z-index: 20;
+        }
+
+        /* Fila de Competidoras */
+        .header-info-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-end;
+            width: 100%;
+            padding: 0 10px;
+        }
+
+        .competitor-meta {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            background: rgba(0, 0, 0, 0.75);
+            padding: 6px 16px;
+            border-radius: 30px;
+            border: 1.5px solid rgba(255, 255, 255, 0.15);
+            box-shadow: 0 6px 15px rgba(0,0,0,0.5);
+        }
+
+        .competitor-avatar {
+            width: 42px;
+            height: 42px;
+            border-radius: 50%;
+            border: 2px solid #fff;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 16px;
+            font-weight: 900;
+        }
+
+        .competitor-details {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+        }
+
+        .competitor-name {
+            font-family: 'Bangers', cursive;
+            font-size: 20px;
+            letter-spacing: 0.5px;
+            line-height: 1;
+            text-transform: uppercase;
+        }
+
+        .win-streak {
+            font-size: 10px;
+            font-weight: 800;
+            color: #FFD700;
+            letter-spacing: 0.5px;
+        }
+
+        /* ── RELOJ CENTRAL Y MARCADORES DE PUNTOS ── */
+        .bar-container-wrap {
+            position: relative;
+            width: 100%;
+            height: 42px;
+        }
+
+        .pk-bar-outer {
+            width: 100%;
+            height: 100%;
+            border-radius: 21px;
+            overflow: hidden;
+            display: flex;
+            background: rgba(0, 0, 0, 0.85);
+            box-shadow: 0 8px 25px rgba(0,0,0,0.7), inset 0 2px 6px rgba(0,0,0,0.4);
+            border: 2.5px solid rgba(255, 255, 255, 0.12);
+            position: relative;
+        }
+
+        .pk-side-bar {
+            height: 100%;
+            transition: width 0.7s cubic-bezier(0.25, 1, 0.5, 1);
+            display: flex;
+            align-items: center;
+            position: relative;
+        }
+
+        /* Lado izquierdo (Team A) */
+        .pk-left {
+            background: linear-gradient(90deg, #ff1493, #c71585);
+            justify-content: flex-start;
+            padding-left: 20px;
+        }
+
+        /* Lado derecho (Team B) */
+        .pk-right {
+            background: linear-gradient(90deg, #0083b0, #00e5ff);
+            justify-content: flex-end;
+            padding-right: 20px;
+        }
+
+        .score-text {
+            font-family: 'Bangers', cursive;
+            font-size: 26px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.8);
+            z-index: 5;
+        }
+
+        /* Divisor central movible de la barra */
+        #bar-divider-lightning {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 24px;
+            height: 44px;
+            background: #fff;
+            clip-path: polygon(40% 0%, 90% 0%, 60% 40%, 100% 40%, 30% 100%, 50% 60%, 10% 60%);
+            z-index: 10;
+            box-shadow: 0 0 10px #ffe600;
+            filter: drop-shadow(0 0 6px #ffe600);
+            transition: left 0.7s cubic-bezier(0.25, 1, 0.5, 1);
+        }
+
+        /* Reloj del Temporizador Superior */
+        .timer-box {
+            position: absolute;
+            left: 50%;
+            top: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 15;
+            background: rgba(0, 0, 0, 0.9);
+            border: 2px solid #FFD700;
+            box-shadow: 0 0 15px rgba(255, 215, 0, 0.4);
+            border-radius: 12px;
+            padding: 2px 14px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        #timer {
+            font-family: 'Bangers', cursive;
+            font-size: 24px;
+            color: #FFD700;
+            letter-spacing: 1px;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.5);
+        }
+
+        /* ── DINÁMICA ICY CLASH (CONGELAMIENTO EN PANTALLA COMPLETA) ── */
+        .frozen-side {
+            position: absolute;
+            top: 0;
+            width: 50%;
+            height: 100%;
+            background: linear-gradient(135deg, rgba(165, 243, 252, 0.2) 0%, rgba(56, 189, 248, 0.3) 100%);
+            backdrop-filter: blur(8px) saturate(0.4);
+            -webkit-backdrop-filter: blur(8px) saturate(0.4);
+            border: 5px solid rgba(165, 243, 252, 0.55);
+            box-shadow: inset 0 0 60px rgba(165, 243, 252, 0.75), 0 0 30px rgba(56, 189, 248, 0.35);
+            z-index: 5;
+            pointer-events: none;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            opacity: 0;
+            transition: opacity 0.5s ease-in-out;
+        }
+
+        .frozen-side.active {
+            opacity: 1;
+        }
+
+        .frozen-side-left {
+            left: 0;
+            border-right: none;
+        }
+
+        .frozen-side-right {
+            right: 0;
+            border-left: none;
+        }
+
+        /* Capa de escarcha extra */
+        .frozen-side::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: repeating-linear-gradient(45deg, rgba(255,255,255,0.03), rgba(255,255,255,0.03) 2px, transparent 2px, transparent 10px);
+            border-radius: inherit;
+        }
+
+        /* Badge Flotante Gigante de Congelamiento */
+        .frozen-side-badge {
+            font-family: 'Bangers', cursive;
+            font-size: 32px;
+            color: #a5f3fc;
+            background: rgba(8, 47, 73, 0.9);
+            border: 2px solid #38bdf8;
+            padding: 8px 24px;
+            border-radius: 12px;
+            letter-spacing: 2px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.7), 0 0 20px rgba(56,189,248,0.6);
+            text-transform: uppercase;
+            animation: ice-badge-pulse 1s infinite alternate ease-in-out;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.5);
+        }
+
+        @keyframes ice-badge-pulse {
+            0% { transform: scale(0.95); box-shadow: 0 10px 25px rgba(0,0,0,0.7), 0 0 15px rgba(56,189,248,0.5); }
+            100% { transform: scale(1.05); box-shadow: 0 10px 25px rgba(0,0,0,0.7), 0 0 30px rgba(56,189,248,0.8); }
+        }
+
+        /* Ruptura de Hielo */
+        .ice-shatter {
+            position: absolute;
+            top: 50%;
+            left: 25%; /* Ajustado dinámicamente */
+            transform: translate(-50%, -50%);
+            font-size: 140px;
+            pointer-events: none;
+            z-index: 100;
+            animation: shatter-explode 0.8s cubic-bezier(0.1, 0.8, 0.3, 1) forwards;
+        }
+
+        @keyframes shatter-explode {
+            0% { transform: translate(-50%, -50%) scale(0.3) rotate(0deg); opacity: 1; filter: drop-shadow(0 0 20px #fff) brightness(1.5); }
+            100% { transform: translate(-50%, -50%) scale(2.6) rotate(45deg); opacity: 0; }
+        }
+
+        /* ── BURBUJAS DE REGALOS FLOTANTES ── */
+        .gift-bubble {
+            position: absolute;
+            bottom: 60px;
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.15);
+            backdrop-filter: blur(4px);
+            border: 2px solid rgba(255, 255, 255, 0.4);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.3), 0 0 10px rgba(255,255,255,0.2);
+            z-index: 60;
+            animation: float-up-fade-pk 2.2s cubic-bezier(0.25, 0.8, 0.25, 1) forwards;
+        }
+
+        @keyframes float-up-fade-pk {
+            0% { transform: translateY(0) scale(0.4); opacity: 0; }
+            12% { transform: translateY(-30px) scale(1.15); opacity: 1; }
+            85% { opacity: 0.9; }
+            100% { transform: translateY(-240px) scale(0.75); opacity: 0; }
+        }
+
+        .gift-bubble img {
+            width: 78%;
+            height: 78%;
+            object-fit: contain;
+            filter: drop-shadow(0 0 6px rgba(255,255,255,0.8));
+        }
+
+        .gift-bubble-coin {
+            position: absolute;
+            bottom: -6px;
+            background: #FFD700;
+            color: #000;
+            font-size: 10px;
+            font-weight: 900;
+            padding: 1px 6px;
+            border-radius: 8px;
+            border: 1px solid #000;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.5);
+        }
+
+        /* ── CUENTA REGRESIVA GIGANTE (ÚLTIMOS 10s) ── */
+        #giant-countdown-wrap {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 1000;
+            pointer-events: none;
+            display: none;
+        }
+
+        #giant-countdown {
+            font-family: 'Bangers', cursive;
+            font-size: 180px;
+            color: #ff3b30;
+            text-shadow: 0 0 20px rgba(255,59,48,0.8), 0 0 40px rgba(255,59,48,0.5), 4px 4px 0px #000;
+            animation: pulse-giant-count 1s infinite alternate ease-in-out;
+        }
+
+        @keyframes pulse-giant-count {
+            0% { transform: scale(0.9) rotate(-3deg); }
+            100% { transform: scale(1.1) rotate(3deg); }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Contenedor Split Screen para las Cámaras -->
+    <div id="split-container">
+        <div class="camera-half" id="cam-left"></div>
+        <div class="camera-half" id="cam-right"></div>
+    </div>
+
+    <!-- Línea Láser Divider en el Centro -->
+    <div id="laser-divider"></div>
+
+    <!-- Capa de Hielo Izquierda -->
+    <div id="ice-left" class="frozen-side frozen-side-left">
+        <div class="frozen-side-badge">❄️ CONGELADA</div>
+    </div>
+
+    <!-- Capa de Hielo Derecha -->
+    <div id="ice-right" class="frozen-side frozen-side-right">
+        <div class="frozen-side-badge">❄️ CONGELADA</div>
+    </div>
+
+    <!-- Cabezal PK Superior -->
+    <div id="pk-header">
+        
+        <!-- Fila de Metadatos -->
+        <div class="header-info-row">
+            
+            <!-- Izquierda (Team A) -->
+            <div class="competitor-meta" id="meta-left">
+                <div class="competitor-avatar" id="avatar-left" style="background: rgba(255,20,147,0.15); color: #ff1493; border-color: #ff1493;">A</div>
+                <div class="competitor-details">
+                    <span class="competitor-name" id="name-left" style="color: #ff1493;">TEAM A</span>
+                    <span class="win-streak" id="streak-left">👑 Vics: 0</span>
+                </div>
+            </div>
+
+            <!-- Derecha (Team B) -->
+            <div class="competitor-meta" id="meta-right">
+                <div class="competitor-details" style="align-items: flex-end;">
+                    <span class="competitor-name" id="name-right" style="color: #00e5ff;">TEAM B</span>
+                    <span class="win-streak" id="streak-right">👑 Vics: 0</span>
+                </div>
+                <div class="competitor-avatar" id="avatar-right" style="background: rgba(0,229,255,0.15); color: #00e5ff; border-color: #00e5ff;">B</div>
+            </div>
+
+        </div>
+
+        <!-- Barra PK Tug-of-War -->
+        <div class="bar-container-wrap">
+            <div class="pk-bar-outer">
+                <div id="bar-left" class="pk-side-bar pk-left" style="width: 50%;">
+                    <span class="score-text" id="score-left">0</span>
+                </div>
+                <div id="bar-right" class="pk-side-bar pk-right" style="width: 50%;">
+                    <span class="score-text" id="score-right">0</span>
+                </div>
+            </div>
+
+            <!-- Divisor Rayo -->
+            <div id="bar-divider-lightning"></div>
+
+            <!-- Caja del Temporizador -->
+            <div class="timer-box" id="timer-box">
+                <span id="timer">ESPERANDO...</span>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Cuenta Regresiva Gigante -->
+    <div id="giant-countdown-wrap">
+        <div id="giant-countdown">10</div>
+    </div>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script>
+        const socket = io();
+        let participantesActivos = [];
+        let equiposInfo = {};
+        let APODOS = {};
+        let puntosActuales = {};
+        
+        let chicasCongeladas = new Set();
+
+        const timerEl = document.getElementById('timer');
+        const timerBox = document.getElementById('timer-box');
+        const giantWrap = document.getElementById('giant-countdown-wrap');
+        const giantCount = document.getElementById('giant-countdown');
+
+        const camLeft = document.getElementById('cam-left');
+        const camRight = document.getElementById('cam-right');
+        
+        const iceLeft = document.getElementById('ice-left');
+        const iceRight = document.getElementById('ice-right');
+
+        const avatarLeft = document.getElementById('avatar-left');
+        const avatarRight = document.getElementById('avatar-right');
+        const nameLeft = document.getElementById('name-left');
+        const nameRight = document.getElementById('name-right');
+        const streakLeft = document.getElementById('streak-left');
+        const streakRight = document.getElementById('streak-right');
+
+        const barLeft = document.getElementById('bar-left');
+        const barRight = document.getElementById('bar-right');
+        const scoreLeft = document.getElementById('score-left');
+        const scoreRight = document.getElementById('score-right');
+        const divider = document.getElementById('bar-divider-lightning');
+
+        // Cargar apodos
+        fetch('/api/apodos').then(r => r.json()).then(data => { APODOS = data; });
+
+        function getDisplayLabel(chica) {
+            return APODOS[chica] || (equiposInfo[chica]?.nombre || chica).toUpperCase();
+        }
+
+        function renderBatalla(participantes, equipos, victorias, puntos) {
+            participantesActivos = participantes.slice(0, 2);
+            equiposInfo = equipos;
+            puntosActuales = { ...puntos };
+            chicasCongeladas = new Set();
+
+            // Ocultar capas de hielo al inicio
+            iceLeft.classList.remove('active');
+            iceRight.classList.remove('active');
+
+            if (participantesActivos.length < 2) {
+                if (participantesActivos.length === 1) {
+                    participantesActivos.push('ESPERANDO...');
+                } else {
+                    participantesActivos = ['TEAM A', 'TEAM B'];
+                }
+            }
+
+            const pL = participantesActivos[0];
+            const pR = participantesActivos[1];
+
+            const colL = equipos[pL]?.color || '#ff1493';
+            const colR = equipos[pR]?.color || '#00e5ff';
+
+            // Configurar Izquierda
+            nameLeft.textContent = getDisplayLabel(pL);
+            nameLeft.style.color = colL;
+            avatarLeft.textContent = pL.substring(0, 2).toUpperCase();
+            avatarLeft.style.color = colL;
+            avatarLeft.style.borderColor = colL;
+            avatarLeft.style.background = colL + '15';
+            streakLeft.textContent = `👑 Vics: ${victorias[pL] || 0}`;
+
+            // Configurar Derecha
+            nameRight.textContent = getDisplayLabel(pR);
+            nameRight.style.color = colR;
+            avatarRight.textContent = pR.substring(0, 2).toUpperCase();
+            avatarRight.style.color = colR;
+            avatarRight.style.borderColor = colR;
+            avatarRight.style.background = colR + '15';
+            streakRight.textContent = `👑 Vics: ${victorias[pR] || 0}`;
+
+            // Configurar Colores de Barras
+            barLeft.style.background = `linear-gradient(90deg, ${colL}, ${lightenColor(colL)})`;
+            barRight.style.background = `linear-gradient(90deg, ${lightenColor(colR)}, ${colR})`;
+
+            actualizarBarras(puntos);
+        }
+
+        function lightenColor(hex) {
+            try {
+                let r = parseInt(hex.slice(1, 3), 16), g = parseInt(hex.slice(3, 5), 16), b = parseInt(hex.slice(5, 7), 16);
+                r = Math.min(255, r + 50); g = Math.min(255, g + 50); b = Math.min(255, b + 50);
+                return '#' + [r, g, b].map(x => x.toString(16).padStart(2, '0')).join('');
+            } catch (e) { return hex; }
+        }
+
+        function actualizarBarras(puntos) {
+            if (participantesActivos.length < 2) return;
+            puntosActuales = { ...puntos };
+
+            const pL = participantesActivos[0];
+            const pR = participantesActivos[1];
+
+            const ptsL = puntos[pL] || 0;
+            const ptsR = puntos[pR] || 0;
+
+            scoreLeft.textContent = ptsL;
+            scoreRight.textContent = ptsR;
+
+            const total = ptsL + ptsR;
+            let pctL = 50;
+            let pctR = 50;
+
+            if (total > 0) {
+                pctL = (ptsL / total) * 100;
+                pctR = (ptsR / total) * 100;
+                pctL = Math.max(12, Math.min(88, pctL));
+                pctR = 100 - pctL;
+            }
+
+            barLeft.style.width = pctL + '%';
+            barRight.style.width = pctR + '%';
+            divider.style.left = pctL + '%';
+
+            // ── Lógica Icy Clash de Pantalla Completa ──
+            let chicasCongeladasNuevas = new Set();
+            if (total > 0) {
+                if (ptsL < ptsR) {
+                    chicasCongeladasNuevas.add(pL);
+                } else if (ptsR < ptsL) {
+                    chicasCongeladasNuevas.add(pR);
+                }
+            }
+
+            // Lado Izquierdo
+            manejarCongelamientoLado(pL, iceLeft, 25, chicasCongeladasNuevas.has(pL));
+
+            // Lado Derecho
+            manejarCongelamientoLado(pR, iceRight, 75, chicasCongeladasNuevas.has(pR));
+
+            chicasCongeladas = chicasCongeladasNuevas;
+        }
+
+        function manejarCongelamientoLado(chica, iceEl, shatterPctX, debeCongelar) {
+            const yaCongelada = chicasCongeladas.has(chica);
+
+            if (debeCongelar) {
+                iceEl.classList.add('active');
+            } else {
+                iceEl.classList.remove('active');
+            }
+
+            // Si estaba congelada y ahora lidera o empata (ruptura)
+            if (yaCongelada && !debeCongelar) {
+                const shatter = document.createElement('div');
+                shatter.className = 'ice-shatter';
+                shatter.style.left = shatterPctX + '%';
+                shatter.textContent = '❄️💥';
+                document.body.appendChild(shatter);
+                setTimeout(() => {
+                    shatter.remove();
+                }, 800);
+            }
+        }
+
+        function dispararBurbujaRegalo(chica, giftImg, coins) {
+            const isLeft = (participantesActivos[0] === chica);
+            const parentEl = isLeft ? camLeft : camRight;
+            if (!parentEl) return;
+
+            const bubble = document.createElement('div');
+            bubble.className = 'gift-bubble';
+            
+            // Posicionamiento horizontal aleatorio leve para que no salgan siempre idénticas
+            const randomOffset = Math.floor(Math.random() * 60) - 30;
+            if (isLeft) {
+                bubble.style.left = `calc(50% + ${randomOffset}px)`;
+            } else {
+                bubble.style.right = `calc(50% + ${randomOffset}px)`;
+            }
+
+            const img = document.createElement('img');
+            img.src = giftImg || '/regalos/corazon.png';
+            img.onerror = () => { img.src = '/regalos/corazon.png'; };
+            bubble.appendChild(img);
+
+            if (coins > 0) {
+                const coinsBadge = document.createElement('div');
+                coinsBadge.className = 'gift-bubble-coin';
+                coinsBadge.textContent = `💎${coins}`;
+                bubble.appendChild(coinsBadge);
+            }
+
+            parentEl.appendChild(bubble);
+            setTimeout(() => {
+                bubble.remove();
+            }, 2200);
+        }
+
+        // ── SOCKET EVENTS ──
+        socket.on('batallaInicio', (data) => {
+            timerBox.style.display = 'flex';
+            giantWrap.style.display = 'none';
+            renderBatalla(data.participantes, data.equipos || {}, data.victorias || {}, data.puntos || {});
+        });
+
+        socket.on('batallaTick', (tiempo) => {
+            if (tiempo <= 10 && tiempo > 0) {
+                // Modo Cuenta Regresiva Gigante
+                timerBox.style.display = 'none';
+                giantWrap.style.display = 'block';
+                giantCount.textContent = tiempo;
+            } else {
+                timerBox.style.display = 'flex';
+                giantWrap.style.display = 'none';
+                
+                let m = Math.floor(tiempo / 60).toString().padStart(2, '0');
+                let s = (tiempo % 60).toString().padStart(2, '0');
+                timerEl.textContent = m + ':' + s;
+            }
+        });
+
+        socket.on('batallaPuntos', actualizarBarras);
+
+        socket.on('nuevoRegalo', (data) => {
+            if (participantesActivos.includes(data.nombre)) {
+                dispararBurbujaRegalo(data.nombre, data.giftImg || '', data.coins || 0);
+            }
+        });
+
+        socket.on('batallaFin', (data) => {
+            timerBox.style.display = 'flex';
+            giantWrap.style.display = 'none';
+            
+            const esEmpate = (data.ganadora === 'EMPATE' || data.ganadora === 'SIN PUNTOS');
+            const nombreDisplay = esEmpate ? data.ganadora : getDisplayLabel(data.ganadora);
+            const texto = esEmpate ? nombreDisplay : '🏆 GANÓ ' + nombreDisplay;
+            timerEl.textContent = texto;
+            
+            // Quitar congelamiento al finalizar
+            iceLeft.classList.remove('active');
+            iceRight.classList.remove('active');
+        });
+    </script>
+</body>
+</html>
