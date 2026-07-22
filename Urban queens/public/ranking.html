@@ -133,7 +133,9 @@
         </div>
         <script src="/socket.io/socket.io.js"></script>
         <script>
-    const socket = io();
+        const urlParams = new URLSearchParams(window.location.search);
+        const userParam = urlParams.get('user') || '';
+        const socket = io({ query: userParam ? { user: userParam } : {} });
     let modo = 'semanal'; // 'semanal', 'mensual' o 'diario'
     let dataSemanal = {};
     let dataMensual = {};

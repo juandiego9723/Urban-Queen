@@ -78,9 +78,21 @@ function verificarCredenciales(username, password) {
     return verifyPassword(password, user.password) ? user : false;
 }
 
+function getAllUsers() {
+    if (!masterDb) return [];
+    const stmt = masterDb.prepare('SELECT username, name FROM users ORDER BY username');
+    const users = [];
+    while (stmt.step()) {
+        users.push(stmt.getAsObject());
+    }
+    stmt.free();
+    return users;
+}
+
 module.exports = {
     initMasterDB,
     registrarUsuario,
     obtenerUsuario,
-    verificarCredenciales
+    verificarCredenciales,
+    getAllUsers
 };

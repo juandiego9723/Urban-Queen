@@ -2,7 +2,7 @@
 <html lang="es">
 
 <head>
-    <title>Urban Queens — Control</title>
+    <title>TikDance — Panel de Control</title>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <style>
@@ -314,6 +314,12 @@
             grid-template-columns: repeat(auto-fit, minmax(420px, 1fr));
             gap: 20px;
             align-items: start;
+        }
+
+        #tab-pantallas.active {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
         }
 
         /* ── CARDS PREMIUM ── */
@@ -984,8 +990,8 @@
     <div class="app-layout">
         <!-- Sidebar izquierda fixed -->
         <div class="sidebar">
-            <div class="sidebar-header">
-                <span class="logo">Urban <span>Queens</span></span>
+            <div class="sidebar-header" style="flex-direction:column;align-items:flex-start;gap:6px">
+                <img src="/logo-tikdance-horizontal.png" alt="TikDance" style="max-height:36px;object-fit:contain">
                 <div class="live-status">
                     <div class="live-dot"></div>
                     <span class="topbar-status" id="master-control-title">Control Maestro</span>
@@ -995,6 +1001,23 @@
             <!-- Mini-HUD en vivo de Batallas -->
             <div id="mini-hud" class="mini-hud">
                 <div class="hud-title">⚡ Estado en Vivo</div>
+
+                <!-- Stats en vivo de la transmisión de TikTok -->
+                <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin: 10px 0; background: rgba(0,0,0,0.3); padding: 8px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.05); text-align: center;">
+                    <div>
+                        <div style="font-size: 8px; color: var(--text-muted); text-transform: uppercase; font-weight: 700; letter-spacing: 0.5px;">Viewers</div>
+                        <div style="font-size: 13px; font-weight: 800; color: var(--cyan); margin-top: 2px;" id="feed-stat-viewers">0</div>
+                    </div>
+                    <div>
+                        <div style="font-size: 8px; color: var(--text-muted); text-transform: uppercase; font-weight: 700; letter-spacing: 0.5px;">Likes</div>
+                        <div style="font-size: 13px; font-weight: 800; color: var(--pink); margin-top: 2px;" id="feed-stat-likes">0</div>
+                    </div>
+                    <div>
+                        <div style="font-size: 8px; color: var(--text-muted); text-transform: uppercase; font-weight: 700; letter-spacing: 0.5px;">Gifts</div>
+                        <div style="font-size: 13px; font-weight: 800; color: var(--warning); margin-top: 2px;" id="feed-stat-coins">0</div>
+                    </div>
+                </div>
+
                 <div class="hud-status" id="hud-battle-status">Batalla: Inactiva</div>
                 <div class="hud-timer" id="hud-battle-timer">00:00</div>
                 <div class="hud-scores" id="hud-battle-scores">
@@ -1016,8 +1039,10 @@
                 <div class="label">Configuración General</div>
                 <div class="menu-item tab" onclick="cambiarTab('bailarinas',this)">🌟 Bailarinas</div>
                 <div class="menu-item tab" onclick="cambiarTab('grupos',this)">👥 Grupos</div>
+                <div class="menu-item tab" onclick="cambiarTab('marca',this)">🎨 Marca / Diseño</div>
                 <div class="menu-item tab" onclick="cambiarTab('pantallas',this)">📺 Overlays / Enlaces</div>
                 <div class="menu-item tab" onclick="cambiarTab('sistema',this)">⚙️ Sistema</div>
+                <div class="menu-item tab" id="menu-item-agencia" onclick="cambiarTab('agencia',this)" style="display:none">🏢 Consola Agencia</div>
                 <div class="divider"></div>
                 <div class="menu-item" onclick="window.location.href='/logout'"
                     style="color:var(--red);margin-top:auto;border-left-color:transparent">🚪 Cerrar Sesión</div>
@@ -1330,15 +1355,79 @@
                 </div>
                 <!-- ══ PANTALLAS ══ -->
                 <div id="tab-pantallas" class="tab-content">
+                    <!-- ENLACES DE OVERLAYS EN OBS -->
                     <div class="card">
                         <div class="card-title">
-                            📺 <span class="card-title-accent">Pantallas de Transmisión</span>
+                            📺 <span class="card-title-accent">Fuentes de Navegador para OBS Studio</span>
                         </div>
                         <p class="helper-text">
-                            Abre cada pantalla en <strong>OBS → Fuente de Navegador</strong>.
-                            Copia la URL y pégala en OBS para que aparezca en tu transmisión.
+                            Agrega estas URL como **Fuentes de Navegador (Browser Sources)** en OBS. El sistema se encarga de cambiar el contenido visual de forma automatizada.
                         </p>
-                        <div id="page-grid" class="page-grid"></div>
+                        
+                        <div class="page-grid" style="grid-template-columns: 1fr 1fr; margin-top: 15px; gap: 16px;">
+                            <div class="page-card" style="margin: 0;">
+                                <div style="display:flex;align-items:center;gap:8px">
+                                    <span style="font-size:1.4rem">🔮</span>
+                                    <span class="page-card-name">Overlay Universal (Juegos)</span>
+                                </div>
+                                <div class="page-card-desc">Controla las batallas neón, PK, fútbol, cronómetros y overlays personalizados desde el panel.</div>
+                                <div class="page-card-url" id="url-overlay-universal" style="word-break:break-all; font-family: monospace; font-size: 0.85rem; color: var(--text-muted); margin-top: 6px;">Cargando...</div>
+                                <div style="display: flex; gap: 8px; margin-top: 10px;">
+                                    <button class="btn btn-ghost btn-sm" onclick="copiarUrl('universal')">&#128203; Copiar</button>
+                                    <button class="btn btn-ghost btn-sm" onclick="abrirUrl('universal')">&#128279; Probar</button>
+                                </div>
+                            </div>
+                            
+                            <div class="page-card" style="margin: 0;">
+                                <div style="display:flex;align-items:center;gap:8px">
+                                    <span style="font-size:1.4rem">🏆</span>
+                                    <span class="page-card-name">Overlay Universal (Acumulados)</span>
+                                </div>
+                                <div class="page-card-desc">Proyecta la tabla general de Ranking de Metas semanal/mensual o el podio de Copa del Día.</div>
+                                <div class="page-card-url" id="url-overlay-acumulados" style="word-break:break-all; font-family: monospace; font-size: 0.85rem; color: var(--text-muted); margin-top: 6px;">Cargando...</div>
+                                <div style="display: flex; gap: 8px; margin-top: 10px;">
+                                    <button class="btn btn-ghost btn-sm" onclick="copiarUrl('acumulados')">&#128203; Copiar</button>
+                                    <button class="btn btn-ghost btn-sm" onclick="abrirUrl('acumulados')">&#128279; Probar</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- CONTROLADORES DUALES -->
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; width: 100%;">
+                        <!-- Control de Overlay Universal (Juegos) -->
+                        <div class="card" style="display: flex; flex-direction: column; gap: 10px; width: 100%;">
+                            <div class="card-title">
+                                🔮 <span class="card-title-accent">Control de Overlay (Juegos)</span>
+                            </div>
+                            <p class="helper-text">
+                                Selecciona qué dinámica proyectar en la transmisión:
+                            </p>
+                            <div style="display: flex; flex-direction: column; gap: 8px; margin-top: 10px;" id="universal-overlay-controls">
+                                <button class="btn btn-primary" onclick="cambiarVistaUniversal('/batalla')" id="btn-view-batalla" style="transition: all 0.3s ease; text-align: left; padding: 12px 16px;">⚔️ Batalla Normal</button>
+                                <button class="btn btn-primary" onclick="cambiarVistaUniversal('/batalla-pk')" id="btn-view-batalla-pk" style="transition: all 0.3s ease; text-align: left; padding: 12px 16px;">⚡ Batalla PK</button>
+                                <button class="btn btn-primary" onclick="cambiarVistaUniversal('/batalla-futbol')" id="btn-view-batalla-futbol" style="transition: all 0.3s ease; text-align: left; padding: 12px 16px;">⚽ El Clásico (Fútbol)</button>
+                                <button class="btn btn-primary" onclick="cambiarVistaUniversal('/timer')" id="btn-view-timer" style="transition: all 0.3s ease; text-align: left; padding: 12px 16px;">💃 Timer de Baile</button>
+                                <button class="btn btn-primary" onclick="cambiarVistaUniversal('/conociendo')" id="btn-view-conociendo" style="transition: all 0.3s ease; text-align: left; padding: 12px 16px;">👑 Conociendo a mi Queen</button>
+                                <button class="btn btn-primary" onclick="cambiarVistaUniversal('/lista-regalos')" id="btn-view-lista-regalos" style="transition: all 0.3s ease; text-align: left; padding: 12px 16px;">🎁 Lista Regalos</button>
+                                <button class="btn btn-primary" onclick="cambiarVistaUniversal('/multicam')" id="btn-view-multicam" style="transition: all 0.3s ease; text-align: left; padding: 12px 16px;">📺 Grid Multicámara</button>
+                                <button class="btn btn-primary" onclick="cambiarVistaUniversal('/dinamica')" id="btn-view-dinamica" style="transition: all 0.3s ease; text-align: left; padding: 12px 16px;">🖼️ Overlay Custom (Dinámica)</button>
+                            </div>
+                        </div>
+
+                        <!-- Control de Overlay de Acumulados -->
+                        <div class="card" style="display: flex; flex-direction: column; gap: 10px; width: 100%;">
+                            <div class="card-title">
+                                🏆 <span class="card-title-accent">Control de Overlay (Acumulados)</span>
+                            </div>
+                            <p class="helper-text">
+                                Selecciona qué marcador general proyectar:
+                            </p>
+                            <div style="display: flex; flex-direction: column; gap: 8px; margin-top: 10px;" id="acumulados-overlay-controls">
+                                <button class="btn btn-primary" onclick="cambiarVistaAcumulados('/')" id="btn-view-ranking" style="transition: all 0.3s ease; text-align: left; padding: 12px 16px;">🏆 Ranking General</button>
+                                <button class="btn btn-primary" onclick="cambiarVistaAcumulados('/copa')" id="btn-view-copa" style="transition: all 0.3s ease; text-align: left; padding: 12px 16px;">🥇 Copa del Día</button>
+                            </div>
+                        </div>
                     </div>
                 </div>
                 <!-- ══ BAILARINAS ══ -->
@@ -1579,9 +1668,121 @@
                                 onclick="uiConfirm('🚨 ¿Reiniciar ABSOLUTAMENTE TODO?', () => hacerFetch('/reset-total'))">
                                 ☢️ Reset Total
                             </button>
+
+                            <div class="divider" style="margin: 16px 0;"></div>
+                            <button class="btn btn-danger btn-full" style="background: linear-gradient(135deg, #ef4444, #991b1b); font-weight: 800; padding: 12px; font-size: 13px; box-shadow: 0 4px 15px rgba(239, 68, 68, 0.4);"
+                                onclick="uiConfirm('🛑 ¿Deseas apagar el servidor por hoy?\nSe guardarán todas las bases de datos y se desconectará TikTok.', apagarServidor)">
+                                🛑 APAGAR SERVIDOR (FINALIZAR JORNADA)
+                            </button>
                         </div>
                     </div>
                 </div>
+
+                <!-- ══ MARCA / DISEÑO ══ -->
+                <div id="tab-marca" class="tab-content">
+                    <div class="card">
+                        <div class="card-title">
+                            🎨 <span class="card-title-accent">Personalización de Marca Global</span>
+                        </div>
+                        <p style="font-size:12px;color:var(--muted);margin-bottom:16px">
+                            Personaliza el aspecto visual de todos tus overlays en tiempo real (Branding).
+                        </p>
+                        
+                        <div class="col" style="gap:16px;">
+                            <!-- Logo de la Agencia -->
+                            <div class="col" style="gap:6px;">
+                                <label class="label">Logotipo de la Agencia (URL de Imagen)</label>
+                                <input type="text" id="marca-logo-url" class="input" placeholder="https://ejemplo.com/logo.png">
+                                <span style="font-size:10px;color:var(--muted)">Sube tu logo y pega la URL aquí. Se mostrará flotando en la esquina superior de los overlays.</span>
+                            </div>
+                            
+                            <!-- Tipografía Global -->
+                            <div class="col" style="gap:6px;">
+                                <label class="label">Tipografía de los Overlays (Google Fonts)</label>
+                                <select id="marca-font-family" class="select">
+                                    <option value="Inter">Inter (Moderna y Limpia)</option>
+                                    <option value="Montserrat">Montserrat (Geométrica)</option>
+                                    <option value="Bangers">Bangers (Cómic/Acción)</option>
+                                    <option value="Orbitron">Orbitron (Ciencia Ficción)</option>
+                                    <option value="Rajdhani">Rajdhani (Tecnológica)</option>
+                                    <option value="Outfit">Outfit (Moderna Premium)</option>
+                                </select>
+                            </div>
+                            
+                            <!-- Intensidad de Brillo Neón -->
+                            <div class="col" style="gap:6px;">
+                                <label class="label">Intensidad del Brillo Neón</label>
+                                <select id="marca-neon-intensity" class="select">
+                                    <option value="normal">Normal (Brillo balanceado)</option>
+                                    <option value="high">Alto (Efecto neón intenso)</option>
+                                    <option value="low">Bajo (Brillo sutil)</option>
+                                    <option value="none">Desactivado (Estilo plano y sobrio)</option>
+                                </select>
+                            </div>
+                            
+                            <button class="btn btn-warning btn-full" style="margin-top:8px" onclick="guardarMarca()">💾 Guardar marca y aplicar en vivo</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ══ CONSOLA AGENCIA ══ -->
+                <div id="tab-agencia" class="tab-content" style="grid-template-columns:1fr;">
+
+                    <!-- KPIs Globales de la Agencia -->
+                    <div style="margin-bottom:6px;">
+                        <div class="label" style="font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-bottom:10px;">🌐 Totales Globales de la Agencia</div>
+                        <div class="row-3" style="gap:14px;">
+                            <div class="card" style="padding:16px 20px;border-left:4px solid var(--pink);">
+                                <div class="label" style="font-size:9px;">Diamantes Hoy</div>
+                                <div style="font-size:28px;font-weight:800;color:#fff;margin-top:4px;" id="agencia-kpi-hoy">0 💎</div>
+                            </div>
+                            <div class="card" style="padding:16px 20px;border-left:4px solid var(--indigo);">
+                                <div class="label" style="font-size:9px;">Diamantes Este Mes</div>
+                                <div style="font-size:28px;font-weight:800;color:#fff;margin-top:4px;" id="agencia-kpi-mes">0 💎</div>
+                            </div>
+                            <div class="card" style="padding:16px 20px;border-left:4px solid var(--green);">
+                                <div class="label" style="font-size:9px;">Acumulado Histórico</div>
+                                <div style="font-size:28px;font-weight:800;color:#fff;margin-top:4px;" id="agencia-kpi-historico">0 💎</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Mini-tarjetas por Bailarina -->
+                    <div style="margin-bottom:8px;">
+                        <div class="label" style="font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-bottom:10px;">👑 Desglose por Bailarina</div>
+                        <div id="agencia-dancer-cards" style="display:flex;flex-wrap:wrap;gap:12px;">
+                            <!-- Rellenado dinámico -->
+                        </div>
+                    </div>
+
+                    <!-- Tabla de Streamers -->
+                    <div class="card" style="width:100%;">
+                        <div class="card-title">
+                            🏢 <span class="card-title-accent">Consola de Transmisión de la Agencia</span>
+                            <button class="btn btn-ghost" style="margin-left:auto;font-size:12px;padding:4px 12px;" onclick="cargarAgencia()">🔄 Actualizar</button>
+                        </div>
+                        <p style="font-size:12px;color:var(--muted);margin-bottom:16px;">
+                            Supervisa el estado y rendimiento de todas tus cuentas registradas. Haz clic en <strong>Controlar</strong> para gestionar una cuenta sin contraseña.
+                        </p>
+                        <table style="width:100%;border-collapse:collapse;font-size:13px;text-align:left;">
+                            <thead>
+                                <tr style="border-bottom:1px solid var(--border);color:var(--muted);font-size:10px;text-transform:uppercase;">
+                                    <th style="padding:10px 8px;">Streamer</th>
+                                    <th style="padding:10px 8px;">Estado TikTok</th>
+                                    <th style="padding:10px 8px;">Vista OBS</th>
+                                    <th style="padding:10px 8px;text-align:right;">Hoy</th>
+                                    <th style="padding:10px 8px;text-align:right;">Mes</th>
+                                    <th style="padding:10px 8px;text-align:right;">Total</th>
+                                    <th style="padding:10px 8px;text-align:center;">Acciones</th>
+                                </tr>
+                            </thead>
+                            <tbody id="table-agencia-body">
+                                <!-- Rellenado dinámico -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
 
                 <!-- ══ GESTOR CUSTOM ══ -->
                 <div id="tab-gestor" class="tab-content">
@@ -1753,58 +1954,6 @@
             </div>
             <!-- /content-area -->
 
-            <!-- Panel lateral derecho: Feed de TikTok estilo Zukaa Agency -->
-            <div class="live-feed-panel">
-                <div class="feed-header">
-                    <div style="display:flex;align-items:center;justify-content:space-between">
-                        <span style="font-weight:800;font-size:1.05rem;color:#fff">📡 Actividad en Vivo</span>
-                        <div class="live-status" style="gap:5px">
-                            <span class="live-dot" id="feed-live-dot"
-                                style="background:#7e8fa6;box-shadow:none;width:7px;height:7px"></span>
-                            <span id="feed-live-txt"
-                                style="font-size:9.5px;color:var(--muted);font-weight:700">INACTIVO</span>
-                        </div>
-                    </div>
-
-                    <!-- Stats rápidos -->
-                    <div
-                        style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-top:14px;background:rgba(0,0,0,0.25);padding:8px;border-radius:8px;border:1px solid var(--border)">
-                        <div style="text-align:center">
-                            <div style="font-size:9px;color:var(--muted);text-transform:uppercase;font-weight:700">
-                                Viewers</div>
-                            <div style="font-size:13px;font-weight:800;color:var(--cyan)" id="feed-stat-viewers">0</div>
-                        </div>
-                        <div style="text-align:center">
-                            <div style="font-size:9px;color:var(--muted);text-transform:uppercase;font-weight:700">Likes
-                            </div>
-                            <div style="font-size:13px;font-weight:800;color:var(--pink)" id="feed-stat-likes">0</div>
-                        </div>
-                        <div style="text-align:center">
-                            <div style="font-size:9px;color:var(--muted);text-transform:uppercase;font-weight:700">Gifts
-                            </div>
-                            <div style="font-size:13px;font-weight:800;color:var(--warning)" id="feed-stat-coins">0
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Widgets de Control Rápido -->
-                    <div class="quick-widgets"
-                        style="margin-top:12px;display:grid;grid-template-columns:repeat(2,1fr);gap:6px">
-                        <button class="btn btn-sm btn-ghost" onclick="saltarTurnoRapido()"
-                            style="font-size:10.5px;padding:6px 2px;font-weight:700">⏭️ Saltar Turno</button>
-                        <button class="btn btn-sm btn-ghost" onclick="resetDiarioRapido()"
-                            style="font-size:10.5px;padding:6px 2px;font-weight:700">🔄 Reset Diario</button>
-                        <button class="btn btn-sm btn-ghost" onclick="resetTarjetasRapido()"
-                            style="font-size:10.5px;padding:6px 2px;font-weight:700">⚽ Tarjetas Gol</button>
-                        <button class="btn btn-sm btn-danger" onclick="detenerDinamicaRapida()"
-                            style="font-size:10.5px;padding:6px 2px;font-weight:700">⏹ Parar Juego</button>
-                    </div>
-                </div>
-
-                <div class="feed-events" id="feed-events-log">
-                    <div class="feed-event-placeholder">Esperando interacciones de TikTok...</div>
-                </div>
-            </div>
         </div>
         <!-- /app-layout -->
         <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
@@ -1848,6 +1997,7 @@
                 { emoji: '🎁', nombre: 'Lista de Regalos', url: '/lista-regalos', desc: 'Overlay que muestra qué regalo corresponde a cada bailarina y cuántos puntos vale.' },
                 { emoji: '⚡', nombre: 'Dinámica', url: '/dinamica', desc: 'Overlay genérico para dinámicas personalizadas creadas desde el Constructor.' },
                 { emoji: '📺', nombre: 'Grid Multi-cámara (Zukaa)', url: '/multicam', desc: 'Overlay de rejilla multi-pantalla transparente con marcos neón reactivos para OBS.' },
+                { emoji: '🔮', nombre: 'Overlay Universal (Zukaa)', url: '/overlay-universal', desc: 'Overlay inteligente para OBS que cambia de pantalla automáticamente en tiempo real según lo decidas.' },
             ];
 
             let editingQueen = null;
@@ -2096,8 +2246,103 @@
                 if (el) el.classList.add('active');
                 if (nombre === 'analytics') {
                     cargarAnaliticas();
+                } else if (nombre === 'marca') {
+                    cargarMarca();
+                } else if (nombre === 'agencia') {
+                    cargarAgencia();
                 }
             }
+
+            // ── CONSOLA DE AGENCIA ──
+            let agenciaRefreshInterval = null;
+
+            async function cargarAgencia() {
+                try {
+                    const data = await fetch('/api/agency/overview').then(r => r.json());
+                    if (data.error) return;
+
+                    // KPIs globales
+                    const kHoy = document.getElementById('agencia-kpi-hoy');
+                    const kMes = document.getElementById('agencia-kpi-mes');
+                    const kHist = document.getElementById('agencia-kpi-historico');
+                    if (kHoy) kHoy.textContent = (data.kpis.totalHoy || 0).toLocaleString() + ' 💎';
+                    if (kMes) kMes.textContent = (data.kpis.totalMes || 0).toLocaleString() + ' 💎';
+                    if (kHist) kHist.textContent = (data.kpis.totalHistorico || 0).toLocaleString() + ' 💎';
+
+                    // Mini-tarjetas por bailarina
+                    const cardsContainer = document.getElementById('agencia-dancer-cards');
+                    if (cardsContainer) {
+                        cardsContainer.innerHTML = data.dancers.map(d => `
+                            <div style="
+                                background: var(--surface2);
+                                border: 1px solid var(--border);
+                                border-radius: 12px;
+                                padding: 14px 18px;
+                                min-width: 170px;
+                                flex: 1;
+                                max-width: 220px;
+                            ">
+                                <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;">
+                                    <span style="
+                                        width:8px;height:8px;border-radius:50%;
+                                        background:${d.tiktokEstado === 'conectado' ? 'var(--green)' : 'var(--muted)'};
+                                        display:inline-block;
+                                        box-shadow: ${d.tiktokEstado === 'conectado' ? '0 0 6px var(--green)' : 'none'};
+                                    "></span>
+                                    <span style="font-weight:700;font-size:13px;color:var(--text);">${d.name || d.username}</span>
+                                </div>
+                                <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:4px;text-align:center;">
+                                    <div>
+                                        <div style="font-size:8px;color:var(--muted);text-transform:uppercase;">Hoy</div>
+                                        <div style="font-size:14px;font-weight:800;color:var(--pink);">${(d.diamantesHoy||0).toLocaleString()}</div>
+                                    </div>
+                                    <div>
+                                        <div style="font-size:8px;color:var(--muted);text-transform:uppercase;">Mes</div>
+                                        <div style="font-size:14px;font-weight:800;color:var(--indigo);">${(d.diamantesMes||0).toLocaleString()}</div>
+                                    </div>
+                                    <div>
+                                        <div style="font-size:8px;color:var(--muted);text-transform:uppercase;">Total</div>
+                                        <div style="font-size:14px;font-weight:800;color:var(--green);">${(d.diamantesHistorico||0).toLocaleString()}</div>
+                                    </div>
+                                </div>
+                            </div>
+                        `).join('');
+                    }
+
+                    // Tabla
+                    const tbody = document.getElementById('table-agencia-body');
+                    if (tbody) {
+                        tbody.innerHTML = data.dancers.map(d => {
+                            const estadoChip = d.tiktokEstado === 'conectado'
+                                ? `<span style="background:rgba(16,185,129,.15);color:var(--green);padding:3px 8px;border-radius:20px;font-size:11px;font-weight:600;border:1px solid rgba(16,185,129,.3);">🔴 EN VIVO</span>`
+                                : `<span style="background:rgba(100,116,139,.1);color:var(--muted);padding:3px 8px;border-radius:20px;font-size:11px;">⚫ Offline</span>`;
+                            const vistaLabel = d.vistaActiva.replace('/', '') || 'batalla';
+                            return `
+                                <tr style="border-bottom:1px solid rgba(255,255,255,0.03);transition:background 0.15s;" onmouseover="this.style.background='rgba(255,255,255,0.03)'" onmouseout="this.style.background=''">
+                                    <td style="padding:12px 8px;">
+                                        <div style="font-weight:700;">${d.name || d.username}</div>
+                                        <div style="font-size:10px;color:var(--muted);">@${d.username}</div>
+                                    </td>
+                                    <td style="padding:12px 8px;">${estadoChip}<br><span style="font-size:10px;color:var(--muted);">${d.tiktokUsuario || '-'}</span></td>
+                                    <td style="padding:12px 8px;"><code style="background:var(--surface3);padding:2px 6px;border-radius:4px;font-size:11px;">/${vistaLabel}</code></td>
+                                    <td style="padding:12px 8px;text-align:right;font-weight:800;color:var(--pink);">${(d.diamantesHoy||0).toLocaleString()} 💎</td>
+                                    <td style="padding:12px 8px;text-align:right;font-weight:800;color:var(--indigo);">${(d.diamantesMes||0).toLocaleString()} 💎</td>
+                                    <td style="padding:12px 8px;text-align:right;font-weight:800;color:var(--green);">${(d.diamantesHistorico||0).toLocaleString()} 💎</td>
+                                    <td style="padding:12px 8px;text-align:center;">
+                                        <button class="btn btn-primary" style="padding:5px 12px;font-size:11px;" onclick="window.location.href='/api/agency/login-as?user=${d.username}'">🛠️ Controlar</button>
+                                    </td>
+                                </tr>
+                            `;
+                        }).join('');
+                        if (data.dancers.length === 0) {
+                            tbody.innerHTML = `<tr><td colspan="7" style="text-align:center;padding:30px;color:var(--muted);">No hay streamers registradas.</td></tr>`;
+                        }
+                    }
+                } catch(e) {
+                    console.error('Error cargando consola agencia:', e);
+                }
+            }
+
 
             // ── EL CLÁSICO (FUTBOL) CONFIG ──
             let futbolConfigCache = null;
@@ -2191,7 +2436,44 @@
                 cargarFutbolConfig();
                 cargarDinamicas();
                 cargarTikTokPanel();
+                cargarMarca();
             }
+
+            function apagarServidor() {
+                fetch('/api/sistema/shutdown')
+                    .then(r => r.json())
+                    .then(data => {
+                        Swal.fire({
+                            title: '🛑 Servidor Apagado',
+                            text: 'El servidor de Urban Queens se ha cerrado de forma limpia y todas las bases de datos fueron guardadas.',
+                            icon: 'success',
+                            confirmButtonColor: '#6366f1',
+                            background: 'var(--surface)',
+                            color: 'var(--text)'
+                        });
+                    })
+                    .catch(err => {
+                        Swal.fire({
+                            title: '🛑 Servidor Apagado',
+                            text: 'El servidor se ha detenido correctamente.',
+                            icon: 'success',
+                            confirmButtonColor: '#6366f1',
+                            background: 'var(--surface)',
+                            color: 'var(--text)'
+                        });
+                    });
+            }
+
+            socket.on('servidorApagado', () => {
+                Swal.fire({
+                    title: '🛑 Servidor Apagado',
+                    text: 'El servidor de Urban Queens ha sido detenido. Todos los datos han sido guardados.',
+                    icon: 'warning',
+                    confirmButtonColor: '#6366f1',
+                    background: 'var(--surface)',
+                    color: 'var(--text)'
+                });
+            });
 
             // ── TikTok Live Panel ──
             function actualizarEstadoTikTok(data) {
@@ -2235,29 +2517,70 @@
                 }
             }
 
-            function renderRegaloDetectado(giftName, mapaActual) {
+            function renderRegaloDetectado(giftData, mapaActual) {
                 const c = document.getElementById('regalos-detectados-lista');
+                
+                // Si viene como string, convertirlo (compatibilidad temporal)
+                if (typeof giftData === 'string') {
+                    giftData = { id: 'temp-' + Date.now(), giftName: giftData, viewer: 'Desconocido', coins: 1, giftImgSrc: '' };
+                }
+                
+                const giftId = giftData.id;
+                const giftName = giftData.giftName;
+                const viewer = giftData.viewer || 'Desconocido';
+                const coins = giftData.coins || 1;
+                const giftImgSrc = giftData.giftImgSrc || '';
+
                 // Evitar duplicados
-                if (document.getElementById('gift-chip-' + CSS.escape(giftName))) return;
+                if (document.getElementById('gift-chip-' + CSS.escape(giftId))) return;
                 // Quitar el placeholder de "ningún regalo"
                 const placeholder = c.querySelector('span');
                 if (placeholder) placeholder.remove();
 
-                const queenAsignada = (mapaActual || {})[giftName] || '';
+                const queenAsignada = ''; // Las asignaciones manuales en vivo son de única vez
                 const fila = document.createElement('div');
-                fila.id = 'gift-chip-' + giftName;
-                fila.style.cssText = 'display:flex;align-items:center;gap:8px;background:var(--surface2);border-radius:10px;padding:7px 10px;border:1px solid var(--border)';
+                fila.id = 'gift-chip-' + giftId;
+                fila.style.cssText = 'display:flex;align-items:center;gap:12px;background:var(--surface2);border-radius:10px;padding:10px 12px;border:1px solid var(--border);';
+                
+                // Mostrar imagen del regalo si existe, si no un emoji de regalo
+                const imgTag = giftImgSrc ? `<img src="${giftImgSrc}" style="width:24px;height:24px;object-fit:contain;border-radius:4px;background:rgba(255,255,255,0.05);flex-shrink:0;">` : '<span style="font-size:1.2rem;flex-shrink:0;">🎁</span>';
+                
                 fila.innerHTML = `
-        <span style="font-size:13px;font-weight:700;color:var(--fg);flex:1">🎁 ${giftName}</span>
-        <select class="select" style="flex:1;font-size:12px" onchange="asignarRegaloRapido('${giftName.replace(/'/g, "\\'")}', this.value)">
-            <option value="">— Sin asignar —</option>
-            ${QUEENS.map(q => `<option value="${q}" ${q === queenAsignada ? 'selected' : ''}>${q}</option>`).join('')}
-        </select>`;
+                    ${imgTag}
+                    <div style="flex:2;min-width:0;display:flex;flex-direction:column;gap:2px;">
+                        <span style="font-size:13px;font-weight:700;color:#fff;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${giftName} (${coins} 💎)</span>
+                        <span style="font-size:10px;color:var(--text-muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">Enviado por: <strong>@${viewer}</strong></span>
+                    </div>
+                    <select class="select" style="flex:1.5;font-size:12px;padding:4px 8px;min-width:120px;" onchange="asignarRegaloUnico('${giftId}', this.value)">
+                        <option value="">— Asignar a... —</option>
+                        ${QUEENS.map(q => `<option value="${q}">${q}</option>`).join('')}
+                    </select>
+                `;
                 c.appendChild(fila);
             }
 
+            async function asignarRegaloUnico(id, queen) {
+                if (!queen) return;
+                
+                await fetch('/api/tiktok/regalos-detectados/asignar', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ id, queen })
+                });
+                
+                // Remover el chip del DOM inmediatamente
+                const el = document.getElementById('gift-chip-' + id);
+                if (el) el.remove();
+                
+                // Mostrar placeholder si la lista queda vacía
+                const c = document.getElementById('regalos-detectados-lista');
+                if (c && c.querySelectorAll('.select').length === 0) {
+                    c.innerHTML = `<span style="color:var(--muted);font-size:12px">Ningún regalo detectado aún. Conéctate al live y espera los primeros regalos.</span>`;
+                }
+            }
+
             async function asignarRegaloRapido(giftName, queen) {
-                // Leer mapa actual, actualizar y guardar
+                // Para el mapeo de activadores permanentes (sigue existiendo abajo en el mapa manual)
                 const mapa = await (await fetch('/api/tiktok/mapa')).json();
                 if (queen) mapa[giftName] = queen;
                 else delete mapa[giftName];
@@ -2281,89 +2604,23 @@
             let accumulatedCoins = 0;
 
             socket.on('tiktokLiveEvent', (event) => {
-                const log = document.getElementById('feed-events-log');
-                if (!log) return;
-
-                // Filtrar comentarios (chat) y resto de interacciones de espectadores (join, follow, share)
-                if (['chat', 'follow', 'share', 'join'].includes(event.tipo)) {
-                    return;
-                }
-
-                const placeholder = log.querySelector('.feed-event-placeholder');
-                if (placeholder) placeholder.remove();
-
-                const item = document.createElement('div');
-                item.className = `feed-item feed-item-${event.tipo}`;
-
-                const avatar = event.avatar || 'https://www.tiktok.com/favicon.ico';
-                const user = event.usuario || 'Anónimo';
-
-                let messageContent = '';
-
-                switch (event.tipo) {
-                    case 'like':
-                        accumulatedLikes += (event.cantidad || 1);
-                        document.getElementById('feed-stat-likes').textContent = accumulatedLikes;
-                        messageContent = `💖 <span class="feed-item-user">@${user}</span> dio me gusta <span style="color:var(--pink);font-weight:700">x${event.cantidad}</span>`;
-                        break;
-                    case 'gift':
-                        accumulatedCoins += (event.coins || 1);
-                        document.getElementById('feed-stat-coins').textContent = accumulatedCoins;
-                        const giftImg = event.giftImg ? `<img src="${event.giftImg}" style="width:20px;height:20px;object-fit:contain;vertical-align:middle;border-radius:4px;background:rgba(255,255,255,0.05)">` : '🎁';
-                        messageContent = `
-                <div style="display:flex;align-items:center;justify-content:space-between;width:100%;gap:4px">
-                    <div style="flex:1;min-width:0;text-overflow:ellipsis;overflow:hidden">
-                        ${giftImg} <strong>${event.giftName}</strong> a <span style="color:var(--cyan);font-weight:700">${event.destinatario}</span>
-                        <div style="font-size:10px;color:var(--muted)">por @${user}</div>
-                    </div>
-                    <div class="badge" style="background:rgba(251,191,36,0.15);color:var(--warning);font-size:10px;padding:2px 5px;flex-shrink:0">
-                        ${event.coins} 💎
-                    </div>
-                </div>
-            `;
-                        break;
-                }
-
-                item.innerHTML = `
-        <img class="feed-item-avatar" src="${avatar}" onerror="this.src='https://www.tiktok.com/favicon.ico'">
-        <div class="feed-item-content">
-            ${messageContent}
-        </div>
-    `;
-
-                log.appendChild(item);
-                log.scrollTop = log.scrollHeight;
-
-                while (log.children.length > 80) {
-                    log.removeChild(log.firstChild);
+                if (event.tipo === 'roomUser') {
+                    const elViewers = document.getElementById('feed-stat-viewers');
+                    if (elViewers) elViewers.textContent = event.viewerCount || 0;
+                } else if (event.tipo === 'like') {
+                    accumulatedLikes += (event.cantidad || 1);
+                    const elLikes = document.getElementById('feed-stat-likes');
+                    if (elLikes) elLikes.textContent = accumulatedLikes;
+                } else if (event.tipo === 'gift') {
+                    accumulatedCoins += (event.coins || 1);
+                    const elCoins = document.getElementById('feed-stat-coins');
+                    if (elCoins) elCoins.textContent = accumulatedCoins;
                 }
             });
 
-            // Funciones de acción rápida para Widgets de control lateral
-            function saltarTurnoRapido() {
-                uiConfirm("¿Estás seguro de saltar el turno de la chica actual en el timer?", () => {
-                    hacerFetch('/timer/skip');
-                });
-            }
-            function resetDiarioRapido() {
-                uiConfirm("¿Estás seguro de reiniciar el ranking Diario a 0?", () => {
-                    hacerFetch('/reset-diario');
-                });
-            }
-            function resetTarjetasRapido() {
-                uiConfirm("¿Estás seguro de reiniciar las tarjetas amarillas y rachas de fútbol?", () => {
-                    hacerFetch('/futbol/reset-tarjetas');
-                });
-            }
-            function detenerDinamicaRapida() {
-                uiConfirm("¿Estás seguro de detener la dinámica o juego en pantalla?", () => {
-                    hacerFetch('/dinamica/stop');
-                });
-            }
-
-            socket.on('regaloDetectado', (giftName) => {
+            socket.on('regaloDetectado', (giftData) => {
                 fetch('/api/tiktok/mapa').then(r => r.json()).then(mapa => {
-                    renderRegaloDetectado(giftName, mapa);
+                    renderRegaloDetectado(giftData, mapa);
                 });
             });
 
@@ -2668,28 +2925,143 @@
                         const data = await res.json();
                         currentUsername = data.username;
                         document.getElementById('master-control-title').textContent = `${data.name || 'Control Maestro'} (@${data.username})`;
+                        
+                        // Mostrar pestaña de agencia solo a admin o master
+                        const menuAgencia = document.getElementById('menu-item-agencia');
+                        if (menuAgencia) {
+                            if (currentUsername === 'admin' || currentUsername === 'master') {
+                                menuAgencia.style.display = 'block';
+                            } else {
+                                menuAgencia.style.display = 'none';
+                            }
+                        }
                     }
                 } catch (e) { }
             }
 
             function renderPantallas() {
-                const c = document.getElementById('page-grid');
-                if (!c) return;
                 const userParam = currentUsername ? `?user=${encodeURIComponent(currentUsername)}` : '';
-                c.innerHTML = PAGES.map(p => {
-                    const fullUrl = `${window.location.origin}${p.url}${userParam}`;
-                    const displayUrl = `${window.location.host}${p.url}${userParam}`;
-                    return `
-        <div class="page-card">
-            <div style="display:flex;align-items:center;gap:8px">
-                <span style="font-size:1.4rem">${p.emoji}</span>
-                <span class="page-card-name">${p.nombre}</span>
-            </div>
-            <div class="page-card-desc">${p.desc}</div>
-            <div class="page-card-url" style="word-break:break-all">${displayUrl}</div>
-            <button class="btn btn-ghost btn-sm" onclick="window.open('${fullUrl}','_blank')">&#128279; Abrir</button>
-        </div>`;
-                }).join('');
+                
+                const urlUniversal = `${window.location.origin}/overlay-universal${userParam}`;
+                const urlAcumulados = `${window.location.origin}/overlay-acumulados${userParam}`;
+                
+                const elUniversal = document.getElementById('url-overlay-universal');
+                const elAcumulados = document.getElementById('url-overlay-acumulados');
+                
+                if (elUniversal) elUniversal.textContent = urlUniversal;
+                if (elAcumulados) elAcumulados.textContent = urlAcumulados;
+
+                cargarVistaUniversalActiva();
+                cargarVistaAcumuladosActiva();
+            }
+
+            function obtenerUrlOverlay(tipo) {
+                const userParam = currentUsername ? `?user=${encodeURIComponent(currentUsername)}` : '';
+                const path = tipo === 'universal' ? '/overlay-universal' : '/overlay-acumulados';
+                return `${window.location.origin}${path}${userParam}`;
+            }
+
+            function abrirUrl(tipo) {
+                window.open(obtenerUrlOverlay(tipo), '_blank');
+            }
+
+            function copiarUrl(tipo) {
+                const url = obtenerUrlOverlay(tipo);
+                navigator.clipboard.writeText(url).then(() => {
+                    alert('¡Enlace copiado al portapapeles!');
+                }).catch(err => {
+                    console.error('Error al copiar:', err);
+                });
+            }
+
+            async function cambiarVistaUniversal(vista) {
+                try {
+                    const res = await fetch(`/api/overlay/cambiar-vista?vista=${encodeURIComponent(vista)}`);
+                    if (res.ok) {
+                        actualizarBotonVistaActiva(vista);
+                    }
+                } catch(e) { console.error('Error al cambiar vista:', e); }
+            }
+
+            function actualizarBotonVistaActiva(vista) {
+                const ids = {
+                    '/batalla': 'btn-view-batalla',
+                    '/batalla-pk': 'btn-view-batalla-pk',
+                    '/batalla-futbol': 'btn-view-batalla-futbol',
+                    '/timer': 'btn-view-timer',
+                    '/conociendo': 'btn-view-conociendo',
+                    '/lista-regalos': 'btn-view-lista-regalos',
+                    '/multicam': 'btn-view-multicam',
+                    '/dinamica': 'btn-view-dinamica'
+                };
+                Object.keys(ids).forEach(key => {
+                    const btn = document.getElementById(ids[key]);
+                    if (btn) {
+                        if (key === vista) {
+                            btn.style.background = 'var(--neon-green)';
+                            btn.style.borderColor = 'var(--neon-green)';
+                            btn.style.color = '#000';
+                            btn.style.boxShadow = '0 0 15px var(--neon-green)';
+                        } else {
+                            btn.style.background = '';
+                            btn.style.borderColor = '';
+                            btn.style.color = '';
+                            btn.style.boxShadow = '';
+                        }
+                    }
+                });
+            }
+
+            async function cargarVistaUniversalActiva() {
+                try {
+                    const res = await fetch('/api/overlay/estado');
+                    if (res.ok) {
+                        const data = await res.json();
+                        actualizarBotonVistaActiva(data.vistaActiva);
+                    }
+                } catch(e) { console.error('Error cargando vista activa:', e); }
+            }
+
+            async function cambiarVistaAcumulados(vista) {
+                try {
+                    const res = await fetch(`/api/overlay/cambiar-vista-acumulados?vista=${encodeURIComponent(vista)}`);
+                    if (res.ok) {
+                        actualizarBotonVistaAcumuladosActiva(vista);
+                    }
+                } catch(e) { console.error('Error al cambiar vista de acumulados:', e); }
+            }
+
+            function actualizarBotonVistaAcumuladosActiva(vista) {
+                const ids = {
+                    '/': 'btn-view-ranking',
+                    '/copa': 'btn-view-copa'
+                };
+                Object.keys(ids).forEach(key => {
+                    const btn = document.getElementById(ids[key]);
+                    if (btn) {
+                        if (key === vista) {
+                            btn.style.background = 'var(--neon-green)';
+                            btn.style.borderColor = 'var(--neon-green)';
+                            btn.style.color = '#000';
+                            btn.style.boxShadow = '0 0 15px var(--neon-green)';
+                        } else {
+                            btn.style.background = '';
+                            btn.style.borderColor = '';
+                            btn.style.color = '';
+                            btn.style.boxShadow = '';
+                        }
+                    }
+                });
+            }
+
+            async function cargarVistaAcumuladosActiva() {
+                try {
+                    const res = await fetch('/api/overlay/estado-acumulados');
+                    if (res.ok) {
+                        const data = await res.json();
+                        actualizarBotonVistaAcumuladosActiva(data.vistaAcumuladosActiva);
+                    }
+                } catch(e) { console.error('Error cargando vista acumulados activa:', e); }
             }
 
             async function cargarColores() {
@@ -3093,6 +3465,37 @@
                     if (url) hacerFetch('/api/sonidos/set?evento=' + encodeURIComponent(ev) + '&url=' + encodeURIComponent(url));
                 });
                 alert('✅ Sonidos guardados');
+            }
+
+            // ── Marca Global ──
+            async function cargarMarca() {
+                try {
+                    const res = await fetch('/api/marca');
+                    if (!res.ok) return;
+                    const config = await res.json();
+                    document.getElementById('marca-logo-url').value = config.logoUrl || '';
+                    document.getElementById('marca-font-family').value = config.fontFamily || 'Inter';
+                    document.getElementById('marca-neon-intensity').value = config.neonIntensity || 'normal';
+                } catch(e) { console.error('Error cargando marca:', e); }
+            }
+
+            async function guardarMarca() {
+                try {
+                    const logoUrl = document.getElementById('marca-logo-url').value.trim();
+                    const fontFamily = document.getElementById('marca-font-family').value;
+                    const neonIntensity = document.getElementById('marca-neon-intensity').value;
+                    
+                    const res = await fetch('/api/marca', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ logoUrl, fontFamily, neonIntensity })
+                    });
+                    if (res.ok) {
+                        alert('✅ Configuración de marca guardada y aplicada en vivo');
+                    } else {
+                        alert('❌ Error al guardar marca');
+                    }
+                } catch(e) { console.error('Error guardando marca:', e); alert('❌ Error al guardar marca'); }
             }
 
             // ── Dinámicas ──

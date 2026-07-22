@@ -64,6 +64,17 @@
             color: #fff;
         }
 
+        /* Configuración de brillo neón global */
+        body.neon-none * {
+            text-shadow: none !important;
+            box-shadow: none !important;
+            border-color: rgba(255,255,255,0.2) !important;
+        }
+        body.neon-low * {
+            text-shadow: 0 0 3px currentColor !important;
+            box-shadow: 0 0 5px currentColor !important;
+        }
+
         /* ── ESTRUCTURA SPLIT-SCREEN 50/50 ── */
         #split-container {
             position: absolute;
@@ -494,7 +505,9 @@
 
     <script src="/socket.io/socket.io.js"></script>
     <script>
-        const socket = io();
+        const urlParams = new URLSearchParams(window.location.search);
+        const userParam = urlParams.get('user') || '';
+        const socket = io({ query: userParam ? { user: userParam } : {} });
         let participantesActivos = [];
         let equiposInfo = {};
         let APODOS = {};
@@ -737,6 +750,54 @@
             iceLeft.classList.remove('active');
             iceRight.classList.remove('active');
         });
+
+        // ── BRAND MANAGER LOGIC ──
+        function loadGoogleFont(fontName) {
+            if (!fontName) return;
+            const fontId = 'custom-google-font';
+            let link = document.getElementById(fontId);
+            if (!link) {
+                link = document.createElement('link');
+                link.id = fontId;
+                link.rel = 'stylesheet';
+                document.head.appendChild(link);
+            }
+            link.href = `https://fonts.googleapis.com/css2?family=${encodeURIComponent(fontName)}:wght@400;700;800;900&display=swap`;
+            document.body.style.fontFamily = `'${fontName}', sans-serif`;
+        }
+
+        function aplicarMarca(config) {
+            if (!config) return;
+            // Tipografía
+            if (config.fontFamily) {
+                loadGoogleFont(config.fontFamily);
+            }
+            // Logotipo
+            const logoContainer = document.getElementById('agency-logo-container');
+            const logoImg = document.getElementById('agency-logo');
+            if (logoContainer && logoImg) {
+                if (config.logoUrl) {
+                    logoImg.src = config.logoUrl;
+                    logoContainer.style.opacity = '1';
+                    logoContainer.style.transform = 'scale(1)';
+                } else {
+                    logoContainer.style.opacity = '0';
+                    logoContainer.style.transform = 'scale(0.8)';
+                }
+            }
+            // Brillo neón
+            document.body.classList.remove('neon-none', 'neon-low', 'neon-high');
+            if (config.neonIntensity && config.neonIntensity !== 'normal') {
+                document.body.classList.add('neon-' + config.neonIntensity);
+            }
+        }
+
+        socket.on('marcaCambiado', aplicarMarca);
     </script>
+
+    <!-- Logotipo de la Agencia Flotante -->
+    <div id="agency-logo-container" style="position: absolute; top: 20px; right: 20px; z-index: 9999; pointer-events: none; transition: all 0.5s ease; opacity: 0; transform: scale(0.8);">
+        <img id="agency-logo" src="" style="max-height: 80px; max-width: 150px; object-fit: contain; filter: drop-shadow(0 0 10px rgba(0,0,0,0.5));">
+    </div>
 </body>
 </html>

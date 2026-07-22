@@ -48,6 +48,17 @@
               rel="stylesheet">
         <style>
         body { font-family: 'Bangers', cursive; margin: 0; padding: 10px; background: #00FF00; color: white; overflow: hidden; letter-spacing: 1px; }
+
+        /* Configuración de brillo neón global */
+        body.neon-none * {
+            text-shadow: none !important;
+            box-shadow: none !important;
+            border-color: rgba(255,255,255,0.2) !important;
+        }
+        body.neon-low * {
+            text-shadow: 0 0 3px currentColor !important;
+            box-shadow: 0 0 5px currentColor !important;
+        }
         .lista-container { display: flex; flex-direction: column; gap: 8px; background: rgba(0,0,0,0.75); border: 3px solid #39FF14; border-radius: 15px; padding: 14px; width: max-content; box-shadow: 0 0 15px rgba(57,255,20,0.5); }
         .titulo { color: #39FF14; font-size: 22px; text-align: center; text-shadow: 2px 2px 4px #000; margin: 0 0 6px 0; }
         .item-regalo { display: flex; align-items: center; gap: 12px; background: rgba(255,255,255,0.08); padding: 5px 14px; border-radius: 10px; border-left: 5px solid; }
@@ -126,6 +137,54 @@
 
         socket.on('queensActualizadas', cargar);
         cargar();
+
+        // ── BRAND MANAGER LOGIC ──
+        function loadGoogleFont(fontName) {
+            if (!fontName) return;
+            const fontId = 'custom-google-font';
+            let link = document.getElementById(fontId);
+            if (!link) {
+                link = document.createElement('link');
+                link.id = fontId;
+                link.rel = 'stylesheet';
+                document.head.appendChild(link);
+            }
+            link.href = `https://fonts.googleapis.com/css2?family=${encodeURIComponent(fontName)}:wght@400;700;800;900&display=swap`;
+            document.body.style.fontFamily = `'${fontName}', sans-serif`;
+        }
+
+        function aplicarMarca(config) {
+            if (!config) return;
+            // Tipografía
+            if (config.fontFamily) {
+                loadGoogleFont(config.fontFamily);
+            }
+            // Logotipo
+            const logoContainer = document.getElementById('agency-logo-container');
+            const logoImg = document.getElementById('agency-logo');
+            if (logoContainer && logoImg) {
+                if (config.logoUrl) {
+                    logoImg.src = config.logoUrl;
+                    logoContainer.style.opacity = '1';
+                    logoContainer.style.transform = 'scale(1)';
+                } else {
+                    logoContainer.style.opacity = '0';
+                    logoContainer.style.transform = 'scale(0.8)';
+                }
+            }
+            // Brillo neón
+            document.body.classList.remove('neon-none', 'neon-low', 'neon-high');
+            if (config.neonIntensity && config.neonIntensity !== 'normal') {
+                document.body.classList.add('neon-' + config.neonIntensity);
+            }
+        }
+
+        socket.on('marcaCambiado', aplicarMarca);
         </script>
-    </body>
+
+    <!-- Logotipo de la Agencia Flotante -->
+    <div id="agency-logo-container" style="position: absolute; top: 20px; right: 20px; z-index: 9999; pointer-events: none; transition: all 0.5s ease; opacity: 0; transform: scale(0.8);">
+        <img id="agency-logo" src="" style="max-height: 80px; max-width: 150px; object-fit: contain; filter: drop-shadow(0 0 10px rgba(0,0,0,0.5));">
+    </div>
+</body>
 </html>

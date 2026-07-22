@@ -270,7 +270,7 @@
             document.body.classList.add('chroma');
         }
 
-        const socket = io();
+        const socket = io({ query: user ? { user: user } : {} });
         let queensList = [];
         let equiposMap = {};
         

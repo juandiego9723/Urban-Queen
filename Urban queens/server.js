@@ -138,7 +138,7 @@ function getUserSession(username) {
             tiktokEstado: 'desconectado',
             tiktokUsuario: '',
             tiktokMensajeError: '',
-            regalosDetectados: new Set(),
+            regalosDetectados: {},
             catalogoRegalos: [],
             dinamicaActiva: null,
             timerDinamica: null,
@@ -147,7 +147,9 @@ function getUserSession(username) {
             rachasDinamica: {},
             amarillasDinamica: {},
             eliminadosDinamica: [],
-            queueUpdate: []
+            queueUpdate: [],
+            vistaActiva: '/batalla',
+            vistaAcumuladosActiva: '/'
         };
         
         initialQueens.forEach(q => {
@@ -188,6 +190,14 @@ io.on('connection', (socket) => {
             });
         }
         socket.emit('tiktokEstado', { estado: session.tiktokEstado, usuario: session.tiktokUsuario });
+        socket.emit('cambioVista', session.vistaActiva || '/batalla');
+        socket.emit('cambioVistaAcumulados', session.vistaAcumuladosActiva || '/');
+        
+        // Emitir branding de marca al conectar
+        const logoUrl = session.db.getConfigVal('marca_logo_url') || '';
+        const fontFamily = session.db.getConfigVal('marca_font_family') || 'Inter';
+        const neonIntensity = session.db.getConfigVal('marca_neon_intensity') || 'normal';
+        socket.emit('marcaCambiado', { logoUrl, fontFamily, neonIntensity });
         
         if (session.dinamicaActiva) {
             socket.emit('dinamicaInicio', {
@@ -287,10 +297,103 @@ app.get('/control',       (req, res) => res.sendFile(pub('control.html')));
 app.get('/dinamica',      (req, res) => res.sendFile(pub('dinamica.html')));
 app.get('/gestor-regalos',(req, res) => res.sendFile(pub('gestor-regalos.html')));
 app.get('/multicam',       (req, res) => res.sendFile(pub('multicam.html')));
+app.get('/overlay-universal', (req, res) => res.sendFile(pub('overlay-universal.html')));
+app.get('/overlay-acumulados', (req, res) => res.sendFile(pub('overlay-acumulados.html')));
 
 // --- APIs DE DATOS ---
 app.get('/api/me', requireSession, (req, res) => {
     res.json({ username: req.username, name: req.session.name });
+});
+
+// --- CONSOLA DE AGENCIA (solo admin) ---
+app.get('/api/agency/overview', requireSession, (req, res) => {
+    if (req.username !== 'admin' && req.username !== 'master') {
+        return res.status(403).json({ error: 'No autorizado' });
+    }
+    try {
+        const allUsers = MasterDB.getAllUsers();
+        let totalHoyAgencia = 0;
+        let totalMesAgencia = 0;
+        let totalHistoricoAgencia = 0;
+        
+        const dancers = allUsers.map(u => {
+            const session = getUserSession(u.username);
+            let diamantesHoy = 0, diamantesMes = 0, diamantesHistorico = 0;
+            try {
+                const resumen = session.db.getResumenAnalytics();
+                diamantesHoy = resumen.totalHoy || 0;
+                diamantesMes = resumen.totalMes || 0;
+                diamantesHistorico = resumen.totalHistorico || 0;
+            } catch(e) {}
+            
+            totalHoyAgencia += diamantesHoy;
+            totalMesAgencia += diamantesMes;
+            totalHistoricoAgencia += diamantesHistorico;
+            
+            return {
+                username: u.username,
+                name: u.name || u.username,
+                tiktokEstado: session.tiktokEstado || 'desconectado',
+                tiktokUsuario: session.tiktokUsuario || '',
+                vistaActiva: session.vistaActiva || '/batalla',
+                diamantesHoy,
+                diamantesMes,
+                diamantesHistorico
+            };
+        });
+        
+        res.json({
+            kpis: {
+                totalHoy: totalHoyAgencia,
+                totalMes: totalMesAgencia,
+                totalHistorico: totalHistoricoAgencia
+            },
+            dancers
+        });
+    } catch(e) {
+        console.error('Error en agency/overview:', e);
+        res.status(500).json({ error: 'Error interno' });
+    }
+});
+
+app.get('/api/agency/login-as', (req, res) => {
+    if (!req.session || !req.session.user) return res.redirect('/login');
+    if (req.session.user !== 'admin' && req.session.user !== 'master') {
+        return res.status(403).send('No autorizado');
+    }
+    const targetUser = req.query.user;
+    if (!targetUser) return res.status(400).send('Falta parámetro user');
+    const userExists = MasterDB.obtenerUsuario(targetUser);
+    if (!userExists) return res.status(404).send('Usuario no encontrado');
+    // Cambiar sesión al usuario destino
+    res.setSession(targetUser, { name: userExists.name || targetUser });
+    res.redirect('/control');
+});
+
+app.get('/api/overlay/estado', requireSession, (req, res) => {
+    res.json({ vistaActiva: req.userSession.vistaActiva || '/batalla' });
+});
+
+app.all('/api/overlay/cambiar-vista', requireSession, (req, res) => {
+    const s = req.userSession;
+    const vista = (req.query.vista || (req.body && req.body.vista) || '').trim();
+    if (!vista) return res.status(400).send('Falta especificar la vista');
+    s.vistaActiva = vista;
+    io.to(req.username).emit('cambioVista', vista);
+    res.json({ status: 'OK', vistaActiva: vista });
+});
+
+app.get('/api/overlay/estado-acumulados', requireSession, (req, res) => {
+    res.json({ vistaAcumuladosActiva: req.userSession.vistaAcumuladosActiva || '/' });
+});
+
+app.all('/api/overlay/cambiar-vista-acumulados', requireSession, (req, res) => {
+    const s = req.userSession;
+    const vista = (req.query.vista || (req.body && req.body.vista) || '').trim();
+    if (!vista) return res.status(400).send('Falta especificar la vista de acumulados');
+    s.vistaAcumuladosActiva = vista;
+    io.to(req.username).emit('cambioVistaAcumulados', vista);
+    res.json({ status: 'OK', vistaAcumuladosActiva: vista });
 });
 
 app.get('/api/queens', requireSession, (req, res) => res.json(req.userSession.QUEENS));
@@ -514,6 +617,10 @@ function conectarTikTok(username, usuarioTikTok) {
         io.to(username).emit('tiktokLiveEvent', { tipo: 'join', usuario: data.uniqueId, avatar: data.profilePictureUrl });
     });
 
+    connection.on('roomUser', (data) => {
+        io.to(username).emit('tiktokLiveEvent', { tipo: 'roomUser', viewerCount: data.viewerCount });
+    });
+
     connection.on('disconnected', () => {
         session.tiktokEstado = 'desconectado';
         session.tiktokUsuario = '';
@@ -540,9 +647,6 @@ function procesarRegaloTikTok(username, data) {
     const repeat = data.repeatCount || 1;
     const giftImgSrc = data.giftPictureUrl || '';
     
-    session.regalosDetectados.add(giftName);
-    io.to(username).emit('regaloDetectado', giftName);
-    
     let rawMapa = session.db.getConfigVal('tiktok_regalo_mapa');
     let mapa = rawMapa ? JSON.parse(rawMapa) : {};
     
@@ -568,6 +672,7 @@ function procesarRegaloTikTok(username, data) {
             
             session.queueUpdate.push({ nombre: queenActivadora, puntos: pts, saltaTurno: queenSalto });
             session.db.registrarRegalo(queenActivadora, giftName, pts, viewer);
+            session.lealtadUsuarios[viewer] = queenActivadora;
             
             io.to(username).emit('nuevoRegalo', {
                 nombre: queenActivadora,
@@ -612,6 +717,19 @@ function procesarRegaloTikTok(username, data) {
                 });
             } else {
                 session.queueUpdate.push({ nombre: null, puntos: coins, saltaTurno: queenSalto });
+                
+                // Regalo no mapeado: registrar instancia para asignación manual una sola vez
+                const giftId = `gift-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
+                const giftInstance = {
+                    id: giftId,
+                    giftName,
+                    viewer,
+                    coins,
+                    giftImgSrc,
+                    timestamp: new Date().toISOString()
+                };
+                session.regalosDetectados[giftId] = giftInstance;
+                io.to(username).emit('regaloDetectado', giftInstance);
             }
         }
 
@@ -812,17 +930,19 @@ app.all('/tiktok/desconectar', requireSession, (req, res) => {
 });
 
 app.get('/tiktok/test-gift', requireSession, (req, res) => {
-    const giftName = req.query.gift || 'Rose';
-    const repeat = parseInt(req.query.repeat || '1');
-    const destName = req.query.to || '';
-    const viewer = req.query.viewer || 'TesterUnique';
+    const giftName = req.query.gift || req.query.giftName || 'Rose';
+    const repeat = parseInt(req.query.repeat || req.query.repeatCount || '1');
+    const destName = req.query.to || req.query.toUser || '';
+    const viewer = req.query.viewer || req.query.uniqueId || 'TesterUnique';
+    const diamonds = parseInt(req.query.diamonds || req.query.coins || req.query.diamondCount || '10');
+    const giftPic = req.query.giftPictureUrl || req.query.giftPic || 'https://p19-webcast.tiktokcdn.com/img/webcast/5f8efc0f4f9f6e72c84285fbfe4e2b00.png~tplv-obj.image';
     const fakeData = {
         uniqueId: viewer,
         profilePictureUrl: 'https://p16-sign-va.tiktokcdn.com/tos-maliva-avt-0068/7311145620163350534~tplv-tiktok-shrink:100:100.webp',
         giftName: giftName,
-        diamondCount: 10,
+        diamondCount: diamonds,
         repeatCount: repeat,
-        giftPictureUrl: 'https://p19-webcast.tiktokcdn.com/img/webcast/5f8efc0f4f9f6e72c84285fbfe4e2b00.png~tplv-obj.image'
+        giftPictureUrl: giftPic
     };
     if (destName) {
         fakeData.toUser = {
@@ -866,12 +986,143 @@ app.get('/api/tiktok/mapa', requireSession, (req, res) => {
 });
 
 app.get('/api/tiktok/regalos-detectados', requireSession, (req, res) => {
-    res.json([...req.userSession.regalosDetectados].sort());
+    res.json(Object.values(req.userSession.regalosDetectados));
 });
 
 app.all('/api/tiktok/regalos-detectados/limpiar', requireSession, (req, res) => {
-    req.userSession.regalosDetectados.clear();
+    req.userSession.regalosDetectados = {};
     res.send('OK');
+});
+
+app.post('/api/tiktok/regalos-detectados/asignar', requireSession, (req, res) => {
+    const s = req.userSession;
+    const { id, queen } = req.body;
+    
+    if (!id || !queen || !s.QUEENS.includes(queen)) {
+        return res.status(400).send('Faltan parámetros requeridos o reina inválida.');
+    }
+    
+    const giftInstance = s.regalosDetectados[id];
+    if (giftInstance) {
+        const giftName = giftInstance.giftName;
+        const coins = giftInstance.coins || 1;
+        const viewer = giftInstance.viewer || 'Anónimo';
+        
+        s.db.registrarRegalo(queen, giftName, coins, viewer);
+        s.queueUpdate.push({ nombre: queen, puntos: coins });
+        s.lealtadUsuarios[viewer] = queen;
+        
+        const eq = s.equipos[queen] || {};
+        io.to(req.username).emit('nuevoRegalo', {
+            nombre: queen,
+            viewer,
+            avatar: '',
+            giftImg: eq.regalo_img || giftInstance.giftImgSrc || '',
+            queenColor: eq.color || '#fff',
+            coins,
+            giftName
+        });
+        
+        // Eliminar de la lista de detectados para que desaparezca
+        delete s.regalosDetectados[id];
+        res.send('Asignado con éxito');
+    } else {
+        res.status(404).send('Regalo no encontrado.');
+    }
+});
+
+app.get('/api/marca', requireSession, (req, res) => {
+    const s = req.userSession;
+    const logoUrl = s.db.getConfigVal('marca_logo_url') || '';
+    const fontFamily = s.db.getConfigVal('marca_font_family') || 'Inter';
+    const neonIntensity = s.db.getConfigVal('marca_neon_intensity') || 'normal';
+    res.json({ logoUrl, fontFamily, neonIntensity });
+});
+
+app.post('/api/marca', requireSession, (req, res) => {
+    const s = req.userSession;
+    const { logoUrl, fontFamily, neonIntensity } = req.body;
+    
+    s.db.setConfigVal('marca_logo_url', logoUrl || '');
+    s.db.setConfigVal('marca_font_family', fontFamily || 'Inter');
+    s.db.setConfigVal('marca_neon_intensity', neonIntensity || 'normal');
+    
+    const config = { logoUrl, fontFamily, neonIntensity };
+    io.to(req.username).emit('marcaCambiado', config);
+    res.json({ status: 'OK', config });
+});
+
+app.get('/api/agency/dancers', requireSession, (req, res) => {
+    if (req.username !== 'admin' && req.username !== 'master') {
+        return res.status(403).send('No autorizado');
+    }
+    
+    try {
+        const files = fs.readdirSync(__dirname);
+        const dbFiles = files.filter(f => f.startsWith('database_') && f.endsWith('.db'));
+        
+        const dancers = [];
+        let grandTotalHistorico = 0;
+        let grandTotalHoy = 0;
+        let grandTotalMes = 0;
+        
+        for (const file of dbFiles) {
+            const username = file.replace(/^database_/, '').replace(/\.db$/, '');
+            const s = getUserSession(username);
+            if (s && s.db) {
+                const analytics = s.db.getResumenAnalytics();
+                const hist = parseInt(analytics.totalHistorico || 0);
+                const hoy = parseInt(analytics.totalHoy || 0);
+                const mes = parseInt(analytics.totalMes || 0);
+                
+                grandTotalHistorico += hist;
+                grandTotalHoy += hoy;
+                grandTotalMes += mes;
+                
+                dancers.push({
+                    username,
+                    tiktokEstado: s.tiktokEstado || 'desconectado',
+                    tiktokUsuario: s.tiktokUsuario || '',
+                    vistaActiva: s.vistaActiva || '/batalla',
+                    vistaAcumuladosActiva: s.vistaAcumuladosActiva || '/',
+                    totalHistorico: hist,
+                    totalHoy: hoy,
+                    totalMes: mes,
+                    totalQueens: s.QUEENS.length
+                });
+            }
+        }
+        
+        res.json({
+            grandTotalHistorico,
+            grandTotalHoy,
+            grandTotalMes,
+            dancers
+        });
+    } catch (e) {
+        console.error('Error cargando datos de agencia:', e);
+        res.status(500).send('Error interno');
+    }
+});
+
+app.get('/login-as', requireSession, (req, res) => {
+    if (req.username !== 'admin' && req.username !== 'master') {
+        return res.status(403).send('No autorizado');
+    }
+    
+    const targetUser = req.query.user;
+    if (!targetUser) return res.status(400).send('Falta usuario');
+    
+    const masterDb = require('./masterDb');
+    const user = masterDb.obtenerUsuario(targetUser);
+    if (!user) return res.status(404).send('Usuario no encontrado');
+    
+    const token = crypto.randomBytes(32).toString('hex');
+    activeSessions[targetUser] = getUserSession(targetUser);
+    activeSessions[targetUser].token = token;
+    
+    res.cookie('session_token', token, { httpOnly: true, maxAge: 24 * 60 * 60 * 1000 });
+    res.redirect('/control');
 });
 
 const CATALOGO_RESPALDO = [
@@ -1467,8 +1718,37 @@ app.get('/datos.json', requireSession, (req, res) => {
     res.json({ ranking: s.db.getRanking(), victorias: s.db.getVictorias(), copa: s.db.getCopa() });
 });
 
-process.on('uncaughtException', (err) => { console.error('🚨 ESCUDO ACTIVADO:', err.message); });
+// Endpoint para apagar el servidor al finalizar la jornada del día
+app.all('/api/sistema/shutdown', requireSession, (req, res) => {
+    const user = req.username;
+    console.log(`🛑 Petición de apagado del servidor por parte del usuario '${user}'...`);
+    io.to(user).emit('servidorApagado');
+    res.json({ status: 'OK', message: 'Servidor apagado correctamente. Todas las bases de datos guardadas.' });
+    setTimeout(() => {
+        cleanupAllSessions();
+        process.exit(0);
+    }, 500);
+});
+
+process.on('uncaughtException', (err) => { 
+    console.error('🚨 ESCUDO ACTIVADO:', err.message);
+    if (err.code === 'EADDRINUSE' || (err.message && err.message.includes('EADDRINUSE'))) {
+        console.error('⚠️ Proceso duplicado detectado en puerto 3000. Cerrando esta instancia para evitar duplicación de puntos.');
+        process.exit(0);
+    }
+});
 process.on('unhandledRejection', (reason) => { console.error('🚨 ESCUDO ACTIVADO:', reason); });
+
+server.on('error', (err) => {
+    if (err.code === 'EADDRINUSE') {
+        console.error('⚠️ ATENCIÓN: El servidor de Urban Queens ya está ejecutándose en segundo plano (Puerto 3000 ocupado).');
+        console.error('⚠️ Se ha cerrado este proceso duplicado para evitar que los regalos de TikTok se cuenten doble.');
+        process.exit(0);
+    } else {
+        console.error('❌ Error en el servidor HTTP:', err);
+        process.exit(1);
+    }
+});
 
 function cleanupAllSessions() {
     console.log('🧹 Cerrando bases de datos de todas las sesiones...');
@@ -1495,7 +1775,7 @@ process.on('SIGTERM', () => { cleanupAllSessions(); process.exit(0); });
         const SQLInstance = await initSQL();
         await MasterDB.initMasterDB(SQLInstance);
         
-        server.listen(3000, '0.0.0.0', () => console.log('🚀 Urban Queens con SQLite activo en puerto 3000'));
+        server.listen(3000, '0.0.0.0', () => console.log('🚀 TikDance v2.0 con SQLite activo en puerto 3000'));
     } catch (err) {
         console.error('❌ Error iniciando el servidor:', err);
         process.exit(1);

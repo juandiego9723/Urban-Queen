@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Universal Leaderboard Overlay — Urban Queens</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+        body, html {
+            width: 100vw;
+            height: 100vh;
+            background: transparent;
+            overflow: hidden;
+        }
+        #content-frame {
+            width: 100%;
+            height: 100%;
+            border: none;
+            background: transparent;
+            overflow: hidden;
+        }
+    </style>
+</head>
+<body>
+    <iframe id="content-frame" src="about:blank"></iframe>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script>
+        const urlParams = new URLSearchParams(window.location.search);
+        const userParam = urlParams.get('user') || '';
+
+        // Conectar a Socket.io pasando el usuario en el query param para OBS
+        const socket = io({ query: userParam ? { user: userParam } : {} });
+
+        const frame = document.getElementById('content-frame');
+
+        // Guardar la última vista cargada para evitar recargas redundantes del iframe
+        let ultimaVista = '';
+
+        socket.on('cambioVistaAcumulados', (vista) => {
+            if (!vista) return;
+            if (vista === ultimaVista) return;
+            ultimaVista = vista;
+
+            // Construir URL del iframe y propagar el usuario
+            let targetUrl = vista;
+            if (userParam) {
+                const connector = targetUrl.includes('?') ? '&' : '?';
+                targetUrl += `${connector}user=${userParam}`;
+            }
+            frame.src = targetUrl;
+        });
+    </script>
+</body>
+</html>

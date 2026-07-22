@@ -30,6 +30,15 @@ class DBInstance {
         }
     }
 
+    close() {
+        if (this.saveTimer) clearInterval(this.saveTimer);
+        this.guardarADisco();
+        if (this.db) {
+            try { this.db.close(); } catch(e) {}
+            this.db = null;
+        }
+    }
+
     marcarCambio() {
         this.dirty = true;
     }
