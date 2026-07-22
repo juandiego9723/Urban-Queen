@@ -1,0 +1,27 @@
+# ==========================================
+# Archivos a ignorar en Git (TikDance)
+# ==========================================
+
+# Bases de Datos SQLite (para evitar sobreescribir datos en despliegues)
+*.db
+*.sqlite
+*.sqlite3
+master.db
+database_*.db
+
+# Mapeos y carpetas de dependencias
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Archivos de entorno y logs locales
+.env
+.env.local
+*.log
+
+# Archivos de sistema operativo
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+.DS_Store
