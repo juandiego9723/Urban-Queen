@@ -148,6 +148,7 @@ function getUserSession(username) {
             amarillasDinamica: {},
             eliminadosDinamica: [],
             queueUpdate: [],
+            giftStreaks: {},
             vistaActiva: '/batalla',
             vistaAcumuladosActiva: '/'
         };
@@ -709,12 +710,17 @@ function procesarRegaloTikTok(username, data) {
     const session = activeSessions[username];
     if (!session) return;
     
-    const viewer = data.uniqueId;
+    const viewer = (data.uniqueId || '').trim();
     const avatar = data.profilePictureUrl || '';
-    const giftName = data.giftName;
-    const coins = (data.diamondCount || 1) * (data.repeatCount || 1);
-    const repeat = data.repeatCount || 1;
+    const giftName = (data.giftName || '').trim();
+    const repeat = parseInt(data.repeatCount) || 1;
     const giftImgSrc = data.giftPictureUrl || '';
+    
+    // De acuerdo a la especificación oficial de tiktok-live-connector:
+    // Los regalos de ráfaga (giftType === 1) envían eventos intermedios con repeatEnd: false.
+    // Solo cuando se completa la ráfaga (repeatEnd: true o giftType !== 1) se acredita el valor final en puntos (diamondCount * repeatCount).
+    const isStreakInProgress = (data.giftType === 1 && !data.repeatEnd);
+    const coins = (data.diamondCount || 1) * repeat;
     
     let rawMapa = session.db.getConfigVal('tiktok_regalo_mapa');
     let mapa = rawMapa ? JSON.parse(rawMapa) : {};
@@ -739,9 +745,11 @@ function procesarRegaloTikTok(username, data) {
             const pts = eq.regalo_pts ? (eq.regalo_pts * repeat) : coins;
             destinatarioFinal = queenActivadora;
             
-            session.queueUpdate.push({ nombre: queenActivadora, puntos: pts, saltaTurno: queenSalto });
-            session.db.registrarRegalo(queenActivadora, giftName, pts, viewer);
-            session.lealtadUsuarios[viewer] = queenActivadora;
+            if (!isStreakInProgress) {
+                session.queueUpdate.push({ nombre: queenActivadora, puntos: pts, saltaTurno: queenSalto });
+                session.db.registrarRegalo(queenActivadora, giftName, pts, viewer);
+                session.lealtadUsuarios[viewer] = queenActivadora;
+            }
             
             io.to(username).emit('nuevoRegalo', {
                 nombre: queenActivadora,
@@ -756,8 +764,10 @@ function procesarRegaloTikTok(username, data) {
             const queenAsignada = session.lealtadUsuarios[viewer] || null;
             if (queenAsignada && session.QUEENS.includes(queenAsignada)) {
                 destinatarioFinal = queenAsignada;
-                session.queueUpdate.push({ nombre: queenAsignada, puntos: coins, saltaTurno: queenSalto });
-                session.db.registrarRegalo(queenAsignada, giftName, coins, viewer);
+                if (!isStreakInProgress) {
+                    session.queueUpdate.push({ nombre: queenAsignada, puntos: coins, saltaTurno: queenSalto });
+                    session.db.registrarRegalo(queenAsignada, giftName, coins, viewer);
+                }
                 const eq = session.equipos[queenAsignada] || {};
                 
                 io.to(username).emit('nuevoRegalo', {
@@ -771,8 +781,10 @@ function procesarRegaloTikTok(username, data) {
                 });
             } else if (queenSalto && session.QUEENS.includes(queenSalto)) {
                 destinatarioFinal = queenSalto;
-                session.queueUpdate.push({ nombre: queenSalto, puntos: coins, saltaTurno: queenSalto });
-                session.db.registrarRegalo(queenSalto, giftName, coins, viewer);
+                if (!isStreakInProgress) {
+                    session.queueUpdate.push({ nombre: queenSalto, puntos: coins, saltaTurno: queenSalto });
+                    session.db.registrarRegalo(queenSalto, giftName, coins, viewer);
+                }
                 const eq = session.equipos[queenSalto] || {};
                 
                 io.to(username).emit('nuevoRegalo', {
@@ -785,20 +797,21 @@ function procesarRegaloTikTok(username, data) {
                     giftName
                 });
             } else {
-                session.queueUpdate.push({ nombre: null, puntos: coins, saltaTurno: queenSalto });
-                
-                // Regalo no mapeado: registrar instancia para asignación manual una sola vez
-                const giftId = `gift-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
-                const giftInstance = {
-                    id: giftId,
-                    giftName,
-                    viewer,
-                    coins,
-                    giftImgSrc,
-                    timestamp: new Date().toISOString()
-                };
-                session.regalosDetectados[giftId] = giftInstance;
-                io.to(username).emit('regaloDetectado', giftInstance);
+                if (!isStreakInProgress) {
+                    session.queueUpdate.push({ nombre: null, puntos: coins, saltaTurno: queenSalto });
+                    
+                    const giftId = `gift-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
+                    const giftInstance = {
+                        id: giftId,
+                        giftName,
+                        viewer,
+                        coins,
+                        giftImgSrc,
+                        timestamp: new Date().toISOString()
+                    };
+                    session.regalosDetectados[giftId] = giftInstance;
+                    io.to(username).emit('regaloDetectado', giftInstance);
+                }
             }
         }
 

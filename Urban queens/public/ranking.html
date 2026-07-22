@@ -275,6 +275,10 @@
 
     init();
 
+    socket.on('rankingActualizado', () => {
+        init();
+    });
+
     socket.on('actualizarRanking', (data) => {
         dataSemanal[data.nombre] = data.puntosSemanal;
         dataMensual[data.nombre] = data.puntosMensual;
