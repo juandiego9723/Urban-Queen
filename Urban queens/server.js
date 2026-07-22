@@ -405,6 +405,40 @@ app.all('/api/agency/eliminar-usuario', (req, res) => {
     }
 });
 
+// ── RUTAS DE RECUPERACIÓN DE CONTRASEÑA CON TOKEN ──
+app.post('/api/forgot-password', (req, res) => {
+    const username = (req.body.username || '').trim();
+    if (!username) return res.status(400).send('Ingresa tu nombre de usuario');
+    try {
+        const token = MasterDB.crearTokenRecuperacion(username);
+        const protocol = req.protocol || 'http';
+        const host = req.get('host') || 'localhost:3000';
+        const resetUrl = `${protocol}://${host}/reset-password.html?token=${token}`;
+        res.json({ status: 'OK', token, resetUrl, username });
+    } catch(e) {
+        res.status(400).send(e.message || 'Error al solicitar token de recuperación');
+    }
+});
+
+app.get('/api/validate-token', (req, res) => {
+    const token = (req.query.token || '').trim();
+    const record = MasterDB.validarTokenRecuperacion(token);
+    if (!record) return res.status(400).json({ valid: false, error: 'El enlace o token de recuperación es inválido o ha expirado (30 mins)' });
+    res.json({ valid: true, username: record.username });
+});
+
+app.post('/api/reset-password', (req, res) => {
+    const { token, newPassword } = req.body || {};
+    if (!token || !newPassword) return res.status(400).send('Datos incompletos');
+    if (newPassword.length < 4) return res.status(400).send('La contraseña debe tener al menos 4 caracteres');
+    try {
+        const username = MasterDB.cambiarPasswordConToken(token, newPassword);
+        res.json({ status: 'OK', message: `Contraseña actualizada correctamente para el usuario ${username}` });
+    } catch(e) {
+        res.status(400).send(e.message || 'Error restableciendo la contraseña');
+    }
+});
+
 app.get('/api/overlay/estado', requireSession, (req, res) => {
     res.json({ vistaActiva: req.userSession.vistaActiva || '/batalla' });
 });

@@ -144,6 +144,69 @@
             display: none;
             text-align: center;
         }
+
+        /* Modal Glassmorphism */
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.75);
+            backdrop-filter: blur(8px);
+            z-index: 100;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        .modal-overlay.active {
+            display: flex;
+            animation: modalFadeIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+        @keyframes modalFadeIn {
+            from { opacity: 0; transform: scale(0.92); }
+            to { opacity: 1; transform: scale(1); }
+        }
+        .modal-box {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 18px;
+            padding: 35px 30px;
+            width: 100%;
+            max-width: 400px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.6);
+            position: relative;
+        }
+        .modal-box::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 4px;
+            background: linear-gradient(90deg, var(--pink), var(--indigo));
+            border-radius: 18px 18px 0 0;
+        }
+        .modal-close {
+            position: absolute;
+            top: 14px;
+            right: 18px;
+            background: none;
+            border: none;
+            color: var(--muted);
+            font-size: 24px;
+            cursor: pointer;
+            transition: color 0.15s;
+        }
+        .modal-close:hover { color: #fff; }
+        .modal-title { font-size: 18px; font-weight: 800; color: #fff; margin-bottom: 4px; }
+        .modal-subtitle { font-size: 12px; color: var(--muted); margin-bottom: 20px; line-height: 1.4; }
+        .success-box {
+            background: rgba(16, 185, 129, 0.1);
+            border: 1px solid rgba(16, 185, 129, 0.2);
+            color: #34d399;
+            padding: 12px;
+            border-radius: 8px;
+            font-size: 13px;
+            margin-bottom: 20px;
+            display: none;
+            text-align: center;
+        }
     </style>
 </head>
 <body>
@@ -162,12 +225,38 @@
             <div class="form-group">
                 <label class="label">Contraseña</label>
                 <input type="password" id="password" class="input" placeholder="••••••••" required autocomplete="current-password">
+                <div style="text-align: right; margin-top: 6px;">
+                    <a href="#" onclick="abrirModalRecuperacion(event)" style="color: var(--muted); font-size: 12px; text-decoration: none;">¿Olvidaste tu contraseña?</a>
+                </div>
             </div>
             <button type="submit" class="btn">Iniciar Sesión</button>
         </form>
 
         <div class="footer-link">
             ¿No tienes cuenta? <a href="/register">Regístrate aquí</a>
+        </div>
+    </div>
+
+    <!-- Modal Emergente de Recuperación de Contraseña -->
+    <div id="forgot-modal" class="modal-overlay">
+        <div class="modal-box">
+            <button class="modal-close" onclick="cerrarModalRecuperacion()">&times;</button>
+            <div class="modal-title">🔑 Recuperar Contraseña</div>
+            <div class="modal-subtitle">Ingresa tu nombre de usuario para solicitar un enlace de restablecimiento seguro.</div>
+
+            <div id="modal-error" class="error-box"></div>
+            <div id="modal-success" class="success-box"></div>
+
+            <form id="forgot-form" onsubmit="enviarSolicitudRecuperacion(event)">
+                <div class="form-group">
+                    <label class="label">Nombre de Usuario</label>
+                    <input type="text" id="forgot-username" class="input" placeholder="ej: mi_academia" required autocomplete="username">
+                </div>
+                <button type="submit" class="btn" id="btn-forgot">Generar Enlace de Recuperación</button>
+            </form>
+            <div id="action-reset" style="display:none; margin-top: 15px;">
+                <button class="btn" style="background: linear-gradient(90deg, var(--pink), var(--indigo));" id="btn-go-reset">Ir a Restablecer Contraseña Ahora ➔</button>
+            </div>
         </div>
     </div>
 
@@ -205,6 +294,64 @@
                 errBox.style.display = 'block';
             }
         });
+
+        function abrirModalRecuperacion(e) {
+            if (e) e.preventDefault();
+            document.getElementById('forgot-modal').classList.add('active');
+            document.getElementById('forgot-username').value = '';
+            document.getElementById('modal-error').style.display = 'none';
+            document.getElementById('modal-success').style.display = 'none';
+            document.getElementById('action-reset').style.display = 'none';
+            document.getElementById('forgot-form').style.display = 'block';
+        }
+
+        function cerrarModalRecuperacion() {
+            document.getElementById('forgot-modal').classList.remove('active');
+        }
+
+        async function enviarSolicitudRecuperacion(e) {
+            e.preventDefault();
+            const username = document.getElementById('forgot-username').value.trim();
+            if (!username) return;
+
+            const errBox = document.getElementById('modal-error');
+            const succBox = document.getElementById('modal-success');
+            const btn = document.getElementById('btn-forgot');
+            const actionReset = document.getElementById('action-reset');
+            const btnGoReset = document.getElementById('btn-go-reset');
+
+            errBox.style.display = 'none';
+            succBox.style.display = 'none';
+            btn.disabled = true;
+            btn.textContent = 'Procesando...';
+
+            try {
+                const res = await fetch('/api/forgot-password', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username })
+                });
+
+                if (res.ok) {
+                    const data = await res.json();
+                    document.getElementById('forgot-form').style.display = 'none';
+                    succBox.innerHTML = '<strong>✅ Token Generado Exitosamente</strong><br><span style="font-size:11px;opacity:0.9">Tu enlace de restablecimiento seguro está listo.</span>';
+                    succBox.style.display = 'block';
+                    actionReset.style.display = 'block';
+                    btnGoReset.onclick = () => { window.location.href = data.resetUrl; };
+                } else {
+                    const text = await res.text();
+                    errBox.textContent = '❌ ' + text;
+                    errBox.style.display = 'block';
+                }
+            } catch(err) {
+                errBox.textContent = '❌ Error de conexión con el servidor';
+                errBox.style.display = 'block';
+            } finally {
+                btn.disabled = false;
+                btn.textContent = 'Generar Enlace de Recuperación';
+            }
+        }
     </script>
 </body>
 </html>

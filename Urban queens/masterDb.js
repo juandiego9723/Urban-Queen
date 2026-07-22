@@ -25,6 +25,12 @@ async function initMasterDB(sqlInstance) {
         name TEXT
     )`);
     
+    masterDb.run(`CREATE TABLE IF NOT EXISTS password_resets (
+        username TEXT NOT NULL,
+        token TEXT UNIQUE NOT NULL,
+        expires_at INTEGER NOT NULL
+    )`);
+    
     guardarMaster();
 }
 
@@ -99,11 +105,47 @@ function eliminarUsuario(username) {
     return true;
 }
 
+function crearTokenRecuperacion(username) {
+    const user = obtenerUsuario(username);
+    if (!user) throw new Error('El usuario ingresado no existe');
+    const token = crypto.randomBytes(32).toString('hex');
+    const expiresAt = Date.now() + (30 * 60 * 1000); // 30 minutos de validez
+    masterDb.run('DELETE FROM password_resets WHERE username = ?', [username]);
+    masterDb.run('INSERT INTO password_resets (username, token, expires_at) VALUES (?, ?, ?)', [username, token, expiresAt]);
+    guardarMaster();
+    return token;
+}
+
+function validarTokenRecuperacion(token) {
+    if (!masterDb || !token) return null;
+    const stmt = masterDb.prepare('SELECT * FROM password_resets WHERE token = ? AND expires_at > ?');
+    stmt.bind([token, Date.now()]);
+    let record = null;
+    if (stmt.step()) {
+        record = stmt.getAsObject();
+    }
+    stmt.free();
+    return record;
+}
+
+function cambiarPasswordConToken(token, nuevaPassword) {
+    const record = validarTokenRecuperacion(token);
+    if (!record) throw new Error('El token de recuperación es inválido o ha expirado');
+    const hashed = hashPassword(nuevaPassword);
+    masterDb.run('UPDATE users SET password = ? WHERE username = ?', [hashed, record.username]);
+    masterDb.run('DELETE FROM password_resets WHERE username = ?', [record.username]);
+    guardarMaster();
+    return record.username;
+}
+
 module.exports = {
     initMasterDB,
     registrarUsuario,
     obtenerUsuario,
     verificarCredenciales,
     getAllUsers,
-    eliminarUsuario
+    eliminarUsuario,
+    crearTokenRecuperacion,
+    validarTokenRecuperacion,
+    cambiarPasswordConToken
 };
