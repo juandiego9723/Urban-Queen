@@ -89,10 +89,21 @@ function getAllUsers() {
     return users;
 }
 
+function eliminarUsuario(username) {
+    if (!masterDb) return false;
+    if (username.toLowerCase() === 'admin') {
+        throw new Error('No se puede eliminar la cuenta principal de administrador.');
+    }
+    masterDb.run('DELETE FROM users WHERE username = ?', [username]);
+    guardarMaster();
+    return true;
+}
+
 module.exports = {
     initMasterDB,
     registrarUsuario,
     obtenerUsuario,
     verificarCredenciales,
-    getAllUsers
+    getAllUsers,
+    eliminarUsuario
 };

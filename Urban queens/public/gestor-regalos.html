@@ -108,26 +108,74 @@
             z-index: 10;
         }
 
-        /* Anillo circular de la imagen */
+        /* Anillo circular animado y flotante de la imagen */
         .card-img-container {
             position: absolute;
             top: 10px;
-            width: 85px;
-            height: 85px;
+            width: 86px;
+            height: 86px;
             border-radius: 50%;
-            border: 2px solid rgba(255, 255, 255, 0.6);
             display: flex;
             align-items: center;
             justify-content: center;
-            background: radial-gradient(circle, rgba(255, 255, 255, 0.2) 0%, rgba(255, 255, 255, 0) 70%);
-            box-shadow: inset 0 0 15px rgba(255, 255, 255, 0.3), 0 0 10px rgba(255, 255, 255, 0.2);
+            animation: floatCircle 3.6s ease-in-out infinite;
+            box-shadow: 0 0 15px rgba(0, 242, 254, 0.4), inset 0 0 12px rgba(255, 0, 80, 0.3);
+        }
+
+        .card-img-container::before {
+            content: '';
+            position: absolute;
+            inset: -3px;
+            border-radius: 50%;
+            background: conic-gradient(from 0deg, #00f2fe, #ff0050, #00f2fe);
+            animation: spinRing 4s linear infinite;
+            z-index: 0;
+        }
+
+        .card-img-container::after {
+            content: '';
+            position: absolute;
+            inset: 2px;
+            border-radius: 50%;
+            background: var(--card-bg);
+            z-index: 1;
         }
 
         .card-img {
-            width: 94%;
-            height: 140%;
+            position: relative;
+            z-index: 2;
+            width: 90%;
+            height: 135%;
             object-fit: contain;
-            filter: drop-shadow(0 4px 6px rgba(0, 0, 0, 0.3));
+            filter: drop-shadow(0 6px 10px rgba(0, 0, 0, 0.5));
+            transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        .card:hover .card-img-container {
+            animation-play-state: paused;
+            box-shadow: 0 0 25px rgba(0, 242, 254, 0.8), inset 0 0 15px rgba(255, 0, 80, 0.6);
+        }
+
+        .card:hover .card-img {
+            transform: scale(1.18) translateY(-4px);
+        }
+
+        @keyframes floatCircle {
+            0%, 100% {
+                transform: translateY(0px) rotate(0deg);
+            }
+            50% {
+                transform: translateY(-8px) rotate(2deg);
+            }
+        }
+
+        @keyframes spinRing {
+            0% {
+                transform: rotate(0deg);
+            }
+            100% {
+                transform: rotate(360deg);
+            }
         }
 
         .card-title {
@@ -357,10 +405,11 @@
             grid.innerHTML = '';
 
             regalos.forEach((r, index) => {
+                const delay = (index % 5) * 0.45;
                 const card = document.createElement('div');
                 card.className = 'card';
                 card.innerHTML = `
-                    <div class="card-img-container">
+                    <div class="card-img-container" style="animation-delay: ${delay}s;">
                         <img src="${r.imagen}" class="card-img" alt="${r.nombre}">
                     </div>
                     <div class="card-title">${r.nombre}</div>

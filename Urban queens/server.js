@@ -370,6 +370,41 @@ app.get('/api/agency/login-as', (req, res) => {
     res.redirect('/control');
 });
 
+app.all('/api/agency/eliminar-usuario', (req, res) => {
+    if (!req.session || !req.session.user) return res.status(401).send('No autenticado');
+    if (req.session.user !== 'admin' && req.session.user !== 'master') {
+        return res.status(403).send('No autorizado');
+    }
+    const targetUser = (req.query.user || (req.body && req.body.user) || '').trim();
+    if (!targetUser) return res.status(400).send('Falta parámetro user');
+    if (targetUser.toLowerCase() === 'admin' || targetUser === req.session.user) {
+        return res.status(400).send('No se puede eliminar la cuenta principal de administrador ni tu usuario activo');
+    }
+    try {
+        const session = activeSessions[targetUser];
+        if (session) {
+            clearInterval(session.batchInterval);
+            if (session.tiktokConnection) {
+                try { session.tiktokConnection.disconnect(); } catch(e) {}
+            }
+            if (session.db) {
+                session.db.close();
+            }
+            delete activeSessions[targetUser];
+        }
+        MasterDB.eliminarUsuario(targetUser);
+
+        const userDbPath = path.join(__dirname, `database_${targetUser}.db`);
+        if (fs.existsSync(userDbPath)) {
+            try { fs.unlinkSync(userDbPath); } catch(e) { console.error('Error eliminando db:', e.message); }
+        }
+
+        res.json({ status: 'OK', message: `Usuario ${targetUser} eliminado correctamente` });
+    } catch(e) {
+        res.status(500).send(e.message || 'Error eliminando usuario');
+    }
+});
+
 app.get('/api/overlay/estado', requireSession, (req, res) => {
     res.json({ vistaActiva: req.userSession.vistaActiva || '/batalla' });
 });

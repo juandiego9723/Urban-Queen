@@ -249,11 +249,11 @@
         }
 
         .menu-item.active {
-            color: #fff;
-            background: var(--indigo-dim);
-            border-left-color: var(--indigo);
-            font-weight: 600;
-            box-shadow: inset 1px 0 0 rgba(255, 255, 255, 0.05);
+            color: #ffffff;
+            background: linear-gradient(135deg, #6366f1, #a855f7);
+            border-left-color: #818cf8;
+            font-weight: 700;
+            box-shadow: 0 4px 15px rgba(99, 102, 241, 0.4);
         }
 
         /* ── AREA DE CONTENIDO ── */
@@ -1028,24 +1028,24 @@
             <!-- Navegación de pestañas vertical -->
             <div class="sidebar-menu">
                 <div class="label">Módulos de Directo</div>
-                <div class="menu-item tab active" onclick="cambiarTab('batallas',this)">⚔️ Batallas</div>
-                <div class="menu-item tab" onclick="cambiarTab('analytics',this)">📊 Analíticas</div>
-                <div class="menu-item tab" onclick="cambiarTab('clasico',this)">⚽ Clásico</div>
-                <div class="menu-item tab" onclick="cambiarTab('puntos',this)">🏆 Puntos</div>
-                <div class="menu-item tab" onclick="cambiarTab('timer',this)">💃 Timer</div>
-                <div class="menu-item tab" onclick="cambiarTab('dinamicas',this)">⚡ Dinámicas</div>
-                <div class="menu-item tab" onclick="cambiarTab('gestor',this)">🎁 Gestor Custom</div>
+                <div class="menu-item tab active" onclick="cambiarTab('batallas',this)">Batallas</div>
+                <div class="menu-item tab" onclick="cambiarTab('analytics',this)">Analíticas</div>
+                <div class="menu-item tab" onclick="cambiarTab('clasico',this)">Clásico</div>
+                <div class="menu-item tab" onclick="cambiarTab('puntos',this)">Conociendo</div>
+                <div class="menu-item tab" onclick="cambiarTab('timer',this)">Timer</div>
+                <div class="menu-item tab" onclick="cambiarTab('dinamicas',this)">Dinámicas</div>
+                <div class="menu-item tab" onclick="cambiarTab('gestor',this)">Gestor Custom</div>
 
                 <div class="label">Configuración General</div>
-                <div class="menu-item tab" onclick="cambiarTab('bailarinas',this)">🌟 Bailarinas</div>
-                <div class="menu-item tab" onclick="cambiarTab('grupos',this)">👥 Grupos</div>
-                <div class="menu-item tab" onclick="cambiarTab('marca',this)">🎨 Marca / Diseño</div>
-                <div class="menu-item tab" onclick="cambiarTab('pantallas',this)">📺 Overlays / Enlaces</div>
-                <div class="menu-item tab" onclick="cambiarTab('sistema',this)">⚙️ Sistema</div>
-                <div class="menu-item tab" id="menu-item-agencia" onclick="cambiarTab('agencia',this)" style="display:none">🏢 Consola Agencia</div>
+                <div class="menu-item tab" onclick="cambiarTab('bailarinas',this)">Bailarinas</div>
+                <div class="menu-item tab" onclick="cambiarTab('grupos',this)">Grupos</div>
+                <div class="menu-item tab" onclick="cambiarTab('marca',this)">Marca / Diseño</div>
+                <div class="menu-item tab" onclick="cambiarTab('pantallas',this)">Overlays / Enlaces</div>
+                <div class="menu-item tab" onclick="cambiarTab('sistema',this)">Sistema</div>
+                <div class="menu-item tab" id="menu-item-agencia" onclick="cambiarTab('agencia',this)" style="display:none">Consola Agencia</div>
                 <div class="divider"></div>
                 <div class="menu-item" onclick="window.location.href='/logout'"
-                    style="color:var(--red);margin-top:auto;border-left-color:transparent">🚪 Cerrar Sesión</div>
+                    style="color:var(--red);margin-top:auto;border-left-color:transparent">Cerrar Sesión</div>
             </div>
         </div>
 
@@ -2331,6 +2331,7 @@
                                     <td style="padding:12px 8px;text-align:right;font-weight:800;color:var(--green);">${(d.diamantesHistorico||0).toLocaleString()} 💎</td>
                                     <td style="padding:12px 8px;text-align:center;">
                                         <button class="btn btn-primary" style="padding:5px 12px;font-size:11px;" onclick="window.location.href='/api/agency/login-as?user=${d.username}'">🛠️ Controlar</button>
+                                        ${d.username.toLowerCase() !== 'admin' ? `<button class="btn btn-danger" style="padding:5px 10px;font-size:11px;margin-left:4px;" onclick="eliminarUsuarioAgencia('${d.username}')">🗑️ Eliminar</button>` : ''}
                                     </td>
                                 </tr>
                             `;
@@ -2342,6 +2343,24 @@
                 } catch(e) {
                     console.error('Error cargando consola agencia:', e);
                 }
+            }
+
+            function eliminarUsuarioAgencia(targetUser) {
+                uiConfirm(`¿Estás seguro de ELIMINAR permanentemente a "${targetUser}"?\n⚠️ Se borrarán su cuenta, configuraciones y base de datos de forma irreversible.`, async () => {
+                    try {
+                        const res = await fetch(`/api/agency/eliminar-usuario?user=${encodeURIComponent(targetUser)}`);
+                        if (res.ok) {
+                            const data = await res.json();
+                            Swal.fire({ title: '✅ Usuario Eliminado', text: data.message, icon: 'success', background: 'var(--surface)', color: 'var(--text)' });
+                            cargarAgencia();
+                        } else {
+                            const err = await res.text();
+                            Swal.fire({ title: '❌ Error', text: err, icon: 'error', background: 'var(--surface)', color: 'var(--text)' });
+                        }
+                    } catch(e) {
+                        Swal.fire({ title: '❌ Error', text: 'Error de red al eliminar usuario', icon: 'error', background: 'var(--surface)', color: 'var(--text)' });
+                    }
+                });
             }
 
 
@@ -3000,15 +3019,17 @@
                     const btn = document.getElementById(ids[key]);
                     if (btn) {
                         if (key === vista) {
-                            btn.style.background = 'var(--neon-green)';
-                            btn.style.borderColor = 'var(--neon-green)';
-                            btn.style.color = '#000';
-                            btn.style.boxShadow = '0 0 15px var(--neon-green)';
+                            btn.style.background = 'linear-gradient(135deg, #6366f1, #a855f7)';
+                            btn.style.borderColor = '#818cf8';
+                            btn.style.color = '#ffffff';
+                            btn.style.fontWeight = '700';
+                            btn.style.boxShadow = '0 4px 15px rgba(99, 102, 241, 0.4)';
                         } else {
-                            btn.style.background = '';
-                            btn.style.borderColor = '';
-                            btn.style.color = '';
-                            btn.style.boxShadow = '';
+                            btn.style.background = 'var(--surface2)';
+                            btn.style.borderColor = 'rgba(255, 255, 255, 0.08)';
+                            btn.style.color = '#f1f5f9';
+                            btn.style.fontWeight = '600';
+                            btn.style.boxShadow = 'none';
                         }
                     }
                 });
@@ -3042,15 +3063,17 @@
                     const btn = document.getElementById(ids[key]);
                     if (btn) {
                         if (key === vista) {
-                            btn.style.background = 'var(--neon-green)';
-                            btn.style.borderColor = 'var(--neon-green)';
-                            btn.style.color = '#000';
-                            btn.style.boxShadow = '0 0 15px var(--neon-green)';
+                            btn.style.background = 'linear-gradient(135deg, #6366f1, #a855f7)';
+                            btn.style.borderColor = '#818cf8';
+                            btn.style.color = '#ffffff';
+                            btn.style.fontWeight = '700';
+                            btn.style.boxShadow = '0 4px 15px rgba(99, 102, 241, 0.4)';
                         } else {
-                            btn.style.background = '';
-                            btn.style.borderColor = '';
-                            btn.style.color = '';
-                            btn.style.boxShadow = '';
+                            btn.style.background = 'var(--surface2)';
+                            btn.style.borderColor = 'rgba(255, 255, 255, 0.08)';
+                            btn.style.color = '#f1f5f9';
+                            btn.style.fontWeight = '600';
+                            btn.style.boxShadow = 'none';
                         }
                     }
                 });

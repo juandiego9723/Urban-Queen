@@ -43,16 +43,17 @@
     </script>
 
         <meta charset="UTF-8">
-        <title>Ranking Queen</title>
+        <title>Ranking</title>
         <link href="https://fonts.googleapis.com/css2?family=Bangers&display=swap"
               rel="stylesheet">
         <style>
         :root {
             --fucsia: #FF1493;
-            --cyan: #00FFFF;
+            --cyan: #00f2fe;
             --dorado: #FFD700;
             --morado: #b026ff;
-            --bg-cristal: rgba(15, 5, 20, 0.6); 
+            --bg-capsule: linear-gradient(180deg, #094721 0%, #052b14 100%);
+            --bg-card: linear-gradient(180deg, #0a4d25 0%, #063318 100%);
         }
 
         body { 
@@ -64,72 +65,94 @@
         }
         
         .container { 
-            width: 240px; 
+            width: 260px; 
             display: flex;
             flex-direction: column;
-            gap: 6px; 
+            gap: 8px; 
         }
         
-        .header-titulo { 
-            font-size: 1.8rem; 
-            text-align: center; 
-            margin: 0 0 5px 0; 
-            color: var(--dorado); 
-            text-shadow: 2px 2px 0px #000, 0 0 5px var(--dorado); 
-            letter-spacing: 1px;
-            order: -1;
-            background: var(--bg-cristal);
-            padding: 5px;
-            border-radius: 8px;
-            border: 2px solid var(--cyan);
-            box-shadow: 0 0 8px var(--fucsia);
+        .header-box {
+            background: var(--bg-capsule);
+            padding: 10px 14px;
+            border-radius: 20px;
+            border: 2.5px solid #00f2fe;
+            box-shadow: 0 0 16px rgba(0, 242, 254, 0.6), inset 0 0 10px rgba(0, 242, 254, 0.3);
+            text-align: center;
             cursor: pointer;
             user-select: none;
+            order: -1;
+            margin-bottom: 4px;
+        }
+
+        .header-titulo { 
+            font-size: 1.85rem; 
+            font-style: italic;
+            font-weight: 900;
+            margin: 0; 
+            color: #ffee00; 
+            text-shadow: 2.5px 2.5px 0px #000, 0 0 10px rgba(255, 238, 0, 0.7); 
+            letter-spacing: 1.5px;
+            text-transform: uppercase;
+        }
+
+        .modo-label {
+            font-size: 0.75rem;
+            font-style: italic;
+            font-weight: 800;
+            color: #00e676;
+            text-align: center;
+            margin-top: 3px;
+            letter-spacing: 2.5px;
+            text-transform: uppercase;
+            text-shadow: 1px 1px 0px #000;
         }
         
         .row { 
             display: flex; 
             justify-content: space-between; 
             align-items: center;
-            background: var(--bg-cristal); 
-            padding: 6px 12px; 
-            border-radius: 8px;
-            border-left: 5px solid;
-            transition: all 0.5s ease;
+            background: var(--bg-card); 
+            padding: 10px 16px; 
+            border-radius: 18px;
+            border: 1px solid rgba(0, 242, 254, 0.4);
+            border-left: 6px solid;
+            box-shadow: 0 4px 14px rgba(0, 0, 0, 0.4);
+            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
         }
         
         .name { 
-            font-size: 1.5rem; 
+            font-size: 1.65rem; 
+            font-style: italic;
             letter-spacing: 1px; 
-            text-shadow: 1px 1px 2px #000; 
+            color: #ffffff;
+            text-shadow: 2px 2px 0px #000; 
             transition: color 0.3s;
+            display: flex;
+            align-items: center;
+            gap: 6px;
         }
         .puntos { 
-            font-size: 1.8rem; 
-            color: var(--cyan); 
-            text-shadow: 1px 1px 2px #000, 0 0 5px var(--cyan); 
+            font-size: 2rem; 
+            font-style: italic;
+            font-weight: 900;
+            color: #00f2fe; 
+            text-shadow: 2px 2px 0px #000, 0 0 10px #00f2fe; 
         }
 
         @keyframes pulse {
             0% { transform: scale(1); }
-            50% { transform: scale(1.15); color: var(--fucsia); text-shadow: 0 0 10px var(--fucsia); }
+            50% { transform: scale(1.15); color: #ff0050; text-shadow: 0 0 15px #ff0050; }
             100% { transform: scale(1); }
         }
         .update-anim { animation: pulse 0.4s ease-out; }
-
-        .modo-label {
-            font-size: 0.7rem;
-            color: #aaa;
-            text-align: center;
-            margin-top: -3px;
-            letter-spacing: 2px;
-        }
         </style>
     </head>
     <body>
         <div class="container" id="ranking-container">
-            <h2 class="header-titulo" id="titulo-ranking" onclick="toggleModo()">👑 QUEEN SEMANAL</h2>
-            <div class="modo-label" id="modo-label">click para cambiar</div>
+            <div class="header-box" onclick="toggleModo()">
+                <div class="header-titulo" id="titulo-ranking">RANKING SEMANAL</div>
+                <div class="modo-label" id="modo-label">CLICK PARA CAMBIAR</div>
+            </div>
         </div>
         <script src="/socket.io/socket.io.js"></script>
         <script>
@@ -144,7 +167,7 @@
     let COLORES = {};
     let APODOS = {};
 
-    const TITULOS = { semanal: '👑 QUEEN SEMANAL', mensual: '📅 QUEEN MENSUAL', diario: '🌅 QUEEN DEL DÍA' };
+    const TITULOS = { semanal: 'RANKING SEMANAL', mensual: 'RANKING MENSUAL', diario: 'RANKING DEL DÍA' };
     const CICLO = { semanal: 'mensual', mensual: 'diario', diario: 'semanal' };
 
     function toggleModo() {
@@ -167,11 +190,23 @@
             const row = document.createElement('div');
             row.className = 'row';
             row.id = 'row-' + q;
-            row.style.borderLeftColor = COLORES[q] || '#fff';
+            row.style.borderLeftColor = COLORES[q] || '#00f2fe';
             const nombre = (APODOS[q] || q).toUpperCase();
             row.innerHTML = `<span class="name">${nombre}</span><span class="puntos" id="pts-${q}">0</span>`;
             container.appendChild(row);
         });
+    }
+
+    function hexToRgba(hex, alpha = 0.4) {
+        if (!hex || hex === '#fff') return `rgba(10, 77, 37, ${alpha})`;
+        let c = hex.replace('#', '');
+        if (c.length === 3) c = c.split('').map(x => x + x).join('');
+        const num = parseInt(c, 16);
+        if (isNaN(num)) return `rgba(10, 77, 37, ${alpha})`;
+        const r = (num >> 16) & 255;
+        const g = (num >> 8) & 255;
+        const b = num & 255;
+        return `rgba(${r}, ${g}, ${b}, ${alpha})`;
     }
 
     function reordenarTabla() {
@@ -185,21 +220,30 @@
         filas.forEach((fila, index) => {
             const rowEl = document.getElementById('row-' + fila.name);
             const ptsEl = document.getElementById('pts-' + fila.name);
-            const nameEl = rowEl.querySelector('.name');
+            const nameEl = rowEl ? rowEl.querySelector('.name') : null;
             if (!rowEl) return;
 
             ptsEl.innerText = fila.pts;
             rowEl.style.order = index;
 
             const nombreDisplay = (APODOS[fila.name] || fila.name).toUpperCase();
+            const colorBase = COLORES[fila.name] || '#00f2fe';
+
             if (index === 0 && fila.pts > 0) {
-                nameEl.innerText = "👑 " + nombreDisplay;
-                nameEl.style.color = "#FFD700";
-                rowEl.style.boxShadow = "0 0 12px rgba(255, 215, 0, 0.5)";
+                nameEl.innerHTML = '<span style="font-size:1.4rem;">👑</span> ' + nombreDisplay;
+                nameEl.style.color = "#ffee00";
+                rowEl.style.background = "linear-gradient(135deg, rgba(255, 215, 0, 0.45) 0%, rgba(15, 12, 4, 0.95) 100%)";
+                rowEl.style.borderColor = "#ffee00";
+                rowEl.style.borderLeftColor = "#ffee00";
+                rowEl.style.boxShadow = "0 0 22px rgba(255, 238, 0, 0.8), inset 0 0 14px rgba(255, 215, 0, 0.35)";
             } else {
                 nameEl.innerText = nombreDisplay;
                 nameEl.style.color = "white";
-                rowEl.style.boxShadow = "none";
+                const bgTint = hexToRgba(colorBase, 0.35);
+                rowEl.style.background = `linear-gradient(135deg, ${bgTint} 0%, rgba(6, 14, 9, 0.94) 100%)`;
+                rowEl.style.borderColor = hexToRgba(colorBase, 0.55);
+                rowEl.style.borderLeftColor = colorBase;
+                rowEl.style.boxShadow = `0 4px 14px rgba(0, 0, 0, 0.6), inset 0 0 12px ${hexToRgba(colorBase, 0.25)}`;
             }
         });
     }
