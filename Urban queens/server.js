@@ -861,6 +861,7 @@ function procesarPuntosEnLote(username) {
     }
     
     io.to(username).emit('rankingActualizado');
+    io.to(username).emit('actualizarCopa', session.db.getCopa());
     
     if (session.estadoBatalla === 'activa') {
         let actualizados = false;

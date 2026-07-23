@@ -294,6 +294,15 @@
 
         
         let lastCopaData = null;
+        function cargarCopaCompleta() {
+            fetch('/api/copa').then(res => res.json()).then(data => {
+                if(data.copa) {
+                    lastCopaData = data.copa;
+                    procesarDatosCopa(data.copa);
+                }
+            });
+        }
+
         fetch('/api/futbol/config').then(r=>r.json()).then(conf => {
             futbolConfig = conf;
             fetch('/api/copa').then(res => res.json()).then(data => {
@@ -316,6 +325,10 @@
         // Actualización en vivo (recibe de server.js y el botón "Reiniciar Copa")
         socket.on('actualizarCopa', (copaData) => {
             procesarDatosCopa(copaData);
+        });
+
+        socket.on('rankingActualizado', () => {
+            cargarCopaCompleta();
         });
 
         // ── BRAND MANAGER LOGIC ──
