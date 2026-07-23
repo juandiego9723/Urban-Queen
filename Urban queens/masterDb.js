@@ -31,6 +31,14 @@ async function initMasterDB(sqlInstance) {
         expires_at INTEGER NOT NULL
     )`);
     
+    if (!obtenerUsuario('admin')) {
+        try {
+            const hashed = hashPassword('admin');
+            masterDb.run('INSERT INTO users (username, password, name) VALUES (?, ?, ?)', ['admin', hashed, 'Administrador']);
+            console.log('👑 Usuario administrador inicial creado automáticamente: admin (Clave: admin)');
+        } catch(e) {}
+    }
+    
     guardarMaster();
 }
 
