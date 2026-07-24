@@ -739,9 +739,10 @@ function procesarRegaloTikTok(username, data) {
         }
     }
     
-    // Si no tiene un destinatario explícito por uniqueId, y NO hay batalla en curso, aplicar redirecciones automáticas por dinámicas individuales:
+    // Si no tiene un destinatario explícito por uniqueId, y NO hay batalla en curso ni Dinámica Personalizada activa, aplicar redirecciones automáticas por dinámicas individuales:
     const hayBatallaActiva = session.estadoBatalla !== 'inactiva';
-    if (!queenActivadora && !hayBatallaActiva) {
+    const hayDinamicaPersonalizadaActiva = !!session.dinamicaActiva;
+    if (!queenActivadora && !hayBatallaActiva && !hayDinamicaPersonalizadaActiva) {
         // SI EL TIMER DE BAILE ESTÁ ACTIVO: Forzar que cualquier regalo vaya a la bailarina actual
         if (session.timerBaile.activo && session.timerBaile.estado === 'bailando' && session.timerBaile.chicaActual) {
             queenActivadora = session.timerBaile.chicaActual;
