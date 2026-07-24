@@ -3153,6 +3153,7 @@
                     const tc = isLightColor(col) ? '#111' : '#fff';
                     c.innerHTML += `<button class="btn btn-sm" style="background:${col};color:${tc}" onclick="hacerFetch('/timer/skip?c=${q}')">⏭ ${q}</button>`;
                 });
+            }
             function iniciarTimer() {
                 const t = document.getElementById('tiempoBaseTimer').value || 30;
                 const s = document.getElementById('timerSegundosPorMoneda').value || 3;
