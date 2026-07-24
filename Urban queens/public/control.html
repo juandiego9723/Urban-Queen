@@ -1312,14 +1312,11 @@
                             👑 <span class="card-title-accent">Conociendo a mi Queen</span>
                         </div>
                         <div class="col">
-                            <div class="row-3">
-                                <button class="btn btn-ghost" onclick="hacerFetch('/conociendo/start?meta=1000')">▶ Meta
-                                    1000</button>
-                                <button class="btn btn-ghost" onclick="hacerFetch('/conociendo/start?meta=2000')">▶ Meta
-                                    2000</button>
-                                <button class="btn btn-ghost" onclick="hacerFetch('/conociendo/start?meta=5000')">▶ Meta
-                                    5000</button>
+                            <div class="row" style="gap:10px; margin-bottom: 12px; align-items: center;">
+                                <span class="label" style="flex:1">Meta (Diamantes):</span>
+                                <input type="number" id="metaConociendoInput" value="2000" class="input input-num" style="width:110px;">
                             </div>
+                            <button class="btn btn-warning btn-full" style="margin-bottom:8px;" onclick="iniciarConociendo()">▶ Iniciar Conociendo</button>
                             <button class="btn btn-danger btn-full" onclick="hacerFetch('/conociendo/stop')">⏹
                                 Cancelar</button>
                             <div id="btns-conociendo" class="row" style="justify-content:center"></div>
@@ -1333,9 +1330,14 @@
                             💃 <span class="card-title-accent">Timer de Baile</span>
                         </div>
                         <div class="col">
-                            <div class="row">
+                            <div class="row" style="margin-bottom: 10px;">
                                 <span class="label">Tiempo base (seg):</span>
                                 <input type="number" id="tiempoBaseTimer" value="30" min="10" max="300"
+                                    class="input input-num">
+                            </div>
+                            <div class="row" style="margin-bottom: 14px;">
+                                <span class="label">Segundos por moneda:</span>
+                                <input type="number" id="timerSegundosPorMoneda" value="3" min="1" max="60"
                                     class="input input-num">
                             </div>
                             <div class="row-2">
@@ -3151,13 +3153,17 @@
                     const tc = isLightColor(col) ? '#111' : '#fff';
                     c.innerHTML += `<button class="btn btn-sm" style="background:${col};color:${tc}" onclick="hacerFetch('/timer/skip?c=${q}')">⏭ ${q}</button>`;
                 });
-            }
-
             function iniciarTimer() {
-                hacerFetch('/timer/start?t=' + (document.getElementById('tiempoBaseTimer').value || 30));
+                const t = document.getElementById('tiempoBaseTimer').value || 30;
+                const s = document.getElementById('timerSegundosPorMoneda').value || 3;
+                hacerFetch(`/timer/start?t=${t}&s=${s}`);
             }
 
             // ── Conociendo ──
+            function iniciarConociendo() {
+                const meta = document.getElementById('metaConociendoInput').value || 2000;
+                hacerFetch(`/conociendo/start?meta=${meta}`);
+            }
             function renderBotonesConociendo() {
                 const c = document.getElementById('btns-conociendo');
                 c.innerHTML = '';

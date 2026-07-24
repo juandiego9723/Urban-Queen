@@ -186,6 +186,11 @@
             contenedor.classList.add('timer-activo');
             aplicarColoresChica(data.chica);
             displayReloj.innerText = formatearTiempo(data.tiempo);
+            const elMonedas = document.querySelector('#caja-reloj .texto-monedas');
+            if (elMonedas) {
+                const segs = data.segundosPorMoneda || 3;
+                elMonedas.textContent = `+${segs} SEGUNDOS POR MONEDA (O PUNTO)`;
+            }
         });
 
         socket.on('timerTick', (tiempo) => { displayReloj.innerText = formatearTiempo(tiempo); });

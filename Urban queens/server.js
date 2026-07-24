@@ -128,7 +128,7 @@ function getUserSession(username) {
             puntosBatalla: {},
             participantesActuales: [...initialQueens],
             timerBatalla: null,
-            timerBaile: { activo: false, tiempo: 0, chicaActual: '', orden: [...initialQueens], estado: 'inactivo', tiempoTransicion: 0 },
+            timerBaile: { activo: false, tiempo: 0, chicaActual: '', orden: [...initialQueens], estado: 'inactivo', tiempoTransicion: 0, segundosPorMoneda: 3 },
             intervaloTimerBaile: null,
             tiempoAcumulado: {},
             conociendo: { activo: false, tiempo: 0, chicaActual: '', orden: [...initialQueens], estado: 'inactivo', tiempoTransicion: 0, meta: 2000, puntos: 0 },
@@ -731,6 +731,15 @@ function procesarRegaloTikTok(username, data) {
     let queenActivadora = mapa[giftName] || null;
     let queenSalto = timerMapa[giftName] || null;
     
+    // SI EL TIMER DE BAILE ESTÁ ACTIVO: Forzar que cualquier regalo vaya a la bailarina actual
+    if (session.timerBaile.activo && session.timerBaile.estado === 'bailando' && session.timerBaile.chicaActual) {
+        queenActivadora = session.timerBaile.chicaActual;
+    }
+    // SI LA DINÁMICA CONOCIENDO ESTÁ ACTIVA: Forzar que cualquier regalo vaya a la bailarina actual
+    else if (session.conociendo.activo && session.conociendo.estado === 'activo' && session.conociendo.chicaActual) {
+        queenActivadora = session.conociendo.chicaActual;
+    }
+    
     if (data.toUser && data.toUser.uniqueId) {
         const dest = resolverNombre(session, data.toUser.uniqueId);
         if (dest) {
@@ -885,6 +894,33 @@ function procesarPuntosEnLote(username) {
         }
     }
     
+    // Si el timer de baile está activo y en estado de baile, sumar segundos configurados por cada punto recibido por la chica actual
+    if (session.timerBaile.activo && session.timerBaile.estado === 'bailando') {
+        const chicaActual = session.timerBaile.chicaActual;
+        const segs = session.timerBaile.segundosPorMoneda || 3;
+        temp.forEach(item => {
+            if (item.nombre === chicaActual && item.puntos > 0) {
+                session.timerBaile.tiempo += (item.puntos * segs);
+            }
+        });
+        io.to(username).emit('timerTick', session.timerBaile.tiempo);
+    }
+
+    // Si la dinámica conociendo está activa y en estado activo, sumar los puntos recibidos
+    if (session.conociendo.activo && session.conociendo.estado === 'activo') {
+        const chicaActual = session.conociendo.chicaActual;
+        let nuevosPuntos = 0;
+        temp.forEach(item => {
+            if (item.nombre === chicaActual && item.puntos > 0) {
+                nuevosPuntos += item.puntos;
+            }
+        });
+        if (nuevosPuntos > 0) {
+            session.conociendo.puntos += nuevosPuntos;
+            io.to(username).emit('conociendoPuntos', { puntos: session.conociendo.puntos, meta: session.conociendo.meta });
+        }
+    }
+
     if (saltaTurnoPara) {
         if (session.timerBaile.activo) {
             saltarSiguienteChica(username, saltaTurnoPara);
@@ -1301,9 +1337,12 @@ app.all('/timer/start', requireSession, (req, res) => {
     const s = req.userSession;
     const user = req.username;
     const tiempoBase = parseInt(req.query.t) || 30;
+    const segundosPorMoneda = parseInt(req.query.s) || 3;
+    
     s.timerBaile.orden = [...s.QUEENS];
     s.timerBaile.activo = true; 
     s.timerBaile.tiempo = tiempoBase; 
+    s.timerBaile.segundosPorMoneda = segundosPorMoneda;
     s.timerBaile.chicaActual = s.QUEENS[0] || 'Ray'; 
     s.timerBaile.estado = 'bailando'; 
     s.tiempoAcumulado = {}; 
@@ -1312,7 +1351,11 @@ app.all('/timer/start', requireSession, (req, res) => {
     let snipeBaile = 3; 
     clearInterval(s.intervaloTimerBaile); 
     
-    io.to(user).emit('timerInicio', { chica: s.timerBaile.chicaActual, tiempo: s.timerBaile.tiempo }); 
+    io.to(user).emit('timerInicio', { 
+        chica: s.timerBaile.chicaActual, 
+        tiempo: s.timerBaile.tiempo,
+        segundosPorMoneda: s.timerBaile.segundosPorMoneda
+    }); 
     
     s.intervaloTimerBaile = setInterval(() => { 
         if (s.timerBaile.estado === 'transicion') { 
