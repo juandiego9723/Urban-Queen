@@ -731,19 +731,24 @@ function procesarRegaloTikTok(username, data) {
     let queenActivadora = mapa[giftName] || null;
     let queenSalto = timerMapa[giftName] || null;
     
-    // SI EL TIMER DE BAILE ESTÁ ACTIVO: Forzar que cualquier regalo vaya a la bailarina actual
-    if (session.timerBaile.activo && session.timerBaile.estado === 'bailando' && session.timerBaile.chicaActual) {
-        queenActivadora = session.timerBaile.chicaActual;
-    }
-    // SI LA DINÁMICA CONOCIENDO ESTÁ ACTIVA: Forzar que cualquier regalo vaya a la bailarina actual
-    else if (session.conociendo.activo && session.conociendo.estado === 'activo' && session.conociendo.chicaActual) {
-        queenActivadora = session.conociendo.chicaActual;
-    }
-    
+    // Prioridad 1: Destinatario directo por uniqueId
     if (data.toUser && data.toUser.uniqueId) {
         const dest = resolverNombre(session, data.toUser.uniqueId);
         if (dest) {
             queenActivadora = dest;
+        }
+    }
+    
+    // Si no tiene un destinatario explícito por uniqueId, y NO hay batalla en curso, aplicar redirecciones automáticas por dinámicas individuales:
+    const hayBatallaActiva = session.estadoBatalla !== 'inactiva';
+    if (!queenActivadora && !hayBatallaActiva) {
+        // SI EL TIMER DE BAILE ESTÁ ACTIVO: Forzar que cualquier regalo vaya a la bailarina actual
+        if (session.timerBaile.activo && session.timerBaile.estado === 'bailando' && session.timerBaile.chicaActual) {
+            queenActivadora = session.timerBaile.chicaActual;
+        }
+        // SI LA DINÁMICA CONOCIENDO ESTÁ ACTIVA: Forzar que cualquier regalo vaya a la bailarina actual
+        else if (session.conociendo.activo && session.conociendo.estado === 'activo' && session.conociendo.chicaActual) {
+            queenActivadora = session.conociendo.chicaActual;
         }
     }
     
