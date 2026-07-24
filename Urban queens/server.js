@@ -1,5 +1,5 @@
 // ═══════════════════════════════════════════════════════════════════
-//  🏆 Urban Queens – server.js (Orchestrator)
+//  🏆 TikDance – server.js (Orchestrator)
 //  Servidor principal: Express + Socket.IO + Módulos por Dinámica
 // ═══════════════════════════════════════════════════════════════════
 const express = require('express');
@@ -278,7 +278,7 @@ process.on('unhandledRejection', (reason) => { console.error('🚨 ESCUDO ACTIVA
 
 server.on('error', (err) => {
     if (err.code === 'EADDRINUSE') {
-        console.error('⚠️ ATENCIÓN: El servidor de Urban Queens ya está ejecutándose (Puerto 3000 ocupado).');
+        console.error('⚠️ ATENCIÓN: TikDance ya está ejecutándose en segundo plano (Puerto 3000 ocupado).');
         process.exit(0);
     } else {
         console.error('❌ Error en el servidor HTTP:', err);
@@ -294,7 +294,7 @@ process.on('SIGTERM', () => { cleanupAllSessions(activeSessions); process.exit(0
     try {
         const SQLInstance = await initSQL();
         await MasterDB.initMasterDB(SQLInstance);
-        server.listen(3000, '0.0.0.0', () => console.log('🚀 Urban Queens v3.0 Modular – Puerto 3000'));
+        server.listen(3000, '0.0.0.0', () => console.log('🚀 TikDance v3.0 Modular – Puerto 3000'));
     } catch (err) {
         console.error('❌ Error iniciando el servidor:', err);
         process.exit(1);

@@ -49,7 +49,7 @@ function verificarFin() {
         console.log(`✔️ Exitosos: ${completados}`);
         console.log(`❌ Errores: ${errores}`);
         if (errores === 0) {
-            console.log(`\n🔥 ¡El servidor Urban Queens resistió la prueba de fuego perfectamente sin colapsar!`);
+            console.log(`\n🔥 ¡TikDance resistió la prueba de fuego perfectamente sin colapsar!`);
         }
     }
 }
