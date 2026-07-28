@@ -41,110 +41,193 @@
             }
         })();
     </script>
-
         <meta charset="UTF-8">
         <title>Ranking</title>
-        <link href="https://fonts.googleapis.com/css2?family=Bangers&display=swap"
+        <link href="https://fonts.googleapis.com/css2?family=Montserrat:ital,wght@0,400;0,700;0,800;0,900;1,400;1,700;1,800;1,900&family=Inter:ital,wght@0,400;0,600;0,700;0,800;1,400;1,600;1,700&display=swap"
               rel="stylesheet">
         <style>
-        :root {
-            --fucsia: #FF1493;
-            --cyan: #00f2fe;
-            --dorado: #FFD700;
-            --morado: #b026ff;
-            --bg-capsule: linear-gradient(180deg, #094721 0%, #052b14 100%);
-            --bg-card: linear-gradient(180deg, #0a4d25 0%, #063318 100%);
-        }
-
         body { 
             background-color: #00FF00; 
-            font-family: 'Bangers', cursive; 
+            font-family: 'Inter', sans-serif; 
             color: white; 
             margin: 0; 
-            padding: 10px;
+            padding: 15px;
+            display: flex;
+            justify-content: flex-start;
+            align-items: flex-start;
         }
         
         .container { 
-            width: 260px; 
+            width: 320px; 
+            background: rgba(22, 38, 26, 0.65);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1.5px solid rgba(255, 255, 255, 0.08);
+            border-radius: 24px;
+            padding: 20px;
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.45);
             display: flex;
             flex-direction: column;
-            gap: 8px; 
+            gap: 12px;
         }
         
         .header-box {
-            background: var(--bg-capsule);
-            padding: 10px 14px;
-            border-radius: 20px;
-            border: 2.5px solid #00f2fe;
-            box-shadow: 0 0 16px rgba(0, 242, 254, 0.6), inset 0 0 10px rgba(0, 242, 254, 0.3);
             text-align: center;
             cursor: pointer;
             user-select: none;
-            order: -1;
+            padding-bottom: 8px;
+            border-bottom: 1.5px solid rgba(255, 255, 255, 0.08);
             margin-bottom: 4px;
+            order: -1;
         }
 
         .header-titulo { 
-            font-size: 1.85rem; 
+            font-family: 'Montserrat', sans-serif;
+            font-size: 1.35rem; 
             font-style: italic;
-            font-weight: 900;
+            font-weight: 850;
             margin: 0; 
             color: #ffee00; 
-            text-shadow: 2.5px 2.5px 0px #000, 0 0 10px rgba(255, 238, 0, 0.7); 
             letter-spacing: 1.5px;
             text-transform: uppercase;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.5);
         }
 
         .modo-label {
-            font-size: 0.75rem;
-            font-style: italic;
-            font-weight: 800;
-            color: #00e676;
+            font-family: 'Inter', sans-serif;
+            font-size: 0.65rem;
+            font-weight: 700;
+            color: rgba(255, 255, 255, 0.4);
             text-align: center;
-            margin-top: 3px;
-            letter-spacing: 2.5px;
+            margin-top: 4px;
+            letter-spacing: 2px;
             text-transform: uppercase;
-            text-shadow: 1px 1px 0px #000;
         }
         
         .row { 
             display: flex; 
             justify-content: space-between; 
             align-items: center;
-            background: var(--bg-card); 
-            padding: 10px 16px; 
-            border-radius: 18px;
-            border: 1px solid rgba(0, 242, 254, 0.4);
-            border-left: 6px solid;
-            box-shadow: 0 4px 14px rgba(0, 0, 0, 0.4);
-            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            padding: 8px 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+            transition: all 0.3s ease;
+        }
+        .row:last-child {
+            border-bottom: none;
+        }
+        
+        .row.is-out {
+            background: rgba(0, 0, 0, 0.25);
+            border-radius: 14px;
+            padding: 8px 12px;
+            margin-top: 4px;
+            border-bottom: none;
+        }
+        
+        .row-left {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            flex-grow: 1;
+        }
+        
+        .rank-num {
+            font-family: 'Montserrat', sans-serif;
+            font-size: 1.55rem;
+            font-weight: 800;
+            font-style: italic;
+            width: 28px;
+            text-align: center;
+            flex-shrink: 0;
+        }
+        .rank-1 { color: #ffee00; text-shadow: 0 0 8px rgba(255, 238, 0, 0.3); }
+        .rank-2 { color: #00f2fe; text-shadow: 0 0 8px rgba(0, 242, 254, 0.3); }
+        .rank-3 { color: #ff8c00; text-shadow: 0 0 8px rgba(255, 140, 0, 0.3); }
+        .rank-other { color: #ffffff; }
+        .rank-out { color: rgba(255, 255, 255, 0.3); text-decoration: line-through; }
+        
+        .out-badge {
+            border: 1.5px solid #ff3b30;
+            color: #ff3b30;
+            background: rgba(255, 59, 48, 0.15);
+            font-size: 0.65rem;
+            font-family: 'Inter', sans-serif;
+            font-weight: 900;
+            padding: 1px 5px;
+            border-radius: 6px;
+            margin-left: 6px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            display: inline-block;
+            vertical-align: middle;
+            flex-shrink: 0;
+        }
+        
+        .avatar-wrapper {
+            position: relative;
+            width: 40px;
+            height: 40px;
+            margin-left: 10px;
+            margin-right: 12px;
+            flex-shrink: 0;
+        }
+        
+        .queen-avatar {
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            object-fit: cover;
+            border: 1.5px solid rgba(255, 255, 255, 0.6);
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+            display: none;
+        }
+        
+        .queen-avatar-fallback {
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: 'Montserrat', sans-serif;
+            font-size: 1.15rem;
+            font-weight: 800;
+            color: white;
+            text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.4);
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
         }
         
         .name { 
-            font-size: 1.65rem; 
-            font-style: italic;
-            letter-spacing: 1px; 
+            font-family: 'Inter', sans-serif;
+            font-size: 1.1rem; 
+            font-weight: 700;
             color: #ffffff;
-            text-shadow: 2px 2px 0px #000; 
+            letter-spacing: 0.5px; 
             transition: color 0.3s;
-            display: flex;
-            align-items: center;
-            gap: 6px;
         }
+        .name-out {
+            color: rgba(255, 255, 255, 0.3);
+        }
+        
         .puntos { 
-            font-size: 2rem; 
-            font-style: italic;
-            font-weight: 900;
-            color: #00f2fe; 
-            text-shadow: 2px 2px 0px #000, 0 0 10px #00f2fe; 
+            font-family: 'Inter', sans-serif;
+            font-size: 1.15rem; 
+            font-weight: 700;
+            color: #ffffff;
+            text-align: right;
+            min-width: 60px;
+            transition: all 0.3s;
+        }
+        .puntos-out {
+            color: rgba(255, 255, 255, 0.3);
         }
 
         @keyframes pulse {
             0% { transform: scale(1); }
-            50% { transform: scale(1.15); color: #ff0050; text-shadow: 0 0 15px #ff0050; }
+            50% { transform: scale(1.12); color: #ffee00; text-shadow: 0 0 10px rgba(255, 238, 0, 0.5); }
             100% { transform: scale(1); }
         }
-        .update-anim { animation: pulse 0.4s ease-out; }
+        .update-anim { display: inline-block; animation: pulse 0.4s ease-out; }
         </style>
     </head>
     <body>
@@ -159,154 +242,230 @@
         const urlParams = new URLSearchParams(window.location.search);
         const userParam = urlParams.get('user') || '';
         const socket = io({ query: userParam ? { user: userParam } : {} });
-    let modo = 'semanal'; // 'semanal', 'mensual' o 'diario'
-    let dataSemanal = {};
-    let dataMensual = {};
-    let dataDiario = {};
-    let QUEENS = [];
-    let COLORES = {};
-    let APODOS = {};
+        let modo = 'semanal'; // 'semanal', 'mensual' o 'diario'
+        let dataSemanal = {};
+        let dataMensual = {};
+        let dataDiario = {};
+        let QUEENS = [];
+        let COLORES = {};
+        let APODOS = {};
+        let REGALOS_IMGS_MAP = {};
+        let AVATAR_IMGS_MAP = {};
 
-    const TITULOS = { semanal: 'RANKING SEMANAL', mensual: 'RANKING MENSUAL', diario: 'RANKING DEL DÍA' };
-    const CICLO = { semanal: 'mensual', mensual: 'diario', diario: 'semanal' };
+        const TITULOS = { semanal: 'RANKING SEMANAL', mensual: 'RANKING MENSUAL', diario: 'RANKING DEL DÍA' };
+        const CICLO = { semanal: 'mensual', mensual: 'diario', diario: 'semanal' };
 
-    function toggleModo() {
-        modo = CICLO[modo];
-        document.getElementById('titulo-ranking').innerText = TITULOS[modo];
-        reordenarTabla();
-    }
-
-    function getDatos() {
-        if (modo === 'mensual') return dataMensual;
-        if (modo === 'diario') return dataDiario;
-        return dataSemanal;
-    }
-
-    function crearFilas() {
-        const container = document.getElementById('ranking-container');
-        container.querySelectorAll('.row').forEach(r => r.remove());
-
-        QUEENS.forEach(q => {
-            const row = document.createElement('div');
-            row.className = 'row';
-            row.id = 'row-' + q;
-            row.style.borderLeftColor = COLORES[q] || '#00f2fe';
-            const nombre = (APODOS[q] || q).toUpperCase();
-            row.innerHTML = `<span class="name">${nombre}</span><span class="puntos" id="pts-${q}">0</span>`;
-            container.appendChild(row);
-        });
-    }
-
-    function hexToRgba(hex, alpha = 0.4) {
-        if (!hex || hex === '#fff') return `rgba(10, 77, 37, ${alpha})`;
-        let c = hex.replace('#', '');
-        if (c.length === 3) c = c.split('').map(x => x + x).join('');
-        const num = parseInt(c, 16);
-        if (isNaN(num)) return `rgba(10, 77, 37, ${alpha})`;
-        const r = (num >> 16) & 255;
-        const g = (num >> 8) & 255;
-        const b = num & 255;
-        return `rgba(${r}, ${g}, ${b}, ${alpha})`;
-    }
-
-    function reordenarTabla() {
-        const datos = getDatos();
-        const filas = QUEENS.map(q => ({
-            name: q,
-            pts: datos[q] || 0
-        }));
-        filas.sort((a, b) => b.pts - a.pts);
-
-        filas.forEach((fila, index) => {
-            const rowEl = document.getElementById('row-' + fila.name);
-            const ptsEl = document.getElementById('pts-' + fila.name);
-            const nameEl = rowEl ? rowEl.querySelector('.name') : null;
-            if (!rowEl) return;
-
-            ptsEl.innerText = fila.pts;
-            rowEl.style.order = index;
-
-            const nombreDisplay = (APODOS[fila.name] || fila.name).toUpperCase();
-            const colorBase = COLORES[fila.name] || '#00f2fe';
-
-            if (index === 0 && fila.pts > 0) {
-                nameEl.innerHTML = '<span style="font-size:1.4rem;">👑</span> ' + nombreDisplay;
-                nameEl.style.color = "#ffee00";
-                rowEl.style.background = "linear-gradient(135deg, rgba(255, 215, 0, 0.45) 0%, rgba(15, 12, 4, 0.95) 100%)";
-                rowEl.style.borderColor = "#ffee00";
-                rowEl.style.borderLeftColor = "#ffee00";
-                rowEl.style.boxShadow = "0 0 22px rgba(255, 238, 0, 0.8), inset 0 0 14px rgba(255, 215, 0, 0.35)";
-            } else {
-                nameEl.innerText = nombreDisplay;
-                nameEl.style.color = "white";
-                const bgTint = hexToRgba(colorBase, 0.35);
-                rowEl.style.background = `linear-gradient(135deg, ${bgTint} 0%, rgba(6, 14, 9, 0.94) 100%)`;
-                rowEl.style.borderColor = hexToRgba(colorBase, 0.55);
-                rowEl.style.borderLeftColor = colorBase;
-                rowEl.style.boxShadow = `0 4px 14px rgba(0, 0, 0, 0.6), inset 0 0 12px ${hexToRgba(colorBase, 0.25)}`;
-            }
-        });
-    }
-
-    // Carga inicial
-    async function init() {
-        try {
-            const [resQ, resR, resM, resD, resAll, resAp] = await Promise.all([
-                fetch('/api/queens'),
-                fetch('/api/ranking'),
-                fetch('/api/ranking-mensual'),
-                fetch('/api/ranking-diario'),
-                fetch('/api/queens/all'),
-                fetch('/api/apodos')
-            ]);
-            QUEENS = await resQ.json();
-            dataSemanal = await resR.json();
-            dataMensual = await resM.json();
-            dataDiario  = await resD.json();
-            const allQueens = await resAll.json();
-            allQueens.forEach(q => { COLORES[q.name] = q.color; });
-            APODOS = await resAp.json();
-            crearFilas();
+        function toggleModo() {
+            modo = CICLO[modo];
+            document.getElementById('titulo-ranking').innerText = TITULOS[modo];
             reordenarTabla();
-        } catch(e) {
-            console.log("Cargado sin datos previos");
         }
-    }
 
-    init();
+        function getDatos() {
+            if (modo === 'mensual') return dataMensual;
+            if (modo === 'diario') return dataDiario;
+            return dataSemanal;
+        }
 
-    socket.on('rankingActualizado', () => {
+        function crearFilas() {
+            const container = document.getElementById('ranking-container');
+            container.querySelectorAll('.row').forEach(r => r.remove());
+
+            QUEENS.forEach(q => {
+                const row = document.createElement('div');
+                row.className = 'row';
+                row.id = 'row-' + q;
+                
+                const nombreDisplay = APODOS[q] || q;
+                const colorBase = COLORES[q] || '#00f2fe';
+                
+                row.innerHTML = `
+                    <div class="row-left">
+                        <span class="rank-num"></span>
+                        <span class="out-badge" style="display: none;">OUT</span>
+                        <div class="avatar-wrapper">
+                            <img class="queen-avatar" src="" onload="this.style.display='block'; this.nextElementSibling.style.display='none';" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                            <div class="queen-avatar-fallback" style="background: linear-gradient(135deg, ${colorBase}88, ${colorBase}); border: 2px solid ${colorBase};">
+                                ${nombreDisplay.trim().charAt(0).toUpperCase()}
+                            </div>
+                        </div>
+                        <span class="name"></span>
+                    </div>
+                    <span class="puntos" id="pts-${q}">0</span>
+                `;
+                container.appendChild(row);
+            });
+        }
+
+        function reordenarTabla() {
+            const datos = getDatos();
+            const filas = QUEENS.map(q => ({
+                name: q,
+                pts: datos[q] || 0
+            }));
+            filas.sort((a, b) => b.pts - a.pts);
+
+            filas.forEach((fila, index) => {
+                const rowEl = document.getElementById('row-' + fila.name);
+                const ptsEl = document.getElementById('pts-' + fila.name);
+                if (!rowEl || !ptsEl) return;
+
+                const nameEl = rowEl.querySelector('.name');
+                const rankEl = rowEl.querySelector('.rank-num');
+                const outEl = rowEl.querySelector('.out-badge');
+                const imgEl = rowEl.querySelector('.queen-avatar');
+                const fallbackEl = rowEl.querySelector('.queen-avatar-fallback');
+
+                // 1. Order & Points
+                rowEl.style.order = index;
+                ptsEl.innerText = fila.pts.toLocaleString('es-ES');
+
+                // 2. OUT State Check
+                const isOut = fila.pts === 0;
+
+                const nombreDisplay = APODOS[fila.name] || fila.name;
+                const colorBase = COLORES[fila.name] || '#00f2fe';
+
+                // 3. Apply Classes & Badges
+                if (isOut) {
+                    rowEl.classList.add('is-out');
+                    rankEl.className = 'rank-num rank-out';
+                    rankEl.innerText = index + 1;
+                    outEl.style.display = 'inline-block';
+                    nameEl.className = 'name name-out';
+                    nameEl.style.color = ''; // let CSS handle it
+                    nameEl.innerText = nombreDisplay;
+                    ptsEl.className = 'puntos puntos-out';
+                } else {
+                    rowEl.classList.remove('is-out');
+                    outEl.style.display = 'none';
+                    ptsEl.className = 'puntos';
+
+                    let rankClass = 'rank-other';
+                    if (index === 0) rankClass = 'rank-1';
+                    else if (index === 1) rankClass = 'rank-2';
+                    else if (index === 2) rankClass = 'rank-3';
+
+                    rankEl.className = 'rank-num ' + rankClass;
+                    rankEl.innerText = index + 1;
+
+                    if (index === 0) {
+                        nameEl.innerHTML = '<span style="font-size:1.15rem; margin-right:4px;">👑</span>' + nombreDisplay;
+                        nameEl.className = 'name name-leader';
+                        nameEl.style.color = '#ffee00';
+                    } else {
+                        nameEl.innerText = nombreDisplay;
+                        nameEl.className = 'name';
+                        nameEl.style.color = '#ffffff';
+                    }
+                }
+
+                // 4. Update Avatar (prefers custom avatar_img, falls back to regalo_img, then to initials)
+                const customAvatar = AVATAR_IMGS_MAP[fila.name] || '';
+                const giftImg = REGALOS_IMGS_MAP[fila.name] || '';
+                const avatarSrc = customAvatar || (giftImg ? `/regalos/${encodeURIComponent(giftImg)}` : '');
+                
+                if (avatarSrc) {
+                    imgEl.src = avatarSrc;
+                    // HTML event handlers (onload/onerror) toggle display dynamically
+                } else {
+                    imgEl.removeAttribute('src');
+                    imgEl.style.display = 'none';
+                    fallbackEl.style.display = 'flex';
+                }
+            });
+        }
+
+        // Carga inicial
+        async function init() {
+            try {
+                const [resQ, resR, resM, resD, resAll, resAp] = await Promise.all([
+                    fetch('/api/queens'),
+                    fetch('/api/ranking'),
+                    fetch('/api/ranking-mensual'),
+                    fetch('/api/ranking-diario'),
+                    fetch('/api/queens/all'),
+                    fetch('/api/apodos')
+                ]);
+                QUEENS = await resQ.json();
+                dataSemanal = await resR.json();
+                dataMensual = await resM.json();
+                dataDiario  = await resD.json();
+                const allQueens = await resAll.json();
+                
+                COLORES = {};
+                REGALOS_IMGS_MAP = {};
+                AVATAR_IMGS_MAP = {};
+                allQueens.forEach(q => { 
+                    COLORES[q.name] = q.color; 
+                    REGALOS_IMGS_MAP[q.name] = q.regalo_img;
+                    AVATAR_IMGS_MAP[q.name] = q.avatar_img || '';
+                });
+                
+                APODOS = await resAp.json();
+                crearFilas();
+                reordenarTabla();
+            } catch(e) {
+                console.log("Cargado sin datos previos", e);
+            }
+        }
+
         init();
-    });
 
-    socket.on('actualizarRanking', (data) => {
-        dataSemanal[data.nombre] = data.puntosSemanal;
-        dataMensual[data.nombre] = data.puntosMensual;
-        if (data.puntosDiario !== undefined) dataDiario[data.nombre] = data.puntosDiario;
+        socket.on('rankingActualizado', () => {
+            init();
+        });
 
-        const el = document.getElementById('pts-' + data.nombre);
-        if (el) {
-            el.classList.remove('update-anim');
-            void el.offsetWidth;
-            el.classList.add('update-anim');
+        socket.on('actualizarRanking', (data) => {
+            dataSemanal[data.nombre] = data.puntosSemanal;
+            dataMensual[data.nombre] = data.puntosMensual;
+            if (data.puntosDiario !== undefined) dataDiario[data.nombre] = data.puntosDiario;
+
+            const el = document.getElementById('pts-' + data.nombre);
+            if (el) {
+                el.classList.remove('update-anim');
+                void el.offsetWidth;
+                el.classList.add('update-anim');
+            }
+            reordenarTabla();
+        });
+
+        socket.on('resetRanking', () => {
+            QUEENS.forEach(q => dataSemanal[q] = 0);
+            reordenarTabla();
+        });
+
+        socket.on('resetMensual', () => {
+            QUEENS.forEach(q => dataMensual[q] = 0);
+            reordenarTabla();
+        });
+
+        socket.on('resetDiario', () => {
+            QUEENS.forEach(q => dataDiario[q] = 0);
+            reordenarTabla();
+        });
+
+        // Branding / Marca
+        function loadGoogleFont(fontName) {
+            const fontId = 'dynamic-google-font';
+            let link = document.getElementById(fontId);
+            if (!link) {
+                link = document.createElement('link');
+                link.id = fontId;
+                link.rel = 'stylesheet';
+                document.head.appendChild(link);
+            }
+            link.href = `https://fonts.googleapis.com/css2?family=${encodeURIComponent(fontName)}:wght@400;700;800;900&display=swap`;
+            document.body.style.fontFamily = `'${fontName}', sans-serif`;
         }
-        reordenarTabla();
-    });
 
-    socket.on('resetRanking', () => {
-        QUEENS.forEach(q => dataSemanal[q] = 0);
-        reordenarTabla();
-    });
-
-    socket.on('resetMensual', () => {
-        QUEENS.forEach(q => dataMensual[q] = 0);
-        reordenarTabla();
-    });
-
-    socket.on('resetDiario', () => {
-        QUEENS.forEach(q => dataDiario[q] = 0);
-        reordenarTabla();
-    });
+        function aplicarMarca(config) {
+            if (!config) return;
+            if (config.fontFamily) {
+                loadGoogleFont(config.fontFamily);
+            }
+        }
+        socket.on('marcaCambiado', aplicarMarca);
         </script>
     </body>
 </html>

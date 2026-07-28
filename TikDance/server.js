@@ -83,14 +83,17 @@ const io = new Server(server);
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ limit: '50mb', extended: true }));
 
-// ── Parche: pasar io y procesarPuntos a sessionStore ───────────
-// getUserSession necesita conocer la fn de batching — la inyectamos en tiempo de arranque
 const _getUserSessionOriginal = getUserSession;
 function getUserSessionWithBatch(username) {
-    if (!activeSessions[username]) {
-        _getUserSessionOriginal(username, io, (u) => procesarPuntosEnLote(u));
+    let session = activeSessions[username];
+    if (!session) {
+        session = _getUserSessionOriginal(username, io, (u) => procesarPuntosEnLote(u));
+    } else if (!session.batchInterval && typeof procesarPuntosEnLote === 'function') {
+        session.batchInterval = setInterval(() => {
+            procesarPuntosEnLote(username);
+        }, 300);
     }
-    return activeSessions[username];
+    return session;
 }
 
 // ── Inicializar módulos de dinámicas (obtener handlers) ─────────

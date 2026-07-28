@@ -1456,6 +1456,12 @@
                                             placeholder="Apodo (ej. @l3_ashley)...">
                                     </div>
                                 </div>
+                                <div style="display: grid; grid-template-columns: 1fr; gap: 12px;">
+                                    <div class="col" style="gap: 4px;">
+                                        <label class="label" style="font-size: 10px;">Foto de Perfil (Opcional - Reemplaza círculo de iniciales)</label>
+                                        <input type="file" id="fotoBailarina" accept="image/*" class="input" style="font-size: 12px; height: auto; padding: 4px 8px;">
+                                    </div>
+                                </div>
                                 <div
                                     style="display: grid; grid-template-columns: 1fr 1fr 100px; gap: 12px; align-items: flex-end;">
                                     <div class="col" style="gap: 4px;">
@@ -3212,6 +3218,10 @@
                         <input id="edit-rp" type="number" class="input" value="${q.regalo_pts || 0}" style="width: 52px; font-size: 12px; padding: 4px; height:28px" min="0">
                     </div>
                 </div>
+                <div class="col" style="gap: 4px;">
+                    <label style="font-size: 9px; color: var(--muted); margin:0;">Foto de Perfil</label>
+                    <input type="file" id="edit-foto" accept="image/*" class="input" style="font-size: 11px; padding: 2px 4px; height: auto;">
+                </div>
                 <div class="row" style="align-items: center; justify-content: space-between; margin-top: 4px; gap:8px">
                     <div style="display: flex; align-items: center; gap: 6px;">
                         <input type="color" id="edit-c" value="${q.color}" style="width: 28px; height: 28px; border: none; cursor: pointer; border-radius: 6px; padding: 1px; background: transparent">
@@ -3339,17 +3349,53 @@
                 cargarBailarinas();
             }
 
+            function fileToBase64(file) {
+                return new Promise((resolve, reject) => {
+                    const reader = new FileReader();
+                    reader.onload = () => resolve(reader.result);
+                    reader.onerror = error => reject(error);
+                    reader.readAsDataURL(file);
+                });
+            }
+
             async function guardarEdicionBailarina(nombreViejo) {
                 const nuevo = document.getElementById('edit-n').value.trim();
                 const color = document.getElementById('edit-c').value;
                 const apodo = document.getElementById('edit-a').value.trim();
                 const regaloImg = document.getElementById('edit-ri').value.trim();
                 const regaloPts = parseInt(document.getElementById('edit-rp').value) || 0;
+                const fotoInput = document.getElementById('edit-foto');
+
                 if (!nuevo) return alert('El nombre no puede estar vacío');
+
+                let avatarBase64 = null;
+                if (fotoInput && fotoInput.files.length > 0) {
+                    try {
+                        avatarBase64 = await fileToBase64(fotoInput.files[0]);
+                    } catch(e) {
+                        console.error('Error leyendo archivo de foto:', e);
+                    }
+                }
+
                 if (nuevo !== nombreViejo) {
                     await fetch('/api/queens/renombrar?nombre=' + encodeURIComponent(nombreViejo) + '&nuevo=' + encodeURIComponent(nuevo));
                 }
-                await fetch('/api/queens/editar?nombre=' + encodeURIComponent(nuevo) + '&color=' + encodeURIComponent(color) + '&apodo=' + encodeURIComponent(apodo) + '&regalo_img=' + encodeURIComponent(regaloImg) + '&regalo_pts=' + regaloPts);
+
+                const payload = {
+                    nombre: nuevo,
+                    color,
+                    apodo,
+                    regalo_img: regaloImg,
+                    regalo_pts: regaloPts,
+                    avatar_img: avatarBase64
+                };
+
+                await fetch('/api/queens/editar', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
                 if (nuevo !== nombreViejo) delete QUEEN_COLORS[nombreViejo];
                 QUEEN_COLORS[nuevo] = color;
                 editingQueen = null;
@@ -3377,20 +3423,39 @@
                 const regalo = document.getElementById('regaloBailarina').value;
                 const pts = parseInt(document.getElementById('ptsRegaloBailarina').value) || 0;
                 const color = document.getElementById('colorBailarina').value;
+                const fotoInput = document.getElementById('fotoBailarina');
 
                 if (!nombre) return alert('Escribe un nombre');
 
-                await fetch('/api/queens/crear?nombre=' + encodeURIComponent(nombre)
-                    + '&color=' + encodeURIComponent(color)
-                    + '&apodo=' + encodeURIComponent(apodo)
-                    + '&regalo_img=' + encodeURIComponent(regalo)
-                    + '&regalo_pts=' + pts
-                );
+                let avatarBase64 = '';
+                if (fotoInput && fotoInput.files.length > 0) {
+                    try {
+                        avatarBase64 = await fileToBase64(fotoInput.files[0]);
+                    } catch(e) {
+                        console.error('Error leyendo archivo de foto:', e);
+                    }
+                }
+
+                const payload = {
+                    nombre,
+                    color,
+                    apodo,
+                    regalo_img: regalo,
+                    regalo_pts: pts,
+                    avatar_img: avatarBase64
+                };
+
+                await fetch('/api/queens/crear', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
 
                 document.getElementById('nuevaBailarina').value = '';
                 document.getElementById('apodoBailarina').value = '';
                 document.getElementById('regaloBailarina').value = '';
                 document.getElementById('ptsRegaloBailarina').value = '';
+                if (fotoInput) fotoInput.value = '';
 
                 QUEENS = await (await fetch('/api/queens')).json();
                 await cargarColores();
