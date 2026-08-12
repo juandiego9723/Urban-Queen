@@ -32,6 +32,35 @@ function setupAnalyticsRoutes(app, requireSession) {
             res.status(500).send(e.message);
         }
     });
+
+    app.get('/api/analytics/grafica-mensual', requireSession, (req, res) => {
+        try {
+            res.json(req.userSession.db.getRegalosPorMes());
+        } catch (e) {
+            res.status(500).send(e.message);
+        }
+    });
+
+    app.get('/api/analytics/bailarina', requireSession, (req, res) => {
+        try {
+            const name = req.query.name || '';
+            const db = req.userSession.db;
+            const stats = db.getDatosBailarina(name);
+            const topDonadores = db.getTopDonadoresBailarina(name, 5);
+            const distribucionRegalos = db.getDistribucionRegalosBailarina(name);
+            res.json({ stats, topDonadores, distribucionRegalos });
+        } catch (e) {
+            res.status(500).send(e.message);
+        }
+    });
+
+    app.get('/api/analytics/horas-pico', requireSession, (req, res) => {
+        try {
+            res.json(req.userSession.db.getDonacionesPorHora());
+        } catch (e) {
+            res.status(500).send(e.message);
+        }
+    });
 }
 
 module.exports = setupAnalyticsRoutes;

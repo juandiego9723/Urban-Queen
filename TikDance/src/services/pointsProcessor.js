@@ -1,4 +1,4 @@
-function createPointsProcessor(io, activeSessions, resolverNombreFn, timerHandlers, conociendoHandlers) {
+function createPointsProcessor(io, activeSessions, resolverNombreFn, timerHandlers, conociendoHandlers, revivirHandlers) {
 
     function procesarRegaloTikTok(username, data) {
         const session = activeSessions[username];
@@ -45,6 +45,10 @@ function createPointsProcessor(io, activeSessions, resolverNombreFn, timerHandle
             else if (session.conociendo.activo && session.conociendo.estado === 'activo' && session.conociendo.chicaActual) {
                 queenActivadora = session.conociendo.chicaActual;
             }
+            // SI LA DINÁMICA REVIVIR ESTÁ ACTIVA: Forzar que cualquier regalo vaya a la bailarina actual
+            else if (session.revivir.activo && session.revivir.estado === 'activo' && session.revivir.chicaActual) {
+                queenActivadora = session.revivir.chicaActual;
+            }
         }
         
         try {
@@ -55,7 +59,7 @@ function createPointsProcessor(io, activeSessions, resolverNombreFn, timerHandle
                 destinatarioFinal = queenActivadora;
                 
                 if (!isStreakInProgress) {
-                    session.queueUpdate.push({ nombre: queenActivadora, puntos: pts, saltaTurno: queenSalto });
+                    session.queueUpdate.push({ nombre: queenActivadora, puntos: pts, saltaTurno: queenSalto, viewer, avatar, giftName, giftImg: eq.regalo_img || giftImgSrc, repeat });
                     session.db.registrarRegalo(queenActivadora, giftName, pts, viewer);
                     session.lealtadUsuarios[viewer] = queenActivadora;
                 }
@@ -73,11 +77,11 @@ function createPointsProcessor(io, activeSessions, resolverNombreFn, timerHandle
                 const queenAsignada = session.lealtadUsuarios[viewer] || null;
                 if (queenAsignada && session.QUEENS.includes(queenAsignada)) {
                     destinatarioFinal = queenAsignada;
+                    const eq = session.equipos[queenAsignada] || {};
                     if (!isStreakInProgress) {
-                        session.queueUpdate.push({ nombre: queenAsignada, puntos: coins, saltaTurno: queenSalto });
+                        session.queueUpdate.push({ nombre: queenAsignada, puntos: coins, saltaTurno: queenSalto, viewer, avatar, giftName, giftImg: eq.regalo_img || giftImgSrc, repeat });
                         session.db.registrarRegalo(queenAsignada, giftName, coins, viewer);
                     }
-                    const eq = session.equipos[queenAsignada] || {};
                     
                     io.to(username).emit('nuevoRegalo', {
                         nombre: queenAsignada,
@@ -90,11 +94,11 @@ function createPointsProcessor(io, activeSessions, resolverNombreFn, timerHandle
                     });
                 } else if (queenSalto && session.QUEENS.includes(queenSalto)) {
                     destinatarioFinal = queenSalto;
+                    const eq = session.equipos[queenSalto] || {};
                     if (!isStreakInProgress) {
-                        session.queueUpdate.push({ nombre: queenSalto, puntos: coins, saltaTurno: queenSalto });
+                        session.queueUpdate.push({ nombre: queenSalto, puntos: coins, saltaTurno: queenSalto, viewer, avatar, giftName, giftImg: eq.regalo_img || giftImgSrc, repeat });
                         session.db.registrarRegalo(queenSalto, giftName, coins, viewer);
                     }
-                    const eq = session.equipos[queenSalto] || {};
                     
                     io.to(username).emit('nuevoRegalo', {
                         nombre: queenSalto,
@@ -107,7 +111,7 @@ function createPointsProcessor(io, activeSessions, resolverNombreFn, timerHandle
                     });
                 } else {
                     if (!isStreakInProgress) {
-                        session.queueUpdate.push({ nombre: null, puntos: coins, saltaTurno: queenSalto });
+                        session.queueUpdate.push({ nombre: null, puntos: coins, saltaTurno: queenSalto, viewer, avatar, giftName, giftImg: giftImgSrc, repeat });
                         
                         const giftId = `gift-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
                         const giftInstance = {
@@ -195,15 +199,89 @@ function createPointsProcessor(io, activeSessions, resolverNombreFn, timerHandle
         }
         
         // Si el timer de baile está activo y en estado de baile, sumar segundos configurados por cada punto recibido por la chica actual
+        // Si el timer de baile está activo y en estado de baile
         if (session.timerBaile.activo && session.timerBaile.estado === 'bailando') {
             const chicaActual = session.timerBaile.chicaActual;
-            const segs = session.timerBaile.segundosPorMoneda || 3;
-            temp.forEach(item => {
-                if (item.nombre === chicaActual && item.puntos > 0) {
-                    session.timerBaile.tiempo += (item.puntos * segs);
+            
+            // Si NO es modo torneo, acumular tiempo según los segundos por moneda/punto
+            if (!session.timerBaile.modoTorneo) {
+                const segs = session.timerBaile.segundosPorMoneda || 3;
+                temp.forEach(item => {
+                    if (item.nombre === chicaActual && item.puntos > 0) {
+                        session.timerBaile.tiempo += (item.puntos * segs);
+                    }
+                });
+                io.to(username).emit('timerTick', session.timerBaile.tiempo);
+            }
+            
+            // Si es modo torneo, procesar puntos de la ronda
+            if (session.timerBaile.modoTorneo) {
+                let nuevosPuntos = 0;
+                
+                if (!session.timerBaile.puntosTorneo) session.timerBaile.puntosTorneo = {};
+                if (!session.timerBaile.donantesTorneo) session.timerBaile.donantesTorneo = {};
+                if (!session.timerBaile.donantesAvatarsTorneo) session.timerBaile.donantesAvatarsTorneo = {};
+                if (!session.timerBaile.regalosEnviadosTorneo) session.timerBaile.regalosEnviadosTorneo = {};
+                if (!session.timerBaile.regalosImgsTorneo) session.timerBaile.regalosImgsTorneo = {};
+
+                temp.forEach(item => {
+                    if (item.puntos > 0) {
+                        nuevosPuntos += item.puntos;
+                        
+                        if (item.viewer) {
+                            session.timerBaile.donantesTorneo[item.viewer] = (session.timerBaile.donantesTorneo[item.viewer] || 0) + item.puntos;
+                            if (item.avatar) {
+                                session.timerBaile.donantesAvatarsTorneo[item.viewer] = item.avatar;
+                            }
+                        }
+                        if (item.giftName) {
+                            const rep = item.repeat || 1;
+                            session.timerBaile.regalosEnviadosTorneo[item.giftName] = (session.timerBaile.regalosEnviadosTorneo[item.giftName] || 0) + rep;
+                            if (item.giftImg) {
+                                session.timerBaile.regalosImgsTorneo[item.giftName] = item.giftImg;
+                            }
+                        }
+                    }
+                });
+                
+                if (nuevosPuntos > 0) {
+                    session.timerBaile.puntosTorneo[chicaActual] = (session.timerBaile.puntosTorneo[chicaActual] || 0) + nuevosPuntos;
+                    session.timerBaile.puntosTurnoActual = (session.timerBaile.puntosTurnoActual || 0) + nuevosPuntos;
+                    
+                    const topDonantes = Object.entries(session.timerBaile.donantesTorneo)
+                        .map(([name, pts]) => ({ 
+                            name, 
+                            pts, 
+                            avatar: session.timerBaile.donantesAvatarsTorneo[name] || '' 
+                        }))
+                        .sort((a, b) => b.pts - a.pts);
+                    
+                    let mvpName = '';
+                    let mvpAvatar = '';
+                    if (topDonantes.length > 0) {
+                        mvpName = topDonantes[0].name;
+                        mvpAvatar = topDonantes[0].avatar;
+                    }
+                    
+                    // Emitir al overlay revivir.html (que visualiza el torneo)
+                    io.to(username).emit('revivirPuntos', { 
+                        puntos: session.timerBaile.puntosTurnoActual, 
+                        meta: session.timerBaile.metaTurno || 1000,
+                        topDonantes: topDonantes.slice(0, 3),
+                        mvpName,
+                        mvpAvatar,
+                        regalosEnviados: session.timerBaile.regalosEnviadosTorneo,
+                        regalosImgs: session.timerBaile.regalosImgsTorneo
+                    });
+
+                    // Emitir al Panel de Control para el marcador en vivo
+                    io.to(username).emit('torneoPuntosActualizados', {
+                        puntosTorneo: session.timerBaile.puntosTorneo,
+                        puntosTurnoActual: session.timerBaile.puntosTurnoActual,
+                        chicaActual
+                    });
                 }
-            });
-            io.to(username).emit('timerTick', session.timerBaile.tiempo);
+            }
         }
 
         // Si la dinámica conociendo está activa y en estado activo, sumar los puntos recibidos
@@ -218,6 +296,76 @@ function createPointsProcessor(io, activeSessions, resolverNombreFn, timerHandle
             if (nuevosPuntos > 0) {
                 session.conociendo.puntos += nuevosPuntos;
                 io.to(username).emit('conociendoPuntos', { puntos: session.conociendo.puntos, meta: session.conociendo.meta });
+            }
+        }
+
+        // Si la dinámica revivir está activa y en estado activo, sumar los puntos recibidos, calcular el MVP y contar los regalos
+        if (session.revivir.activo && session.revivir.estado === 'activo') {
+            const chicaActual = session.revivir.chicaActual;
+            let nuevosPuntos = 0;
+            temp.forEach(item => {
+                if (item.nombre === chicaActual && item.puntos > 0) {
+                    nuevosPuntos += item.puntos;
+                    if (item.viewer) {
+                        session.revivir.donantes[item.viewer] = (session.revivir.donantes[item.viewer] || 0) + item.puntos;
+                        if (item.avatar) {
+                            session.revivir.donantesAvatars[item.viewer] = item.avatar;
+                        }
+                    }
+                    if (item.giftName) {
+                        const rep = item.repeat || 1;
+                        session.revivir.regalosEnviados[item.giftName] = (session.revivir.regalosEnviados[item.giftName] || 0) + rep;
+                        if (item.giftImg) {
+                            session.revivir.regalosImgs[item.giftName] = item.giftImg;
+                        }
+                    }
+                }
+            });
+            if (nuevosPuntos > 0) {
+                session.revivir.puntos += nuevosPuntos;
+
+                // Si estamos en modo torneo, sumar los puntos de salvación directamente al marcador del torneo
+                if (session.timerBaile.modoTorneo) {
+                    session.timerBaile.puntosTorneo[chicaActual] = (session.timerBaile.puntosTorneo[chicaActual] || 0) + nuevosPuntos;
+                    
+                    // Emitir la actualización del marcador del torneo en vivo
+                    io.to(username).emit('torneoPuntosActualizados', {
+                        puntosTorneo: session.timerBaile.puntosTorneo,
+                        chicaActual: session.timerBaile.chicaActual
+                    });
+                }
+                
+                const topDonantes = Object.entries(session.revivir.donantes)
+                    .map(([name, pts]) => ({ 
+                        name, 
+                        pts, 
+                        avatar: session.revivir.donantesAvatars[name] || '' 
+                    }))
+                    .sort((a, b) => b.pts - a.pts);
+                
+                let mvpName = '';
+                let mvpAvatar = '';
+                if (topDonantes.length > 0) {
+                    mvpName = topDonantes[0].name;
+                    mvpAvatar = topDonantes[0].avatar;
+                }
+                
+                io.to(username).emit('revivirPuntos', { 
+                    puntos: session.revivir.puntos, 
+                    meta: session.revivir.meta,
+                    topDonantes: topDonantes.slice(0, 3),
+                    mvpName,
+                    mvpAvatar,
+                    regalosEnviados: session.revivir.regalosEnviados,
+                    regalosImgs: session.revivir.regalosImgs
+                });
+
+                // Si ha alcanzado o superado la meta de salvación, detenerla con éxito inmediatamente
+                if (session.revivir.puntos >= session.revivir.meta) {
+                    if (revivirHandlers && revivirHandlers.detenerRevivir) {
+                        revivirHandlers.detenerRevivir(username, true);
+                    }
+                }
             }
         }
 

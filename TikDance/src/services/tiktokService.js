@@ -26,6 +26,61 @@ function createTikTokService(app, io, requireSession, activeSessions, procesarRe
             session.tiktokEstado = 'conectado';
             session.tiktokMensajeError = '';
             io.to(username).emit('tiktokEstado', { estado: 'conectado', usuario: usuarioTikTok });
+
+            // Auto-reset de rankings diario, semanal y mensual
+            try {
+                const now = new Date();
+                const diaStr = now.toLocaleDateString('sv');
+                const mesStr = diaStr.substring(0, 7);
+
+                function getISOWeekString(date) {
+                    const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
+                    const dayNum = d.getUTCDay() || 7;
+                    d.setUTCDate(d.getUTCDate() + 4 - dayNum);
+                    const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
+                    const weekNo = Math.ceil((((d - yearStart) / 86400000) + 1) / 7);
+                    return `${d.getUTCFullYear()}-W${weekNo.toString().padStart(2, '0')}`;
+                }
+                const semanaStr = getISOWeekString(now);
+
+                const lastDiario = session.db.getConfigVal('last_reset_diario') || '';
+                const lastSemanal = session.db.getConfigVal('last_reset_semanal') || '';
+                const lastMensual = session.db.getConfigVal('last_reset_mensual') || '';
+
+                let huboCambios = false;
+
+                if (lastDiario !== diaStr) {
+                    console.log(`[Auto-Reset] Nuevo día detectado: ${diaStr} (Anterior: ${lastDiario}). Reiniciando ranking diario.`);
+                    session.db.resetDiario();
+                    session.db.setConfigVal('last_reset_diario', diaStr);
+                    huboCambios = true;
+                }
+
+                if (lastSemanal !== semanaStr) {
+                    console.log(`[Auto-Reset] Nueva semana detectada: ${semanaStr} (Anterior: ${lastSemanal}). Reiniciando ranking semanal.`);
+                    session.db.resetSemanal();
+                    session.db.setConfigVal('last_reset_semanal', semanaStr);
+                    huboCambios = true;
+                }
+
+                if (lastMensual !== mesStr) {
+                    console.log(`[Auto-Reset] Nuevo mes detectado: ${mesStr} (Anterior: ${lastMensual}). Reiniciando ranking mensual.`);
+                    session.db.resetMensual();
+                    session.db.setConfigVal('last_reset_mensual', mesStr);
+                    huboCambios = true;
+                }
+
+                if (huboCambios) {
+                    io.to(username).emit('queensActualizadas', {
+                        queens: session.QUEENS,
+                        equipos: session.equipos,
+                        apodos: session.db.getApodosMap()
+                    });
+                }
+            } catch (resetErr) {
+                console.error('Error durante el auto-reset de rankings:', resetErr);
+            }
+
             connection.fetchAvailableGifts().then(gifts => {
                 session.catalogoRegalos = (gifts || []).map(g => ({
                     id: g.id || g.giftId,

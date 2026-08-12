@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html lang="es">
+    <head>
+    <!-- Inyección de multi-cuenta -->
+    <script>
+        (function() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const user = urlParams.get('user');
+            if (user) {
+                const originalFetch = window.fetch;
+                window.fetch = function(url, options) {
+                    if (typeof url === 'string' && !url.includes('user=')) {
+                        const sep = url.includes('?') ? '&' : '?';
+                        url = url + sep + 'user=' + encodeURIComponent(user);
+                    }
+                    return originalFetch(url, options);
+                };
+                const originalIo = window.io;
+                if (originalIo) {
+                    window.io = function(opts) {
+                        opts = opts || {};
+                        opts.query = opts.query || {};
+                        opts.query.user = user;
+                        return originalIo(opts);
+                    };
+                } else {
+                    let _io = undefined;
+                    Object.defineProperty(window, 'io', {
+                        get: function() { return _io; },
+                        set: function(val) {
+                            _io = function(opts) {
+                                opts = opts || {};
+                                opts.query = opts.query || {};
+                                opts.query.user = user;
+                                return val(opts);
+                            };
+                        },
+                        configurable: true
+                    });
+                }
+            }
+        })();
+    </script>
+
+        <meta charset="UTF-8">
+        <title>Revivir Classification Ranking</title>
+        <link href="https://fonts.googleapis.com/css2?family=Montserrat:ital,wght@0,400;0,700;0,800;0,900;1,400;1,700;1,800;1,900&family=Inter:ital,wght@0,400;0,600;0,700;0,800;1,400;1,600;1,700&display=swap"
+              rel="stylesheet">
+        <style>
+        body { 
+            background-color: #00FF00; 
+            font-family: 'Inter', sans-serif; 
+            color: white; 
+            margin: 0; 
+            padding: 0;
+            overflow: hidden;
+            width: 100vw;
+            height: 100vh;
+            position: relative;
+        }
+
+        /* ── PANEL SUPERIOR IZQUIERDO (RANKING) ── */
+        .ranking-panel-bottom-right {
+            position: absolute;
+            top: 25px;
+            left: 25px;
+            width: 350px;
+            background: rgba(22, 38, 26, 0.7);
+            backdrop-filter: blur(14px);
+            -webkit-backdrop-filter: blur(14px);
+            border: 1.5px solid rgba(255, 255, 255, 0.08);
+            border-radius: 24px;
+            padding: 20px;
+            box-shadow: 0 10px 36px rgba(0, 0, 0, 0.55);
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .ranking-item-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 8px 12px;
+            background: rgba(0, 0, 0, 0.25);
+            border-radius: 14px;
+            border: 1px solid rgba(255, 255, 255, 0.03);
+            transition: all 0.3s ease;
+        }
+
+        .ranking-left-side {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .badge-pos {
+            font-family: 'Montserrat', sans-serif;
+            font-weight: 900;
+            font-style: italic;
+            font-size: 13px;
+            padding: 2px 8px;
+            border-radius: 6px;
+            min-width: 16px;
+            text-align: center;
+            box-shadow: 0 1px 4px rgba(0,0,0,0.2);
+        }
+
+        .badge-pos-1 { background: #ffd700; color: #000; }
+        .badge-pos-2 { background: #c0c0c0; color: #000; }
+        .badge-pos-default { background: rgba(255,255,255,0.15); color: #fff; }
+        
+        .badge-out {
+            background: #ff3b30;
+            color: #fff;
+            font-family: 'Montserrat', sans-serif;
+            font-size: 10px;
+            font-weight: 900;
+            padding: 2px 6px;
+            border-radius: 6px;
+            letter-spacing: 0.5px;
+        }
+
+        .ranking-avatar {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            object-fit: cover;
+            border: 1px solid rgba(255,255,255,0.2);
+        }
+
+        .ranking-name {
+            font-weight: 700;
+            font-size: 15px;
+        }
+
+        .ranking-points {
+            font-family: 'Montserrat', sans-serif;
+            font-weight: 800;
+            font-size: 15px;
+            color: #ffee00;
+        }
+
+        /* Fila OUT (Eliminada) */
+        .row-out {
+            opacity: 0.45;
+            background: rgba(0,0,0,0.1);
+        }
+        .row-out .ranking-points {
+            color: #c0c0c0;
+        }
+        </style>
+    </head>
+    <body>
+        <!-- Contenedor del Ranking -->
+        <div class="ranking-panel-bottom-right" id="ranking-box">
+            <!-- Posiciones dinámicas se inyectan acá -->
+        </div>
+
+        <script src="/socket.io/socket.io.js"></script>
+        <script>
+        const socket = io();
+        
+        let QUEEN_COLORS = {};
+        let QUEEN_AVATARS = {};
+        let QUEEN_GIFTS = {};
+        let APODOS = {};
+        
+        let clasificadasLim = 2; // Límite de clasificación
+
+        const rankingBox = document.getElementById('ranking-box');
+
+        // Cargar detalles de las reinas
+        async function fetchInitialData() {
+            try {
+                const [resAll, resAp] = await Promise.all([
+                    fetch('/api/queens/all'),
+                    fetch('/api/apodos')
+                ]);
+                const all = await resAll.json();
+                all.forEach(q => {
+                    QUEEN_COLORS[q.name] = q.color;
+                    QUEEN_AVATARS[q.name] = q.avatar_img || '';
+                    QUEEN_GIFTS[q.name] = q.regalo_img || '';
+                });
+                APODOS = await resAp.json();
+                actualizarRankingUI();
+            } catch(e) {
+                console.error("Error cargando configuración:", e);
+            }
+        }
+        fetchInitialData();
+
+        socket.on('queensActualizadas', (data) => {
+            if (data.equipos) {
+                Object.keys(data.equipos).forEach(n => {
+                    QUEEN_COLORS[n] = data.equipos[n].color;
+                    QUEEN_AVATARS[n] = data.equipos[n].avatar_img || '';
+                    QUEEN_GIFTS[n] = data.equipos[n].regalo_img || '';
+                });
+            }
+            if (data.apodos) APODOS = data.apodos;
+            actualizarRankingUI();
+        });
+
+        socket.on('rankingActualizado', () => {
+            actualizarRankingUI();
+        });
+
+        async function actualizarRankingUI() {
+            try {
+                // Obtener estado del timer/torneo del servidor para tener la sincronización correcta
+                const resStatus = await fetch('/timer/status');
+                let modoTorneoActivo = false;
+                let clasificadasLim = 2;
+                if (resStatus.ok) {
+                    const status = await resStatus.json();
+                    modoTorneoActivo = !!status.modoTorneo;
+                    clasificadasLim = status.clasificadas || 2;
+                }
+
+                const [resActive, resPts, resEliminated] = await Promise.all([
+                    fetch('/api/queens'),
+                    fetch('/api/ranking'),
+                    fetch('/api/tournament/eliminated')
+                ]);
+                const activeNames = await resActive.json();
+                const pointsMap = await resPts.json();
+                const eliminatedList = await resEliminated.json();
+                
+                // Ordenar por puntos descendente
+                const sorted = activeNames.map(name => ({
+                    name,
+                    puntos: pointsMap[name] || 0
+                })).sort((a, b) => b.puntos - a.puntos);
+                
+                rankingBox.innerHTML = sorted.map((q, index) => {
+                    const rank = index + 1;
+                    
+                    // Si estamos en torneo, una bailarina está OUT si está en la lista de eliminadas.
+                    // Si no estamos en torneo, está OUT si supera el límite de clasificados.
+                    const isEliminated = modoTorneoActivo ? eliminatedList.includes(q.name) : (rank > clasificadasLim);
+                    const rowClass = isEliminated ? 'row-out' : '';
+                    
+                    let posHtml = '';
+                    if (!isEliminated) {
+                        const badgeClass = rank === 1 ? 'badge-pos-1' : (rank === 2 ? 'badge-pos-2' : 'badge-pos-default');
+                        posHtml = `<span class="badge-pos ${badgeClass}">${rank}</span>`;
+                    } else {
+                        posHtml = `<span class="badge-out">OUT</span>`;
+                    }
+
+                    const customAvatar = QUEEN_AVATARS[q.name] || '';
+                    const giftImg = QUEEN_GIFTS[q.name] || '';
+                    const avatarSrc = customAvatar || (giftImg ? `/regalos/${giftImg}` : '');
+                    
+                    const apodo = APODOS[q.name] || q.name;
+                    const queenColor = QUEEN_COLORS[q.name] || '#ffffff';
+
+                    return `
+                        <div class="ranking-item-row ${rowClass}">
+                            <div class="ranking-left-side">
+                                ${posHtml}
+                                <img class="ranking-avatar" src="${avatarSrc}" onerror="this.src='data:image/svg+xml;utf8,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22 fill=%22%23555%22><circle cx=%2250%22 cy=%2250%22 r=%2250%22/><text x=%2250%25%22 y=%2255%25%22 font-size=%2240%22 fill=%22%23fff%22 text-anchor=%22middle%22 font-family=%22Montserrat%22 font-weight=%22bold%22>${apodo.charAt(0).toUpperCase()}</text></svg>'">
+                                <span class="ranking-name" style="color: ${queenColor}">${apodo}</span>
+                            </div>
+                            <span class="ranking-points">${q.puntos.toLocaleString('es-ES')}</span>
+                        </div>
+                    `;
+                }).join('');
+
+            } catch(e) {
+                console.error("Error al renderizar ranking:", e);
+            }
+        }
+
+        // Eventos de sockets de la dinámica
+        socket.on('revivirInicio', (data) => {
+            actualizarRankingUI();
+        });
+
+        socket.on('revivirPuntos', (data) => {
+            actualizarRankingUI();
+        });
+
+        socket.on('torneoPuntosActualizados', (data) => {
+            actualizarRankingUI();
+        });
+
+        socket.on('revivirCancelado', () => {
+            actualizarRankingUI();
+        });
+
+        socket.on('revivirFin', () => {
+            actualizarRankingUI();
+        });
+        </script>
+    </body>
+</html>

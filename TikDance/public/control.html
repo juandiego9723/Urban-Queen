@@ -1058,6 +1058,8 @@
                 <a class="topbar-link" href="/batalla-pk" target="_blank">⚡ Batalla PK</a>
                 <a class="topbar-link" href="/timer" target="_blank">💃 Timer</a>
                 <a class="topbar-link" href="/conociendo" target="_blank">👑 Conociendo</a>
+                <a class="topbar-link" href="/revivir" target="_blank">❤️ Revivir</a>
+                <a class="topbar-link" href="/revivir-ranking" target="_blank">📊 Ranking Revivir</a>
                 <a class="topbar-link" href="/copa" target="_blank">🥇 Copa</a>
                 <a class="topbar-link" href="/lista-regalos" target="_blank">🎁 Regalos</a>
                 <a class="topbar-link" href="/dinamica" target="_blank">⚡ Dinámica</a>
@@ -1109,91 +1111,138 @@
                 </div>
                 <!-- ══ ANALÍTICAS ══ -->
                 <div id="tab-analytics" class="tab-content" style="grid-template-columns: 1fr;">
-                    <!-- KPIs Superiores -->
-                    <div class="row-3" style="width: 100%; gap: 16px; margin-bottom: 8px;">
-                        <div class="card" style="padding: 16px 20px; border-left: 4px solid var(--pink);">
-                            <div class="label" style="font-size: 9px;">Diamantes Recibidos Hoy</div>
-                            <div style="font-size: 28px; font-weight: 800; color: #fff; margin-top: 4px;" id="kpi-hoy">0
-                                💎</div>
-                        </div>
-                        <div class="card" style="padding: 16px 20px; border-left: 4px solid var(--indigo);">
-                            <div class="label" style="font-size: 9px;">Diamantes de este Mes</div>
-                            <div style="font-size: 28px; font-weight: 800; color: #fff; margin-top: 4px;" id="kpi-mes">0
-                                💎</div>
-                        </div>
-                        <div class="card" style="padding: 16px 20px; border-left: 4px solid var(--green);">
-                            <div class="label" style="font-size: 9px;">Acumulado Histórico</div>
-                            <div style="font-size: 28px; font-weight: 800; color: #fff; margin-top: 4px;"
-                                id="kpi-historico">0 💎</div>
-                        </div>
+                    <!-- Sub-pestañas de Analíticas -->
+                    <div style="display: flex; gap: 10px; margin-bottom: 16px;">
+                        <button id="btn-subtab-agencia" class="btn btn-primary" onclick="cambiarSubTabAnalytics('agencia')" style="padding: 10px 20px; font-weight: 700; border-radius: 8px;">🏢 Vista de Agencia</button>
+                        <button id="btn-subtab-bailarinas" class="btn" onclick="cambiarSubTabAnalytics('bailarinas')" style="padding: 10px 20px; font-weight: 700; border-radius: 8px; background: var(--surface2); color: var(--muted); border: 1px solid var(--border);">💃 Perfil de Bailarina</button>
                     </div>
 
-                    <!-- Gráficas y Desglose por Queen -->
-                    <div
-                        style="display: grid; grid-template-columns: 1.2fr 1fr; gap: 20px; width: 100%; align-items: start;">
-                        <!-- Gráficas -->
-                        <div class="card">
-                            <div class="card-title">📈 <span class="card-title-accent">Tendencia Semanal e Ingresos por
-                                    Queen</span></div>
-                            <div class="col" style="gap: 24px;">
-                                <div>
-                                    <div class="label" style="margin-bottom: 10px;">Donaciones en los últimos 7 días
-                                    </div>
-                                    <div style="height: 180px; position: relative;">
-                                        <canvas id="chart-tendencia"></canvas>
-                                    </div>
-                                </div>
-                                <div class="divider"></div>
-                                <div
-                                    style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; align-items: center;">
+                    <!-- SECCIÓN: VISTA DE AGENCIA -->
+                    <div id="analytics-section-agencia" class="col" style="gap: 16px; width: 100%;">
+                        <!-- KPIs Superiores -->
+                        <div class="row-3" style="width: 100%; gap: 16px; margin-bottom: 8px;">
+                            <div class="card" style="padding: 16px 20px; border-left: 4px solid var(--pink);">
+                                <div class="label" style="font-size: 9px;">Diamantes Recibidos Hoy</div>
+                                <div style="font-size: 28px; font-weight: 800; color: #fff; margin-top: 4px;" id="kpi-hoy">0 💎</div>
+                            </div>
+                            <div class="card" style="padding: 16px 20px; border-left: 4px solid var(--indigo);">
+                                <div class="label" style="font-size: 9px;">Diamantes de este Mes</div>
+                                <div style="font-size: 28px; font-weight: 800; color: #fff; margin-top: 4px;" id="kpi-mes">0 💎</div>
+                            </div>
+                            <div class="card" style="padding: 16px 20px; border-left: 4px solid var(--green);">
+                                <div class="label" style="font-size: 9px;">Acumulado Histórico</div>
+                                <div style="font-size: 28px; font-weight: 800; color: #fff; margin-top: 4px;" id="kpi-historico">0 💎</div>
+                            </div>
+                        </div>
+
+                        <!-- Gráficas y Desglose por Queen -->
+                        <div style="display: grid; grid-template-columns: 1.2fr 1fr; gap: 20px; width: 100%; align-items: start;">
+                            <!-- Gráficas -->
+                            <div class="card">
+                                <div class="card-title">📈 <span class="card-title-accent">Tendencia e Ingresos por Queen</span></div>
+                                <div class="col" style="gap: 24px;">
                                     <div>
-                                        <div class="label" style="margin-bottom: 10px;">Distribución por Queen</div>
-                                        <div style="height: 140px; position: relative;">
-                                            <canvas id="chart-queens"></canvas>
+                                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                                            <div class="label" id="label-grafica-tendencia" style="margin-bottom:0;">Donaciones en los últimos 7 días</div>
+                                            <div style="display: flex; gap: 4px; background: var(--surface3); padding: 3px; border-radius: 6px; border: 1px solid var(--border);">
+                                                <button id="btn-chart-diario" class="btn btn-sm btn-primary" onclick="cambiarFiltroGrafica('diario')" style="padding: 4px 8px; font-size: 10px; border-radius: 4px; line-height:1.2; height:auto;">Diario</button>
+                                                <button id="btn-chart-mensual" class="btn btn-sm" onclick="cambiarFiltroGrafica('mensual')" style="padding: 4px 8px; font-size: 10px; border-radius: 4px; line-height:1.2; height:auto; background:transparent; border:none; color:var(--muted);">Mensual</button>
+                                            </div>
+                                        </div>
+                                        <div style="height: 180px; position: relative;">
+                                            <canvas id="chart-tendencia"></canvas>
                                         </div>
                                     </div>
-                                    <div id="legend-queens-container" class="col" style="gap: 8px;">
-                                        <!-- Leyenda dinámica con porcentaje -->
+                                    <div class="divider"></div>
+                                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; align-items: center;">
+                                        <div>
+                                            <div class="label" style="margin-bottom: 10px;">Distribución por Queen</div>
+                                            <div style="height: 140px; position: relative;">
+                                                <canvas id="chart-queens"></canvas>
+                                            </div>
+                                        </div>
+                                        <div id="legend-queens-container" class="col" style="gap: 8px;">
+                                            <!-- Leyenda dinámica con porcentaje -->
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Desglose Tablas -->
+                            <div class="col" style="gap: 20px;">
+                                <div class="card">
+                                    <div class="card-title">👑 <span class="card-title-accent">Rendimiento por Queen</span></div>
+                                    <table style="width: 100%; border-collapse: collapse; font-size: 13px; text-align: left;">
+                                        <thead>
+                                            <tr style="border-bottom: 1px solid var(--border); color: var(--muted); font-size: 10px; text-transform: uppercase;">
+                                                <th style="padding: 8px 4px;">Queen</th>
+                                                <th style="padding: 8px 4px; text-align: right;">Regalos</th>
+                                                <th style="padding: 8px 4px; text-align: right;">Diamantes</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="table-queens-body">
+                                            <!-- Rellenado dinámico -->
+                                        </tbody>
+                                    </table>
+                                </div>
+
+                                <div class="card">
+                                    <div class="card-title">💎 <span class="card-title-accent">Top Donadores (Agencia)</span></div>
+                                    <table style="width: 100%; border-collapse: collapse; font-size: 13px; text-align: left;">
+                                        <thead>
+                                            <tr style="border-bottom: 1px solid var(--border); color: var(--muted); font-size: 10px; text-transform: uppercase;">
+                                                <th style="padding: 8px 4px;">Donador</th>
+                                                <th style="padding: 8px 4px; text-align: right;">Regalos</th>
+                                                <th style="padding: 8px 4px; text-align: right;">Total Enviado</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="table-donadores-body">
+                                            <!-- Rellenado dinámico -->
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Fila Nueva: Horas Pico y Equipos -->
+                        <div style="display: grid; grid-template-columns: 1.2fr 1fr; gap: 20px; width: 100%; align-items: start;">
+                            <!-- Horas Pico -->
+                            <div class="card">
+                                <div class="card-title">🕒 <span class="card-title-accent">Horas Pico de Mayor Donación</span></div>
+                                <div class="col" style="gap: 12px;">
+                                    <div class="label" style="margin-bottom: 5px;">Distribución de diamantes por hora del día (24 hrs)</div>
+                                    <div style="height: 180px; position: relative;">
+                                        <canvas id="chart-horas-pico"></canvas>
+                                    </div>
+                                </div>
+                            </div>
+                            <!-- Rendimiento de Equipos -->
+                            <div class="card">
+                                <div class="card-title">⚔️ <span class="card-title-accent">Rendimiento por Equipos (Fútbol)</span></div>
+                                <div class="col" style="gap: 12px;">
+                                    <div class="label" style="margin-bottom: 5px;">Comparación de recaudación acumulada por equipo</div>
+                                    <div style="height: 180px; position: relative;">
+                                        <canvas id="chart-equipos-comparativa"></canvas>
                                     </div>
                                 </div>
                             </div>
                         </div>
 
-                        <!-- Desglose Tablas -->
-                        <div class="col" style="gap: 20px;">
-                            <div class="card">
-                                <div class="card-title">👑 <span class="card-title-accent">Rendimiento por Queen</span>
-                                </div>
-                                <table
-                                    style="width: 100%; border-collapse: collapse; font-size: 13px; text-align: left;">
+                        <!-- Historial de Regalos Recientes -->
+                        <div class="card" style="width: 100%;">
+                            <div class="card-title">📋 <span class="card-title-accent">Registro de Transacciones Recientes (Historial)</span></div>
+                            <div style="max-height: 250px; overflow-y: auto; padding-right: 6px;">
+                                <table style="width: 100%; border-collapse: collapse; font-size: 12.5px; text-align: left;">
                                     <thead>
-                                        <tr
-                                            style="border-bottom: 1px solid var(--border); color: var(--muted); font-size: 10px; text-transform: uppercase;">
-                                            <th style="padding: 8px 4px;">Queen</th>
-                                            <th style="padding: 8px 4px; text-align: right;">Regalos</th>
-                                            <th style="padding: 8px 4px; text-align: right;">Diamantes</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody id="table-queens-body">
-                                        <!-- Rellenado dinámico -->
-                                    </tbody>
-                                </table>
-                            </div>
-
-                            <div class="card">
-                                <div class="card-title">💎 <span class="card-title-accent">Top Donadores
-                                        (Agencia)</span></div>
-                                <table
-                                    style="width: 100%; border-collapse: collapse; font-size: 13px; text-align: left;">
-                                    <thead>
-                                        <tr
-                                            style="border-bottom: 1px solid var(--border); color: var(--muted); font-size: 10px; text-transform: uppercase;">
+                                        <tr style="border-bottom: 1px solid var(--border); color: var(--muted); font-size: 10px; text-transform: uppercase; position: sticky; top: 0; background: var(--surface); z-index: 5;">
+                                            <th style="padding: 8px 4px;">Fecha/Hora</th>
                                             <th style="padding: 8px 4px;">Donador</th>
-                                            <th style="padding: 8px 4px; text-align: right;">Regalos</th>
-                                            <th style="padding: 8px 4px; text-align: right;">Total Enviado</th>
+                                            <th style="padding: 8px 4px;">Destinataria</th>
+                                            <th style="padding: 8px 4px;">Regalo</th>
+                                            <th style="padding: 8px 4px; text-align: right;">Valor</th>
                                         </tr>
                                     </thead>
-                                    <tbody id="table-donadores-body">
+                                    <tbody id="table-historial-body">
                                         <!-- Rellenado dinámico -->
                                     </tbody>
                                 </table>
@@ -1201,26 +1250,74 @@
                         </div>
                     </div>
 
-                    <!-- Historial de Regalos Recientes -->
-                    <div class="card" style="width: 100%;">
-                        <div class="card-title">📋 <span class="card-title-accent">Registro de Transacciones Recientes
-                                (Historial)</span></div>
-                        <div style="max-height: 250px; overflow-y: auto; padding-right: 6px;">
-                            <table style="width: 100%; border-collapse: collapse; font-size: 12.5px; text-align: left;">
-                                <thead>
-                                    <tr
-                                        style="border-bottom: 1px solid var(--border); color: var(--muted); font-size: 10px; text-transform: uppercase; position: sticky; top: 0; background: var(--surface); z-index: 5;">
-                                        <th style="padding: 8px 4px;">Fecha/Hora</th>
-                                        <th style="padding: 8px 4px;">Donador</th>
-                                        <th style="padding: 8px 4px;">Destinataria</th>
-                                        <th style="padding: 8px 4px;">Regalo</th>
-                                        <th style="padding: 8px 4px; text-align: right;">Valor</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="table-historial-body">
-                                    <!-- Rellenado dinámico -->
-                                </tbody>
-                            </table>
+                    <!-- SECCIÓN: PERFIL DE BAILARINA -->
+                    <div id="analytics-section-bailarinas" class="col" style="gap: 20px; width: 100%; display: none;">
+                        <!-- Selector de Bailarina -->
+                        <div class="card" style="padding: 16px 20px; display: flex; flex-direction: row; align-items: center; justify-content: space-between; gap: 20px; width: 100%;">
+                            <div class="col" style="gap: 4px;">
+                                <div class="card-title" style="margin: 0;">💃 <span class="card-title-accent">Perfil Individual de Bailarina</span></div>
+                                <div class="label" style="font-size: 11px; margin-bottom: 0;">Selecciona una integrante para analizar su rendimiento, superfans y regalos favoritos.</div>
+                            </div>
+                            <select id="select-analytics-bailarina" class="select" onchange="cargarDetalleBailarina(this.value)" style="width: 220px; height: 38px; font-size: 14px; font-weight: 700; padding: 6px 12px; border-radius: 8px; background: var(--surface3); color: #fff; border: 1px solid var(--border);">
+                                <option value="">-- Seleccionar --</option>
+                            </select>
+                        </div>
+
+                        <!-- Ficha de Rendimiento Individual -->
+                        <div id="ficha-bailarina-contenido" class="col" style="gap: 20px; display: none; width: 100%;">
+                            <!-- KPIs Individuales -->
+                            <div class="row-3" style="width: 100%; gap: 16px;">
+                                <div class="card" style="padding: 16px 20px; border-left: 4px solid var(--pink);">
+                                    <div class="label" style="font-size: 9px;">Total Diamantes Recibidos</div>
+                                    <div style="font-size: 28px; font-weight: 800; color: #fff; margin-top: 4px;" id="kpi-indiv-total">0 💎</div>
+                                </div>
+                                <div class="card" style="padding: 16px 20px; border-left: 4px solid var(--indigo);">
+                                    <div class="label" style="font-size: 9px;">Total de Regalos Recibidos</div>
+                                    <div style="font-size: 28px; font-weight: 800; color: #fff; margin-top: 4px;" id="kpi-indiv-regalos">0 🎁</div>
+                                </div>
+                                <div class="card" style="padding: 16px 20px; border-left: 4px solid var(--green);">
+                                    <div class="label" style="font-size: 9px;">Valor Promedio por Regalo</div>
+                                    <div style="font-size: 28px; font-weight: 800; color: #fff; margin-top: 4px;" id="kpi-indiv-promedio">0 💎</div>
+                                </div>
+                            </div>
+
+                            <!-- Gráfico de Regalos y Tabla de Superfans -->
+                            <div style="display: grid; grid-template-columns: 1fr 1.2fr; gap: 20px; width: 100%; align-items: start;">
+                                <!-- Distribución de Regalos -->
+                                <div class="card">
+                                    <div class="card-title">🎁 <span class="card-title-accent">Distribución de Regalos</span></div>
+                                    <div class="col" style="gap: 16px; align-items: center;">
+                                        <div style="height: 180px; width: 100%; position: relative;">
+                                            <canvas id="chart-indiv-regalos"></canvas>
+                                        </div>
+                                        <div id="legend-indiv-regalos" class="col" style="gap: 6px; width: 100%; max-height: 100px; overflow-y: auto;">
+                                            <!-- Leyenda dinámica -->
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Superfans / Donadores de ella -->
+                                <div class="card">
+                                    <div class="card-title">⭐ <span class="card-title-accent">Superfans (Mayores Donadores)</span></div>
+                                    <table style="width: 100%; border-collapse: collapse; font-size: 13px; text-align: left;">
+                                        <thead>
+                                            <tr style="border-bottom: 1px solid var(--border); color: var(--muted); font-size: 10px; text-transform: uppercase;">
+                                                <th style="padding: 8px 4px;">Espectador</th>
+                                                <th style="padding: 8px 4px; text-align: right;">Cantidad Regalos</th>
+                                                <th style="padding: 8px 4px; text-align: right;">Total Enviado</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="table-indiv-superfans-body">
+                                            <!-- Rellenado dinámico -->
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Estado vacío inicial -->
+                        <div id="ficha-bailarina-vacio" class="card" style="padding: 40px; text-align: center; color: var(--muted); width: 100%;">
+                            Selecciona una bailarina del selector superior para cargar su ficha analítica individual.
                         </div>
                     </div>
                 </div>
@@ -1352,6 +1449,122 @@
                             <div class="divider"></div>
                             <div class="label">Tiempo acumulado en vivo:</div>
                             <div id="timer-acumulado"></div>
+                        </div>
+                    </div>
+
+                    <!-- CARD DE TORNEO POR RONDAS -->
+                    <div class="card" style="margin-top: 15px;">
+                        <div class="card-title">
+                            🏆 <span class="card-title-accent">Torneo por Rondas con Eliminación</span>
+                        </div>
+                        <div class="col" style="gap: 10px;">
+                            <div class="label">Bailarinas Participantes:</div>
+                            <div id="torneo-participantes-checks" class="row" style="gap: 12px; flex-wrap: wrap; margin-bottom: 8px;">
+                                <!-- Checkboxes se inyectarán dinámicamente -->
+                            </div>
+                            
+                            <div class="row" style="gap:10px; align-items: center;">
+                                <span class="label" style="flex:1">Rondas:</span>
+                                <input type="number" id="torneoRondas" value="2" min="1" max="10" class="input input-num" style="width:130px; height:32px;">
+                            </div>
+                            <div class="row" style="gap:10px; align-items: center;">
+                                <span class="label" style="flex:1">Tiempo por Turno (seg):</span>
+                                <input type="number" id="torneoTiempo" value="90" min="10" max="300" class="input input-num" style="width:130px; height:32px;">
+                            </div>
+                            <div class="row" style="gap:10px; align-items: center;">
+                                <span class="label" style="flex:1">Meta por Turno:</span>
+                                <input type="number" id="torneoMetaTurno" value="1000" min="10" max="10000" class="input input-num" style="width:130px; height:32px;">
+                            </div>
+                            <div class="row" style="gap:10px; align-items: center;">
+                                <span class="label" style="flex:1">Cupos Clasificados:</span>
+                                <input type="number" id="torneoClasificadas" value="2" min="1" max="10" class="input input-num" style="width:130px; height:32px;">
+                            </div>
+                            
+                            <div class="row-2" style="margin-top: 8px;">
+                                <button class="btn btn-primary btn-full" onclick="iniciarTorneoRondas()">▶ Iniciar Torneo</button>
+                                <button class="btn btn-danger btn-full" onclick="cancelarTorneoRondas()">⏹ Cancelar</button>
+                            </div>
+                            
+                            <!-- BOTÓN DE INICIAR SIGUIENTE RONDA -->
+                            <div id="btn-next-round-wrap" style="display: none; margin-top: 8px;">
+                                <style>
+                                    @keyframes pulse-btn {
+                                        0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(16,185,129, 0.7); }
+                                        70% { transform: scale(1.02); box-shadow: 0 0 0 8px rgba(16,185,129, 0); }
+                                        100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(16,185,129, 0); }
+                                    }
+                                </style>
+                                <button class="btn btn-success btn-full" style="height: 40px; font-weight: 800; animation: pulse-btn 1.5s infinite; border: 2px solid #10b981;" onclick="avanzarSiguienteRondaTorneo()">▶ Iniciar Ronda <span id="lbl-next-round-num">2</span></button>
+                            </div>
+
+                            <!-- BOTÓN DE CONFIRMAR SIGUIENTE TURNO -->
+                            <div id="btn-next-turn-wrap" style="display: none; margin-top: 8px;">
+                                <button class="btn btn-primary btn-full" style="height: 40px; font-weight: 800; border: 2px solid var(--primary);" onclick="hacerFetch('/timer/confirm-next-turn')">▶ Siguiente Turno</button>
+                            </div>
+
+                            <!-- CONTROLES DE CAMPEONA -->
+                            <div id="torneo-campeona-wrap" style="display: none; margin-top: 8px;">
+                                <div class="col" style="gap: 8px;">
+                                    <button class="btn btn-success btn-full" style="height: 40px; font-weight: 800; background-color: #10b981;" onclick="hacerFetch('/timer/present-champion')">🏆 Presentar Campeona en Pantalla</button>
+                                    <button class="btn btn-danger btn-full" onclick="cancelarTorneoRondas()">⏹ Finalizar Torneo</button>
+                                </div>
+                            </div>
+
+                            <!-- CONFIRMAR ELIMINACIÓN DE TORNEO (FALLO SALVACIÓN) -->
+                            <div id="btn-confirm-elimination-fail-wrap" style="display: none; margin-top: 8px;">
+                                <style>
+                                    @keyframes pulse-btn-danger-torneo {
+                                        0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(239,68,68, 0.7); }
+                                        70% { transform: scale(1.02); box-shadow: 0 0 0 8px rgba(239,68,68, 0); }
+                                        100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(239,68,68, 0); }
+                                    }
+                                </style>
+                                <button class="btn btn-danger btn-full" style="height: 40px; font-weight: 800; border: 2px solid #ef4444; animation: pulse-btn-danger-torneo 1.5s infinite; background-color: #ef4444; color: #fff;" onclick="hacerFetch('/api/revivir/confirm-fallo')">⚠️ Declarar Eliminada (Tiempo Agotado)</button>
+                            </div>
+
+                            <!-- Marcador en Vivo del Torneo (oculto por defecto) -->
+                            <div id="torneo-marcador-wrap" style="display: none; border-top: 1px solid var(--border); margin-top: 12px; padding-top: 12px;">
+                                <div class="hud-title" style="margin-bottom: 8px;">Leaderboard en Vivo (Torneo)</div>
+                                <div style="display: flex; justify-content: space-between; font-weight: bold; margin-bottom: 6px; font-size: 12px;">
+                                    <span>Bailarina</span>
+                                    <span>Puntos en Rondas</span>
+                                </div>
+                                <div id="torneo-marcador-list" class="col" style="gap: 6px;"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- CARD DE REVIVIR QUEEN (SALVACIÓN) -->
+                    <div class="card" style="margin-top: 15px;">
+                        <div class="card-title">
+                            ❤️ <span class="card-title-accent">Revivir Queen (Salvación)</span>
+                        </div>
+                        <div class="col" style="gap: 10px;">
+                            <div class="row" style="gap:10px; align-items: center;">
+                                <span class="label" style="flex:1">Bailarina a Revivir:</span>
+                                <select id="revivirChicaSelect" class="select" style="width:130px; font-size:12px; height:32px; padding: 6px 10px;">
+                                    <!-- Se llenará dinámicamente -->
+                                </select>
+                            </div>
+                            <div class="row" style="gap:10px; align-items: center;">
+                                <span class="label" style="flex:1">Tiempo (seg):</span>
+                                <input type="number" id="tiempoRevivirInput" value="90" class="input input-num" style="width:130px; height:32px;">
+                            </div>
+                            <button class="btn btn-success btn-full" onclick="iniciarRevivir()">❤️ Iniciar Salvación</button>
+                            <div class="row-2" style="gap: 10px; margin-top: 5px;">
+                                <button class="btn btn-danger btn-full" onclick="hacerFetch('/api/revivir/stop')">⏹ Eliminar</button>
+                                <button class="btn btn-success btn-full" style="background-color: #10b981;" onclick="hacerFetch('/api/revivir/stop?exito=true')">❤️ Salvar</button>
+                            </div>
+                            <div id="btn-confirm-fallo-wrap" style="display: none; margin-top: 5px;">
+                                <style>
+                                    @keyframes pulse-btn-danger {
+                                        0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(239,68,68, 0.7); }
+                                        70% { transform: scale(1.02); box-shadow: 0 0 0 8px rgba(239,68,68, 0); }
+                                        100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(239,68,68, 0); }
+                                    }
+                                </style>
+                                <button class="btn btn-danger btn-full" style="height: 40px; font-weight: 800; border: 2px solid #ef4444; animation: pulse-btn-danger 1.5s infinite; background-color: #ef4444; color: #fff;" onclick="hacerFetch('/api/revivir/confirm-fallo')">⚠️ Declarar Eliminada (Tiempo Agotado)</button>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -1992,6 +2205,7 @@
             const socket = io();
             let QUEENS = [];
             let QUEEN_COLORS = {};
+            let APODOS = {};
 
             const EVENTOS_SONIDO = ['batalla_inicio', 'batalla_fin', 'batalla_punto', 'timer_inicio', 'timer_cambio', 'timer_fin', 'gol', 'tarjeta_amarilla', 'tarjeta_roja'];
 
@@ -2043,12 +2257,17 @@
 
             function hacerFetch(url) {
                 fetch(url)
-                    .then(r => {
+                    .then(async r => {
                         if (r.status === 401) {
                             window.location.href = '/login';
                             return;
                         }
-                        return r.text();
+                        const txt = await r.text();
+                        if (!r.ok) {
+                            alert(`Error: ${txt}`);
+                            throw new Error(txt);
+                        }
+                        return txt;
                     })
                     .then(msg => {
                         if (msg === 'Sistema pausado') alert('Sistema pausado');
@@ -2059,57 +2278,87 @@
             // --- ANALYTICS JAVASCRIPT ---
             let chartTendencia = null;
             let chartQueens = null;
+            let chartHorasPico = null;
+            let chartEquiposComparativa = null;
+            let chartIndivRegalos = null;
+
+            let cacheGraficaDiaria = [];
+            let cacheGraficaMensual = [];
+            let filtroGraficaActual = 'diario';
+            let subTabAnalyticsActual = 'agencia';
 
             async function cargarAnaliticas() {
                 try {
-                    const [resumen, historial, topGifters, grafica] = await Promise.all([
+                    const [resumen, historial, topGifters, graficaDiaria, graficaMensual, horasPico, futbolConfig] = await Promise.all([
                         fetch('/api/analytics/resumen').then(r => r.json()),
                         fetch('/api/analytics/historial').then(r => r.json()),
                         fetch('/api/analytics/top-gifters').then(r => r.json()),
-                        fetch('/api/analytics/grafica').then(r => r.json())
+                        fetch('/api/analytics/grafica').then(r => r.json()),
+                        fetch('/api/analytics/grafica-mensual').then(r => r.json()),
+                        fetch('/api/analytics/horas-pico').then(r => r.json()),
+                        fetch('/api/futbol/config').then(r => r.json())
                     ]);
 
+                    cacheGraficaDiaria = graficaDiaria;
+                    cacheGraficaMensual = graficaMensual;
+
+                    // Llenar selector de bailarinas si está vacío
+                    const selectBailarina = document.getElementById('select-analytics-bailarina');
+                    if (selectBailarina && selectBailarina.options.length <= 1) {
+                        selectBailarina.innerHTML = '<option value="">-- Seleccionar --</option>';
+                        QUEENS.forEach(q => {
+                            const opt = document.createElement('option');
+                            opt.value = q;
+                            opt.textContent = q.toUpperCase();
+                            selectBailarina.appendChild(opt);
+                        });
+                    }
+
+                    // KPIs Globales
                     document.getElementById('kpi-hoy').textContent = resumen.totalHoy.toLocaleString() + ' 💎';
                     document.getElementById('kpi-mes').textContent = resumen.totalMes.toLocaleString() + ' 💎';
                     document.getElementById('kpi-historico').textContent = resumen.totalHistorico.toLocaleString() + ' 💎';
 
+                    // Tabla Queens
                     const tableQueensBody = document.getElementById('table-queens-body');
                     tableQueensBody.innerHTML = '';
                     resumen.porQueen.forEach(q => {
                         const color = QUEEN_COLORS[q.queen_name] || '#ffffff';
                         tableQueensBody.innerHTML += `
-                <tr style="border-bottom: 1px solid rgba(255,255,255,0.03);">
-                    <td style="padding: 10px 4px; display: flex; align-items: center; gap: 8px;">
-                        <span style="width: 8px; height: 8px; border-radius: 50%; background: ${color}; display: inline-block;"></span>
-                        <span style="font-weight: 700; color: ${color};">${q.queen_name.toUpperCase()}</span>
-                    </td>
-                    <td style="padding: 10px 4px; text-align: right; color: var(--muted);">${q.cantidad_regalos}</td>
-                    <td style="padding: 10px 4px; text-align: right; font-weight: 800; color: #fff;">${q.total_diamantes.toLocaleString()}</td>
-                </tr>
-            `;
+                            <tr style="border-bottom: 1px solid rgba(255,255,255,0.03);">
+                                <td style="padding: 10px 4px; display: flex; align-items: center; gap: 8px;">
+                                    <span style="width: 8px; height: 8px; border-radius: 50%; background: ${color}; display: inline-block;"></span>
+                                    <span style="font-weight: 700; color: ${color};">${q.queen_name.toUpperCase()}</span>
+                                </td>
+                                <td style="padding: 10px 4px; text-align: right; color: var(--muted);">${q.cantidad_regalos}</td>
+                                <td style="padding: 10px 4px; text-align: right; font-weight: 800; color: #fff;">${q.total_diamantes.toLocaleString()}</td>
+                            </tr>
+                        `;
                     });
                     if (resumen.porQueen.length === 0) {
                         tableQueensBody.innerHTML = `<tr><td colspan="3" style="text-align:center; padding: 20px; color: var(--muted);">No hay registros aún.</td></tr>`;
                     }
 
+                    // Tabla Donadores
                     const tableDonadoresBody = document.getElementById('table-donadores-body');
                     tableDonadoresBody.innerHTML = '';
                     topGifters.forEach((g, idx) => {
                         const medal = idx === 0 ? '🥇' : idx === 1 ? '🥈' : idx === 2 ? '🥉' : '👤';
                         tableDonadoresBody.innerHTML += `
-                <tr style="border-bottom: 1px solid rgba(255,255,255,0.03);">
-                    <td style="padding: 10px 4px; font-weight: 600; color: var(--text);">
-                        <span style="margin-right: 6px;">${medal}</span>${g.viewer_name}
-                    </td>
-                    <td style="padding: 10px 4px; text-align: right; color: var(--muted);">${g.cantidad_regalos}</td>
-                    <td style="padding: 10px 4px; text-align: right; font-weight: 800; color: var(--green);">${g.total_donado.toLocaleString()} 💎</td>
-                </tr>
-            `;
+                            <tr style="border-bottom: 1px solid rgba(255,255,255,0.03);">
+                                <td style="padding: 10px 4px; font-weight: 600; color: var(--text);">
+                                    <span style="margin-right: 6px;">${medal}</span>${g.viewer_name}
+                                </td>
+                                <td style="padding: 10px 4px; text-align: right; color: var(--muted);">${g.cantidad_regalos}</td>
+                                <td style="padding: 10px 4px; text-align: right; font-weight: 800; color: var(--green);">${g.total_donado.toLocaleString()} 💎</td>
+                            </tr>
+                        `;
                     });
                     if (topGifters.length === 0) {
                         tableDonadoresBody.innerHTML = `<tr><td colspan="3" style="text-align:center; padding: 20px; color: var(--muted);">No hay donadores registrados.</td></tr>`;
                     }
 
+                    // Tabla Historial
                     const tableHistorialBody = document.getElementById('table-historial-body');
                     tableHistorialBody.innerHTML = '';
                     historial.forEach(h => {
@@ -2121,98 +2370,358 @@
                         } catch (e) { }
 
                         tableHistorialBody.innerHTML += `
-                <tr style="border-bottom: 1px solid rgba(255,255,255,0.03);">
-                    <td style="padding: 8px 4px; color: var(--muted); font-size: 11px;">${fechaStr}</td>
-                    <td style="padding: 8px 4px; font-weight: 600;">${h.viewer_name}</td>
-                    <td style="padding: 8px 4px; font-weight: 700; color: ${color};">${h.queen_name.toUpperCase()}</td>
-                    <td style="padding: 8px 4px; color: var(--text);">${h.gift_name}</td>
-                    <td style="padding: 8px 4px; text-align: right; font-weight: 800; color: var(--pink);">${h.diamonds.toLocaleString()}</td>
-                </tr>
-            `;
+                            <tr style="border-bottom: 1px solid rgba(255,255,255,0.03);">
+                                <td style="padding: 8px 4px; color: var(--muted); font-size: 11px;">${fechaStr}</td>
+                                <td style="padding: 8px 4px; font-weight: 600;">${h.viewer_name}</td>
+                                <td style="padding: 8px 4px; font-weight: 700; color: ${color};">${h.queen_name.toUpperCase()}</td>
+                                <td style="padding: 8px 4px; color: var(--text);">${h.gift_name}</td>
+                                <td style="padding: 8px 4px; text-align: right; font-weight: 800; color: var(--pink);">${h.diamonds.toLocaleString()}</td>
+                            </tr>
+                        `;
                     });
                     if (historial.length === 0) {
                         tableHistorialBody.innerHTML = `<tr><td colspan="5" style="text-align:center; padding: 30px; color: var(--muted);">No hay transacciones recientes.</td></tr>`;
                     }
 
-                    const ctxTendencia = document.getElementById('chart-tendencia').getContext('2d');
-                    if (chartTendencia) {
-                        chartTendencia.destroy();
-                    }
+                    // Dibujar Gráficas
+                    dibujarGraficaTendencia();
+                    dibujarGraficaQueens(resumen);
+                    dibujarGraficaHorasPico(horasPico);
+                    dibujarGraficaEquipos(resumen, futbolConfig);
 
-                    const labelsGrafica = [];
-                    const datosGrafica = [];
+                } catch (e) {
+                    console.error('Error cargando analíticas:', e);
+                }
+            }
+
+            function dibujarGraficaTendencia() {
+                const ctxTendencia = document.getElementById('chart-tendencia').getContext('2d');
+                if (chartTendencia) {
+                    chartTendencia.destroy();
+                }
+
+                const labelsGrafica = [];
+                const datosGrafica = [];
+
+                if (filtroGraficaActual === 'diario') {
+                    document.getElementById('label-grafica-tendencia').textContent = 'Donaciones en los últimos 7 días';
                     for (let i = 6; i >= 0; i--) {
                         const d = new Date();
                         d.setDate(d.getDate() - i);
                         const dateStr = d.toISOString().split('T')[0];
 
-                        const record = grafica.find(g => g.dia === dateStr);
+                        const record = cacheGraficaDiaria.find(g => g.dia === dateStr);
                         const total = record ? record.total_diamantes : 0;
 
                         const labelStr = d.toLocaleDateString([], { day: 'numeric', month: 'short' });
                         labelsGrafica.push(labelStr);
                         datosGrafica.push(total);
                     }
+                } else {
+                    document.getElementById('label-grafica-tendencia').textContent = 'Donaciones en los últimos 6 meses';
+                    const mesesAbreviados = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
+                    for (let i = 5; i >= 0; i--) {
+                        const d = new Date();
+                        d.setMonth(d.getMonth() - i);
+                        const year = d.getFullYear();
+                        const month = (d.getMonth() + 1).toString().padStart(2, '0');
+                        const monthKey = `${year}-${month}`;
 
-                    chartTendencia = new Chart(ctxTendencia, {
-                        type: 'line',
-                        data: {
-                            labels: labelsGrafica,
-                            datasets: [{
-                                label: 'Diamantes',
-                                data: datosGrafica,
-                                borderColor: '#6366f1',
-                                backgroundColor: 'rgba(99, 102, 241, 0.1)',
-                                borderWidth: 3,
-                                fill: true,
-                                tension: 0.3,
-                                pointBackgroundColor: '#818cf8',
-                                pointRadius: 4
-                            }]
+                        const record = cacheGraficaMensual.find(g => g.mes === monthKey);
+                        const total = record ? record.total_diamantes : 0;
+
+                        const labelStr = `${mesesAbreviados[d.getMonth()]} ${year}`;
+                        labelsGrafica.push(labelStr);
+                        datosGrafica.push(total);
+                    }
+                }
+
+                chartTendencia = new Chart(ctxTendencia, {
+                    type: 'line',
+                    data: {
+                        labels: labelsGrafica,
+                        datasets: [{
+                            label: 'Diamantes',
+                            data: datosGrafica,
+                            borderColor: '#6366f1',
+                            backgroundColor: 'rgba(99, 102, 241, 0.1)',
+                            borderWidth: 3,
+                            fill: true,
+                            tension: 0.3,
+                            pointBackgroundColor: '#818cf8',
+                            pointRadius: 4
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: { display: false }
                         },
-                        options: {
-                            responsive: true,
-                            maintainAspectRatio: false,
-                            plugins: {
-                                legend: { display: false }
+                        scales: {
+                            x: {
+                                grid: { color: 'rgba(255,255,255,0.03)' },
+                                ticks: { color: '#64748b', font: { size: 9 } }
                             },
-                            scales: {
-                                x: {
-                                    grid: { color: 'rgba(255,255,255,0.03)' },
-                                    ticks: { color: '#64748b', font: { size: 9 } }
-                                },
-                                y: {
-                                    grid: { color: 'rgba(255,255,255,0.03)' },
-                                    ticks: { color: '#64748b', font: { size: 9 } }
-                                }
+                            y: {
+                                grid: { color: 'rgba(255,255,255,0.03)' },
+                                ticks: { color: '#64748b', font: { size: 9 } }
                             }
                         }
-                    });
+                    }
+                });
+            }
 
-                    const ctxQueens = document.getElementById('chart-queens').getContext('2d');
-                    if (chartQueens) {
-                        chartQueens.destroy();
+            function cambiarFiltroGrafica(filtro) {
+                filtroGraficaActual = filtro;
+                
+                const btnDiario = document.getElementById('btn-chart-diario');
+                const btnMensual = document.getElementById('btn-chart-mensual');
+
+                if (filtro === 'diario') {
+                    btnDiario.className = 'btn btn-sm btn-primary';
+                    btnDiario.style.background = '';
+                    btnDiario.style.border = '';
+                    btnDiario.style.color = '';
+
+                    btnMensual.className = 'btn btn-sm';
+                    btnMensual.style.background = 'transparent';
+                    btnMensual.style.border = 'none';
+                    btnMensual.style.color = 'var(--muted)';
+                } else {
+                    btnMensual.className = 'btn btn-sm btn-primary';
+                    btnMensual.style.background = '';
+                    btnMensual.style.border = '';
+                    btnMensual.style.color = '';
+
+                    btnDiario.className = 'btn btn-sm';
+                    btnDiario.style.background = 'transparent';
+                    btnDiario.style.border = 'none';
+                    btnDiario.style.color = 'var(--muted)';
+                }
+
+                dibujarGraficaTendencia();
+            }
+
+            function dibujarGraficaQueens(resumen) {
+                const ctxQueens = document.getElementById('chart-queens').getContext('2d');
+                if (chartQueens) {
+                    chartQueens.destroy();
+                }
+
+                const labelsQueens = [];
+                const datosQueens = [];
+                const coloresQueens = [];
+                let totalSumadoQueens = 0;
+
+                resumen.porQueen.forEach(q => {
+                    labelsQueens.push(q.queen_name.toUpperCase());
+                    datosQueens.push(q.total_diamantes);
+                    coloresQueens.push(QUEEN_COLORS[q.queen_name] || '#aaa');
+                    totalSumadoQueens += q.total_diamantes;
+                });
+
+                chartQueens = new Chart(ctxQueens, {
+                    type: 'doughnut',
+                    data: {
+                        labels: labelsQueens,
+                        datasets: [{
+                            data: datosQueens,
+                            backgroundColor: coloresQueens,
+                            borderWidth: 0,
+                            hoverOffset: 4
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: { display: false }
+                        },
+                        cutout: '70%'
+                    }
+                });
+
+                const legendContainer = document.getElementById('legend-queens-container');
+                legendContainer.innerHTML = '';
+                resumen.porQueen.forEach((q, idx) => {
+                    const color = coloresQueens[idx];
+                    const pct = totalSumadoQueens > 0 ? ((q.total_diamantes / totalSumadoQueens) * 100).toFixed(1) : 0;
+                    legendContainer.innerHTML += `
+                        <div style="display: flex; align-items: center; justify-content: space-between; font-size: 11px;">
+                            <div style="display: flex; align-items: center; gap: 6px;">
+                                <span style="width: 8px; height: 8px; border-radius: 50%; background: ${color}; display: inline-block;"></span>
+                                <span style="color: ${color}; font-weight: 600;">${q.queen_name.toUpperCase()}</span>
+                            </div>
+                            <span style="color: #fff; font-weight: 700;">${pct}% <span style="font-size:9px; color:var(--muted); font-weight:normal;">(${q.total_diamantes})</span></span>
+                        </div>
+                    `;
+                });
+            }
+
+            function dibujarGraficaHorasPico(horasPico) {
+                const ctxHoras = document.getElementById('chart-horas-pico').getContext('2d');
+                if (chartHorasPico) {
+                    chartHorasPico.destroy();
+                }
+
+                const labels = [];
+                const datos = [];
+                for (let i = 0; i < 24; i++) {
+                    const horaStr = i.toString().padStart(2, '0');
+                    labels.push(`${horaStr}:00`);
+
+                    const record = horasPico.find(h => h.hora === horaStr);
+                    datos.push(record ? record.total_diamantes : 0);
+                }
+
+                chartHorasPico = new Chart(ctxHoras, {
+                    type: 'line',
+                    data: {
+                        labels: labels,
+                        datasets: [{
+                            label: 'Diamantes',
+                            data: datos,
+                            borderColor: '#10b981',
+                            backgroundColor: 'rgba(16, 185, 129, 0.1)',
+                            borderWidth: 2,
+                            fill: true,
+                            tension: 0.4,
+                            pointRadius: 2
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: { legend: { display: false } },
+                        scales: {
+                            x: {
+                                grid: { color: 'rgba(255,255,255,0.03)' },
+                                ticks: { color: '#64748b', font: { size: 8 } }
+                            },
+                            y: {
+                                grid: { color: 'rgba(255,255,255,0.03)' },
+                                ticks: { color: '#64748b', font: { size: 8 } }
+                            }
+                        }
+                    }
+                });
+            }
+
+            function dibujarGraficaEquipos(resumen, futbolConfig) {
+                const ctxEquipos = document.getElementById('chart-equipos-comparativa').getContext('2d');
+                if (chartEquiposComparativa) {
+                    chartEquiposComparativa.destroy();
+                }
+
+                const team1Name = (futbolConfig.equipo1 && futbolConfig.equipo1.nombre) || 'EQUIPO A';
+                const team2Name = (futbolConfig.equipo2 && futbolConfig.equipo2.nombre) || 'EQUIPO B';
+                const team1Members = (futbolConfig.equipo1 && futbolConfig.equipo1.miembros) || [];
+                const team2Members = (futbolConfig.equipo2 && futbolConfig.equipo2.miembros) || [];
+
+                let team1Total = 0;
+                let team2Total = 0;
+
+                resumen.porQueen.forEach(q => {
+                    const nameLower = q.queen_name.toLowerCase();
+                    if (team1Members.some(m => m.toLowerCase() === nameLower)) {
+                        team1Total += q.total_diamantes;
+                    } else if (team2Members.some(m => m.toLowerCase() === nameLower)) {
+                        team2Total += q.total_diamantes;
+                    }
+                });
+
+                chartEquiposComparativa = new Chart(ctxEquipos, {
+                    type: 'bar',
+                    data: {
+                        labels: [team1Name.toUpperCase(), team2Name.toUpperCase()],
+                        datasets: [{
+                            data: [team1Total, team2Total],
+                            backgroundColor: [
+                                (futbolConfig.equipo1 && futbolConfig.equipo1.color1) || '#004D98',
+                                (futbolConfig.equipo2 && futbolConfig.equipo2.color1) || '#FFFFFF'
+                            ],
+                            borderWidth: 0,
+                            borderRadius: 6
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: { legend: { display: false } },
+                        scales: {
+                            x: { grid: { display: false }, ticks: { color: '#64748b', font: { size: 9 } } },
+                            y: { grid: { color: 'rgba(255,255,255,0.03)' }, ticks: { color: '#64748b', font: { size: 9 } } }
+                        }
+                    }
+                });
+            }
+
+            async function cargarDetalleBailarina(name) {
+                const fichaContenido = document.getElementById('ficha-bailarina-contenido');
+                const fichaVacio = document.getElementById('ficha-bailarina-vacio');
+
+                if (!name) {
+                    fichaContenido.style.display = 'none';
+                    fichaVacio.style.display = 'block';
+                    return;
+                }
+
+                fichaContenido.style.display = 'flex';
+                fichaVacio.style.display = 'none';
+
+                try {
+                    const res = await fetch(`/api/analytics/bailarina?name=${encodeURIComponent(name)}`);
+                    const data = await res.json();
+
+                    document.getElementById('kpi-indiv-total').textContent = (data.stats.total || 0).toLocaleString() + ' 💎';
+                    document.getElementById('kpi-indiv-regalos').textContent = (data.stats.total_regalos || 0).toLocaleString() + ' 🎁';
+                    document.getElementById('kpi-indiv-promedio').textContent = (data.stats.promedio || 0).toLocaleString() + ' 💎';
+
+                    const tableBody = document.getElementById('table-indiv-superfans-body');
+                    tableBody.innerHTML = '';
+                    data.topDonadores.forEach((g, idx) => {
+                        const medal = idx === 0 ? '🥇' : idx === 1 ? '🥈' : idx === 2 ? '🥉' : '👤';
+                        tableBody.innerHTML += `
+                            <tr style="border-bottom: 1px solid rgba(255,255,255,0.03);">
+                                <td style="padding: 10px 4px; font-weight: 600; color: var(--text);">
+                                    <span style="margin-right: 6px;">${medal}</span>${g.viewer_name}
+                                </td>
+                                <td style="padding: 10px 4px; text-align: right; color: var(--muted);">${g.cantidad_regalos}</td>
+                                <td style="padding: 10px 4px; text-align: right; font-weight: 800; color: var(--green);">${g.total_donado.toLocaleString()} 💎</td>
+                            </tr>
+                        `;
+                    });
+                    if (data.topDonadores.length === 0) {
+                        tableBody.innerHTML = `<tr><td colspan="3" style="text-align:center; padding: 20px; color: var(--muted);">No hay donadores registrados para ella.</td></tr>`;
                     }
 
-                    const labelsQueens = [];
-                    const datosQueens = [];
-                    const coloresQueens = [];
-                    let totalSumadoQueens = 0;
+                    const ctxIndiv = document.getElementById('chart-indiv-regalos').getContext('2d');
+                    if (chartIndivRegalos) {
+                        chartIndivRegalos.destroy();
+                    }
 
-                    resumen.porQueen.forEach(q => {
-                        labelsQueens.push(q.queen_name.toUpperCase());
-                        datosQueens.push(q.total_diamantes);
-                        coloresQueens.push(QUEEN_COLORS[q.queen_name] || '#aaa');
-                        totalSumadoQueens += q.total_diamantes;
+                    const labels = [];
+                    const datos = [];
+                    const colores = [];
+                    let totalSumado = 0;
+
+                    const colorPalette = ['#ff4785', '#6366f1', '#10b981', '#f59e0b', '#ec4899', '#8b5cf6', '#3b82f6'];
+
+                    data.distribucionRegalos.forEach((r, idx) => {
+                        labels.push(r.gift_name.toUpperCase());
+                        datos.push(r.total_diamantes);
+                        colores.push(colorPalette[idx % colorPalette.length]);
+                        totalSumado += r.total_diamantes;
                     });
 
-                    chartQueens = new Chart(ctxQueens, {
+                    chartIndivRegalos = new Chart(ctxIndiv, {
                         type: 'doughnut',
                         data: {
-                            labels: labelsQueens,
+                            labels: labels,
                             datasets: [{
-                                data: datosQueens,
-                                backgroundColor: coloresQueens,
+                                data: datos,
+                                backgroundColor: colores,
                                 borderWidth: 0,
                                 hoverOffset: 4
                             }]
@@ -2220,31 +2729,65 @@
                         options: {
                             responsive: true,
                             maintainAspectRatio: false,
-                            plugins: {
-                                legend: { display: false }
-                            },
+                            plugins: { legend: { display: false } },
                             cutout: '70%'
                         }
                     });
 
-                    const legendContainer = document.getElementById('legend-queens-container');
+                    const legendContainer = document.getElementById('legend-indiv-regalos');
                     legendContainer.innerHTML = '';
-                    resumen.porQueen.forEach((q, idx) => {
-                        const color = coloresQueens[idx];
-                        const pct = totalSumadoQueens > 0 ? ((q.total_diamantes / totalSumadoQueens) * 100).toFixed(1) : 0;
+                    data.distribucionRegalos.forEach((r, idx) => {
+                        const color = colores[idx];
+                        const pct = totalSumado > 0 ? ((r.total_diamantes / totalSumado) * 100).toFixed(1) : 0;
                         legendContainer.innerHTML += `
-                <div style="display: flex; align-items: center; justify-content: space-between; font-size: 11px;">
-                    <div style="display: flex; align-items: center; gap: 6px;">
-                        <span style="width: 8px; height: 8px; border-radius: 50%; background: ${color}; display: inline-block;"></span>
-                        <span style="color: ${color}; font-weight: 600;">${q.queen_name.toUpperCase()}</span>
-                    </div>
-                    <span style="color: #fff; font-weight: 700;">${pct}% <span style="font-size:9px; color:var(--muted); font-weight:normal;">(${q.total_diamantes})</span></span>
-                </div>
-            `;
+                            <div style="display: flex; align-items: center; justify-content: space-between; font-size: 11px;">
+                                <div style="display: flex; align-items: center; gap: 6px;">
+                                    <span style="width: 8px; height: 8px; border-radius: 50%; background: ${color}; display: inline-block;"></span>
+                                    <span style="color: ${color}; font-weight: 600;">${r.gift_name.toUpperCase()}</span>
+                                </div>
+                                <span style="color: #fff; font-weight: 700;">${pct}% <span style="font-size:9px; color:var(--muted); font-weight:normal;">(${r.total_diamantes})</span></span>
+                            </div>
+                        `;
                     });
 
                 } catch (e) {
-                    console.error('Error cargando analíticas:', e);
+                    console.error("Error al cargar detalle de bailarina:", e);
+                }
+            }
+
+            function cambiarSubTabAnalytics(tab) {
+                subTabAnalyticsActual = tab;
+                const btnAgencia = document.getElementById('btn-subtab-agencia');
+                const btnBailarinas = document.getElementById('btn-subtab-bailarinas');
+                const secAgencia = document.getElementById('analytics-section-agencia');
+                const secBailarinas = document.getElementById('analytics-section-bailarinas');
+
+                if (tab === 'agencia') {
+                    btnAgencia.className = 'btn btn-primary';
+                    btnAgencia.style.background = '';
+                    btnAgencia.style.border = '';
+                    btnAgencia.style.color = '';
+
+                    btnBailarinas.className = 'btn';
+                    btnBailarinas.style.background = 'var(--surface2)';
+                    btnBailarinas.style.border = '1px solid var(--border)';
+                    btnBailarinas.style.color = 'var(--muted)';
+
+                    secAgencia.style.display = 'flex';
+                    secBailarinas.style.display = 'none';
+                } else {
+                    btnBailarinas.className = 'btn btn-primary';
+                    btnBailarinas.style.background = '';
+                    btnBailarinas.style.border = '';
+                    btnBailarinas.style.color = '';
+
+                    btnAgencia.className = 'btn';
+                    btnAgencia.style.background = 'var(--surface2)';
+                    btnAgencia.style.border = '1px solid var(--border)';
+                    btnAgencia.style.color = 'var(--muted)';
+
+                    secAgencia.style.display = 'none';
+                    secBailarinas.style.display = 'flex';
                 }
             }
 
@@ -3098,8 +3641,12 @@
             }
 
             async function cargarColores() {
-                const all = await (await fetch('/api/queens/all')).json();
+                const [all, ap] = await Promise.all([
+                    fetch('/api/queens/all').then(r => r.json()),
+                    fetch('/api/apodos').then(r => r.json())
+                ]);
                 all.forEach(q => { QUEEN_COLORS[q.name] = q.color; });
+                APODOS = ap || {};
             }
 
             // ── Puntos ──
@@ -3171,6 +3718,13 @@
                 const meta = document.getElementById('metaConociendoInput').value || 2000;
                 hacerFetch(`/conociendo/start?meta=${meta}`);
             }
+            function iniciarRevivir() {
+                const chica = document.getElementById('revivirChicaSelect').value;
+                const tiempo = document.getElementById('tiempoRevivirInput').value || 90;
+                const clasificadas = document.getElementById('torneoClasificadas').value || 2;
+                if (!chica) return alert('Selecciona una bailarina');
+                hacerFetch(`/api/revivir/start?chica=${encodeURIComponent(chica)}&tiempo=${tiempo}&clasificadas=${clasificadas}`);
+            }
             function renderBotonesConociendo() {
                 const c = document.getElementById('btns-conociendo');
                 c.innerHTML = '';
@@ -3190,6 +3744,28 @@
                 if (selRegalo && selRegalo.options.length <= 1 && typeof REGALO_IMGS !== 'undefined') {
                     selRegalo.innerHTML = '<option value="">— Sin imagen —</option>' +
                         REGALO_IMGS.map(img => `<option value="${img}">${img.replace('.png', '').replace('.jpg', '')}</option>`).join('');
+                }
+
+                // Rellenar select de revivir con las Queens activas
+                const selRevivir = document.getElementById('revivirChicaSelect');
+                if (selRevivir) {
+                    selRevivir.innerHTML = todas.filter(q => q.activo).map(q => `<option value="${q.name}">${q.apodo || q.name}</option>`).join('');
+                }
+
+                // Rellenar checkboxes del Torneo
+                const checksContainer = document.getElementById('torneo-participantes-checks');
+                if (checksContainer) {
+                    const selectedBefore = Array.from(checksContainer.querySelectorAll('input[type="checkbox"]:checked')).map(cb => cb.value);
+                    const hasSelections = selectedBefore.length > 0;
+                    checksContainer.innerHTML = todas.map(q => {
+                        const checked = hasSelections ? (selectedBefore.includes(q.name) ? 'checked' : '') : (q.activo ? 'checked' : '');
+                        return `
+                            <label style="display: flex; align-items: center; gap: 4px; font-size: 12px; cursor: pointer;">
+                                <input type="checkbox" value="${q.name}" class="torneo-participante-cb" ${checked}>
+                                <span style="color: ${q.color || '#fff'}">${q.apodo || q.name}</span>
+                            </label>
+                        `;
+                    }).join('');
                 }
 
                 // 1. Render tarjetas de miembros a la izquierda
@@ -3482,9 +4058,154 @@
             socket.on('queensActualizadas', async (data) => {
                 QUEENS = data.queens;
                 if (data.equipos) Object.keys(data.equipos).forEach(n => { QUEEN_COLORS[n] = data.equipos[n].color; });
+                if (data.apodos) APODOS = data.apodos;
                 renderPuntos(); renderBatallaOptions(); renderBotonesTimer();
                 renderBotonesConociendo(); cargarBailarinas();
             });
+
+            // ── Sockets del Torneo de Rondas ──
+            socket.on('revivirInicio', (data) => {
+                document.getElementById('btn-confirm-fallo-wrap').style.display = 'none';
+                document.getElementById('btn-confirm-elimination-fail-wrap').style.display = 'none';
+                if (data.modoTorneo) {
+                    document.getElementById('torneo-marcador-wrap').style.display = 'block';
+                    actualizarMarcadorTorneoUI(data.puntos || {}, data.chica);
+                    // Ocultar botones al empezar turno
+                    document.getElementById('btn-next-round-wrap').style.display = 'none';
+                    document.getElementById('btn-next-turn-wrap').style.display = 'none';
+                    document.getElementById('torneo-campeona-wrap').style.display = 'none';
+                } else {
+                    document.getElementById('torneo-marcador-wrap').style.display = 'none';
+                }
+            });
+
+            socket.on('revivirCancelado', () => {
+                document.getElementById('btn-confirm-fallo-wrap').style.display = 'none';
+                document.getElementById('btn-confirm-elimination-fail-wrap').style.display = 'none';
+                document.getElementById('torneo-marcador-wrap').style.display = 'none';
+                document.getElementById('btn-next-round-wrap').style.display = 'none';
+                document.getElementById('btn-next-turn-wrap').style.display = 'none';
+            });
+
+            socket.on('revivirFin', () => {
+                document.getElementById('btn-confirm-fallo-wrap').style.display = 'none';
+                document.getElementById('btn-confirm-elimination-fail-wrap').style.display = 'none';
+            });
+
+            socket.on('revivirFalloTiempoOut', (data) => {
+                document.getElementById('btn-confirm-fallo-wrap').style.display = 'block';
+                document.getElementById('btn-confirm-elimination-fail-wrap').style.display = 'block';
+            });
+
+            socket.on('torneoPuntosActualizados', (data) => {
+                actualizarMarcadorTorneoUI(data.puntosTorneo, data.chicaActual);
+            });
+
+            socket.on('torneoTurnoTerminado', (data) => {
+                // Mostrar botón de siguiente turno manual
+                document.getElementById('btn-next-turn-wrap').style.display = 'block';
+                document.getElementById('btn-next-round-wrap').style.display = 'none';
+            });
+
+            socket.on('torneoFinRondaEsperandoDecision', (data) => {
+                document.getElementById('torneo-marcador-wrap').style.display = 'none';
+                document.getElementById('btn-next-round-wrap').style.display = 'none';
+                document.getElementById('btn-next-turn-wrap').style.display = 'none';
+                const apodo = APODOS[data.chica] || data.chica;
+                const col = QUEEN_COLORS[data.chica] || '#fff';
+                mostrarDialogoSalvacion(data.chica, apodo, data.puntos, col, data.rondaActual, data.esUltimaRonda);
+            });
+
+            socket.on('torneoRondaDecidida', (data) => {
+                document.getElementById('btn-next-turn-wrap').style.display = 'none';
+                mostrarBotonSiguienteRonda(data.siguienteRonda);
+            });
+
+            socket.on('torneoGanadoraAnunciada', (data) => {
+                document.getElementById('btn-next-round-wrap').style.display = 'none';
+                document.getElementById('btn-next-turn-wrap').style.display = 'none';
+                document.getElementById('torneo-campeona-wrap').style.display = 'block';
+                
+                const apodo = APODOS[data.ganadora] || data.ganadora;
+                alert(`🏆 ¡Torneo finalizado! La ganadora es ${apodo} con ${data.puntosTotales} puntos.`);
+            });
+
+            // ── Funciones del Torneo de Rondas ──
+            function iniciarTorneoRondas() {
+                const checkedCheckboxes = Array.from(document.querySelectorAll('.torneo-participante-cb:checked')).map(cb => cb.value);
+                if (checkedCheckboxes.length < 2) {
+                    return alert('Por favor, selecciona al menos 2 bailarinas para el torneo.');
+                }
+                const participantes = checkedCheckboxes.join(',');
+                const tiempo = document.getElementById('torneoTiempo').value || 90;
+                const metaTurno = document.getElementById('torneoMetaTurno').value || 1000;
+                const rondas = document.getElementById('torneoRondas').value || 2;
+                const clasificadas = document.getElementById('torneoClasificadas').value || 2;
+                
+                // Ocultar botón de reanudación
+                document.getElementById('btn-next-round-wrap').style.display = 'none';
+                hacerFetch(`/timer/start-tournament?participantes=${encodeURIComponent(participantes)}&tiempoBase=${tiempo}&metaTurno=${metaTurno}&rondas=${rondas}&clasificadas=${clasificadas}`);
+            }
+
+            function cancelarTorneoRondas() {
+                hacerFetch('/timer/stop');
+            }
+
+            function actualizarMarcadorTorneoUI(puntosTorneo, chicaActual) {
+                const list = document.getElementById('torneo-marcador-list');
+                if (list) {
+                    const sorted = Object.entries(puntosTorneo || {})
+                        .map(([name, pts]) => ({ name, pts }))
+                        .sort((a, b) => b.pts - a.pts);
+                        
+                    list.innerHTML = sorted.map(item => {
+                        const display = APODOS[item.name] || item.name;
+                        const color = QUEEN_COLORS[item.name] || '#fff';
+                        const isCurrent = item.name === chicaActual ? 'font-weight: 800; border-left: 3px solid var(--pink); padding-left: 6px;' : '';
+                        return `
+                            <div style="display: flex; justify-content: space-between; font-size: 12px; ${isCurrent}">
+                                <span style="color: ${color}">${display} ${item.name === chicaActual ? '🎤' : ''}</span>
+                                <span style="font-family: monospace;">${item.pts.toLocaleString()}</span>
+                            </div>
+                        `;
+                    }).join('');
+                }
+            }
+
+            let chicaEnPeligro = '';
+            function mostrarDialogoSalvacion(chica, apodo, puntos, color, ronda, esUltimaRonda) {
+                chicaEnPeligro = chica;
+                document.getElementById('salvacion-chica-nombre').innerText = apodo;
+                document.getElementById('salvacion-chica-nombre').style.color = color;
+                document.getElementById('salvacion-chica-puntos').innerText = puntos;
+                
+                const descText = document.querySelector('#salvacion-modal h2');
+                if (descText) {
+                    descText.innerText = esUltimaRonda ? '¡Torneo Finalizado!' : `Fin de Ronda ${ronda}`;
+                }
+                
+                document.getElementById('salvacion-modal').style.display = 'flex';
+            }
+            
+            async function ejecutarAccionSalvacion(accion) {
+                document.getElementById('salvacion-modal').style.display = 'none';
+                if (accion === 'revivir') {
+                    const tiempo = document.getElementById('tiempoRevivirInput').value || 90;
+                    const clasificadas = document.getElementById('torneoClasificadas').value || 2;
+                    hacerFetch(`/api/revivir/start?chica=${encodeURIComponent(chicaEnPeligro)}&tiempo=${tiempo}&clasificadas=${clasificadas}`);
+                } else if (accion === 'eliminar') {
+                    hacerFetch('/timer/confirm-elimination');
+                }
+            }
+
+            function mostrarBotonSiguienteRonda(siguienteRonda) {
+                document.getElementById('lbl-next-round-num').innerText = siguienteRonda;
+                document.getElementById('btn-next-round-wrap').style.display = 'block';
+            }
+
+            function avanzarSiguienteRondaTorneo() {
+                hacerFetch('/timer/next-round');
+            }
 
             // ── Grupos ──
             async function cargarGrupos() {
@@ -3920,16 +4641,29 @@
                 const lista = document.getElementById('lista-gestor-regalos');
                 if (!lista) return;
                 lista.innerHTML = regalos.map(r => `
-        <div class="row" style="background:var(--surface2); border:1px solid var(--border); padding:8px 12px; border-radius:8px;">
+        <div class="row" style="background:var(--surface2); border:1px solid var(--border); padding:8px 12px; border-radius:8px; align-items:center; gap:10px;">
             <img src="${r.imagen}" style="width:40px;height:40px;object-fit:contain;border-radius:4px;background:var(--surface3);">
-            <div class="col" style="flex:1;gap:4px;">
-                <span style="font-weight:700;font-size:14px">${r.nombre}</span>
+            <div class="col" style="flex:1;">
+                <input type="text" class="input" value="${r.nombre}" style="width:100%; height:32px; font-weight:700; font-size:14px; background:var(--surface3); border:1px solid var(--border);" onchange="editarRegaloCustom(${r.id}, this.value, '${r.imagen}')" placeholder="Nombre del regalo...">
             </div>
             <button class="btn btn-danger btn-sm" onclick="eliminarRegaloCustom(${r.id})">🗑 Eliminar</button>
         </div>
     `).join('');
             }
             socket.on('regalosCustomActualizados', () => cargarGestorRegalos());
+
+            async function editarRegaloCustom(id, nuevoNombre, imagenActual) {
+                if (!nuevoNombre.trim()) return;
+                try {
+                    await fetch('/api/regalos-custom/editar', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ id, nombre: nuevoNombre.trim(), imagen: imagenActual })
+                    });
+                } catch(e) {
+                    console.error("Error editando regalo:", e);
+                }
+            }
 
             function eliminarRegaloCustom(id) {
                 uiConfirm("¿Estás seguro de eliminar este regalo?", async () => {
@@ -3963,6 +4697,23 @@
                 }
             }
         </script>
+
+    <!-- MODAL DE DECISIÓN DE SALVACIÓN / ELIMINACIÓN -->
+    <div id="salvacion-modal" style="display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0, 0, 0, 0.8); backdrop-filter: blur(8px); z-index: 99999; align-items: center; justify-content: center;">
+        <div class="card" style="width: 420px; text-align: center; border: 2px solid var(--pink); box-shadow: 0 0 25px rgba(236,72,153,0.3); padding: 24px;">
+            <div style="font-size: 3rem; margin-bottom: 12px;">🏆</div>
+            <h2 style="font-size: 1.5rem; font-weight: 800; margin-bottom: 8px;">¡Torneo Finalizado!</h2>
+            <p style="font-size: 0.95rem; color: var(--text-muted); margin-bottom: 20px; line-height: 1.5;">
+                La bailarina con menor puntaje es <br>
+                <span id="salvacion-chica-nombre" style="font-size: 1.3rem; font-weight: 900; color: #fff;">Venus</span> 
+                con <span id="salvacion-chica-puntos" style="font-weight: 800; color: var(--yellow);">150</span> puntos.
+            </p>
+            <div class="col" style="gap: 12px;">
+                <button class="btn btn-success btn-full" style="height: 42px; font-weight: 700;" onclick="ejecutarAccionSalvacion('revivir')">❤️ Iniciar Dinámica de Revivir</button>
+                <button class="btn btn-danger btn-full" style="height: 42px; font-weight: 700;" onclick="ejecutarAccionSalvacion('eliminar')">⏹ Eliminar de Inmediato</button>
+            </div>
+        </div>
+    </div>
 </body>
 
 </html>

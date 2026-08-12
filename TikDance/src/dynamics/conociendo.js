@@ -22,7 +22,7 @@ function setupConociendoDynamics(app, io, requireSession, activeSessions) {
         s.conociendo.meta = parseInt(req.query.meta) || 2000;
         s.conociendo.tiempo = 300;
         s.conociendo.puntos = 0;
-        s.conociendo.chicaActual = s.QUEENS[0] || 'Ray';
+        s.conociendo.chicaActual = s.QUEENS[0] || '';
         s.conociendo.estado = 'activo';
         let subTickConociendo = 0;
         let snipeConociendo = 3;

@@ -23,7 +23,20 @@ function procesarAvatarBase64(base64Str) {
 }
 
 function setupQueensRoutes(app, io, requireSession) {
-    app.get('/api/queens', requireSession, (req, res) => res.json(req.userSession.QUEENS));
+    app.get('/api/queens', requireSession, (req, res) => {
+        const s = req.userSession;
+        if (s.timerBaile && s.timerBaile.activo && s.timerBaile.modoTorneo) {
+            return res.json(s.timerBaile.participantesOriginales);
+        }
+        res.json(s.QUEENS);
+    });
+    app.get('/api/tournament/eliminated', requireSession, (req, res) => {
+        const s = req.userSession;
+        if (s.timerBaile && s.timerBaile.activo && s.timerBaile.modoTorneo) {
+            return res.json(s.timerBaile.eliminadas || []);
+        }
+        res.json([]);
+    });
     app.get('/api/queens/all', requireSession, (req, res) => res.json(req.userSession.db.getAllQueensFull()));
     app.get('/api/apodos', requireSession, (req, res) => res.json(req.userSession.db.getApodosMap()));
 
@@ -93,7 +106,13 @@ function setupQueensRoutes(app, io, requireSession) {
         res.json({ activo: nuevoEstado });
     });
 
-    app.get('/api/ranking', requireSession, (req, res) => res.json(req.userSession.db.getRanking()));
+    app.get('/api/ranking', requireSession, (req, res) => {
+        const s = req.userSession;
+        if (s.timerBaile && s.timerBaile.activo && s.timerBaile.modoTorneo) {
+            return res.json(s.timerBaile.puntosTorneo);
+        }
+        res.json(s.db.getRanking());
+    });
     app.get('/api/ranking-mensual', requireSession, (req, res) => res.json(req.userSession.db.getRankingMensual()));
     app.get('/api/ranking-diario', requireSession, (req, res) => res.json(req.userSession.db.getRankingDiario()));
     app.get('/api/copa', requireSession, (req, res) => res.json({ copa: req.userSession.db.getCopa(), equipos: req.userSession.equipos }));
@@ -159,7 +178,16 @@ function setupQueensRoutes(app, io, requireSession) {
         
         if (nombre && !isNaN(puntos)) {
             if (viewer && puntos > 0) s.lealtadUsuarios[viewer] = nombre;
-            if (puntos !== 0) s.queueUpdate.push({ nombre, puntos });
+            if (puntos !== 0) {
+                s.queueUpdate.push({ 
+                    nombre, 
+                    puntos, 
+                    viewer: viewer || 'Admin', 
+                    avatar: avatar || '', 
+                    giftName: 'Regalo Manual', 
+                    repeat: 1 
+                });
+            }
             
             if (puntos > 0) {
                 const vName = viewer || 'Admin';
@@ -190,7 +218,14 @@ function setupQueensRoutes(app, io, requireSession) {
         if (!isNaN(puntos) && puntos > 0) {
             let queenAsignada = (viewer && s.lealtadUsuarios[viewer]) ? s.lealtadUsuarios[viewer] : null;
             if (queenAsignada) {
-                s.queueUpdate.push({ nombre: queenAsignada, puntos });
+                s.queueUpdate.push({ 
+                    nombre: queenAsignada, 
+                    puntos, 
+                    viewer: viewer || 'Auto', 
+                    avatar: avatar || '', 
+                    giftName: 'Regalo Auto', 
+                    repeat: 1 
+                });
                 const vName = viewer || 'Auto';
                 s.db.registrarRegalo(queenAsignada, 'Regalo Auto', puntos, vName);
                 const eq = s.equipos[queenAsignada] || {};
@@ -199,7 +234,14 @@ function setupQueensRoutes(app, io, requireSession) {
                 }
                 return res.send("Asignado a " + queenAsignada);
             } else {
-                s.queueUpdate.push({ nombre: null, puntos });
+                s.queueUpdate.push({ 
+                    nombre: null, 
+                    puntos, 
+                    viewer: viewer || 'Auto', 
+                    avatar: avatar || '', 
+                    giftName: 'Regalo Auto', 
+                    repeat: 1 
+                });
                 return res.send("Sumado Global");
             }
         }

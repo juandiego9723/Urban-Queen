@@ -22,6 +22,7 @@ const createTikTokService      = require('./src/services/tiktokService');
 
 const setupTimerDynamics       = require('./src/dynamics/timer');
 const setupConociendoDynamics  = require('./src/dynamics/conociendo');
+const setupRevivirDynamics     = require('./src/dynamics/revivir');
 const setupBatallaDynamics     = require('./src/dynamics/batalla');
 const setupFutbolDynamics      = require('./src/dynamics/futbol');
 const setupCustomDynamics      = require('./src/dynamics/customDynamics');
@@ -99,10 +100,10 @@ function getUserSessionWithBatch(username) {
 // ── Inicializar módulos de dinámicas (obtener handlers) ─────────
 const timerHandlers      = setupTimerDynamics(app, io, requireSession, activeSessions);
 const conociendoHandlers = setupConociendoDynamics(app, io, requireSession, activeSessions);
+const revivirHandlers    = setupRevivirDynamics(app, io, requireSession, activeSessions);
 
-// ── Procesador de puntos central ────────────────────────────────
 const { procesarRegaloTikTok, procesarPuntosEnLote } = createPointsProcessor(
-    io, activeSessions, resolverNombre, timerHandlers, conociendoHandlers
+    io, activeSessions, resolverNombre, timerHandlers, conociendoHandlers, revivirHandlers
 );
 
 // ── Servicio TikTok ─────────────────────────────────────────────
@@ -204,6 +205,8 @@ app.get('/batalla-futbol',(req, res) => res.sendFile(pub('batalla-futbol.html'))
 app.get('/batalla-pk',    (req, res) => res.sendFile(pub('batalla-pk.html')));
 app.get('/timer',         (req, res) => res.sendFile(pub('timer.html')));
 app.get('/conociendo',    (req, res) => res.sendFile(pub('conociendo.html')));
+app.get('/revivir',       (req, res) => res.sendFile(pub('revivir.html')));
+app.get('/revivir-ranking', (req, res) => res.sendFile(pub('revivir-ranking.html')));
 app.get('/copa',          (req, res) => res.sendFile(pub('copa.html')));
 app.get('/lista-regalos', (req, res) => res.sendFile(pub('lista-regalos.html')));
 app.get('/control',       (req, res) => res.sendFile(pub('control.html')));

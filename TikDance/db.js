@@ -162,6 +162,9 @@ class DBInstance {
     }
 
     initQueens(queensArray) {
+        const countRow = this.queryOne('SELECT COUNT(*) as total FROM queens');
+        if (countRow && countRow.total > 0) return;
+
         const colores = { Amy: '#ff1493', Ray: '#ffd700', Nucita: '#00ffff', Venus: '#b026ff' };
         for (const name of queensArray) {
             const existing = this.queryOne('SELECT name FROM queens WHERE name = ?', [name]);
@@ -432,6 +435,37 @@ class DBInstance {
             WHERE timestamp >= datetime('now', '-6 days', 'start of day', 'localtime')
             GROUP BY dia
             ORDER BY dia ASC
+        `);
+    }
+
+    getRegalosPorMes() {
+        return this.queryAll(`
+            SELECT strftime('%Y-%m', timestamp) as mes, COALESCE(SUM(diamonds), 0) as total_diamantes
+            FROM historial_regalos
+            WHERE timestamp >= datetime('now', '-5 months', 'start of month', 'localtime')
+            GROUP BY mes
+            ORDER BY mes ASC
+        `);
+    }
+
+    getDatosBailarina(name) {
+        return this.queryOne("SELECT COALESCE(SUM(diamonds), 0) as total, COUNT(*) as total_regalos, COALESCE(ROUND(AVG(diamonds), 1), 0) as promedio FROM historial_regalos WHERE LOWER(queen_name) = LOWER(?)", [name]);
+    }
+
+    getTopDonadoresBailarina(name, limite = 5) {
+        return this.queryAll("SELECT viewer_name, COALESCE(SUM(diamonds), 0) as total_donado, COUNT(*) as cantidad_regalos FROM historial_regalos WHERE LOWER(queen_name) = LOWER(?) GROUP BY viewer_name ORDER BY total_donado DESC LIMIT ?", [name, limite]);
+    }
+
+    getDistribucionRegalosBailarina(name) {
+        return this.queryAll("SELECT gift_name, COALESCE(SUM(diamonds), 0) as total_diamantes, COUNT(*) as cantidad FROM historial_regalos WHERE LOWER(queen_name) = LOWER(?) GROUP BY gift_name ORDER BY total_diamantes DESC", [name]);
+    }
+
+    getDonacionesPorHora() {
+        return this.queryAll(`
+            SELECT strftime('%H', timestamp) as hora, COALESCE(SUM(diamonds), 0) as total_diamantes
+            FROM historial_regalos
+            GROUP BY hora
+            ORDER BY hora ASC
         `);
     }
 

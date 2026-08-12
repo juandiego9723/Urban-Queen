@@ -1,0 +1,754 @@
+<!DOCTYPE html>
+<html lang="es">
+    <head>
+    <!-- Inyección de multi-cuenta -->
+    <script>
+        (function() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const user = urlParams.get('user');
+            if (user) {
+                const originalFetch = window.fetch;
+                window.fetch = function(url, options) {
+                    if (typeof url === 'string' && !url.includes('user=')) {
+                        const sep = url.includes('?') ? '&' : '?';
+                        url = url + sep + 'user=' + encodeURIComponent(user);
+                    }
+                    return originalFetch(url, options);
+                };
+                const originalIo = window.io;
+                if (originalIo) {
+                    window.io = function(opts) {
+                        opts = opts || {};
+                        opts.query = opts.query || {};
+                        opts.query.user = user;
+                        return originalIo(opts);
+                    };
+                } else {
+                    let _io = undefined;
+                    Object.defineProperty(window, 'io', {
+                        get: function() { return _io; },
+                        set: function(val) {
+                            _io = function(opts) {
+                                opts = opts || {};
+                                opts.query = opts.query || {};
+                                opts.query.user = user;
+                                return val(opts);
+                            };
+                        },
+                        configurable: true
+                    });
+                }
+            }
+        })();
+    </script>
+
+        <meta charset="UTF-8">
+        <title>Revivir Queen Dynamic</title>
+        <link href="https://fonts.googleapis.com/css2?family=Montserrat:ital,wght@0,400;0,700;0,800;0,900;1,400;1,700;1,800;1,900&family=Inter:ital,wght@0,400;0,600;0,700;0,800;1,400;1,600;1,700&display=swap"
+              rel="stylesheet">
+        <style>
+        body { 
+            background-color: #00FF00; 
+            font-family: 'Inter', sans-serif; 
+            color: white; 
+            margin: 0; 
+            padding: 0;
+            overflow: hidden;
+            width: 100vw;
+            height: 100vh;
+            position: relative;
+        }
+
+        /* ── PANEL SUPERIOR (DANCER CARD) ── */
+        .revivir-top-panel {
+            position: absolute;
+            top: 25px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 440px;
+            background: rgba(10, 18, 14, 0.88);
+            border: 2px solid rgba(255, 255, 255, 0.15);
+            border-radius: 20px;
+            padding: 12px 18px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6);
+            display: none; /* Se activa dinámicamente */
+            align-items: center;
+            gap: 16px;
+            z-index: 10;
+            transition: border-color 0.3s, box-shadow 0.3s;
+        }
+
+        .left-circle-area {
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            width: 85px;
+            flex-shrink: 0;
+        }
+
+        .avatar-container {
+            position: relative;
+            width: 76px;
+            height: 76px;
+            border-radius: 50%;
+            padding: 2px;
+            background: #fff;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.4);
+            transition: all 0.3s;
+        }
+
+        /* Corona sobre el avatar */
+        .crown-overlay {
+            position: absolute;
+            top: -24px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 38px;
+            height: 38px;
+            background: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="%23ffee00"><path d="M2 19h20v2H2v-2zm3-3h14v2H5v-2zm7-11.87l3.6 4.7 4.4-2.83L18.4 15H5.6L4 9l4.4 2.83L12 7.13z"/></svg>') no-repeat center/contain;
+            display: none;
+            z-index: 5;
+            animation: bounce 1.5s infinite alternate;
+        }
+
+        @keyframes bounce {
+            from { transform: translateX(-50%) translateY(0); }
+            to { transform: translateX(-50%) translateY(-3px); }
+        }
+
+        .avatar-img {
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            object-fit: cover;
+            display: block;
+        }
+
+        .avatar-fallback {
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            font-family: 'Montserrat', sans-serif;
+            font-size: 2rem;
+            font-weight: 900;
+            color: white;
+            text-shadow: 1px 1px 3px rgba(0,0,0,0.5);
+        }
+
+        .mvp-badge-overlay {
+            position: absolute;
+            bottom: -3px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #ffee00;
+            color: #000;
+            font-family: 'Montserrat', sans-serif;
+            font-size: 10px;
+            font-weight: 900;
+            padding: 1px 6px;
+            border-radius: 10px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.4);
+            letter-spacing: 0.5px;
+            display: none;
+        }
+
+        .username-under-circle {
+            margin-top: 6px;
+            background: rgba(0, 0, 0, 0.85);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            padding: 2px 8px;
+            border-radius: 10px;
+            font-size: 10px;
+            font-weight: 800;
+            color: #ffee00;
+            max-width: 90px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            display: none;
+        }
+
+        .right-content-area {
+            display: flex;
+            flex-direction: column;
+            flex-grow: 1;
+            gap: 6px;
+        }
+
+        .top-row-info {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            width: 100%;
+        }
+
+        .dancer-pill-name {
+            background: #000;
+            border: 1px solid rgba(255,255,255,0.15);
+            padding: 3px 10px;
+            border-radius: 8px;
+            font-family: 'Montserrat', sans-serif;
+            font-weight: 900;
+            font-size: 13px;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .gifts-horizontal-list {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            overflow: hidden;
+            max-width: 220px;
+        }
+
+        .gift-pill-item {
+            background: rgba(255,255,255,0.06);
+            border: 1px solid rgba(255,255,255,0.08);
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            padding: 2px 5px;
+            gap: 3px;
+        }
+
+        .gift-pill-img {
+            width: 16px;
+            height: 16px;
+            object-fit: contain;
+        }
+
+        .gift-pill-multiplier {
+            font-size: 9px;
+            font-weight: 800;
+            color: #ffee00;
+        }
+
+        .middle-status-area {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            min-height: 38px;
+        }
+
+        .status-text-display {
+            font-family: 'Montserrat', sans-serif;
+            font-size: 26px;
+            font-weight: 900;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            text-shadow: 0 0 10px rgba(0, 242, 254, 0.4);
+            margin: 0;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .countdown-time-display {
+            font-family: 'Montserrat', sans-serif;
+            font-size: 26px;
+            font-weight: 900;
+            font-style: italic;
+            color: #fff;
+            text-shadow: 0 0 10px rgba(255, 255, 255, 0.4);
+            margin: 0;
+        }
+
+        .bottom-progress-row {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .revivir-progress-container {
+            width: 100%;
+            height: 22px;
+            background: rgba(0,0,0,0.5);
+            border: 1.5px solid rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .revivir-progress-fill {
+            height: 100%;
+            width: 0%;
+            background: #4facfe;
+            border-radius: 8px;
+            transition: width 0.3s ease;
+        }
+
+        .revivir-progress-label {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: 'Montserrat', sans-serif;
+            font-size: 11px;
+            font-weight: 900;
+            color: #fff;
+            text-shadow: 1px 1px 2px #000;
+        }
+
+        /* Brillo dorado en el ganador de MVP */
+        .mvp-glow {
+            animation: glow-anim 1.5s infinite alternate;
+        }
+        @keyframes glow-anim {
+            from { box-shadow: 0 0 10px #ffee00; }
+            to { box-shadow: 0 0 25px #ffee00; }
+        }
+        </style>
+    </head>
+    <body>
+        <!-- ── PANEL SUPERIOR (DANCER / MVP CARD) ── -->
+        <div class="revivir-top-panel" id="top-card">
+            <!-- Círculo de Imagen (Dancer / MVP) -->
+            <div class="left-circle-area">
+                <div class="crown-overlay" id="crown-icon"></div>
+                <div class="avatar-container" id="avatar-container">
+                    <img class="avatar-img" id="top-avatar" src="" onload="this.style.display='block'; this.nextElementSibling.style.display='none';" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                    <div class="avatar-fallback" id="top-fallback">Q</div>
+                    <div class="mvp-badge-overlay" id="mvp-badge">MVP</div>
+                </div>
+                <div class="username-under-circle" id="username-under">aleon810_chican</div>
+            </div>
+
+            <!-- Información Derecha -->
+            <div class="right-content-area">
+                <!-- Fila Superior: Nombre y Regalos Recibidos -->
+                <div class="top-row-info">
+                    <div class="dancer-pill-name" id="dancer-name-pill">-</div>
+                    <div class="gifts-horizontal-list" id="gifts-list">
+                        <!-- Iconos de regalos acumulados se inyectan acá -->
+                    </div>
+                </div>
+
+                <!-- Fila Media: Estado / Tiempo -->
+                <div class="middle-status-area">
+                    <h2 class="status-text-display" id="status-text">PREPÁRATE</h2>
+                    <h2 class="countdown-time-display" id="countdown-text">01:30</h2>
+                </div>
+
+                <!-- Fila Inferior: Progreso de Puntos -->
+                <div class="bottom-progress-row">
+                    <div id="meta-container" style="font-family:'Montserrat', sans-serif; font-size:14px; font-weight:900; color:#ffee00; text-align:left; letter-spacing:0.5px;">FALTAN: <span id="meta-valor" style="font-size:18px; font-style:italic;">0</span> PTS</div>
+                    <div class="revivir-progress-container">
+                        <div class="revivir-progress-fill" id="bar-fill"></div>
+                        <div class="revivir-progress-label" id="bar-label">0 / 0</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <script src="/socket.io/socket.io.js"></script>
+        <script>
+        const socket = io();
+        
+        let QUEEN_COLORS = {};
+        let QUEEN_AVATARS = {};
+        let QUEEN_GIFTS = {};
+        let APODOS = {};
+        
+        let activeQueen = '';
+
+        const topCard = document.getElementById('top-card');
+        const imgAvatar = document.getElementById('top-avatar');
+        const fallbackAvatar = document.getElementById('top-fallback');
+        const dancerNamePill = document.getElementById('dancer-name-pill');
+        const giftsList = document.getElementById('gifts-list');
+        const statusText = document.getElementById('status-text');
+        const countdownText = document.getElementById('countdown-text');
+        const barFill = document.getElementById('bar-fill');
+        const barLabel = document.getElementById('bar-label');
+        const metaValor = document.getElementById('meta-valor');
+        const metaContainer = document.getElementById('meta-container');
+
+        const avatarContainer = document.getElementById('avatar-container');
+        const crownIcon = document.getElementById('crown-icon');
+        const mvpBadge = document.getElementById('mvp-badge');
+        const usernameUnder = document.getElementById('username-under');
+
+        // Cargar detalles de las reinas
+        async function fetchInitialData() {
+            try {
+                const [resAll, resAp] = await Promise.all([
+                    fetch('/api/queens/all'),
+                    fetch('/api/apodos')
+                ]);
+                const all = await resAll.json();
+                all.forEach(q => {
+                    QUEEN_COLORS[q.name] = q.color;
+                    QUEEN_AVATARS[q.name] = q.avatar_img || '';
+                    QUEEN_GIFTS[q.name] = q.regalo_img || '';
+                });
+                APODOS = await resAp.json();
+            } catch(e) {
+                console.error("Error cargando configuración:", e);
+            }
+        }
+        fetchInitialData();
+
+        socket.on('queensActualizadas', (data) => {
+            if (data.equipos) {
+                Object.keys(data.equipos).forEach(n => {
+                    QUEEN_COLORS[n] = data.equipos[n].color;
+                    QUEEN_AVATARS[n] = data.equipos[n].avatar_img || '';
+                    QUEEN_GIFTS[n] = data.equipos[n].regalo_img || '';
+                });
+            }
+            if (data.apodos) APODOS = data.apodos;
+        });
+
+        function formatearTiempo(segundos) {
+            let m = Math.floor(segundos / 60).toString().padStart(2, '0');
+            let s = (segundos % 60).toString().padStart(2, '0');
+            return m + ':' + s;
+        }
+
+        function aplicarColoresTopCard(chica) {
+            const color = QUEEN_COLORS[chica] || '#ffee00';
+            topCard.style.borderColor = color;
+            topCard.style.boxShadow = `0 8px 32px ${color}33, 0 0 15px ${color}11`;
+            dancerNamePill.style.color = color;
+            barFill.style.background = `linear-gradient(90deg, ${color}, #ffffff)`;
+            statusText.style.color = color;
+            statusText.style.textShadow = `0 0 10px ${color}55`;
+
+            const apodo = APODOS[chica] || chica;
+            dancerNamePill.innerText = apodo + ' 💚';
+
+            // Configurar foto de la bailarina inicial
+            const customAvatar = QUEEN_AVATARS[chica] || '';
+            const giftImg = QUEEN_GIFTS[chica] || '';
+            const avatarSrc = customAvatar || (giftImg ? `/regalos/${giftImg}` : '');
+
+            // Reiniciar estado visual del círculo a "Dancer"
+            crownIcon.style.display = 'none';
+            mvpBadge.style.display = 'none';
+            usernameUnder.style.display = 'none';
+            avatarContainer.style.borderColor = '#fff';
+            avatarContainer.classList.remove('mvp-glow');
+
+            if (avatarSrc) {
+                imgAvatar.src = avatarSrc;
+                fallbackAvatar.style.display = 'none';
+            } else {
+                imgAvatar.removeAttribute('src');
+                imgAvatar.style.display = 'none';
+                fallbackAvatar.style.display = 'flex';
+                fallbackAvatar.innerText = apodo.charAt(0).toUpperCase();
+                fallbackAvatar.style.background = `linear-gradient(135deg, ${color}99, ${color})`;
+                fallbackAvatar.style.border = `2px solid ${color}`;
+            }
+        }
+
+        function actualizarProgreso(puntos, meta) {
+            const pts = parseInt(puntos) || 0;
+            const mt = parseInt(meta) || 0;
+
+            let porcentaje = mt === 0 ? 0 : (pts / mt) * 100;
+            if (porcentaje > 100) porcentaje = 100;
+            barFill.style.width = porcentaje + '%';
+            barLabel.innerText = `${pts.toLocaleString('es-ES')} / ${mt.toLocaleString('es-ES')}`;
+
+            // Calcular y renderizar puntos faltantes
+            const faltan = Math.max(0, mt - pts);
+            metaValor.innerText = faltan.toLocaleString('es-ES');
+        }
+
+        function renderRegalos(regalos, imgs) {
+            if (!regalos || Object.keys(regalos).length === 0) {
+                giftsList.innerHTML = '';
+                return;
+            }
+            giftsList.innerHTML = Object.entries(regalos).map(([name, count]) => {
+                const img = imgs[name] || '';
+                return `
+                    <div class="gift-pill-item">
+                        <img class="gift-pill-img" src="${img}">
+                        <span class="gift-pill-multiplier">x${count}</span>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        // ── EVENTOS DE SOCKETS ──
+        let introTimeout = null;
+        let isIntroRunning = false;
+        let modoTorneoActivo = false;
+        let rondaActualTorneo = 0;
+        let rondasTotalesTorneo = 0;
+
+        // ── EVENTOS DE SOCKETS ──
+        socket.on('revivirInicio', (data) => {
+            activeQueen = data.chica;
+            topCard.style.display = 'flex';
+            
+            // Guardar configuración del torneo
+            modoTorneoActivo = data.modoTorneo || false;
+            rondaActualTorneo = data.rondaActual || 0;
+            rondasTotalesTorneo = data.rondasTotales || 0;
+
+            // Limpiar cualquier intro previa
+            if (introTimeout) clearTimeout(introTimeout);
+            isIntroRunning = true;
+
+            // Mostrar estado inicial de intro centrado
+            statusText.style.display = 'block';
+            statusText.style.width = '100%';
+            statusText.style.textAlign = 'center';
+            statusText.innerText = 'PREPÁRATE';
+            
+            countdownText.style.display = 'none';
+
+            // Asegurar que el contenedor de "FALTAN" esté visible al iniciar
+            if (metaContainer) metaContainer.style.display = 'block';
+
+            aplicarColoresTopCard(data.chica);
+            actualizarProgreso(data.puntos, data.meta);
+            renderRegalos({}, {});
+
+            // Secuencia: PREPÁRATE (1s) -> READY (1s) -> SET (1s) -> GO! (1s)
+            introTimeout = setTimeout(() => {
+                statusText.innerText = 'READY';
+                introTimeout = setTimeout(() => {
+                    statusText.innerText = 'SET';
+                    introTimeout = setTimeout(() => {
+                        statusText.innerText = 'GO!';
+                        introTimeout = setTimeout(() => {
+                            // Terminar Intro, Centrar y Agrandar el Reloj
+                            isIntroRunning = false;
+                            
+                            if (modoTorneoActivo) {
+                                statusText.innerText = `RONDA ${rondaActualTorneo} / ${rondasTotalesTorneo}`;
+                                statusText.style.display = 'block';
+                                statusText.style.width = 'auto';
+                                statusText.style.textAlign = 'left';
+                                
+                                countdownText.style.display = 'block';
+                                countdownText.style.fontSize = '26px';
+                                countdownText.style.width = 'auto';
+                                countdownText.style.textAlign = 'right';
+                            } else {
+                                statusText.style.display = 'none';
+                                
+                                countdownText.style.display = 'block';
+                                countdownText.style.fontSize = '38px';
+                                countdownText.style.width = '100%';
+                                countdownText.style.textAlign = 'center';
+                            }
+                            countdownText.innerText = formatearTiempo(data.tiempo);
+                        }, 1000);
+                    }, 1000);
+                }, 1000);
+            }, 1200); // 1.2 segundos para mostrar "PREPÁRATE" al inicio
+        });
+
+        socket.on('revivirTick', (tiempo) => {
+            if (!isIntroRunning) {
+                countdownText.innerText = formatearTiempo(tiempo);
+                if (tiempo <= 10) {
+                    countdownText.style.color = '#ff3b30';
+                } else {
+                    countdownText.style.color = '#fff';
+                }
+            }
+        });
+
+        socket.on('revivirPuntos', (data) => {
+            actualizarProgreso(data.puntos, data.meta);
+            renderRegalos(data.regalosEnviados, data.regalosImgs);
+        });
+
+        socket.on('revivirFin', (data) => {
+            // Cancelar intro si seguía corriendo por alguna razón
+            if (introTimeout) clearTimeout(introTimeout);
+            isIntroRunning = false;
+
+            // Ocultar contador de tiempo
+            countdownText.style.display = 'none';
+
+            // Mostrar texto de estado centrado
+            statusText.style.display = 'block';
+            statusText.style.width = '100%';
+            statusText.style.textAlign = 'center';
+
+            if (modoTorneoActivo) {
+                const esUltima = (rondaActualTorneo === rondasTotalesTorneo);
+                statusText.innerText = esUltima ? 'TORNEO FIN' : `FIN RONDA ${rondaActualTorneo}`;
+                statusText.style.color = '#fff';
+                statusText.style.textShadow = '0 0 15px rgba(255,255,255,0.4)';
+                return;
+            }
+
+            if (data.exito) {
+                statusText.innerText = '¡WIN! ✨';
+                statusText.style.color = '#ffee00';
+                statusText.style.textShadow = '0 0 15px #ffee00';
+                
+                // Mostrar MVP en el círculo
+                if (data.mvpAvatar) {
+                    imgAvatar.src = data.mvpAvatar;
+                    fallbackAvatar.style.display = 'none';
+                } else if (data.mvpName) {
+                    imgAvatar.style.display = 'none';
+                    fallbackAvatar.style.display = 'flex';
+                    fallbackAvatar.innerText = data.mvpName.charAt(0).toUpperCase();
+                    fallbackAvatar.style.background = 'linear-gradient(135deg, #ffd700, #ff8c00)';
+                }
+
+                // Activar corona, badge MVP, bordes dorados y nombre del MVP
+                crownIcon.style.display = 'block';
+                mvpBadge.style.display = 'block';
+                
+                if (data.mvpName) {
+                    usernameUnder.innerText = data.mvpName;
+                    usernameUnder.style.display = 'block';
+                }
+                
+                avatarContainer.style.borderColor = '#ffee00';
+                avatarContainer.classList.add('mvp-glow');
+            } else {
+                statusText.innerText = 'ELIMINADA';
+                statusText.style.color = '#ff3b30';
+                statusText.style.textShadow = '0 0 15px #ff3b30';
+            }
+        });
+
+        socket.on('torneoTurnoTerminado', (data) => {
+            if (introTimeout) clearTimeout(introTimeout);
+            isIntroRunning = false;
+
+            // Ocultar contador de tiempo
+            countdownText.style.display = 'none';
+
+            // Configurar diseño de turno terminado
+            statusText.innerText = 'TURNO TERMINADO';
+            statusText.style.display = 'block';
+            statusText.style.width = '100%';
+            statusText.style.textAlign = 'center';
+
+            const color = QUEEN_COLORS[data.chica] || '#ffee00';
+            statusText.style.color = color;
+            statusText.style.textShadow = `0 0 15px ${color}`;
+
+            // Mostrar el MVP en el círculo avatar-container
+            if (data.mvpAvatar) {
+                imgAvatar.src = data.mvpAvatar;
+                imgAvatar.style.display = 'block';
+                fallbackAvatar.style.display = 'none';
+            } else if (data.mvpName) {
+                imgAvatar.style.display = 'none';
+                fallbackAvatar.style.display = 'flex';
+                fallbackAvatar.innerText = data.mvpName.charAt(0).toUpperCase();
+                fallbackAvatar.style.background = 'linear-gradient(135deg, #ffd700, #ff8c00)';
+            }
+
+            // Corona e indicador de MVP si hay MVP
+            if (data.mvpName) {
+                crownIcon.style.display = 'block';
+                mvpBadge.style.display = 'block';
+                usernameUnder.innerText = data.mvpName;
+                usernameUnder.style.display = 'block';
+                avatarContainer.style.borderColor = '#ffee00';
+                avatarContainer.classList.add('mvp-glow');
+            } else {
+                // Si no hay MVP, mantener el avatar de la bailarina y ocultar indicador de MVP
+                crownIcon.style.display = 'none';
+                mvpBadge.style.display = 'none';
+                usernameUnder.style.display = 'none';
+                avatarContainer.style.borderColor = '#fff';
+                avatarContainer.classList.remove('mvp-glow');
+            }
+        });
+
+        socket.on('torneoCampeonaPantalla', (data) => {
+            if (introTimeout) clearTimeout(introTimeout);
+            isIntroRunning = false;
+
+            activeQueen = data.ganadora;
+            topCard.style.display = 'flex';
+            if (metaContainer) metaContainer.style.display = 'none';
+
+            const color = QUEEN_COLORS[data.ganadora] || '#ffee00';
+            topCard.style.borderColor = color;
+            topCard.style.boxShadow = `0 0 50px ${color}, 0 0 20px ${color}88`;
+
+            dancerNamePill.style.color = '#fff';
+            dancerNamePill.style.backgroundColor = color;
+            const apodo = APODOS[data.ganadora] || data.ganadora;
+            dancerNamePill.innerText = `🏆 CAMPEONA: ${apodo} 🏆`;
+
+            statusText.innerText = '¡FELICIDADES!';
+            statusText.style.display = 'block';
+            statusText.style.width = '100%';
+            statusText.style.textAlign = 'center';
+            statusText.style.color = '#fff';
+            statusText.style.textShadow = `0 0 15px ${color}`;
+
+            countdownText.style.display = 'none';
+
+            // Mostrar puntos totales en la barra
+            barFill.style.width = '100%';
+            barFill.style.background = `linear-gradient(90deg, ${color}, #ffffff)`;
+            barLabel.innerText = `PUNTOS TOTALES: ${data.puntosTotales.toLocaleString('es-ES')}`;
+
+            // Configurar foto de la campeona
+            const customAvatar = QUEEN_AVATARS[data.ganadora] || '';
+            const giftImg = QUEEN_GIFTS[data.ganadora] || '';
+            const avatarSrc = customAvatar || (giftImg ? `/regalos/${giftImg}` : '');
+
+            crownIcon.style.display = 'block';
+            mvpBadge.style.display = 'none';
+            usernameUnder.innerText = 'CHAMPION';
+            usernameUnder.style.display = 'block';
+            avatarContainer.style.borderColor = color;
+            avatarContainer.classList.add('mvp-glow');
+
+            if (avatarSrc) {
+                imgAvatar.src = avatarSrc;
+                imgAvatar.style.display = 'block';
+                fallbackAvatar.style.display = 'none';
+            } else {
+                imgAvatar.removeAttribute('src');
+                imgAvatar.style.display = 'none';
+                fallbackAvatar.style.display = 'flex';
+                fallbackAvatar.innerText = apodo.charAt(0).toUpperCase();
+                fallbackAvatar.style.background = `linear-gradient(135deg, ${color}99, ${color})`;
+            }
+        });
+
+        socket.on('revivirFalloTiempoOut', (data) => {
+            if (introTimeout) clearTimeout(introTimeout);
+            isIntroRunning = false;
+
+            // Ocultar contador de tiempo
+            countdownText.style.display = 'none';
+
+            // Mostrar texto de estado centrado
+            statusText.style.display = 'block';
+            statusText.style.width = '100%';
+            statusText.style.textAlign = 'center';
+            statusText.innerText = 'NO LOGRADO';
+            statusText.style.color = '#ff3b30';
+            statusText.style.textShadow = '0 0 15px #ff3b30';
+        });
+
+        socket.on('revivirCancelado', () => {
+            if (introTimeout) clearTimeout(introTimeout);
+            isIntroRunning = false;
+            topCard.style.display = 'none';
+        });
+        </script>
+    </body>
+</html>

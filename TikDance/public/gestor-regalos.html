@@ -178,18 +178,39 @@
             }
         }
 
+        .card-title-container {
+            width: 90%;
+            overflow: hidden;
+            z-index: 2;
+            height: 24px;
+            position: relative;
+            margin-top: 10px;
+        }
+
         .card-title {
-            font-size: 18px;
+            font-size: 16px;
             font-weight: 800;
             text-transform: uppercase;
             letter-spacing: 0.5px;
-            text-align: center;
-            width: 90%;
             white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            z-index: 2;
             text-shadow: 0 2px 4px rgba(0, 0, 0, 0.6);
+            display: inline-block;
+            position: absolute;
+            left: 50%;
+            transform: translateX(-50%);
+        }
+
+        /* Marquesina para nombres largos */
+        .card-title.marquee {
+            left: 0;
+            transform: none;
+            animation: marqueeText 8s linear infinite;
+            padding-left: 100%;
+        }
+
+        @keyframes marqueeText {
+            0% { transform: translate3d(0, 0, 0); }
+            100% { transform: translate3d(-100%, 0, 0); }
         }
 
         /* Accion eliminada */
@@ -408,11 +429,17 @@
                 const delay = (index % 5) * 0.45;
                 const card = document.createElement('div');
                 card.className = 'card';
+                
+                const isLong = r.nombre && r.nombre.length > 8;
+                const titleClass = isLong ? 'card-title marquee' : 'card-title';
+
                 card.innerHTML = `
                     <div class="card-img-container" style="animation-delay: ${delay}s;">
                         <img src="${r.imagen}" class="card-img" alt="${r.nombre}">
                     </div>
-                    <div class="card-title">${r.nombre}</div>
+                    <div class="card-title-container">
+                        <div class="${titleClass}">${r.nombre}</div>
+                    </div>
                 `;
                 grid.appendChild(card);
             });
