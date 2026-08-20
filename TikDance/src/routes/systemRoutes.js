@@ -210,6 +210,75 @@ function setupSystemRoutes(app, io, requireSession, activeSessions) {
         res.json({ ranking: s.db.getRanking(), victorias: s.db.getVictorias(), copa: s.db.getCopa() });
     });
 
+    // Restaurar rankings desde el historial
+    app.get('/api/rankings/restore', requireSession, (req, res) => {
+        try {
+            const db = req.userSession.db;
+            const now = new Date();
+            const diaStr = now.toLocaleDateString('sv');
+            const mesStr = diaStr.substring(0, 7) + '-01';
+
+            const currentDay = now.getDay();
+            const distance = currentDay === 0 ? -6 : 1 - currentDay;
+            const monday = new Date(now);
+            monday.setDate(now.getDate() + distance);
+            const lunesStr = monday.toLocaleDateString('sv');
+
+            db.runSql('UPDATE queens SET ranking_diario = 0, ranking_semanal = 0, ranking_mensual = 0');
+
+            const diarios = db.queryAll(`
+                SELECT queen_name, COALESCE(SUM(diamonds), 0) as total 
+                FROM historial_regalos 
+                WHERE date(timestamp) >= date(?)
+                GROUP BY queen_name
+            `, [diaStr]);
+            diarios.forEach(d => {
+                db.runSql('UPDATE queens SET ranking_diario = ? WHERE name = ?', [d.total, d.queen_name]);
+            });
+
+            const semanales = db.queryAll(`
+                SELECT queen_name, COALESCE(SUM(diamonds), 0) as total 
+                FROM historial_regalos 
+                WHERE date(timestamp) >= date(?)
+                GROUP BY queen_name
+            `, [lunesStr]);
+            semanales.forEach(s => {
+                db.runSql('UPDATE queens SET ranking_semanal = ? WHERE name = ?', [s.total, s.queen_name]);
+            });
+
+            const mensuales = db.queryAll(`
+                SELECT queen_name, COALESCE(SUM(diamonds), 0) as total 
+                FROM historial_regalos 
+                WHERE date(timestamp) >= date(?)
+                GROUP BY queen_name
+            `, [mesStr]);
+            mensuales.forEach(m => {
+                db.runSql('UPDATE queens SET ranking_mensual = ? WHERE name = ?', [m.total, m.queen_name]);
+            });
+
+            io.to(req.username).emit('queensActualizadas', {
+                queens: req.userSession.QUEENS,
+                equipos: req.userSession.equipos,
+                apodos: db.getApodosMap()
+            });
+
+            res.json({
+                status: 'OK',
+                mensaje: 'Rankings restaurados con éxito a partir del historial de regalos.',
+                detalles: {
+                    diaInicio: diaStr,
+                    semanaInicio: lunesStr,
+                    mesInicio: mesStr,
+                    diariosRestaurados: diarios,
+                    semanalesRestaurados: semanales,
+                    mensualesRestaurados: mensuales
+                }
+            });
+        } catch (e) {
+            res.status(500).send(e.message);
+        }
+    });
+
     // Apagado
     app.all('/api/sistema/shutdown', requireSession, (req, res) => {
         const user = req.username;
