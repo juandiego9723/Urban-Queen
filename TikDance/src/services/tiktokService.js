@@ -49,21 +49,27 @@ function createTikTokService(app, io, requireSession, activeSessions, procesarRe
 
                 let huboCambios = false;
 
-                if (lastDiario !== diaStr) {
+                if (!lastDiario) {
+                    session.db.setConfigVal('last_reset_diario', diaStr);
+                } else if (lastDiario !== diaStr) {
                     console.log(`[Auto-Reset] Nuevo día detectado: ${diaStr} (Anterior: ${lastDiario}). Reiniciando ranking diario.`);
                     session.db.resetDiario();
                     session.db.setConfigVal('last_reset_diario', diaStr);
                     huboCambios = true;
                 }
 
-                if (lastSemanal !== semanaStr) {
+                if (!lastSemanal) {
+                    session.db.setConfigVal('last_reset_semanal', semanaStr);
+                } else if (lastSemanal !== semanaStr) {
                     console.log(`[Auto-Reset] Nueva semana detectada: ${semanaStr} (Anterior: ${lastSemanal}). Reiniciando ranking semanal.`);
                     session.db.resetSemanal();
                     session.db.setConfigVal('last_reset_semanal', semanaStr);
                     huboCambios = true;
                 }
 
-                if (lastMensual !== mesStr) {
+                if (!lastMensual) {
+                    session.db.setConfigVal('last_reset_mensual', mesStr);
+                } else if (lastMensual !== mesStr) {
                     console.log(`[Auto-Reset] Nuevo mes detectado: ${mesStr} (Anterior: ${lastMensual}). Reiniciando ranking mensual.`);
                     session.db.resetMensual();
                     session.db.setConfigVal('last_reset_mensual', mesStr);
