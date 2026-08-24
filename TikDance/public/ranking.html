@@ -199,6 +199,18 @@
         </div>
         <script src="/socket.io/socket.io.js"></script>
         <script>
+        function hexToRgba(hex, alpha) {
+            if (!hex) return `rgba(0, 242, 254, ${alpha})`;
+            hex = hex.replace('#', '');
+            if (hex.length === 3) {
+                hex = hex.split('').map(char => char + char).join('');
+            }
+            const r = parseInt(hex.substring(0, 2), 16) || 0;
+            const g = parseInt(hex.substring(2, 4), 16) || 0;
+            const b = parseInt(hex.substring(4, 6), 16) || 0;
+            return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+        }
+
         const urlParams = new URLSearchParams(window.location.search);
         const userParam = urlParams.get('user') || '';
         const socket = io({ query: userParam ? { user: userParam } : {} });
@@ -242,8 +254,8 @@
                 row.innerHTML = `
                     <div class="row-left">
                         <div class="avatar-wrapper">
-                            <img class="queen-avatar" src="" onload="this.style.display='block'; this.nextElementSibling.style.display='none';" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
-                            <div class="queen-avatar-fallback" style="background: linear-gradient(135deg, ${colorBase}88, ${colorBase}); border: 2px solid ${colorBase};">
+                            <img class="queen-avatar" style="display: none;">
+                            <div class="queen-avatar-fallback" style="background: linear-gradient(135deg, ${colorBase}88, ${colorBase}); border: 2px solid ${colorBase}; display: flex;">
                                 ${nombreDisplay.trim().charAt(0).toUpperCase()}
                             </div>
                         </div>
@@ -304,6 +316,12 @@
                 
                 if (avatarSrc) {
                     imgEl.src = avatarSrc;
+                    imgEl.style.display = 'block';
+                    fallbackEl.style.display = 'none';
+                    imgEl.onerror = () => {
+                        imgEl.style.display = 'none';
+                        fallbackEl.style.display = 'flex';
+                    };
                 } else {
                     imgEl.removeAttribute('src');
                     imgEl.style.display = 'none';
@@ -347,6 +365,20 @@
         }
 
         init();
+
+        socket.on('queensActualizadas', (data) => {
+            QUEENS = data.queens;
+            if (data.equipos) {
+                Object.keys(data.equipos).forEach(n => {
+                    COLORES[n] = data.equipos[n].color;
+                    AVATAR_IMGS_MAP[n] = data.equipos[n].avatar_img || '';
+                    REGALOS_IMGS_MAP[n] = data.equipos[n].regalo_img || '';
+                });
+            }
+            if (data.apodos) APODOS = data.apodos;
+            crearFilas();
+            reordenarTabla();
+        });
 
         socket.on('rankingActualizado', () => {
             init();
