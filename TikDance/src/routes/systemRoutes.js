@@ -213,21 +213,45 @@ function setupSystemRoutes(app, io, requireSession, activeSessions) {
         res.json({ status: 'OK', vistaAcumuladosActiva: vista });
     });
 
+    function getResetKeys() {
+        const now = new Date();
+        const year = now.getFullYear();
+        const month = String(now.getMonth() + 1).padStart(2, '0');
+        const day = String(now.getDate()).padStart(2, '0');
+        const diaStr = `${year}-${month}-${day}`;
+        const mesStr = `${year}-${month}`;
+
+        const target = new Date(year, now.getMonth(), now.getDate());
+        const dayNum = target.getDay() || 7;
+        target.setDate(target.getDate() + 4 - dayNum);
+        const yearStart = new Date(target.getFullYear(), 0, 1);
+        const weekNo = Math.ceil((((target - yearStart) / 86400000) + 1) / 7);
+        const semanaStr = `${target.getFullYear()}-W${String(weekNo).padStart(2, '0')}`;
+
+        return { diaStr, mesStr, semanaStr };
+    }
+
     // Resets
     app.all('/reset-semanal', requireSession, (req, res) => {
+        const { semanaStr } = getResetKeys();
         req.userSession.db.resetSemanal();
+        req.userSession.db.setConfigVal('last_reset_semanal', semanaStr);
         io.to(req.username).emit('resetRanking');
         res.send("OK");
     });
 
     app.all('/reset-diario', requireSession, (req, res) => {
+        const { diaStr } = getResetKeys();
         req.userSession.db.resetDiario();
+        req.userSession.db.setConfigVal('last_reset_diario', diaStr);
         io.to(req.username).emit('resetDiario');
         res.send("OK");
     });
 
     app.all('/reset-mensual', requireSession, (req, res) => {
+        const { mesStr } = getResetKeys();
         req.userSession.db.resetMensual();
+        req.userSession.db.setConfigVal('last_reset_mensual', mesStr);
         io.to(req.username).emit('resetMensual');
         res.send("OK");
     });
@@ -242,11 +266,15 @@ function setupSystemRoutes(app, io, requireSession, activeSessions) {
     app.all('/reset-total', requireSession, (req, res) => {
         const s = req.userSession;
         const user = req.username;
+        const { diaStr, mesStr, semanaStr } = getResetKeys();
         s.db.resetSemanal();
         s.db.resetMensual();
         s.db.resetDiario();
         s.db.resetCopa();
         s.db.resetVictorias();
+        s.db.setConfigVal('last_reset_diario', diaStr);
+        s.db.setConfigVal('last_reset_semanal', semanaStr);
+        s.db.setConfigVal('last_reset_mensual', mesStr);
         s.QUEENS.forEach(q => { s.rachasPerdidas[q] = 0; s.amarillasAcumuladas[q] = 0; });
         io.to(user).emit('resetRanking');
         io.to(user).emit('resetMensual');
