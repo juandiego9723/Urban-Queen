@@ -145,6 +145,36 @@ class DBInstance {
             creado_en TEXT DEFAULT CURRENT_TIMESTAMP
         )`);
 
+        this.db.run(`CREATE TABLE IF NOT EXISTS regalos_listas (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            nombre TEXT NOT NULL,
+            activa INTEGER DEFAULT 0,
+            creado_en TEXT DEFAULT CURRENT_TIMESTAMP
+        )`);
+
+        // Insert default list if empty
+        const listasCount = this.queryOne(`SELECT COUNT(*) as cnt FROM regalos_listas`);
+        if (listasCount && listasCount.cnt === 0) {
+            this.db.run(`INSERT INTO regalos_listas (id, nombre, activa) VALUES (1, 'General', 1)`);
+            this.marcarCambio();
+        }
+
+        // Migrate columns to regalos_custom
+        try {
+            this.db.run(`ALTER TABLE regalos_custom ADD COLUMN lista_id INTEGER REFERENCES regalos_listas(id)`);
+            this.db.run(`UPDATE regalos_custom SET lista_id = 1 WHERE lista_id IS NULL`);
+            this.marcarCambio();
+        } catch (e) {
+            // Column already exists
+        }
+
+        try {
+            this.db.run(`ALTER TABLE regalos_custom ADD COLUMN orden INTEGER DEFAULT 0`);
+            this.marcarCambio();
+        } catch (e) {
+            // Column already exists
+        }
+
         this.db.run(`CREATE TABLE IF NOT EXISTS historial_regalos (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             queen_name TEXT NOT NULL REFERENCES queens(name),
@@ -383,13 +413,46 @@ class DBInstance {
         this.runSql('INSERT INTO config (clave, valor) VALUES (?, ?) ON CONFLICT(clave) DO UPDATE SET valor=excluded.valor', [clave, valor]);
     }
 
-    getRegalosCustom() {
-        return this.queryAll('SELECT * FROM regalos_custom ORDER BY id DESC');
+    // Listas de Regalos
+    getRegalosListas() {
+        return this.queryAll('SELECT * FROM regalos_listas ORDER BY id ASC');
+    }
+
+    crearRegaloLista(nombre) {
+        this.runSql('INSERT INTO regalos_listas (nombre, activa) VALUES (?, 0)', [nombre]);
+    }
+
+    eliminarRegaloLista(id) {
+        // Eliminar regalos asociados a esa lista
+        this.runSql('DELETE FROM regalos_custom WHERE lista_id = ?', [id]);
+        // Eliminar la lista
+        this.runSql('DELETE FROM regalos_listas WHERE id = ?', [id]);
+    }
+
+    setListaActiva(id) {
+        this.runSql('UPDATE regalos_listas SET activa = 0');
+        this.runSql('UPDATE regalos_listas SET activa = 1 WHERE id = ?', [id]);
+    }
+
+    getActiveLista() {
+        return this.queryOne('SELECT * FROM regalos_listas WHERE activa = 1') || { id: 1, nombre: 'General', activa: 1 };
+    }
+
+    getRegalosCustom(listaId) {
+        if (!listaId) {
+            const active = this.getActiveLista();
+            listaId = active ? active.id : 1;
+        }
+        return this.queryAll('SELECT * FROM regalos_custom WHERE lista_id = ? ORDER BY orden ASC, id DESC', [listaId]);
     }
 
     crearRegaloCustom(data) {
-        this.runSql(`INSERT INTO regalos_custom (nombre, accion, imagen) VALUES (?, ?, ?)`,
-            [data.nombre, data.accion || '', data.imagen || '']);
+        const listaId = data.lista_id || this.getActiveLista().id;
+        const maxRow = this.queryOne('SELECT COALESCE(MAX(orden), 0) as maxOrden FROM regalos_custom WHERE lista_id = ?', [listaId]);
+        const nextOrden = maxRow ? maxRow.maxOrden + 1 : 1;
+        
+        this.runSql(`INSERT INTO regalos_custom (nombre, accion, imagen, lista_id, orden) VALUES (?, ?, ?, ?, ?)`,
+            [data.nombre, data.accion || '', data.imagen || '', listaId, nextOrden]);
     }
 
     editarRegaloCustom(id, data) {
@@ -399,6 +462,13 @@ class DBInstance {
 
     eliminarRegaloCustom(id) {
         this.runSql('DELETE FROM regalos_custom WHERE id = ?', [id]);
+    }
+
+    reordenarRegalosCustom(ids) {
+        if (!Array.isArray(ids)) return;
+        ids.forEach((id, idx) => {
+            this.runSql('UPDATE regalos_custom SET orden = ? WHERE id = ?', [idx, id]);
+        });
     }
 
     registrarRegalo(queenName, giftName, diamonds, viewerName) {

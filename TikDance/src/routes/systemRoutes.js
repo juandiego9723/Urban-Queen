@@ -54,7 +54,49 @@ function setupSystemRoutes(app, io, requireSession, activeSessions) {
         });
     });
 
-    app.get('/api/regalos-custom', requireSession, (req, res) => res.json(req.userSession.db.getRegalosCustom()));
+    app.get('/api/regalos-custom', requireSession, (req, res) => {
+        const listaId = req.query.lista_id ? parseInt(req.query.lista_id) : null;
+        res.json(req.userSession.db.getRegalosCustom(listaId));
+    });
+
+    // Rutas de Listas de Regalos
+    app.get('/api/regalos-listas', requireSession, (req, res) => {
+        res.json(req.userSession.db.getRegalosListas());
+    });
+
+    app.all('/api/regalos-listas/crear', requireSession, (req, res) => {
+        const s = req.userSession;
+        const nombre = req.body.nombre;
+        if (!nombre) return res.status(400).send('Falta nombre');
+        s.db.crearRegaloLista(nombre);
+        res.send('OK');
+    });
+
+    app.all('/api/regalos-listas/eliminar', requireSession, (req, res) => {
+        const s = req.userSession;
+        const id = parseInt(req.query.id || (req.body && req.body.id));
+        if (!id) return res.status(400).send('Falta id');
+        
+        // No permitir eliminar la lista General (id=1)
+        if (id === 1) return res.status(400).send('No se puede eliminar la lista general');
+        
+        s.db.eliminarRegaloLista(id);
+        const active = s.db.getActiveLista();
+        if (!active || active.id === id) {
+            s.db.setListaActiva(1);
+        }
+        io.to(req.username).emit('regalosCustomActualizados', s.db.getRegalosCustom());
+        res.send('OK');
+    });
+
+    app.all('/api/regalos-listas/activar', requireSession, (req, res) => {
+        const s = req.userSession;
+        const id = parseInt(req.query.id || (req.body && req.body.id));
+        if (!id) return res.status(400).send('Falta id');
+        s.db.setListaActiva(id);
+        io.to(req.username).emit('regalosCustomActualizados', s.db.getRegalosCustom());
+        res.send('OK');
+    });
 
     function procesarImagenBase64(base64Str) {
         if (!base64Str || !base64Str.startsWith('data:image')) return base64Str;
@@ -100,6 +142,15 @@ function setupSystemRoutes(app, io, requireSession, activeSessions) {
         const id = parseInt(req.query.id || (req.body && req.body.id));
         if (!id) return res.status(400).send('Falta id');
         s.db.eliminarRegaloCustom(id);
+        io.to(req.username).emit('regalosCustomActualizados', s.db.getRegalosCustom());
+        res.send('OK');
+    });
+
+    app.all('/api/regalos-custom/reordenar', requireSession, (req, res) => {
+        const s = req.userSession;
+        const ids = req.body.ids;
+        if (!Array.isArray(ids)) return res.status(400).send('Falta array ids');
+        s.db.reordenarRegalosCustom(ids);
         io.to(req.username).emit('regalosCustomActualizados', s.db.getRegalosCustom());
         res.send('OK');
     });

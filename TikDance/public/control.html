@@ -2017,6 +2017,22 @@
                                 Aquí puedes subir regalos personalizados. Estos regalos aparecerán automáticamente en el
                                 overlay <strong>/gestor-regalos</strong> con el fondo croma verde.
                             </div>
+
+                            <!-- Gestión de Listas de Regalos -->
+                            <div class="row" style="flex-wrap: wrap; align-items: center; gap: 10px; background: var(--surface2); padding: 12px; border-radius: 10px; border: 1px solid var(--border);">
+                                <div class="col" style="flex: 1; min-width: 200px;">
+                                    <label style="font-size: 11px; font-weight: 800; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px;">Lista de Regalos Seleccionada</label>
+                                    <select id="gestorListasSelect" class="input" style="width: 100%; height: 38px; margin-top: 4px;" onchange="cambiarListaGestor()"></select>
+                                </div>
+                                <div class="row" style="gap: 8px; margin-top: 18px;">
+                                    <button id="btnActivarLista" class="btn btn-primary" onclick="activarListaActual()">Activar para Stream</button>
+                                    <button class="btn btn-success" onclick="crearNuevaLista()">+ Nueva Lista</button>
+                                    <button id="btnEliminarLista" class="btn btn-danger" onclick="eliminarListaActual()">🗑 Eliminar</button>
+                                </div>
+                            </div>
+                            
+                            <div class="divider"></div>
+
                             <div class="row" style="flex-wrap: wrap;">
                                 <input type="text" id="gestorNombre" class="input" placeholder="Nombre (ej. KARAOKE)..."
                                     style="flex:1; min-width: 150px;">
@@ -2199,6 +2215,18 @@
                     if (result.isConfirmed) {
                         if (callback) callback();
                     }
+                });
+            };
+
+            window.uiAlert = function (title, msg, icon = 'info') {
+                Swal.fire({
+                    title: title,
+                    text: msg,
+                    icon: icon,
+                    background: 'var(--surface)',
+                    color: 'var(--text)',
+                    confirmButtonColor: '#ff4785',
+                    confirmButtonText: 'Aceptar'
                 });
             };
 
@@ -4607,8 +4635,13 @@
                 }).join('');
             });
 
-            // ── Gestor Custom ──
+            // ── Gestor Custom con Listas y Reordenamiento ──
             let gestorBase64 = '';
+            let gestorListas = [];
+            let gestorListaSeleccionadaId = 1;
+            let gestorListaActivaId = 1;
+            let gestorRegalosLocales = [];
+
             function previewGestorFile(e) {
                 const file = e.target.files[0];
                 if (!file) return;
@@ -4616,9 +4649,159 @@
                 r.onload = ev => gestorBase64 = ev.target.result;
                 r.readAsDataURL(file);
             }
+
+            async function cargarGestorListas() {
+                try {
+                    const res = await fetch('/api/regalos-listas');
+                    gestorListas = await res.json();
+                    
+                    const select = document.getElementById('gestorListasSelect');
+                    if (!select) return;
+
+                    const activeList = gestorListas.find(l => l.activa === 1) || gestorListas[0];
+                    gestorListaActivaId = activeList ? activeList.id : 1;
+
+                    if (!gestorListas.some(l => l.id === gestorListaSeleccionadaId)) {
+                        gestorListaSeleccionadaId = gestorListaActivaId;
+                    }
+
+                    select.innerHTML = gestorListas.map(l => {
+                        const activeText = l.activa === 1 ? ' 🟢 [ACTIVA LIVE]' : '';
+                        return `<option value="${l.id}" ${l.id === gestorListaSeleccionadaId ? 'selected' : ''}>${l.nombre}${activeText}</option>`;
+                    }).join('');
+
+                    const btnActivar = document.getElementById('btnActivarLista');
+                    if (btnActivar) {
+                        if (gestorListaSeleccionadaId === gestorListaActivaId) {
+                            btnActivar.textContent = '✓ Activa';
+                            btnActivar.className = 'btn btn-success';
+                            btnActivar.disabled = true;
+                        } else {
+                            btnActivar.textContent = 'Activar para Stream';
+                            btnActivar.className = 'btn btn-primary';
+                            btnActivar.disabled = false;
+                        }
+                    }
+
+                    const btnEliminar = document.getElementById('btnEliminarLista');
+                    if (btnEliminar) {
+                        btnEliminar.disabled = (gestorListaSeleccionadaId === 1);
+                    }
+
+                    cargarGestorRegalos();
+                } catch (e) {
+                    console.error("Error al cargar listas:", e);
+                }
+            }
+
+            function cambiarListaGestor() {
+                const select = document.getElementById('gestorListasSelect');
+                if (select) {
+                    gestorListaSeleccionadaId = parseInt(select.value);
+                    const btnActivar = document.getElementById('btnActivarLista');
+                    if (btnActivar) {
+                        if (gestorListaSeleccionadaId === gestorListaActivaId) {
+                            btnActivar.textContent = '✓ Activa';
+                            btnActivar.className = 'btn btn-success';
+                            btnActivar.disabled = true;
+                        } else {
+                            btnActivar.textContent = 'Activar para Stream';
+                            btnActivar.className = 'btn btn-primary';
+                            btnActivar.disabled = false;
+                        }
+                    }
+
+                    const btnEliminar = document.getElementById('btnEliminarLista');
+                    if (btnEliminar) {
+                        btnEliminar.disabled = (gestorListaSeleccionadaId === 1);
+                    }
+
+                    cargarGestorRegalos();
+                }
+            }
+
+            function crearNuevaLista() {
+                Swal.fire({
+                    title: 'Nueva Lista de Regalos',
+                    text: 'Introduce el nombre de la nueva lista de regalos:',
+                    input: 'text',
+                    inputPlaceholder: 'Ej. Halloween, Navidad, Especiales...',
+                    showCancelButton: true,
+                    confirmButtonColor: '#ff4785',
+                    cancelButtonColor: '#3d4f6e',
+                    confirmButtonText: 'Crear',
+                    cancelButtonText: 'Cancelar',
+                    background: 'var(--surface)',
+                    color: 'var(--text)',
+                    inputValidator: (value) => {
+                        if (!value || !value.trim()) {
+                            return '¡Debes escribir un nombre para la lista!';
+                        }
+                    }
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        const nombre = result.value.trim();
+                        fetch('/api/regalos-listas/crear', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ nombre })
+                        }).then(res => {
+                            if (res.ok) {
+                                cargarGestorListas();
+                            } else {
+                                uiAlert('Error', 'Hubo un error al crear la lista.', 'error');
+                            }
+                        }).catch(e => {
+                            console.error(e);
+                        });
+                    }
+                });
+            }
+
+            function eliminarListaActual() {
+                if (gestorListaSeleccionadaId === 1) {
+                    uiAlert('Acción Denegada', 'No se puede eliminar la lista General.', 'warning');
+                    return;
+                }
+                const listName = gestorListas.find(l => l.id === gestorListaSeleccionadaId)?.nombre || '';
+                uiConfirm(`¿Estás seguro de eliminar la lista "${listName}"? Se borrarán todos los regalos contenidos en ella.`, async () => {
+                    try {
+                        const res = await fetch(`/api/regalos-listas/eliminar?id=${gestorListaSeleccionadaId}`, {
+                            method: 'POST'
+                        });
+                        if (res.ok) {
+                            gestorListaSeleccionadaId = 1;
+                            cargarGestorListas();
+                        } else {
+                            uiAlert('Error', 'Error al eliminar la lista.', 'error');
+                        }
+                    } catch(e) {
+                        console.error(e);
+                    }
+                });
+            }
+
+            async function activarListaActual() {
+                try {
+                    const res = await fetch(`/api/regalos-listas/activar?id=${gestorListaSeleccionadaId}`, {
+                        method: 'POST'
+                    });
+                    if (res.ok) {
+                        cargarGestorListas();
+                    } else {
+                        uiAlert('Error', 'Error al activar la lista.', 'error');
+                    }
+                } catch(e) {
+                    console.error(e);
+                }
+            }
+
             async function guardarRegaloCustom() {
                 const nombre = document.getElementById('gestorNombre').value.trim();
-                if (!nombre || !gestorBase64) return alert('Falta nombre o imagen');
+                if (!nombre || !gestorBase64) {
+                    uiAlert('Datos Incompletos', 'Falta ingresar el nombre o seleccionar la imagen del regalo.', 'warning');
+                    return;
+                }
 
                 const btn = event.target;
                 btn.disabled = true;
@@ -4626,7 +4809,7 @@
 
                 await fetch('/api/regalos-custom/crear', {
                     method: 'POST', headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ nombre, imagen: gestorBase64 })
+                    body: JSON.stringify({ nombre, imagen: gestorBase64, lista_id: gestorListaSeleccionadaId })
                 });
                 document.getElementById('gestorNombre').value = '';
                 document.getElementById('gestorFile').value = '';
@@ -4635,22 +4818,108 @@
                 btn.disabled = false;
                 btn.textContent = '+ Agregar';
             }
+
             async function cargarGestorRegalos() {
-                const res = await fetch('/api/regalos-custom');
+                const res = await fetch('/api/regalos-custom?lista_id=' + gestorListaSeleccionadaId);
                 const regalos = await res.json();
                 const lista = document.getElementById('lista-gestor-regalos');
                 if (!lista) return;
-                lista.innerHTML = regalos.map(r => `
-        <div class="row" style="background:var(--surface2); border:1px solid var(--border); padding:8px 12px; border-radius:8px; align-items:center; gap:10px;">
-            <img src="${r.imagen}" style="width:40px;height:40px;object-fit:contain;border-radius:4px;background:var(--surface3);">
-            <div class="col" style="flex:1;">
+
+                if (regalos.length === 0) {
+                    lista.innerHTML = `
+                        <div style="text-align:center; padding: 20px; color: var(--text-muted); font-style: italic;">
+                            Esta lista no contiene regalos todavía. ¡Sube uno abajo!
+                        </div>
+                    `;
+                    gestorRegalosLocales = [];
+                    return;
+                }
+
+                lista.innerHTML = regalos.map((r, index) => {
+                    return `
+        <div class="row row-draggable" draggable="true" data-id="${r.id}" data-index="${index}" style="background:var(--surface2); border:1px solid var(--border); padding:8px 12px; border-radius:8px; align-items:center; gap:10px; cursor: grab; user-select: none; transition: transform 0.15s ease, background-color 0.15s ease;">
+            <!-- Indicador / Manija de Arrastre -->
+            <div style="color: var(--text-muted); font-size: 18px; margin-right: 2px; display: flex; align-items: center; justify-content: center; pointer-events: none; width: 20px;">☰</div>
+            
+            <img src="${r.imagen}" style="width:40px;height:40px;object-fit:contain;border-radius:4px;background:var(--surface3); pointer-events: none;">
+            
+            <div class="col" style="flex:1; pointer-events: auto;">
                 <input type="text" class="input" value="${r.nombre}" style="width:100%; height:32px; font-weight:700; font-size:14px; background:var(--surface3); border:1px solid var(--border);" onchange="editarRegaloCustom(${r.id}, this.value, '${r.imagen}')" placeholder="Nombre del regalo...">
             </div>
+            
             <button class="btn btn-danger btn-sm" onclick="eliminarRegaloCustom(${r.id})">🗑 Eliminar</button>
         </div>
-    `).join('');
+                    `;
+                }).join('');
+
+                gestorRegalosLocales = regalos;
+
+                // Agregar listeners para Drag & Drop
+                const rows = lista.querySelectorAll('.row-draggable');
+                let dragIdx = null;
+
+                rows.forEach(row => {
+                    row.addEventListener('dragstart', (e) => {
+                        // Evitar que arrastre al hacer clic en inputs o botones
+                        if (e.target.tagName === 'INPUT' || e.target.tagName === 'BUTTON') {
+                            e.preventDefault();
+                            return;
+                        }
+                        dragIdx = parseInt(row.getAttribute('data-index'));
+                        row.style.opacity = '0.5';
+                        row.style.border = '1px dashed var(--pink)';
+                        e.dataTransfer.effectAllowed = 'move';
+                    });
+
+                    row.addEventListener('dragover', (e) => {
+                        e.preventDefault();
+                        row.style.transform = 'scale(1.02)';
+                        row.style.background = 'var(--surface3)';
+                    });
+
+                    row.addEventListener('dragleave', () => {
+                        row.style.transform = '';
+                        row.style.background = 'var(--surface2)';
+                    });
+
+                    row.addEventListener('drop', async (e) => {
+                        e.preventDefault();
+                        row.style.transform = '';
+                        row.style.background = 'var(--surface2)';
+                        
+                        const dropIdx = parseInt(row.getAttribute('data-index'));
+                        if (dragIdx !== null && dragIdx !== dropIdx) {
+                            // Reordenar localmente
+                            const [movedItem] = gestorRegalosLocales.splice(dragIdx, 1);
+                            gestorRegalosLocales.splice(dropIdx, 0, movedItem);
+
+                            const ids = gestorRegalosLocales.map(item => item.id);
+                            
+                            try {
+                                const res = await fetch('/api/regalos-custom/reordenar', {
+                                    method: 'POST',
+                                    headers: { 'Content-Type': 'application/json' },
+                                    body: JSON.stringify({ ids })
+                                });
+                                if (!res.ok) {
+                                    uiAlert('Error', 'Error al reordenar regalos.', 'error');
+                                }
+                                cargarGestorRegalos();
+                            } catch(err) {
+                                console.error(err);
+                                cargarGestorRegalos();
+                            }
+                        }
+                    });
+
+                    row.addEventListener('dragend', () => {
+                        row.style.opacity = '1';
+                        row.style.border = '1px solid var(--border)';
+                    });
+                });
             }
-            socket.on('regalosCustomActualizados', () => cargarGestorRegalos());
+
+            socket.on('regalosCustomActualizados', () => cargarGestorListas());
 
             async function editarRegaloCustom(id, nuevoNombre, imagenActual) {
                 if (!nuevoNombre.trim()) return;
@@ -4673,7 +4942,6 @@
                             headers: { 'Content-Type': 'application/json' },
                             body: JSON.stringify({ id })
                         });
-                        // La lista se actualizará por socket
                     } catch (e) {
                         console.error("Error al eliminar regalo:", e);
                     }
@@ -4681,7 +4949,7 @@
             }
 
             init();
-            cargarGestorRegalos();
+            cargarGestorListas();
 
             async function iniciarClasico() {
                 try {
