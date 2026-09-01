@@ -59,7 +59,11 @@ function createPointsProcessor(io, activeSessions, resolverNombreFn, timerHandle
         
         try {
             let destinatarioFinal = 'Global';
-            if (queenActivadora && session.QUEENS.includes(queenActivadora)) {
+            const esChicaValida = queenActivadora && (
+                session.QUEENS.includes(queenActivadora) ||
+                (session.timerBaile && session.timerBaile.activo && queenActivadora === session.timerBaile.chicaActual)
+            );
+            if (esChicaValida) {
                 const eq = session.equipos[queenActivadora] || {};
                 const pts = eq.regalo_pts ? (eq.regalo_pts * repeat) : coins;
                 destinatarioFinal = queenActivadora;
