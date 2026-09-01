@@ -2203,6 +2203,43 @@
             };
 
             const socket = io();
+            let currentUserSession = 'admin';
+
+            async function initObsUrls() {
+                try {
+                    const res = await fetch('/api/me');
+                    if (res.ok) {
+                        const data = await res.json();
+                        if (data && data.username) currentUserSession = data.username;
+                    }
+                } catch(e) {}
+                
+                const elUniversal = document.getElementById('url-overlay-universal');
+                const elAcumulados = document.getElementById('url-overlay-acumulados');
+                
+                if (elUniversal) elUniversal.textContent = `${window.location.origin}/overlay-universal?user=${encodeURIComponent(currentUserSession)}`;
+                if (elAcumulados) elAcumulados.textContent = `${window.location.origin}/overlay-acumulados?user=${encodeURIComponent(currentUserSession)}`;
+            }
+
+            window.copiarUrl = function(tipo) {
+                const url = tipo === 'acumulados' 
+                    ? `${window.location.origin}/overlay-acumulados?user=${encodeURIComponent(currentUserSession)}`
+                    : `${window.location.origin}/overlay-universal?user=${encodeURIComponent(currentUserSession)}`;
+                navigator.clipboard.writeText(url).then(() => {
+                    alert('📋 URL copiada al portapapeles para OBS:\n' + url);
+                }).catch(() => {
+                    prompt('Copia esta URL para OBS:', url);
+                });
+            };
+
+            window.abrirUrl = function(tipo) {
+                const url = tipo === 'acumulados' 
+                    ? `${window.location.origin}/overlay-acumulados?user=${encodeURIComponent(currentUserSession)}`
+                    : `${window.location.origin}/overlay-universal?user=${encodeURIComponent(currentUserSession)}`;
+                window.open(url, '_blank');
+            };
+
+            initObsUrls();
             let QUEENS = [];
             let QUEEN_COLORS = {};
             let APODOS = {};

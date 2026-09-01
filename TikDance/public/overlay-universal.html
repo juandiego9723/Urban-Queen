@@ -30,14 +30,25 @@
     <script src="/socket.io/socket.io.js"></script>
     <script>
         const urlParams = new URLSearchParams(window.location.search);
-        const userParam = urlParams.get('user') || '';
+        let userParam = urlParams.get('user') || '';
 
-        // Conectar a Socket.io pasando el usuario en el query param para OBS
+        // Si no hay parámetro de usuario en la URL, consultar /api/me para obtener el usuario activo
+        if (!userParam) {
+            fetch('/api/me').then(r => r.json()).then(d => {
+                if (d && d.username) {
+                    userParam = d.username;
+                    if (frame.src && frame.src !== 'about:blank' && !frame.src.includes('user=')) {
+                        const connector = frame.src.includes('?') ? '&' : '?';
+                        frame.src += `${connector}user=${userParam}`;
+                    }
+                }
+            }).catch(() => {});
+        }
+
+        // Conectar a Socket.io pasando el usuario si existe
         const socket = io({ query: userParam ? { user: userParam } : {} });
 
         const frame = document.getElementById('content-frame');
-
-        // Guardar la última vista cargada para evitar recargas redundantes del iframe
         let ultimaVista = '';
 
         socket.on('cambioVista', (vista) => {

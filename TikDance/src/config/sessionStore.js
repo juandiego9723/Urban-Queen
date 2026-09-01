@@ -31,7 +31,17 @@ function getSocketUser(socket) {
             return sessions[sessionToken].user;
         }
     }
-    return null;
+    
+    // Fallback inteligente para OBS Browser Sources aisladas (sin cookies ni ?user=)
+    const activeKeys = Object.keys(activeSessions);
+    if (activeKeys.length > 0) return activeKeys[0];
+    
+    const sessionTokens = Object.keys(sessions);
+    if (sessionTokens.length > 0 && sessions[sessionTokens[0]].user) {
+        return sessions[sessionTokens[0]].user;
+    }
+    
+    return 'admin';
 }
 
 function getUserSession(username, io, procesarPuntosFn) {

@@ -231,7 +231,17 @@ function getSocketUserLocal(socket) {
         const sessionToken = list['session_token'];
         if (sessionToken && sessions[sessionToken]) return sessions[sessionToken].user;
     }
-    return null;
+    
+    // Fallback inteligente para OBS Browser Sources (sesión de navegador aislada)
+    const activeKeys = Object.keys(activeSessions);
+    if (activeKeys.length > 0) return activeKeys[0];
+    
+    const sessionTokens = Object.keys(sessions);
+    if (sessionTokens.length > 0 && sessions[sessionTokens[0]].user) {
+        return sessions[sessionTokens[0]].user;
+    }
+    
+    return 'admin';
 }
 
 io.on('connection', (socket) => {
@@ -242,6 +252,7 @@ io.on('connection', (socket) => {
     const session = getUserSessionWithBatch(username);
     
     if (session) {
+        // 1. Estado Batalla Neón / PK
         if (session.estadoBatalla === 'activa') {
             const victorias = session.db.getVictorias();
             socket.emit('batallaInicio', {
@@ -251,16 +262,36 @@ io.on('connection', (socket) => {
                 equipos: session.equipos,
                 participantes: session.participantesActuales
             });
+            socket.emit('batallaTick', session.tiempoBatalla);
         }
+        
+        // 2. Estado Timer de Baile
+        if (session.timerBaile && (session.timerBaile.activo || session.timerBaile.estado === 'corriendo')) {
+            socket.emit('timerTick', session.timerBaile);
+        }
+        
+        // 3. Estado Conociendo a mi Queen
+        if (session.conociendo && session.conociendo.activo) {
+            socket.emit('conociendoTick', session.conociendo);
+        }
+        
+        // 4. Estado Revivir Queen
+        if (session.revivir && session.revivir.activo) {
+            socket.emit('revivirTick', session.revivir);
+        }
+
+        // 5. Estado global de TikTok y Vistas de OBS
         socket.emit('tiktokEstado', { estado: session.tiktokEstado, usuario: session.tiktokUsuario });
         socket.emit('cambioVista', session.vistaActiva || '/batalla');
         socket.emit('cambioVistaAcumulados', session.vistaAcumuladosActiva || '/');
         
+        // 6. Personalización de Marca Neón
         const logoUrl = session.db.getConfigVal('marca_logo_url') || '';
         const fontFamily = session.db.getConfigVal('marca_font_family') || 'Inter';
         const neonIntensity = session.db.getConfigVal('marca_neon_intensity') || 'normal';
         socket.emit('marcaCambiado', { logoUrl, fontFamily, neonIntensity });
         
+        // 7. Dinámica Custom
         if (session.dinamicaActiva) {
             socket.emit('dinamicaInicio', {
                 config: session.dinamicaActiva,
