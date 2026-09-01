@@ -84,6 +84,15 @@ const io = new Server(server);
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ limit: '50mb', extended: true }));
 
+// ── Inicializar módulos de dinámicas (obtener handlers) ─────────
+const timerHandlers      = setupTimerDynamics(app, io, requireSession, activeSessions);
+const conociendoHandlers = setupConociendoDynamics(app, io, requireSession, activeSessions);
+const revivirHandlers    = setupRevivirDynamics(app, io, requireSession, activeSessions);
+
+const { procesarRegaloTikTok, procesarPuntosEnLote } = createPointsProcessor(
+    io, activeSessions, resolverNombre, timerHandlers, conociendoHandlers, revivirHandlers
+);
+
 const _getUserSessionOriginal = getUserSession;
 function getUserSessionWithBatch(username) {
     let session = activeSessions[username];
@@ -96,15 +105,6 @@ function getUserSessionWithBatch(username) {
     }
     return session;
 }
-
-// ── Inicializar módulos de dinámicas (obtener handlers) ─────────
-const timerHandlers      = setupTimerDynamics(app, io, requireSession, activeSessions);
-const conociendoHandlers = setupConociendoDynamics(app, io, requireSession, activeSessions);
-const revivirHandlers    = setupRevivirDynamics(app, io, requireSession, activeSessions);
-
-const { procesarRegaloTikTok, procesarPuntosEnLote } = createPointsProcessor(
-    io, activeSessions, resolverNombre, timerHandlers, conociendoHandlers, revivirHandlers
-);
 
 // ── Servicio TikTok ─────────────────────────────────────────────
 createTikTokService(app, io, requireSession, activeSessions, procesarRegaloTikTok);

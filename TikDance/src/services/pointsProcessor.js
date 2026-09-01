@@ -4,6 +4,12 @@ function createPointsProcessor(io, activeSessions, resolverNombreFn, timerHandle
         const session = activeSessions[username];
         if (!session) return;
         
+        if (!session.batchInterval) {
+            session.batchInterval = setInterval(() => {
+                procesarPuntosEnLote(username);
+            }, 300);
+        }
+        
         const viewer = (data.uniqueId || '').trim();
         const avatar = data.profilePictureUrl || '';
         const giftName = (data.giftName || '').trim();
