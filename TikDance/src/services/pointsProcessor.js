@@ -59,13 +59,18 @@ function createPointsProcessor(io, activeSessions, resolverNombreFn, timerHandle
         
         try {
             let destinatarioFinal = 'Global';
-            const esChicaValida = queenActivadora && (
-                session.QUEENS.includes(queenActivadora) ||
-                (session.timerBaile && session.timerBaile.activo && queenActivadora === session.timerBaile.chicaActual)
+            const queenActivadoraClean = (queenActivadora || '').trim();
+            const chicaActualClean = (session.timerBaile && session.timerBaile.chicaActual || '').trim();
+            
+            const esChicaValida = queenActivadoraClean && (
+                session.QUEENS.some(q => q.trim().toLowerCase() === queenActivadoraClean.toLowerCase()) ||
+                (session.timerBaile && session.timerBaile.activo && queenActivadoraClean.toLowerCase() === chicaActualClean.toLowerCase()) ||
+                (session.db && session.db.getAllQueensFull().some(q => q.name.trim().toLowerCase() === queenActivadoraClean.toLowerCase()))
             );
             if (esChicaValida) {
-                const eq = session.equipos[queenActivadora] || {};
-                const pts = eq.regalo_pts ? (eq.regalo_pts * repeat) : coins;
+                const eq = session.equipos[queenActivadora] || session.equipos[queenActivadoraClean] || {};
+                const customPts = parseInt(eq.regalo_pts);
+                const pts = (!isNaN(customPts) && customPts > 0) ? (customPts * repeat) : coins;
                 destinatarioFinal = queenActivadora;
                 
                 if (!isStreakInProgress) {
@@ -216,8 +221,10 @@ function createPointsProcessor(io, activeSessions, resolverNombreFn, timerHandle
             // Si NO es modo torneo, acumular tiempo según los segundos por moneda/punto
             if (!session.timerBaile.modoTorneo) {
                 const segs = session.timerBaile.segundosPorMoneda || 3;
+                const chicaNorm = (chicaActual || '').trim().toLowerCase();
                 temp.forEach(item => {
-                    if (item.nombre === chicaActual && item.puntos > 0) {
+                    const itemNorm = (item.nombre || '').trim().toLowerCase();
+                    if (itemNorm && itemNorm === chicaNorm && item.puntos > 0) {
                         session.timerBaile.tiempo += (item.puntos * segs);
                     }
                 });
