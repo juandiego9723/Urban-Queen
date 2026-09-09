@@ -376,13 +376,6 @@ function createPointsProcessor(io, activeSessions, resolverNombreFn, timerHandle
                     regalosEnviados: session.revivir.regalosEnviados,
                     regalosImgs: session.revivir.regalosImgs
                 });
-
-                // Si ha alcanzado o superado la meta de salvación, detenerla con éxito inmediatamente
-                if (session.revivir.puntos >= session.revivir.meta) {
-                    if (revivirHandlers && revivirHandlers.detenerRevivir) {
-                        revivirHandlers.detenerRevivir(username, true);
-                    }
-                }
             }
         }
 

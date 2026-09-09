@@ -19,47 +19,22 @@ function setupRevivirDynamics(app, io, requireSession, activeSessions) {
         // Ocultar overlay
         io.to(username).emit('revivirCancelado');
 
-        if (exito) {
-            // Se salvó, pero nadie ha sido eliminado en esta ronda todavía.
-            // Buscamos a la nueva chica con menor puntaje para volver a pedir decisión (bucle hasta que haya una eliminada).
-            const participantes = s.timerBaile.participantesActivas;
-            let lowestQueen = participantes[0];
-            let lowestPoints = s.timerBaile.puntosTorneo[lowestQueen] || 0;
-            participantes.forEach(q => {
-                const pts = s.timerBaile.puntosTorneo[q] || 0;
-                if (pts < lowestPoints) {
-                    lowestPoints = pts;
-                    lowestQueen = q;
-                }
-            });
-
-            s.timerBaile.chicaAEliminar = lowestQueen;
-            s.timerBaile.estado = 'esperando_decision_ronda';
-
-            io.to(username).emit('torneoFinRondaEsperandoDecision', {
-                chica: lowestQueen,
-                puntos: lowestPoints,
-                rondaActual: s.timerBaile.rondaActual,
-                esUltimaRonda: false // No puede terminar el torneo si alguien se salva
+        // Al concluir la salvación (éxito o fallo), verificar si el torneo ha terminado (1 sola activa) o avanzar a la siguiente ronda
+        const torneoTerminado = (s.timerBaile.participantesActivas.length <= 1);
+        if (torneoTerminado) {
+            s.timerBaile.estado = 'torneo_finalizado';
+            s.timerBaile.ganadora = s.timerBaile.participantesActivas[0] || '';
+            io.to(username).emit('torneoGanadoraAnunciada', {
+                ganadora: s.timerBaile.ganadora,
+                puntosTotales: s.timerBaile.puntosTorneo[s.timerBaile.ganadora] || 0
             });
         } else {
-            // Alguien fue eliminado. Verificar si el torneo ha terminado por rondas o por cupo de clasificadas.
-            const torneoTerminado = (s.timerBaile.rondaActual === s.timerBaile.rondasTotales) || (s.timerBaile.participantesActivas.length <= s.timerBaile.clasificadas);
-            if (torneoTerminado) {
-                s.timerBaile.estado = 'torneo_finalizado';
-                s.timerBaile.ganadora = s.timerBaile.participantesActivas[0] || '';
-                io.to(username).emit('torneoGanadoraAnunciada', {
-                    ganadora: s.timerBaile.ganadora,
-                    puntosTotales: s.timerBaile.puntosTorneo[s.timerBaile.ganadora] || 0
-                });
-            } else {
-                // Avanzar a la siguiente ronda.
-                s.timerBaile.estado = 'esperando_siguiente_ronda';
-                s.timerBaile.chicaAEliminar = '';
-                io.to(username).emit('torneoRondaDecidida', {
-                    siguienteRonda: s.timerBaile.rondaActual + 1
-                });
-            }
+            // Avanzar a la siguiente ronda (muestra botón de Iniciar Ronda X en el panel)
+            s.timerBaile.estado = 'esperando_siguiente_ronda';
+            s.timerBaile.chicaAEliminar = '';
+            io.to(username).emit('torneoRondaDecidida', {
+                siguienteRonda: s.timerBaile.rondaActual + 1
+            });
         }
     }
     function detenerRevivir(username, forceSuccess = false) {
@@ -80,7 +55,7 @@ function setupRevivirDynamics(app, io, requireSession, activeSessions) {
         const user = req.username;
         const chica = req.query.chica || (req.body && req.body.chica) || '';
         const tiempo = parseInt(req.query.tiempo || (req.body && req.body.tiempo)) || 90;
-        const clasificadas = parseInt(req.query.clasificadas || (req.body && req.body.clasificadas)) || 2;
+        const clasificadas = parseInt(req.query.clasificadas || (req.body && req.body.clasificadas)) || 1;
 
         if (!chica) return res.status(400).send('Falta especificar la bailarina a revivir');
 

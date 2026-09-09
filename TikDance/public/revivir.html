@@ -65,17 +65,92 @@
             top: 25px;
             left: 50%;
             transform: translateX(-50%);
-            width: 440px;
-            background: rgba(10, 18, 14, 0.88);
-            border: 2px solid rgba(255, 255, 255, 0.15);
+            width: 460px;
+            background: rgba(10, 18, 14, 0.92);
+            border: 2.5px solid rgba(255, 255, 255, 0.2);
             border-radius: 20px;
             padding: 12px 18px;
-            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.7);
             display: none; /* Se activa dinámicamente */
             align-items: center;
             gap: 16px;
             z-index: 10;
+            overflow: hidden;
             transition: border-color 0.3s, box-shadow 0.3s;
+            animation: animated-panel-glow 4s infinite linear;
+        }
+
+        .panel-inner-glow {
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: radial-gradient(circle at 80% 20%, rgba(255, 238, 0, 0.08), transparent 60%),
+                        radial-gradient(circle at 20% 80%, rgba(0, 242, 254, 0.08), transparent 60%);
+            pointer-events: none;
+            z-index: 1;
+            animation: pulse-inner-glow 3s ease-in-out infinite alternate;
+        }
+
+        @keyframes pulse-inner-glow {
+            0% { opacity: 0.3; }
+            100% { opacity: 1; }
+        }
+
+        .left-circle-area, .right-content-area {
+            position: relative;
+            z-index: 2;
+        }
+
+        .avatar-container::before {
+            content: '';
+            position: absolute;
+            top: -6px;
+            left: -6px;
+            right: -6px;
+            bottom: -6px;
+            border-radius: 50%;
+            border: 2.5px dashed var(--queen-ring-color, #ffee00);
+            filter: drop-shadow(0 0 6px var(--queen-ring-color, #ffee00));
+            animation: rotate-ring 5s linear infinite;
+            pointer-events: none;
+        }
+
+        @keyframes rotate-ring {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+
+        .revivir-progress-fill {
+            height: 100%;
+            width: 0%;
+            background: linear-gradient(90deg, #4facfe, #00f2fe, #ffee00, #4facfe);
+            background-size: 200% 100%;
+            border-radius: 8px;
+            transition: width 0.3s ease;
+            animation: shimmer-bar 2s linear infinite;
+        }
+
+        .rainbow-celebration-bar {
+            background: linear-gradient(270deg, #ff007f, #ffee00, #00f2fe, #10b981, #7928ca, #ff007f) !important;
+            background-size: 400% 400% !important;
+            animation: rainbow-celebration-anim 2s ease infinite !important;
+            box-shadow: 0 0 15px rgba(255, 238, 0, 0.8), 0 0 25px rgba(0, 242, 254, 0.6) !important;
+        }
+
+        @keyframes rainbow-celebration-anim {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+
+        @keyframes shimmer-bar {
+            0% { background-position: 0% 0%; }
+            100% { background-position: 200% 0%; }
+        }
+
+        @keyframes animated-panel-glow {
+            0% { box-shadow: 0 8px 32px rgba(0, 0, 0, 0.7), 0 0 10px rgba(255, 0, 128, 0.2); }
+            50% { box-shadow: 0 8px 32px rgba(0, 0, 0, 0.7), 0 0 22px rgba(0, 242, 254, 0.35); }
+            100% { box-shadow: 0 8px 32px rgba(0, 0, 0, 0.7), 0 0 10px rgba(255, 0, 128, 0.2); }
         }
 
         .left-circle-area {
@@ -232,31 +307,39 @@
         .middle-status-area {
             display: flex;
             align-items: center;
-            justify-content: space-between;
-            min-height: 38px;
+            justify-content: flex-start;
+            gap: 16px;
+            min-height: 42px;
         }
 
         .status-text-display {
             font-family: 'Montserrat', sans-serif;
-            font-size: 26px;
+            font-size: 28px;
             font-weight: 900;
-            letter-spacing: 1px;
+            letter-spacing: 0.5px;
             text-transform: uppercase;
-            text-shadow: 0 0 10px rgba(0, 242, 254, 0.4);
+            text-shadow: 0 0 12px rgba(255, 0, 128, 0.5);
             margin: 0;
             display: flex;
             align-items: center;
             gap: 6px;
+            white-space: nowrap;
         }
 
         .countdown-time-display {
             font-family: 'Montserrat', sans-serif;
-            font-size: 26px;
+            font-size: 34px;
             font-weight: 900;
             font-style: italic;
             color: #fff;
-            text-shadow: 0 0 10px rgba(255, 255, 255, 0.4);
+            text-shadow: 0 0 15px rgba(255, 255, 255, 0.8), 0 0 30px rgba(255, 59, 48, 0.5);
             margin: 0;
+            animation: timer-pulse 1.2s infinite alternate ease-in-out;
+        }
+
+        @keyframes timer-pulse {
+            from { transform: scale(1); filter: drop-shadow(0 0 4px rgba(255,255,255,0.4)); }
+            to { transform: scale(1.04); filter: drop-shadow(0 0 12px rgba(255,255,255,0.9)); }
         }
 
         .bottom-progress-row {
@@ -310,8 +393,12 @@
         </style>
     </head>
     <body>
+        <canvas id="win-particles-canvas" style="position: absolute; top: 0; left: 0; width: 100vw; height: 100vh; pointer-events: none; z-index: 100;"></canvas>
+
         <!-- ── PANEL SUPERIOR (DANCER / MVP CARD) ── -->
         <div class="revivir-top-panel" id="top-card">
+            <div class="panel-inner-glow"></div>
+
             <!-- Círculo de Imagen (Dancer / MVP) -->
             <div class="left-circle-area">
                 <div class="crown-overlay" id="crown-icon"></div>
@@ -421,16 +508,25 @@
             topCard.style.boxShadow = `0 8px 32px ${color}33, 0 0 15px ${color}11`;
             dancerNamePill.style.color = color;
             barFill.style.background = `linear-gradient(90deg, ${color}, #ffffff)`;
+            barFill.classList.remove('rainbow-celebration-bar'); // Restablecer barra normal en nuevo turno
             statusText.style.color = color;
             statusText.style.textShadow = `0 0 10px ${color}55`;
 
+            // Aplicar el color neón de la bailarina activa al anillo giratorio del avatar
+            if (avatarContainer) {
+                avatarContainer.style.setProperty('--queen-ring-color', color);
+            }
+
             const apodo = APODOS[chica] || chica;
-            dancerNamePill.innerText = apodo + ' 💚';
+            dancerNamePill.innerText = apodo;
 
             // Configurar foto de la bailarina inicial
             const customAvatar = QUEEN_AVATARS[chica] || '';
             const giftImg = QUEEN_GIFTS[chica] || '';
-            const avatarSrc = customAvatar || (giftImg ? `/regalos/${giftImg}` : '');
+            let avatarSrc = customAvatar || giftImg || '';
+            if (avatarSrc && !avatarSrc.startsWith('/') && !avatarSrc.startsWith('http')) {
+                avatarSrc = '/regalos/' + avatarSrc;
+            }
 
             // Reiniciar estado visual del círculo a "Dancer"
             crownIcon.style.display = 'none';
@@ -439,16 +535,23 @@
             avatarContainer.style.borderColor = '#fff';
             avatarContainer.classList.remove('mvp-glow');
 
+            fallbackAvatar.innerText = apodo.charAt(0).toUpperCase();
+            fallbackAvatar.style.background = `linear-gradient(135deg, ${color}99, ${color})`;
+            fallbackAvatar.style.border = `2px solid ${color}`;
+
+            imgAvatar.onerror = () => {
+                imgAvatar.style.display = 'none';
+                fallbackAvatar.style.display = 'flex';
+            };
+
             if (avatarSrc) {
                 imgAvatar.src = avatarSrc;
+                imgAvatar.style.display = 'block';
                 fallbackAvatar.style.display = 'none';
             } else {
                 imgAvatar.removeAttribute('src');
                 imgAvatar.style.display = 'none';
                 fallbackAvatar.style.display = 'flex';
-                fallbackAvatar.innerText = apodo.charAt(0).toUpperCase();
-                fallbackAvatar.style.background = `linear-gradient(135deg, ${color}99, ${color})`;
-                fallbackAvatar.style.border = `2px solid ${color}`;
             }
         }
 
@@ -530,13 +633,14 @@
                             isIntroRunning = false;
                             
                             if (modoTorneoActivo) {
-                                statusText.innerText = `RONDA ${rondaActualTorneo} / ${rondasTotalesTorneo}`;
+                                statusText.innerText = `RONDA ${rondaActualTorneo}`;
                                 statusText.style.display = 'block';
+                                statusText.style.fontSize = '28px';
                                 statusText.style.width = 'auto';
                                 statusText.style.textAlign = 'left';
                                 
                                 countdownText.style.display = 'block';
-                                countdownText.style.fontSize = '26px';
+                                countdownText.style.fontSize = '34px';
                                 countdownText.style.width = 'auto';
                                 countdownText.style.textAlign = 'right';
                             } else {
@@ -553,6 +657,67 @@
                 }, 1000);
             }, 1200); // 1.2 segundos para mostrar "PREPÁRATE" al inicio
         });
+
+        function lanzarEstallidoVictoria() {
+            const canvas = document.getElementById('win-particles-canvas');
+            if (!canvas) return;
+            const ctx = canvas.getContext('2d');
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+            
+            const particles = [];
+            const colors = ['#ffee00', '#ff007f', '#00f2fe', '#ffffff', '#ffd700', '#ff3b30'];
+            const centerX = canvas.width / 2;
+            const centerY = 110;
+            
+            for (let i = 0; i < 110; i++) {
+                const angle = Math.random() * Math.PI * 2;
+                const speed = Math.random() * 9 + 2;
+                particles.push({
+                    x: centerX,
+                    y: centerY,
+                    vx: Math.cos(angle) * speed,
+                    vy: Math.sin(angle) * speed - 2.5,
+                    size: Math.random() * 7 + 3,
+                    color: colors[Math.floor(Math.random() * colors.length)],
+                    alpha: 1,
+                    decay: Math.random() * 0.018 + 0.012,
+                    rotation: Math.random() * Math.PI * 2,
+                    vRot: (Math.random() - 0.5) * 0.2
+                });
+            }
+            
+            function animate() {
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                let active = 0;
+                particles.forEach(p => {
+                    if (p.alpha > 0) {
+                        active++;
+                        p.x += p.vx;
+                        p.y += p.vy;
+                        p.vy += 0.16;
+                        p.alpha -= p.decay;
+                        p.rotation += p.vRot;
+                        
+                        ctx.save();
+                        ctx.globalAlpha = Math.max(0, p.alpha);
+                        ctx.translate(p.x, p.y);
+                        ctx.rotate(p.rotation);
+                        ctx.fillStyle = p.color;
+                        ctx.shadowColor = p.color;
+                        ctx.shadowBlur = 8;
+                        ctx.fillRect(-p.size / 2, -p.size / 2, p.size, p.size);
+                        ctx.restore();
+                    }
+                });
+                if (active > 0) {
+                    requestAnimationFrame(animate);
+                } else {
+                    ctx.clearRect(0, 0, canvas.width, canvas.height);
+                }
+            }
+            animate();
+        }
 
         socket.on('revivirTick', (tiempo) => {
             if (!isIntroRunning) {
@@ -583,18 +748,12 @@
             statusText.style.width = '100%';
             statusText.style.textAlign = 'center';
 
-            if (modoTorneoActivo) {
-                const esUltima = (rondaActualTorneo === rondasTotalesTorneo);
-                statusText.innerText = esUltima ? 'TORNEO FIN' : `FIN RONDA ${rondaActualTorneo}`;
-                statusText.style.color = '#fff';
-                statusText.style.textShadow = '0 0 15px rgba(255,255,255,0.4)';
-                return;
-            }
-
             if (data.exito) {
+                lanzarEstallidoVictoria();
+                barFill.classList.add('rainbow-celebration-bar'); // Activar barra celebracion multicolor al ganar salvacion
                 statusText.innerText = '¡WIN! ✨';
                 statusText.style.color = '#ffee00';
-                statusText.style.textShadow = '0 0 15px #ffee00';
+                statusText.style.textShadow = '0 0 20px #ffee00, 0 0 40px #ffee00';
                 
                 // Mostrar MVP en el círculo
                 if (data.mvpAvatar) {
@@ -625,9 +784,27 @@
             }
         });
 
+        socket.on('torneoFinRondaEsperandoDecision', (data) => {
+            if (data.chica) aplicarColoresTopCard(data.chica);
+            topCard.style.display = 'flex';
+            countdownText.style.display = 'none';
+            statusText.innerText = 'EN RIESGO ⚠️';
+            statusText.style.display = 'block';
+            statusText.style.width = '100%';
+            statusText.style.textAlign = 'center';
+            statusText.style.color = '#ff9500';
+            statusText.style.textShadow = '0 0 15px #ff9500';
+        });
+
         socket.on('torneoTurnoTerminado', (data) => {
             if (introTimeout) clearTimeout(introTimeout);
             isIntroRunning = false;
+
+            // Lanzar estallido de partículas al terminar el turno de baile
+            lanzarEstallidoVictoria();
+
+            // Activar barra celebración multicolor al terminar turno de baile
+            barFill.classList.add('rainbow-celebration-bar');
 
             // Ocultar contador de tiempo
             countdownText.style.display = 'none';

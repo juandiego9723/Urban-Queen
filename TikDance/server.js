@@ -196,6 +196,16 @@ app.get('/api/me', requireSession, (req, res) => {
 });
 
 // Archivos estáticos
+app.use('/regalos', express.static(path.join(__dirname, 'public', 'regalos')));
+app.get('/custom_:file', (req, res) => {
+    const file = `custom_${req.params.file}`;
+    const regalosPath = path.join(__dirname, 'public', 'regalos', file);
+    if (fs.existsSync(regalosPath)) {
+        res.sendFile(regalosPath);
+    } else {
+        res.sendFile(path.join(__dirname, 'public', file));
+    }
+});
 app.use(express.static(path.join(__dirname, 'public')));
 
 // Rutas de pantallas

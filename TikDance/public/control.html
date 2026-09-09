@@ -1464,20 +1464,12 @@
                             </div>
                             
                             <div class="row" style="gap:10px; align-items: center;">
-                                <span class="label" style="flex:1">Rondas:</span>
-                                <input type="number" id="torneoRondas" value="2" min="1" max="10" class="input input-num" style="width:130px; height:32px;">
-                            </div>
-                            <div class="row" style="gap:10px; align-items: center;">
                                 <span class="label" style="flex:1">Tiempo por Turno (seg):</span>
                                 <input type="number" id="torneoTiempo" value="90" min="10" max="300" class="input input-num" style="width:130px; height:32px;">
                             </div>
                             <div class="row" style="gap:10px; align-items: center;">
                                 <span class="label" style="flex:1">Meta por Turno:</span>
                                 <input type="number" id="torneoMetaTurno" value="1000" min="10" max="10000" class="input input-num" style="width:130px; height:32px;">
-                            </div>
-                            <div class="row" style="gap:10px; align-items: center;">
-                                <span class="label" style="flex:1">Cupos Clasificados:</span>
-                                <input type="number" id="torneoClasificadas" value="2" min="1" max="10" class="input input-num" style="width:130px; height:32px;">
                             </div>
                             
                             <div class="row-2" style="margin-top: 8px;">
@@ -3721,9 +3713,8 @@
             function iniciarRevivir() {
                 const chica = document.getElementById('revivirChicaSelect').value;
                 const tiempo = document.getElementById('tiempoRevivirInput').value || 90;
-                const clasificadas = document.getElementById('torneoClasificadas').value || 2;
                 if (!chica) return alert('Selecciona una bailarina');
-                hacerFetch(`/api/revivir/start?chica=${encodeURIComponent(chica)}&tiempo=${tiempo}&clasificadas=${clasificadas}`);
+                hacerFetch(`/api/revivir/start?chica=${encodeURIComponent(chica)}&tiempo=${tiempo}&clasificadas=1`);
             }
             function renderBotonesConociendo() {
                 const c = document.getElementById('btns-conociendo');
@@ -4079,13 +4070,19 @@
                 }
             });
 
-            socket.on('revivirCancelado', () => {
+            function limpiarUIFinalizacionTorneo() {
                 document.getElementById('btn-confirm-fallo-wrap').style.display = 'none';
                 document.getElementById('btn-confirm-elimination-fail-wrap').style.display = 'none';
                 document.getElementById('torneo-marcador-wrap').style.display = 'none';
                 document.getElementById('btn-next-round-wrap').style.display = 'none';
                 document.getElementById('btn-next-turn-wrap').style.display = 'none';
-            });
+                document.getElementById('torneo-campeona-wrap').style.display = 'none';
+                const salvModal = document.getElementById('salvacion-modal');
+                if (salvModal) salvModal.style.display = 'none';
+            }
+
+            socket.on('revivirCancelado', limpiarUIFinalizacionTorneo);
+            socket.on('timerCancelado', limpiarUIFinalizacionTorneo);
 
             socket.on('revivirFin', () => {
                 document.getElementById('btn-confirm-fallo-wrap').style.display = 'none';
@@ -4113,7 +4110,7 @@
                 document.getElementById('btn-next-turn-wrap').style.display = 'none';
                 const apodo = APODOS[data.chica] || data.chica;
                 const col = QUEEN_COLORS[data.chica] || '#fff';
-                mostrarDialogoSalvacion(data.chica, apodo, data.puntos, col, data.rondaActual, data.esUltimaRonda);
+                mostrarDialogoSalvacion(data.chica, apodo, data.puntos, col, data.rondaActual, data.esUltimaRonda, data.yaRevivido);
             });
 
             socket.on('torneoRondaDecidida', (data) => {
@@ -4139,12 +4136,10 @@
                 const participantes = checkedCheckboxes.join(',');
                 const tiempo = document.getElementById('torneoTiempo').value || 90;
                 const metaTurno = document.getElementById('torneoMetaTurno').value || 1000;
-                const rondas = document.getElementById('torneoRondas').value || 2;
-                const clasificadas = document.getElementById('torneoClasificadas').value || 2;
                 
                 // Ocultar botón de reanudación
                 document.getElementById('btn-next-round-wrap').style.display = 'none';
-                hacerFetch(`/timer/start-tournament?participantes=${encodeURIComponent(participantes)}&tiempoBase=${tiempo}&metaTurno=${metaTurno}&rondas=${rondas}&clasificadas=${clasificadas}`);
+                hacerFetch(`/timer/start-tournament?participantes=${encodeURIComponent(participantes)}&tiempoBase=${tiempo}&metaTurno=${metaTurno}`);
             }
 
             function cancelarTorneoRondas() {
@@ -4173,7 +4168,7 @@
             }
 
             let chicaEnPeligro = '';
-            function mostrarDialogoSalvacion(chica, apodo, puntos, color, ronda, esUltimaRonda) {
+            function mostrarDialogoSalvacion(chica, apodo, puntos, color, ronda, esUltimaRonda, yaRevivido = false) {
                 chicaEnPeligro = chica;
                 document.getElementById('salvacion-chica-nombre').innerText = apodo;
                 document.getElementById('salvacion-chica-nombre').style.color = color;
@@ -4181,7 +4176,12 @@
                 
                 const descText = document.querySelector('#salvacion-modal h2');
                 if (descText) {
-                    descText.innerText = esUltimaRonda ? '¡Torneo Finalizado!' : `Fin de Ronda ${ronda}`;
+                    descText.innerText = `Fin de Ronda ${ronda}`;
+                }
+
+                const btnRevivir = document.querySelector('#salvacion-modal button[onclick*="revivir"]');
+                if (btnRevivir) {
+                    btnRevivir.style.display = 'block';
                 }
                 
                 document.getElementById('salvacion-modal').style.display = 'flex';
@@ -4191,8 +4191,7 @@
                 document.getElementById('salvacion-modal').style.display = 'none';
                 if (accion === 'revivir') {
                     const tiempo = document.getElementById('tiempoRevivirInput').value || 90;
-                    const clasificadas = document.getElementById('torneoClasificadas').value || 2;
-                    hacerFetch(`/api/revivir/start?chica=${encodeURIComponent(chicaEnPeligro)}&tiempo=${tiempo}&clasificadas=${clasificadas}`);
+                    hacerFetch(`/api/revivir/start?chica=${encodeURIComponent(chicaEnPeligro)}&tiempo=${tiempo}&clasificadas=1`);
                 } else if (accion === 'eliminar') {
                     hacerFetch('/timer/confirm-elimination');
                 }

@@ -33,16 +33,7 @@ function setupTimerDynamics(app, io, requireSession, activeSessions) {
                 io.to(username).emit('torneoFinRondaEsperandoDecision', {
                     chica: lowestQueen,
                     puntos: lowestPoints,
-                    rondaActual: s.timerBaile.rondaActual,
-                    esUltimaRonda: (s.timerBaile.rondaActual === s.timerBaile.rondasTotales)
-                });
-
-                io.to(username).emit('revivirFin', {
-                    exito: false,
-                    puntos: 0,
-                    meta: s.timerBaile.metaTurno || 1000,
-                    mvpName: '',
-                    mvpAvatar: ''
+                    rondaActual: s.timerBaile.rondaActual
                 });
                 return;
             } else {
@@ -168,8 +159,7 @@ function setupTimerDynamics(app, io, requireSession, activeSessions) {
         const participantesRaw = req.query.participantes || (req.body && req.body.participantes) || '';
         const tiempoBase = parseInt(req.query.tiempoBase || (req.body && req.body.tiempoBase)) || 90;
         const metaTurno = parseInt(req.query.metaTurno || (req.body && req.body.metaTurno)) || 1000;
-        const rondas = parseInt(req.query.rondas || (req.body && req.body.rondas)) || 2;
-        const clasificadas = parseInt(req.query.clasificadas || (req.body && req.body.clasificadas)) || 2;
+        const clasificadas = 1;
 
         if (!participantesRaw) return res.status(400).send('Falta especificar los participantes');
         
@@ -192,12 +182,13 @@ function setupTimerDynamics(app, io, requireSession, activeSessions) {
         // Configurar estado del torneo
         s.timerBaile.activo = true;
         s.timerBaile.modoTorneo = true;
-        s.timerBaile.rondasTotales = rondas;
+        s.timerBaile.rondasTotales = 0;
         s.timerBaile.rondaActual = 1;
         s.timerBaile.orden = [...participantes];
         s.timerBaile.participantesOriginales = [...participantes];
         s.timerBaile.participantesActivas = [...participantes];
         s.timerBaile.eliminadas = [];
+        s.timerBaile.revividasEnRonda = [];
         s.timerBaile.tiempo = tiempoBase;
         s.timerBaile.tiempoBase = tiempoBase;
         s.timerBaile.chicaActual = participantes[0];
@@ -301,8 +292,8 @@ function setupTimerDynamics(app, io, requireSession, activeSessions) {
         // Ocultar el overlay
         io.to(user).emit('revivirCancelado');
 
-        // Verificar si el torneo ha terminado por rondas o por cupo de clasificadas
-        const torneoTerminado = (s.timerBaile.rondaActual === s.timerBaile.rondasTotales) || (s.timerBaile.participantesActivas.length <= s.timerBaile.clasificadas);
+        // Verificar si el torneo ha terminado (queda 1 sola bailarina activa)
+        const torneoTerminado = (s.timerBaile.participantesActivas.length <= 1);
         
         if (torneoTerminado) {
             s.timerBaile.estado = 'torneo_finalizado';
@@ -333,11 +324,8 @@ function setupTimerDynamics(app, io, requireSession, activeSessions) {
             return res.status(400).send(`No se puede iniciar la siguiente ronda. modoTorneo: ${s.timerBaile.modoTorneo}, estado: ${s.timerBaile.estado}`);
         }
 
-        if (s.timerBaile.rondaActual >= s.timerBaile.rondasTotales) {
-            return res.status(400).send(`El torneo ya ha finalizado todas sus rondas. rondaActual: ${s.timerBaile.rondaActual}, rondasTotales: ${s.timerBaile.rondasTotales}`);
-        }
-
         s.timerBaile.rondaActual++;
+        s.timerBaile.revividasEnRonda = [];
         
         // Filtrar orden participante a las que sigan activas en el torneo
         s.timerBaile.orden = [...s.timerBaile.participantesActivas];
@@ -432,7 +420,9 @@ function setupTimerDynamics(app, io, requireSession, activeSessions) {
 
         if (s.timerBaile.modoTorneo && s.timerBaile.estado === 'esperando_confirmacion_turno') {
             s.timerBaile.estado = 'bailando';
-            avanzarTurnoTorneo(user);
+            const targetChica = s.timerBaile.proximoInicioTurno || null;
+            s.timerBaile.proximoInicioTurno = null;
+            avanzarTurnoTorneo(user, targetChica);
             res.send("OK");
         } else {
             res.status(400).send("No se puede avanzar el turno en este estado");
@@ -463,7 +453,21 @@ function setupTimerDynamics(app, io, requireSession, activeSessions) {
         s.timerBaile.activo = false;
         s.timerBaile.estado = 'inactivo';
         s.timerBaile.modoTorneo = false;
+        s.timerBaile.rondaActual = 0;
+        s.timerBaile.rondasTotales = 0;
+        s.timerBaile.participantesActivas = [];
+        s.timerBaile.eliminadas = [];
+        s.timerBaile.revividasEnRonda = [];
+        s.timerBaile.puntosTorneo = {};
+        s.timerBaile.chicaActual = '';
+        s.timerBaile.chicaAEliminar = '';
+        s.timerBaile.ganadora = '';
         clearInterval(s.intervaloTimerBaile);
+
+        // Reconstruir Queens para notificar a los clientes y refrescar interfaz
+        reconstruirQueens(s);
+        io.to(req.username).emit('queensActualizadas', { queens: s.QUEENS, equipos: s.equipos, apodos: s.db.getApodosMap() });
+
         io.to(req.username).emit('timerCancelado');
         io.to(req.username).emit('revivirCancelado');
         res.send("OK");
