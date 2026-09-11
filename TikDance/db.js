@@ -448,16 +448,187 @@ class DBInstance {
         `);
     }
 
-    getDatosBailarina(name) {
-        return this.queryOne("SELECT COALESCE(SUM(diamonds), 0) as total, COUNT(*) as total_regalos, COALESCE(ROUND(AVG(diamonds), 1), 0) as promedio FROM historial_regalos WHERE LOWER(queen_name) = LOWER(?)", [name]);
+    getDateFilterSQL(periodo) {
+        if (!periodo) return "1=1";
+        const p = String(periodo).trim();
+        if (p === 'diario')  return "date(timestamp) = date('now', 'localtime')";
+        if (p === 'semanal') return "timestamp >= datetime('now', '-6 days', 'start of day', 'localtime')";
+        if (p === 'mensual') return "strftime('%Y-%m', timestamp) = strftime('%Y-%m', 'now', 'localtime')";
+        
+        let targetMonth = null;
+        if (p.startsWith('mes:')) targetMonth = p.replace('mes:', '').trim();
+        else if (/^\d{4}-\d{2}$/.test(p)) targetMonth = p;
+
+        if (targetMonth) {
+            return `strftime('%Y-%m', timestamp) = '${targetMonth}'`;
+        }
+        return "1=1";
     }
 
-    getTopDonadoresBailarina(name, limite = 5) {
-        return this.queryAll("SELECT viewer_name, COALESCE(SUM(diamonds), 0) as total_donado, COUNT(*) as cantidad_regalos FROM historial_regalos WHERE LOWER(queen_name) = LOWER(?) GROUP BY viewer_name ORDER BY total_donado DESC LIMIT ?", [name, limite]);
+    getMesesConHistorial() {
+        return this.queryAll(`
+            SELECT DISTINCT strftime('%Y-%m', timestamp) as mes 
+            FROM historial_regalos 
+            WHERE timestamp IS NOT NULL AND timestamp != ''
+            ORDER BY mes DESC
+        `);
     }
 
-    getDistribucionRegalosBailarina(name) {
-        return this.queryAll("SELECT gift_name, COALESCE(SUM(diamonds), 0) as total_diamantes, COUNT(*) as cantidad FROM historial_regalos WHERE LOWER(queen_name) = LOWER(?) GROUP BY gift_name ORDER BY total_diamantes DESC", [name]);
+    getQueensAnalyticsPorPeriodo(periodo = 'historico') {
+        const filter = this.getDateFilterSQL(periodo);
+        return this.queryAll(`
+            SELECT queen_name, 
+                   COALESCE(SUM(diamonds), 0) as total_diamantes, 
+                   COUNT(*) as cantidad_regalos,
+                   COALESCE(ROUND(AVG(diamonds), 1), 0) as promedio
+            FROM historial_regalos 
+            WHERE ${filter} 
+            GROUP BY queen_name 
+            ORDER BY total_diamantes DESC
+        `);
+    }
+
+    getDatosBailarina(name, periodo = 'historico') {
+        const filter = this.getDateFilterSQL(periodo);
+        const stats = this.queryOne(`
+            SELECT COALESCE(SUM(diamonds), 0) as total, 
+                   COUNT(*) as total_regalos, 
+                   COALESCE(ROUND(AVG(diamonds), 1), 0) as promedio 
+            FROM historial_regalos 
+            WHERE LOWER(queen_name) = LOWER(?) AND ${filter}
+        `, [name]) || { total: 0, total_regalos: 0, promedio: 0 };
+
+        const horaPicoRow = this.queryOne(`
+            SELECT strftime('%H', timestamp) as hora, SUM(diamonds) as total 
+            FROM historial_regalos 
+            WHERE LOWER(queen_name) = LOWER(?) AND ${filter} 
+            GROUP BY hora 
+            ORDER BY total DESC LIMIT 1
+        `, [name]);
+
+        return {
+            ...stats,
+            hora_pico: horaPicoRow ? `${horaPicoRow.hora}:00` : 'N/A'
+        };
+    }
+
+    getTopDonadoresBailarina(name, limite = 5, periodo = 'historico') {
+        const filter = this.getDateFilterSQL(periodo);
+        return this.queryAll(`
+            SELECT viewer_name, COALESCE(SUM(diamonds), 0) as total_donado, COUNT(*) as cantidad_regalos 
+            FROM historial_regalos 
+            WHERE LOWER(queen_name) = LOWER(?) AND ${filter} 
+            GROUP BY viewer_name 
+            ORDER BY total_donado DESC LIMIT ?
+        `, [name, limite]);
+    }
+
+    getDistribucionRegalosBailarina(name, periodo = 'historico') {
+        const filter = this.getDateFilterSQL(periodo);
+        return this.queryAll(`
+            SELECT gift_name, COALESCE(SUM(diamonds), 0) as total_diamantes, COUNT(*) as cantidad 
+            FROM historial_regalos 
+            WHERE LOWER(queen_name) = LOWER(?) AND ${filter} 
+            GROUP BY gift_name 
+            ORDER BY total_diamantes DESC
+        `, [name]);
+    }
+
+    getEvolucionBailarina(name, periodo = 'semanal') {
+        const p = String(periodo || '').trim();
+        let targetMonth = null;
+        if (p.startsWith('mes:')) targetMonth = p.replace('mes:', '').trim();
+        else if (/^\d{4}-\d{2}$/.test(p)) targetMonth = p;
+
+        if (targetMonth) {
+            const rows = this.queryAll(`
+                SELECT strftime('%Y-%m-%d', timestamp) as dia, COALESCE(SUM(diamonds), 0) as total
+                FROM historial_regalos
+                WHERE LOWER(queen_name) = LOWER(?) AND strftime('%Y-%m', timestamp) = ?
+                GROUP BY dia
+            `, [name, targetMonth]);
+            const parts = targetMonth.split('-');
+            const year = parseInt(parts[0]);
+            const month = parseInt(parts[1]);
+            const daysInMonth = new Date(year, month, 0).getDate();
+            const result = [];
+            for (let day = 1; day <= daysInMonth; day++) {
+                const dayStr = day.toString().padStart(2, '0');
+                const fullDateStr = `${targetMonth}-${dayStr}`;
+                const found = rows.find(r => r.dia === fullDateStr);
+                result.push({ label: `${dayStr}/${month}`, total: found ? found.total : 0 });
+            }
+            return result;
+        }
+
+        if (periodo === 'diario') {
+            const rows = this.queryAll(`
+                SELECT strftime('%H', timestamp) as hora, COALESCE(SUM(diamonds), 0) as total
+                FROM historial_regalos
+                WHERE LOWER(queen_name) = LOWER(?) AND date(timestamp) = date('now', 'localtime')
+                GROUP BY hora
+            `, [name]);
+            const result = [];
+            for (let i = 0; i < 24; i++) {
+                const h = i.toString().padStart(2, '0');
+                const found = rows.find(r => r.hora === h);
+                result.push({ label: `${h}:00`, total: found ? found.total : 0 });
+            }
+            return result;
+        } else if (periodo === 'mensual') {
+            const rows = this.queryAll(`
+                SELECT strftime('%Y-%m-%d', timestamp) as dia, COALESCE(SUM(diamonds), 0) as total
+                FROM historial_regalos
+                WHERE LOWER(queen_name) = LOWER(?) AND timestamp >= datetime('now', '-29 days', 'start of day', 'localtime')
+                GROUP BY dia
+            `, [name]);
+            const result = [];
+            for (let i = 29; i >= 0; i--) {
+                const d = new Date();
+                d.setDate(d.getDate() - i);
+                const dateStr = d.toISOString().split('T')[0];
+                const labelStr = d.toLocaleDateString([], { day: 'numeric', month: 'short' });
+                const found = rows.find(r => r.dia === dateStr);
+                result.push({ label: labelStr, total: found ? found.total : 0 });
+            }
+            return result;
+        } else if (periodo === 'historico') {
+            const rows = this.queryAll(`
+                SELECT strftime('%Y-%m', timestamp) as mes, COALESCE(SUM(diamonds), 0) as total
+                FROM historial_regalos
+                WHERE LOWER(queen_name) = LOWER(?) AND timestamp >= datetime('now', '-5 months', 'start of month', 'localtime')
+                GROUP BY mes
+            `, [name]);
+            const meses = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
+            const result = [];
+            for (let i = 5; i >= 0; i--) {
+                const d = new Date();
+                d.setMonth(d.getMonth() - i);
+                const mKey = `${d.getFullYear()}-${(d.getMonth() + 1).toString().padStart(2, '0')}`;
+                const labelStr = `${meses[d.getMonth()]} ${d.getFullYear()}`;
+                const found = rows.find(r => r.mes === mKey);
+                result.push({ label: labelStr, total: found ? found.total : 0 });
+            }
+            return result;
+        } else {
+            // 'semanal' default (7 días)
+            const rows = this.queryAll(`
+                SELECT strftime('%Y-%m-%d', timestamp) as dia, COALESCE(SUM(diamonds), 0) as total
+                FROM historial_regalos
+                WHERE LOWER(queen_name) = LOWER(?) AND timestamp >= datetime('now', '-6 days', 'start of day', 'localtime')
+                GROUP BY dia
+            `, [name]);
+            const result = [];
+            for (let i = 6; i >= 0; i--) {
+                const d = new Date();
+                d.setDate(d.getDate() - i);
+                const dateStr = d.toISOString().split('T')[0];
+                const labelStr = d.toLocaleDateString([], { day: 'numeric', month: 'short' });
+                const found = rows.find(r => r.dia === dateStr);
+                result.push({ label: labelStr, total: found ? found.total : 0 });
+            }
+            return result;
+        }
     }
 
     getDonacionesPorHora() {
@@ -490,6 +661,20 @@ class DBInstance {
 
     setFutbolConfig(configObj) {
         this.setConfigVal('futbol_config', JSON.stringify(configObj));
+    }
+
+    getRankingTitulos() {
+        return {
+            semanal: this.getConfigVal('ranking_titulo_semanal') || 'RANKING SEMANAL',
+            mensual: this.getConfigVal('ranking_titulo_mensual') || 'RANKING MENSUAL',
+            diario:  this.getConfigVal('ranking_titulo_diario')  || 'RANKING DEL DÍA'
+        };
+    }
+
+    setRankingTitulos(titulos = {}) {
+        if (titulos.semanal !== undefined) this.setConfigVal('ranking_titulo_semanal', String(titulos.semanal).trim());
+        if (titulos.mensual !== undefined) this.setConfigVal('ranking_titulo_mensual', String(titulos.mensual).trim());
+        if (titulos.diario  !== undefined) this.setConfigVal('ranking_titulo_diario',  String(titulos.diario).trim());
     }
 
     migrarDesdeJSON(filePath) {

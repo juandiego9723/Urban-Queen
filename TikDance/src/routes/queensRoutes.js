@@ -115,6 +115,26 @@ function setupQueensRoutes(app, io, requireSession) {
     });
     app.get('/api/ranking-mensual', requireSession, (req, res) => res.json(req.userSession.db.getRankingMensual()));
     app.get('/api/ranking-diario', requireSession, (req, res) => res.json(req.userSession.db.getRankingDiario()));
+    app.get('/api/ranking/titulos', requireSession, (req, res) => res.json(req.userSession.db.getRankingTitulos()));
+    app.all('/api/ranking/titulos/set', requireSession, (req, res) => {
+        const s = req.userSession;
+        const titulos = req.body || {};
+        const semanal = (req.query.semanal || titulos.semanal || '').trim();
+        const mensual = (req.query.mensual || titulos.mensual || '').trim();
+        const diario  = (req.query.diario  || titulos.diario  || '').trim();
+        s.db.setRankingTitulos({ semanal, mensual, diario });
+        const nuevosTitulos = s.db.getRankingTitulos();
+        io.to(req.username).emit('rankingTitulosActualizados', nuevosTitulos);
+        res.json({ status: 'OK', titulos: nuevosTitulos });
+    });
+    app.post('/api/ranking/titulos', requireSession, (req, res) => {
+        const s = req.userSession;
+        const titulos = req.body || {};
+        s.db.setRankingTitulos(titulos);
+        const nuevosTitulos = s.db.getRankingTitulos();
+        io.to(req.username).emit('rankingTitulosActualizados', nuevosTitulos);
+        res.json({ status: 'OK', titulos: nuevosTitulos });
+    });
     app.get('/api/copa', requireSession, (req, res) => res.json({ copa: req.userSession.db.getCopa(), equipos: req.userSession.equipos }));
     app.get('/api/victorias', requireSession, (req, res) => res.json(req.userSession.db.getVictorias()));
 

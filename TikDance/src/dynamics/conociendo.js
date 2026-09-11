@@ -20,6 +20,7 @@ function setupConociendoDynamics(app, io, requireSession, activeSessions) {
         s.conociendo.orden = [...s.QUEENS];
         s.conociendo.activo = true;
         s.conociendo.meta = parseInt(req.query.meta) || 2000;
+        s.conociendo.titulo = req.query.titulo || s.conociendo.titulo || 'CONOCIENDO A:';
         s.conociendo.tiempo = 300;
         s.conociendo.puntos = 0;
         s.conociendo.chicaActual = s.QUEENS[0] || '';
@@ -28,7 +29,7 @@ function setupConociendoDynamics(app, io, requireSession, activeSessions) {
         let snipeConociendo = 3;
         clearInterval(s.intervaloConociendo);
         
-        io.to(user).emit('conociendoInicio', { chica: s.conociendo.chicaActual, tiempo: s.conociendo.tiempo, meta: s.conociendo.meta, puntos: s.conociendo.puntos });
+        io.to(user).emit('conociendoInicio', { chica: s.conociendo.chicaActual, tiempo: s.conociendo.tiempo, meta: s.conociendo.meta, puntos: s.conociendo.puntos, titulo: s.conociendo.titulo });
         
         s.intervaloConociendo = setInterval(() => {
             if (s.conociendo.estado === 'transicion') {
@@ -39,7 +40,7 @@ function setupConociendoDynamics(app, io, requireSession, activeSessions) {
                     s.conociendo.tiempo = 300;
                     snipeConociendo = 3;
                     subTickConociendo = 0;
-                    io.to(user).emit('conociendoInicio', { chica: s.conociendo.chicaActual, tiempo: s.conociendo.tiempo, meta: s.conociendo.meta, puntos: s.conociendo.puntos });
+                    io.to(user).emit('conociendoInicio', { chica: s.conociendo.chicaActual, tiempo: s.conociendo.tiempo, meta: s.conociendo.meta, puntos: s.conociendo.puntos, titulo: s.conociendo.titulo });
                 }
             } else if (s.conociendo.estado === 'activo') {
                 if (s.conociendo.tiempo > 3) {
@@ -59,7 +60,7 @@ function setupConociendoDynamics(app, io, requireSession, activeSessions) {
                         if (s.conociendo.puntos >= s.conociendo.meta) {
                             s.conociendo.tiempo = 300;
                             s.conociendo.puntos = 0;
-                            io.to(user).emit('conociendoInicio', { chica: s.conociendo.chicaActual, tiempo: s.conociendo.tiempo, meta: s.conociendo.meta, puntos: s.conociendo.puntos });
+                            io.to(user).emit('conociendoInicio', { chica: s.conociendo.chicaActual, tiempo: s.conociendo.tiempo, meta: s.conociendo.meta, puntos: s.conociendo.puntos, titulo: s.conociendo.titulo });
                         } else {
                             saltarConociendo(user);
                         }

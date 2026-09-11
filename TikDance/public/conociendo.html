@@ -98,7 +98,7 @@
             <div class="caja-central" id="caja-reloj">
                 <div class="fila-principal">
                     <div class="titulo-bailando">
-                        CONOCIENDO A: <span id="nombre-bailando">RAY</span>
+                        <span id="texto-titulo-dinamica">CONOCIENDO A:</span> <span id="nombre-bailando">RAY</span>
                     </div>
                     <div class="reloj" id="timer-display">05:00</div>
                 </div>
@@ -183,6 +183,10 @@
             cajaTransicion.style.display = 'none';
             cajaReloj.style.display = 'flex';
             contenedor.classList.add('timer-activo');
+            const txtTitulo = document.getElementById('texto-titulo-dinamica');
+            if (txtTitulo && data.titulo) {
+                txtTitulo.innerText = data.titulo;
+            }
             aplicarColoresChica(data.chica);
             displayReloj.innerText = formatearTiempo(data.tiempo);
             txtMeta.innerText = data.meta;

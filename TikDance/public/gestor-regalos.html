@@ -213,6 +213,72 @@
             100% { transform: translate3d(-100%, 0, 0); }
         }
 
+        /* ── CUSTOM TOAST NOTIFICATIONS ── */
+        #toast-container {
+            position: fixed;
+            top: 24px;
+            right: 24px;
+            z-index: 999999;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            pointer-events: none;
+        }
+
+        .toast-item {
+            pointer-events: auto;
+            min-width: 280px;
+            max-width: 420px;
+            background: rgba(15, 18, 28, 0.94);
+            backdrop-filter: blur(14px);
+            -webkit-backdrop-filter: blur(14px);
+            border: 1.5px solid rgba(99, 102, 241, 0.4);
+            border-radius: 14px;
+            padding: 12px 18px;
+            color: #ffffff;
+            font-family: 'Inter', sans-serif;
+            font-size: 13.5px;
+            font-weight: 600;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5), 0 0 15px rgba(99, 102, 241, 0.2);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            animation: toastSlideIn 0.35s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            transition: all 0.3s ease;
+        }
+
+        .toast-item.toast-success {
+            border-color: rgba(16, 185, 129, 0.6);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5), 0 0 15px rgba(16, 185, 129, 0.25);
+        }
+
+        .toast-item.toast-error {
+            border-color: rgba(239, 68, 68, 0.6);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5), 0 0 15px rgba(239, 68, 68, 0.25);
+        }
+
+        .toast-item.toast-warning {
+            border-color: rgba(245, 158, 11, 0.6);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5), 0 0 15px rgba(245, 158, 11, 0.25);
+        }
+
+        .toast-item.toast-hiding {
+            opacity: 0;
+            transform: translateX(100%) scale(0.9);
+        }
+
+        @keyframes toastSlideIn {
+            from {
+                opacity: 0;
+                transform: translateX(100%) scale(0.9);
+            }
+            to {
+                opacity: 1;
+                transform: translateX(0) scale(1);
+            }
+        }
+
         /* Accion eliminada */
 
         .btn-delete {
@@ -408,6 +474,50 @@
     <!-- Socket.IO para actualizaciones en tiempo real -->
     <script src="/socket.io/socket.io.js"></script>
     <script>
+        function showToast(message, type = 'auto') {
+            let container = document.getElementById('toast-container');
+            if (!container) {
+                container = document.createElement('div');
+                container.id = 'toast-container';
+                document.body.appendChild(container);
+            }
+
+            if (type === 'auto') {
+                const msgLower = String(message).toLowerCase();
+                if (msgLower.includes('error') || msgLower.includes('falló') || msgLower.includes('incorrecto') || msgLower.includes('❌') || msgLower.includes('⚠️')) {
+                    type = 'error';
+                } else if (msgLower.includes('éxito') || msgLower.includes('guardado') || msgLower.includes('correctamente') || msgLower.includes('✅') || msgLower.includes('🏆')) {
+                    type = 'success';
+                } else {
+                    type = 'info';
+                }
+            }
+
+            const icon = type === 'success' ? '✅' : type === 'error' ? '❌' : type === 'warning' ? '⚠️' : 'ℹ️';
+
+            const toast = document.createElement('div');
+            toast.className = `toast-item toast-${type}`;
+            
+            toast.innerHTML = `
+                <div style="display:flex;align-items:center;gap:10px;flex:1">
+                    <span style="font-size:15px;line-height:1">${icon}</span>
+                    <span>${message}</span>
+                </div>
+                <span onclick="this.parentElement.classList.add('toast-hiding');setTimeout(()=>this.parentElement.remove(),300)" style="cursor:pointer;opacity:0.6;font-size:16px;line-height:1;margin-left:8px">&times;</span>
+            `;
+
+            container.appendChild(toast);
+
+            setTimeout(() => {
+                toast.classList.add('toast-hiding');
+                setTimeout(() => toast.remove(), 300);
+            }, 3500);
+        }
+
+        window.alert = function(msg) {
+            showToast(msg);
+        };
+
         const socket = io();
         let base64Image = '';
 

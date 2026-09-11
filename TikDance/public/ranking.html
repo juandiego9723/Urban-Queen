@@ -224,12 +224,12 @@
         let REGALOS_IMGS_MAP = {};
         let AVATAR_IMGS_MAP = {};
 
-        const TITULOS = { semanal: 'RANKING SEMANAL', mensual: 'RANKING MENSUAL', diario: 'RANKING DEL DÍA' };
+        let TITULOS = { semanal: 'RANKING SEMANAL', mensual: 'RANKING MENSUAL', diario: 'RANKING DEL DÍA' };
         const CICLO = { semanal: 'mensual', mensual: 'diario', diario: 'semanal' };
 
         function toggleModo() {
             modo = CICLO[modo];
-            document.getElementById('titulo-ranking').innerText = TITULOS[modo];
+            document.getElementById('titulo-ranking').innerText = TITULOS[modo] || 'RANKING';
             reordenarTabla();
         }
 
@@ -333,13 +333,14 @@
         // Carga inicial
         async function init() {
             try {
-                const [resQ, resR, resM, resD, resAll, resAp] = await Promise.all([
+                const [resQ, resR, resM, resD, resAll, resAp, resTitulos] = await Promise.all([
                     fetch('/api/queens'),
                     fetch('/api/ranking'),
                     fetch('/api/ranking-mensual'),
                     fetch('/api/ranking-diario'),
                     fetch('/api/queens/all'),
-                    fetch('/api/apodos')
+                    fetch('/api/apodos'),
+                    fetch('/api/ranking/titulos')
                 ]);
                 QUEENS = await resQ.json();
                 dataSemanal = await resR.json();
@@ -357,6 +358,17 @@
                 });
                 
                 APODOS = await resAp.json();
+                
+                if (resTitulos.ok) {
+                    const titulosData = await resTitulos.json();
+                    if (titulosData) {
+                        if (titulosData.semanal) TITULOS.semanal = titulosData.semanal;
+                        if (titulosData.mensual) TITULOS.mensual = titulosData.mensual;
+                        if (titulosData.diario)  TITULOS.diario  = titulosData.diario;
+                    }
+                }
+                
+                document.getElementById('titulo-ranking').innerText = TITULOS[modo] || 'RANKING';
                 crearFilas();
                 reordenarTabla();
             } catch(e) {
@@ -365,6 +377,16 @@
         }
 
         init();
+
+        socket.on('rankingTitulosActualizados', (titulosData) => {
+            if (titulosData) {
+                if (titulosData.semanal) TITULOS.semanal = titulosData.semanal;
+                if (titulosData.mensual) TITULOS.mensual = titulosData.mensual;
+                if (titulosData.diario)  TITULOS.diario  = titulosData.diario;
+                const el = document.getElementById('titulo-ranking');
+                if (el) el.innerText = TITULOS[modo] || 'RANKING';
+            }
+        });
 
         socket.on('queensActualizadas', (data) => {
             QUEENS = data.queens;
