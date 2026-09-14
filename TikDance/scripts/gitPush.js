@@ -30,39 +30,19 @@ try {
 
     console.log('✓ Verificación de seguridad superada: El archivo .env está 100% protegido y excluido.');
 
-    // 4. Crear commit completo
-    const detailedMessage = `feat: refactor backend to Supabase PostgreSQL, Cloud Run Dockerfile & Firebase Hosting
+    // 4. Crear commit completo de las actualizaciones
+    const commitMessage = `fix: clean default queens for new users, fix async analytics routes, and update gcp branch
 
-- Database & Architecture:
-  * Migrated from multi-file WASM SQLite (sql.js) to a unified multi-tenant PostgreSQL schema on Supabase.
-  * Added 1FN-3FN DDL schema (src/config/schema.sql) with user_id multi-tenancy, foreign keys, and analytics indexes.
-  * Created singleton connection pool (src/config/dbPool.js) using 'pg' with SSL.
+- Cleaned up default queen initialization in sessionStore.js so new users start with 0 default dancers.
+- Resolved async Promise return issue in analyticsRoutes.js & db.js PostgreSQL aggregation queries.
+- Ensured all agency, queen, and sound routes handle async Supabase calls properly.`;
 
-- Server & Asynchronous Layer:
-  * Refactored masterDb.js, db.js, sessionStore.js, server.js, queensRoutes.js, analyticsRoutes.js, and agencyRoutes.js to async/await.
-  * Retained high-performance in-memory cache for live TikTok gift streams while persisting to Supabase asynchronously.
-  * Configured dynamic PORT environment variable for Cloud Run compatibility.
-
-- Analytics & Data Integrity:
-  * Implemented native PostgreSQL analytics queries (TO_CHAR, NOW() - INTERVAL, DATE_TRUNC).
-  * Added ensureUserId() and auto-queen creation in registrarRegalo to guarantee 100% data capture in historial_regalos.
-
-- Cloud Infrastructure & Security:
-  * Created multi-stage production Dockerfile for Google Cloud Run (WebSocket persistent connection support).
-  * Added firebase.json for static CDN hosting on Firebase.
-  * Configured strict .gitignore rules to prevent committing .env (Supabase credentials), .db files, node_modules, and logs.
-
-- Project Cleanup & Asset Organization:
-  * Organized logos and app icon into public/assets/ and updated HTML path references.
-  * Created automated migration script (scripts/migrateFromSqliteToSupabase.js) and cleanup script (scripts/cleanupProject.js).
-  * Removed obsolete .bat, .vbs scripts, heavy 10MB media assets, and legacy SQLite files.`;
-
-    execSync(`git commit -m "${detailedMessage.replace(/"/g, '\\"')}"`, { cwd: repoDir, stdio: 'inherit' });
-    console.log('✓ Commit completo creado exitosamente en la rama gcp.');
+    execSync(`git commit -m "${commitMessage.replace(/"/g, '\\"')}"`, { cwd: repoDir, stdio: 'inherit' });
+    console.log('✓ Commit adicional creado en la rama gcp.');
 
     // 5. Push a la rama gcp
     console.log('🚀 Subiendo cambios a origin/gcp...');
-    execSync('git push -u origin gcp', { cwd: repoDir, stdio: 'inherit' });
+    execSync('git push origin gcp', { cwd: repoDir, stdio: 'inherit' });
     console.log('🎉 ¡Todos los cambios han sido subidos exitosamente a la rama gcp!');
 } catch (e) {
     console.error('⚠️ Detalle de ejecución Git:', e.message);

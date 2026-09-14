@@ -39,7 +39,6 @@ async function getUserSessionAsync(username, io, procesarPuntosFn) {
     if (!activeSessions[username]) {
         const dbInstance = new DBInstance(username);
         await dbInstance.init();
-        await dbInstance.initQueens(['Amy', 'Ray', 'Nucita', 'Venus']);
         
         const initialQueens = dbInstance.getActiveQueenNames();
         const initialEquipos = {};
@@ -133,30 +132,25 @@ function getUserSession(username, io, procesarPuntosFn) {
 
         const session = {
             db: dbInstance,
-            QUEENS: ['Amy', 'Ray', 'Nucita', 'Venus'],
-            equipos: {
-                Amy: { nombre: 'AMY', color: '#ff1493' },
-                Ray: { nombre: 'RAY', color: '#ffd700' },
-                Nucita: { nombre: 'NUCITA', color: '#00ffff' },
-                Venus: { nombre: 'VENUS', color: '#b026ff' }
-            },
-            rachasPerdidas: { Amy: 0, Ray: 0, Nucita: 0, Venus: 0 },
-            amarillasAcumuladas: { Amy: 0, Ray: 0, Nucita: 0, Venus: 0 },
+            QUEENS: [],
+            equipos: {},
+            rachasPerdidas: {},
+            amarillasAcumuladas: {},
             configFutbol: { limiteAmarilla: 3 },
             estadoBatalla: 'inactiva',
             tiempoBatalla: 0,
             puntosBatalla: {},
-            participantesActuales: ['Amy', 'Ray', 'Nucita', 'Venus'],
+            participantesActuales: [],
             timerBatalla: null,
             timerBaile: { 
-                activo: false, tiempo: 0, chicaActual: '', orden: ['Amy', 'Ray', 'Nucita', 'Venus'], 
+                activo: false, tiempo: 0, chicaActual: '', orden: [], 
                 estado: 'inactivo', tiempoTransicion: 0, segundosPorMoneda: 3, modoTorneo: false,
                 rondasTotales: 0, rondaActual: 0, participantesOriginales: [], puntosTorneo: {},
                 puntosTurnoActual: 0, chicaAEliminar: '', metaTurno: 1000, eliminadas: [], participantesActivas: []
             },
             intervaloTimerBaile: null,
-            tiempoAcumulado: { Amy: 0, Ray: 0, Nucita: 0, Venus: 0 },
-            conociendo: { activo: false, tiempo: 0, chicaActual: '', orden: ['Amy', 'Ray', 'Nucita', 'Venus'], estado: 'inactivo', tiempoTransicion: 0, meta: 2000, puntos: 0 },
+            tiempoAcumulado: {},
+            conociendo: { activo: false, tiempo: 0, chicaActual: '', orden: [], estado: 'inactivo', tiempoTransicion: 0, meta: 2000, puntos: 0 },
             intervaloConociendo: null,
             revivir: { activo: false, tiempo: 0, chicaActual: '', estado: 'inactivo', meta: 5000, puntos: 0, donantes: {}, donantesAvatars: {}, regalosEnviados: {}, regalosImgs: {}, clasificadas: 2 },
             intervaloRevivir: null,
