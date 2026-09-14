@@ -1,5 +1,6 @@
 {
   "hosting": {
+    "site": "tikdance-508616",
     "public": "public",
     "ignore": [
       "firebase.json",
