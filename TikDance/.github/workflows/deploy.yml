@@ -1,0 +1,64 @@
+name: Deploy TikDance to GCP (Cloud Run & Firebase Hosting)
+
+on:
+  push:
+    branches:
+      - gcp
+
+env:
+  PROJECT_ID: tikdance-508616
+  REGION: us-central1
+  SERVICE_NAME: tikdance-backend
+
+jobs:
+  deploy-backend:
+    name: 🚀 Deploy Backend to Cloud Run
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Authenticate to GCP
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.GCP_SA_KEY }}
+
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v2
+
+      - name: Configure Docker for GCR
+        run: gcloud auth configure-docker --quiet
+
+      - name: Build and Push Container Image
+        run: |
+          IMAGE_TAG="gcr.io/${{ env.PROJECT_ID }}/${{ env.SERVICE_NAME }}:${{ github.sha }}"
+          IMAGE_LATEST="gcr.io/${{ env.PROJECT_ID }}/${{ env.SERVICE_NAME }}:latest"
+          docker build -t $IMAGE_TAG -t $IMAGE_LATEST .
+          docker push $IMAGE_TAG
+          docker push $IMAGE_LATEST
+
+      - name: Deploy Backend to Cloud Run
+        run: |
+          gcloud run deploy ${{ env.SERVICE_NAME }} \
+            --image gcr.io/${{ env.PROJECT_ID }}/${{ env.SERVICE_NAME }}:${{ github.sha }} \
+            --region ${{ env.REGION }} \
+            --platform managed \
+            --allow-unauthenticated \
+            --no-cpu-throttling \
+            --session-affinity \
+            --set-env-vars DATABASE_URL="${{ secrets.DATABASE_URL }}",NODE_ENV="production"
+
+  deploy-frontend:
+    name: 🌐 Deploy Frontend to Firebase Hosting
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Deploy Frontend to Firebase Hosting
+        uses: FirebaseExtended/action-hosting-deploy@v0
+        with:
+          repoToken: '${{ secrets.GITHUB_TOKEN }}'
+          firebaseServiceAccount: '${{ secrets.GCP_SA_KEY }}'
+          channelId: live
+          projectId: tikdance-508616
