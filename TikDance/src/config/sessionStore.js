@@ -34,19 +34,12 @@ function getSocketUser(socket) {
     return null;
 }
 
-function getUserSession(username, io, procesarPuntosFn) {
+async function getUserSessionAsync(username, io, procesarPuntosFn) {
     if (!username) return null;
     if (!activeSessions[username]) {
-        const dbPath = path.join(__dirname, '..', '..', `database_${username}.db`);
-        const dbInstance = new DBInstance(dbPath);
-        dbInstance.init();
-        
-        dbInstance.initQueens(['Amy', 'Ray', 'Nucita', 'Venus']);
-        
-        const rootDir = path.join(__dirname, '..', '..');
-        if (username === 'admin' || username === 'master') {
-            dbInstance.migrarDesdeJSON(path.join(rootDir, 'datos.json'));
-        }
+        const dbInstance = new DBInstance(username);
+        await dbInstance.init();
+        await dbInstance.initQueens(['Amy', 'Ray', 'Nucita', 'Venus']);
         
         const initialQueens = dbInstance.getActiveQueenNames();
         const initialEquipos = {};
@@ -131,6 +124,73 @@ function getUserSession(username, io, procesarPuntosFn) {
     return activeSessions[username];
 }
 
+function getUserSession(username, io, procesarPuntosFn) {
+    if (!username) return null;
+    if (!activeSessions[username]) {
+        // Enrutador síncrono que inicializa el objeto sesión de forma inmediata
+        const dbInstance = new DBInstance(username);
+        dbInstance.init().catch(err => console.error('Error cargando BD Supabase para usuario:', username, err));
+
+        const session = {
+            db: dbInstance,
+            QUEENS: ['Amy', 'Ray', 'Nucita', 'Venus'],
+            equipos: {
+                Amy: { nombre: 'AMY', color: '#ff1493' },
+                Ray: { nombre: 'RAY', color: '#ffd700' },
+                Nucita: { nombre: 'NUCITA', color: '#00ffff' },
+                Venus: { nombre: 'VENUS', color: '#b026ff' }
+            },
+            rachasPerdidas: { Amy: 0, Ray: 0, Nucita: 0, Venus: 0 },
+            amarillasAcumuladas: { Amy: 0, Ray: 0, Nucita: 0, Venus: 0 },
+            configFutbol: { limiteAmarilla: 3 },
+            estadoBatalla: 'inactiva',
+            tiempoBatalla: 0,
+            puntosBatalla: {},
+            participantesActuales: ['Amy', 'Ray', 'Nucita', 'Venus'],
+            timerBatalla: null,
+            timerBaile: { 
+                activo: false, tiempo: 0, chicaActual: '', orden: ['Amy', 'Ray', 'Nucita', 'Venus'], 
+                estado: 'inactivo', tiempoTransicion: 0, segundosPorMoneda: 3, modoTorneo: false,
+                rondasTotales: 0, rondaActual: 0, participantesOriginales: [], puntosTorneo: {},
+                puntosTurnoActual: 0, chicaAEliminar: '', metaTurno: 1000, eliminadas: [], participantesActivas: []
+            },
+            intervaloTimerBaile: null,
+            tiempoAcumulado: { Amy: 0, Ray: 0, Nucita: 0, Venus: 0 },
+            conociendo: { activo: false, tiempo: 0, chicaActual: '', orden: ['Amy', 'Ray', 'Nucita', 'Venus'], estado: 'inactivo', tiempoTransicion: 0, meta: 2000, puntos: 0 },
+            intervaloConociendo: null,
+            revivir: { activo: false, tiempo: 0, chicaActual: '', estado: 'inactivo', meta: 5000, puntos: 0, donantes: {}, donantesAvatars: {}, regalosEnviados: {}, regalosImgs: {}, clasificadas: 2 },
+            intervaloRevivir: null,
+            lealtadUsuarios: {},
+            tiktokConnection: null,
+            tiktokEstado: 'desconectado',
+            tiktokUsuario: '',
+            tiktokMensajeError: '',
+            regalosDetectados: {},
+            catalogoRegalos: [],
+            dinamicaActiva: null,
+            timerDinamica: null,
+            tiempoDinamica: 0,
+            puntosDinamica: {},
+            rachasDinamica: {},
+            amarillasDinamica: {},
+            eliminadosDinamica: [],
+            queueUpdate: [],
+            giftStreaks: {},
+            vistaActiva: '/batalla',
+            vistaAcumuladosActiva: '/'
+        };
+
+        if (typeof procesarPuntosFn === 'function') {
+            session.batchInterval = setInterval(() => {
+                procesarPuntosFn(username);
+            }, 300);
+        }
+
+        activeSessions[username] = session;
+    }
+    return activeSessions[username];
+}
+
 function reconstruirEquipos(session) {
     session.equipos = {};
     session.db.getAllQueensFull().forEach(q => {
@@ -146,14 +206,14 @@ function reconstruirQueens(session) {
     reconstruirEquipos(session);
 }
 
-function requireSession(req, res, next) {
+async function requireSession(req, res, next) {
     const username = getUserId(req);
     if (!username) {
         return res.status(401).send('No autorizado: Falta especificar usuario');
     }
     let session = activeSessions[username];
     if (!session) {
-        session = getUserSession(username);
+        session = await getUserSessionAsync(username);
     }
     if (!session) {
         return res.status(404).send('Usuario no encontrado');
@@ -176,6 +236,7 @@ module.exports = {
     getUserId,
     getSocketUser,
     getUserSession,
+    getUserSessionAsync,
     reconstruirEquipos,
     reconstruirQueens,
     requireSession,

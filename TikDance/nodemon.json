@@ -1,0 +1,6 @@
+{
+  "watch": ["server.js", "db.js", "masterDb.js", "src/"],
+  "ext": "js,json,sql",
+  "ignore": ["*.db", "*.log", "public/regalos/*"],
+  "delay": "1000"
+}

@@ -1,3 +1,19 @@
-﻿node_modules/
+# ==========================================
+# Root .gitignore (TikDance Repository)
+# ==========================================
 .env
-npm-debug.log
+.env.local
+*.key.json
+service-account*.json
+gcp-credentials*.json
+
+!.env.example
+
+node_modules/
+*.db
+*.sqlite
+database_*.db
+master.db
+*.log
+.DS_Store
+Thumbs.db

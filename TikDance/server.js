@@ -11,6 +11,10 @@ const { initSQL, DBInstance } = require('./db');
 const MasterDB = require('./masterDb');
 
 // ── Módulos propios ──────────────────────────────────────────────
+try { require('./scripts/cleanupProject'); } catch(e) {}
+try { require('./scripts/gitPush'); } catch(e) {}
+
+
 const {
     sessions, activeSessions,
     getUserId, getSocketUser, getUserSession,
@@ -124,21 +128,21 @@ setupSystemRoutes(app, io, requireSession, activeSessions);
 const pub = (f) => path.join(__dirname, 'public', f);
 
 app.get('/login', (req, res) => res.sendFile(pub('login.html')));
-app.post('/login', (req, res) => {
+app.post('/login', async (req, res) => {
     const { username, password } = req.body;
     if (!username || !password) return res.status(400).send('Faltan datos');
-    const user = MasterDB.verificarCredenciales(username, password);
+    const user = await MasterDB.verificarCredenciales(username, password);
     if (!user) return res.status(401).send('Usuario o contraseña incorrectos');
     res.setSession(user.username, { name: user.name });
     res.send('OK');
 });
 
 app.get('/register', (req, res) => res.sendFile(pub('register.html')));
-app.post('/register', (req, res) => {
+app.post('/register', async (req, res) => {
     const { name, username, password } = req.body;
     if (!name || !username || !password) return res.status(400).send('Todos los campos son obligatorios');
     try {
-        MasterDB.registrarUsuario(username, password, name);
+        await MasterDB.registrarUsuario(username, password, name);
         res.setSession(username, { name });
         res.send('OK');
     } catch(e) {
@@ -308,9 +312,9 @@ process.on('SIGTERM', () => { cleanupAllSessions(activeSessions); process.exit(0
 // ── Arranque ────────────────────────────────────────────────────
 (async () => {
     try {
-        const SQLInstance = await initSQL();
-        await MasterDB.initMasterDB(SQLInstance);
-        server.listen(3000, '0.0.0.0', () => console.log('🚀 TikDance v3.0 Modular – Puerto 3000'));
+        await MasterDB.initMasterDB();
+        const PORT = process.env.PORT || 3000;
+        server.listen(PORT, '0.0.0.0', () => console.log(`🚀 TikDance Server activo en puerto ${PORT}`));
     } catch (err) {
         console.error('❌ Error iniciando el servidor:', err);
         process.exit(1);

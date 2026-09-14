@@ -40,7 +40,7 @@ function setupQueensRoutes(app, io, requireSession) {
     app.get('/api/queens/all', requireSession, (req, res) => res.json(req.userSession.db.getAllQueensFull()));
     app.get('/api/apodos', requireSession, (req, res) => res.json(req.userSession.db.getApodosMap()));
 
-    app.all('/api/queens/crear', requireSession, (req, res) => {
+    app.all('/api/queens/crear', requireSession, async (req, res) => {
         const s = req.userSession;
         const nombre = (req.query.nombre || (req.body && req.body.nombre) || '').trim();
         const color = req.query.color || (req.body && req.body.color) || '#ffffff';
@@ -50,14 +50,14 @@ function setupQueensRoutes(app, io, requireSession) {
         const avatarImgRaw = req.query.avatar_img || (req.body && req.body.avatar_img) || '';
         const avatarImg = procesarAvatarBase64(avatarImgRaw);
         if (!nombre) return res.status(400).send('Falta nombre');
-        s.db.crearQueen(nombre, color, apodo, regaloImg, regaloPts, avatarImg);
+        await s.db.crearQueen(nombre, color, apodo, regaloImg, regaloPts, avatarImg);
         reconstruirQueens(s);
         s.QUEENS.forEach(q => { if (!s.rachasPerdidas[q]) s.rachasPerdidas[q] = 0; if (!s.amarillasAcumuladas[q]) s.amarillasAcumuladas[q] = 0; });
         io.to(req.username).emit('queensActualizadas', { queens: s.QUEENS, equipos: s.equipos, apodos: s.db.getApodosMap() });
         res.send('OK');
     });
 
-    app.all('/api/queens/editar', requireSession, (req, res) => {
+    app.all('/api/queens/editar', requireSession, async (req, res) => {
         const s = req.userSession;
         const p      = (k) => req.query[k] !== undefined ? req.query[k] : (req.body && req.body[k] !== undefined ? req.body[k] : null);
         const nombre = p('nombre');
@@ -68,39 +68,39 @@ function setupQueensRoutes(app, io, requireSession) {
         const avatarImgRaw = p('avatar_img');
         const avatarImg = avatarImgRaw !== null ? procesarAvatarBase64(avatarImgRaw) : null;
         if (!nombre || !color) return res.status(400).send('Faltan datos');
-        s.db.editarQueen(nombre, color, apodo, regImg, regPts, avatarImg);
+        await s.db.editarQueen(nombre, color, apodo, regImg, regPts, avatarImg);
         reconstruirEquipos(s);
         io.to(req.username).emit('queensActualizadas', { queens: s.QUEENS, equipos: s.equipos, apodos: s.db.getApodosMap() });
         res.send('OK');
     });
 
-    app.all('/api/queens/renombrar', requireSession, (req, res) => {
+    app.all('/api/queens/renombrar', requireSession, async (req, res) => {
         const s = req.userSession;
         const nombre = (req.query.nombre || (req.body && req.body.nombre) || '').trim();
         const nuevo  = (req.query.nuevo  || (req.body && req.body.nuevo)  || '').trim();
         if (!nombre || !nuevo) return res.status(400).send('Faltan datos');
         if (nombre === nuevo) return res.send('OK');
-        s.db.renombrarQueen(nombre, nuevo);
+        await s.db.renombrarQueen(nombre, nuevo);
         reconstruirQueens(s);
         io.to(req.username).emit('queensActualizadas', { queens: s.QUEENS, equipos: s.equipos, apodos: s.db.getApodosMap() });
         res.send('OK');
     });
 
-    app.all('/api/queens/eliminar', requireSession, (req, res) => {
+    app.all('/api/queens/eliminar', requireSession, async (req, res) => {
         const s = req.userSession;
         const nombre = (req.query.nombre || (req.body && req.body.nombre) || '').trim();
         if (!nombre) return res.status(400).send('Falta nombre');
-        s.db.eliminarQueen(nombre);
+        await s.db.eliminarQueen(nombre);
         reconstruirQueens(s);
         io.to(req.username).emit('queensActualizadas', { queens: s.QUEENS, equipos: s.equipos, apodos: s.db.getApodosMap() });
         res.send('OK');
     });
 
-    app.all('/api/queens/toggle', requireSession, (req, res) => {
+    app.all('/api/queens/toggle', requireSession, async (req, res) => {
         const s = req.userSession;
         const nombre = req.query.nombre || (req.body && req.body.nombre);
         if (!nombre) return res.status(400).send('Falta nombre');
-        const nuevoEstado = s.db.toggleQueenActivo(nombre);
+        const nuevoEstado = await s.db.toggleQueenActivo(nombre);
         reconstruirQueens(s);
         io.to(req.username).emit('queensActualizadas', { queens: s.QUEENS, equipos: s.equipos, apodos: s.db.getApodosMap() });
         res.json({ activo: nuevoEstado });
@@ -140,37 +140,37 @@ function setupQueensRoutes(app, io, requireSession) {
 
     // Aliases
     app.get('/api/aliases', requireSession, (req, res) => res.json(req.userSession.db.getAliases()));
-    app.all('/api/aliases/add', requireSession, (req, res) => {
+    app.all('/api/aliases/add', requireSession, async (req, res) => {
         const s = req.userSession;
         const alias = req.query.alias || (req.body && req.body.alias);
         const queen = req.query.queen || (req.body && req.body.queen);
         if (alias && queen && s.QUEENS.includes(queen)) {
-            s.db.agregarAlias(alias, queen);
+            await s.db.agregarAlias(alias, queen);
             return res.send("OK");
         }
         res.status(400).send("Error");
     });
-    app.all('/api/aliases/delete', requireSession, (req, res) => {
+    app.all('/api/aliases/delete', requireSession, async (req, res) => {
         const alias = req.query.alias || (req.body && req.body.alias);
-        if (alias) { req.userSession.db.eliminarAlias(alias); return res.send("OK"); }
+        if (alias) { await req.userSession.db.eliminarAlias(alias); return res.send("OK"); }
         res.status(400).send("Error");
     });
 
     // Grupos
     app.get('/api/grupos', requireSession, (req, res) => res.json(req.userSession.db.getGrupos()));
-    app.all('/api/grupos/crear', requireSession, (req, res) => {
+    app.all('/api/grupos/crear', requireSession, async (req, res) => {
         const s = req.userSession;
         const nombre = req.query.nombre || (req.body && req.body.nombre);
         const color = req.query.color || (req.body && req.body.color) || '#39FF14';
         if (nombre) {
-            try { s.db.crearGrupo(nombre, color); return res.send("OK"); }
+            try { await s.db.crearGrupo(nombre, color); return res.send("OK"); }
             catch(e) { return res.status(400).send("Grupo ya existe"); }
         }
         res.status(400).send("Error");
     });
-    app.all('/api/grupos/eliminar', requireSession, (req, res) => {
+    app.all('/api/grupos/eliminar', requireSession, async (req, res) => {
         const id = parseInt(req.query.id || (req.body && req.body.id));
-        if (id) { req.userSession.db.eliminarGrupo(id); return res.send("OK"); }
+        if (id) { await req.userSession.db.eliminarGrupo(id); return res.send("OK"); }
         res.status(400).send("Error");
     });
     app.all('/api/grupos/agregar-miembro', requireSession, (req, res) => {
@@ -187,11 +187,11 @@ function setupQueensRoutes(app, io, requireSession) {
     });
 
     // Manual Updates
-    app.all('/update', requireSession, (req, res) => {
+    app.all('/update', requireSession, async (req, res) => {
         const s = req.userSession;
         let nombre = req.query.nombre || (req.body && req.body.nombre);
         const puntos = parseInt(req.query.puntos || (req.body && req.body.puntos));
-        const viewer = req.query.viewer || (req.body && req.body.viewer);
+        const viewer = req.query.viewer || (req.body && req.query.viewer);
         const avatar = req.query.avatar || (req.body && req.body.avatar) || '';
         
         nombre = resolverNombre(s, nombre);
@@ -211,7 +211,7 @@ function setupQueensRoutes(app, io, requireSession) {
             
             if (puntos > 0) {
                 const vName = viewer || 'Admin';
-                s.db.registrarRegalo(nombre, 'Regalo Manual', puntos, vName);
+                await s.db.registrarRegalo(nombre, 'Regalo Manual', puntos, vName);
                 if (viewer) {
                     const eq = s.equipos[nombre] || {};
                     io.to(req.username).emit('nuevoRegalo', {

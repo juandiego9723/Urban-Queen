@@ -5,21 +5,22 @@ const MasterDB = require('../../masterDb');
 const { getUserSession, activeSessions } = require('../config/sessionStore');
 
 function setupAgencyRoutes(app, requireSession) {
-    app.get('/api/agency/overview', requireSession, (req, res) => {
+    app.get('/api/agency/overview', requireSession, async (req, res) => {
         if (req.username !== 'admin' && req.username !== 'master') {
             return res.status(403).json({ error: 'No autorizado' });
         }
         try {
-            const allUsers = MasterDB.getAllUsers();
+            const allUsers = await MasterDB.getAllUsers();
             let totalHoyAgencia = 0;
             let totalMesAgencia = 0;
             let totalHistoricoAgencia = 0;
             
-            const dancers = allUsers.map(u => {
+            const dancers = [];
+            for (const u of (allUsers || [])) {
                 const session = getUserSession(u.username);
                 let diamantesHoy = 0, diamantesMes = 0, diamantesHistorico = 0;
                 try {
-                    const resumen = session.db.getResumenAnalytics();
+                    const resumen = await session.db.getResumenAnalytics();
                     diamantesHoy = resumen.totalHoy || 0;
                     diamantesMes = resumen.totalMes || 0;
                     diamantesHistorico = resumen.totalHistorico || 0;
@@ -29,17 +30,17 @@ function setupAgencyRoutes(app, requireSession) {
                 totalMesAgencia += diamantesMes;
                 totalHistoricoAgencia += diamantesHistorico;
                 
-                return {
+                dancers.push({
                     username: u.username,
                     name: u.name || u.username,
-                    tiktokEstado: session.tiktokEstado || 'desconectado',
-                    tiktokUsuario: session.tiktokUsuario || '',
-                    vistaActiva: session.vistaActiva || '/batalla',
+                    tiktokEstado: session ? (session.tiktokEstado || 'desconectado') : 'desconectado',
+                    tiktokUsuario: session ? (session.tiktokUsuario || '') : '',
+                    vistaActiva: session ? (session.vistaActiva || '/batalla') : '/batalla',
                     diamantesHoy,
                     diamantesMes,
                     diamantesHistorico
-                };
-            });
+                });
+            }
             
             res.json({
                 kpis: {
@@ -55,20 +56,20 @@ function setupAgencyRoutes(app, requireSession) {
         }
     });
 
-    app.get('/api/agency/login-as', (req, res) => {
+    app.get('/api/agency/login-as', async (req, res) => {
         if (!req.session || !req.session.user) return res.redirect('/login');
         if (req.session.user !== 'admin' && req.session.user !== 'master') {
             return res.status(403).send('No autorizado');
         }
         const targetUser = req.query.user;
         if (!targetUser) return res.status(400).send('Falta parámetro user');
-        const userExists = MasterDB.obtenerUsuario(targetUser);
+        const userExists = await MasterDB.obtenerUsuario(targetUser);
         if (!userExists) return res.status(404).send('Usuario no encontrado');
         res.setSession(targetUser, { name: userExists.name || targetUser });
         res.redirect('/control');
     });
 
-    app.get('/login-as', requireSession, (req, res) => {
+    app.get('/login-as', requireSession, async (req, res) => {
         if (req.username !== 'admin' && req.username !== 'master') {
             return res.status(403).send('No autorizado');
         }
@@ -76,7 +77,7 @@ function setupAgencyRoutes(app, requireSession) {
         const targetUser = req.query.user;
         if (!targetUser) return res.status(400).send('Falta usuario');
         
-        const user = MasterDB.obtenerUsuario(targetUser);
+        const user = await MasterDB.obtenerUsuario(targetUser);
         if (!user) return res.status(404).send('Usuario no encontrado');
         
         const token = crypto.randomBytes(32).toString('hex');
@@ -87,7 +88,7 @@ function setupAgencyRoutes(app, requireSession) {
         res.redirect('/control');
     });
 
-    app.all('/api/agency/eliminar-usuario', (req, res) => {
+    app.all('/api/agency/eliminar-usuario', async (req, res) => {
         if (!req.session || !req.session.user) return res.status(401).send('No autenticado');
         if (req.session.user !== 'admin' && req.session.user !== 'master') {
             return res.status(403).send('No autorizado');
@@ -109,7 +110,7 @@ function setupAgencyRoutes(app, requireSession) {
                 }
                 delete activeSessions[targetUser];
             }
-            MasterDB.eliminarUsuario(targetUser);
+            await MasterDB.eliminarUsuario(targetUser);
 
             const rootDir = path.join(__dirname, '..', '..');
             const userDbPath = path.join(rootDir, `database_${targetUser}.db`);

@@ -1,27 +1,55 @@
 # ==========================================
-# Archivos a ignorar en Git (TikDance)
+# Archivos de Entorno y Credenciales Sensibles (¡NUNCA SUBIR A GIT!)
 # ==========================================
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+*.key.json
+service-account*.json
+gcp-credentials*.json
 
-# Bases de Datos SQLite (para evitar sobreescribir datos en despliegues)
+# Permitir explícitamente el archivo de ejemplo de variables de entorno
+!.env.example
+
+# ==========================================
+# Dependencias de Node.js
+# ==========================================
+node_modules/
+/node_modules
+.pnpm-store
+
+# ==========================================
+# Bases de Datos Locales y Temporales SQLite
+# ==========================================
 *.db
 *.sqlite
 *.sqlite3
 master.db
 database_*.db
 
-# Mapeos y carpetas de dependencias
-node_modules/
+# ==========================================
+# Archivos de Build y Despliegue (Firebase / GCP)
+# ==========================================
+.firebase/
+firebase-debug.log
+firebase-debug.*.log
+.gcloudignore
+
+# ==========================================
+# Logs y Temporales del Sistema
+# ==========================================
+*.log
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+logs/
 
-# Archivos de entorno y logs locales
-.env
-.env.local
-*.log
-
-# Archivos de sistema operativo
+# ==========================================
+# Archivos del Sistema Operativo
+# ==========================================
+.DS_Store
 Thumbs.db
 ehthumbs.db
 Desktop.ini
-.DS_Store

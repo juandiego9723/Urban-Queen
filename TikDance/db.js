@@ -1,715 +1,789 @@
-const initSqlJs = require('sql.js');
-const fs = require('fs');
-const path = require('path');
-
-let SQL = null;
-
-async function initSQL() {
-    if (!SQL) {
-        SQL = await initSqlJs();
-    }
-    return SQL;
-}
+const { query } = require('./src/config/dbPool');
 
 class DBInstance {
-    constructor(dbPath) {
-        this.dbPath = dbPath;
-        this.db = null;
-        this.dirty = false;
-        this.saveTimer = null;
-    }
-
-    guardarADisco() {
-        if (!this.db || !this.dirty) return;
-        try {
-            const data = this.db.export();
-            fs.writeFileSync(this.dbPath, Buffer.from(data));
-            this.dirty = false;
-        } catch (e) {
-            console.error(`⚠️ Error guardando ${this.dbPath}:`, e.message);
-        }
+    constructor(username, userId = null) {
+        this.username = username;
+        this.userId = userId;
+        this.cacheQueens = [];
+        this.cacheAliases = [];
+        this.cacheGrupos = [];
+        this.cacheConfig = {};
+        this.cacheSonidos = {};
+        this.cacheRegalosCustom = [];
+        this.cacheDinamicas = [];
     }
 
     close() {
-        if (this.saveTimer) clearInterval(this.saveTimer);
-        this.guardarADisco();
-        if (this.db) {
-            try { this.db.close(); } catch(e) {}
-            this.db = null;
-        }
+        // No-op para compatibilidad
     }
 
-    marcarCambio() {
-        this.dirty = true;
-    }
-
-    queryAll(sql, params) {
-        if (!this.db) return [];
-        const stmt = this.db.prepare(sql);
-        if (params) stmt.bind(params);
-        const results = [];
-        while (stmt.step()) {
-            results.push(stmt.getAsObject());
-        }
-        stmt.free();
-        return results;
-    }
-
-    queryOne(sql, params) {
-        const rows = this.queryAll(sql, params);
-        return rows.length > 0 ? rows[0] : null;
-    }
-
-    runSql(sql, params) {
-        if (!this.db) return;
-        this.db.run(sql, params);
-        this.marcarCambio();
-    }
-
-    init() {
-        if (fs.existsSync(this.dbPath)) {
-            const buffer = fs.readFileSync(this.dbPath);
-            this.db = new SQL.Database(buffer);
-            console.log(`📂 Base de datos cargada desde ${this.dbPath}`);
-        } else {
-            this.db = new SQL.Database();
-            console.log(`🆕 Base de datos nueva creada en ${this.dbPath}`);
-        }
-
-        // Crear tablas
-        this.db.run(`CREATE TABLE IF NOT EXISTS queens (
-            name TEXT PRIMARY KEY,
-            color TEXT NOT NULL DEFAULT '#ffffff',
-            ranking_semanal INTEGER NOT NULL DEFAULT 0,
-            ranking_mensual INTEGER NOT NULL DEFAULT 0,
-            victorias INTEGER NOT NULL DEFAULT 0,
-            copa INTEGER NOT NULL DEFAULT 0,
-            activo INTEGER NOT NULL DEFAULT 1,
-            empates INTEGER NOT NULL DEFAULT 0,
-            derrotas INTEGER NOT NULL DEFAULT 0
-        )`);
-
-        // Migraciones para columnas añadidas en versiones posteriores
-        try { this.db.run(`ALTER TABLE queens ADD COLUMN activo INTEGER NOT NULL DEFAULT 1`); } catch(e) {}
-        try { this.db.run(`ALTER TABLE queens ADD COLUMN apodo TEXT NOT NULL DEFAULT ''`); } catch(e) {}
-        try { this.db.run(`ALTER TABLE queens ADD COLUMN ranking_diario INTEGER NOT NULL DEFAULT 0`); } catch(e) {}
-        try { this.db.run(`ALTER TABLE queens ADD COLUMN regalo_img TEXT NOT NULL DEFAULT ''`); } catch(e) {}
-        try { this.db.run(`ALTER TABLE queens ADD COLUMN regalo_pts INTEGER NOT NULL DEFAULT 0`); } catch(e) {}
-        try { this.db.run(`ALTER TABLE queens ADD COLUMN empates INTEGER NOT NULL DEFAULT 0`); } catch(e) {}
-        try { this.db.run(`ALTER TABLE queens ADD COLUMN derrotas INTEGER NOT NULL DEFAULT 0`); } catch(e) {}
-        try { this.db.run(`ALTER TABLE queens ADD COLUMN avatar_img TEXT NOT NULL DEFAULT ''`); } catch(e) {}
-
-        this.db.run(`CREATE TABLE IF NOT EXISTS aliases (
-            alias_name TEXT PRIMARY KEY COLLATE NOCASE,
-            queen_name TEXT NOT NULL REFERENCES queens(name)
-        )`);
-
-        this.db.run(`CREATE TABLE IF NOT EXISTS grupos (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            nombre TEXT UNIQUE NOT NULL,
-            color TEXT NOT NULL DEFAULT '#ffffff'
-        )`);
-
-        this.db.run(`CREATE TABLE IF NOT EXISTS grupo_miembros (
-            grupo_id INTEGER NOT NULL REFERENCES grupos(id) ON DELETE CASCADE,
-            queen_name TEXT NOT NULL REFERENCES queens(name),
-            PRIMARY KEY (grupo_id, queen_name)
-        )`);
-
-        this.db.run(`CREATE TABLE IF NOT EXISTS sonidos (
-            evento TEXT PRIMARY KEY,
-            url TEXT NOT NULL DEFAULT ''
-        )`);
-
-        this.db.run(`CREATE TABLE IF NOT EXISTS dinamicas (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            nombre TEXT NOT NULL,
-            descripcion TEXT DEFAULT '',
-            icono TEXT DEFAULT '⚔️',
-            color TEXT DEFAULT '#6366f1',
-            participantes TEXT DEFAULT 'todas',
-            reglas TEXT DEFAULT '{}',
-            creado_en TEXT DEFAULT CURRENT_TIMESTAMP
-        )`);
-
-        this.db.run(`CREATE TABLE IF NOT EXISTS config (
-            clave TEXT PRIMARY KEY,
-            valor TEXT NOT NULL DEFAULT ''
-        )`);
-
-        this.db.run(`CREATE TABLE IF NOT EXISTS regalos_custom (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            nombre TEXT NOT NULL,
-            accion TEXT DEFAULT '',
-            imagen TEXT NOT NULL,
-            creado_en TEXT DEFAULT CURRENT_TIMESTAMP
-        )`);
-
-        this.db.run(`CREATE TABLE IF NOT EXISTS historial_regalos (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            queen_name TEXT NOT NULL REFERENCES queens(name),
-            gift_name TEXT NOT NULL,
-            diamonds INTEGER NOT NULL,
-            viewer_name TEXT NOT NULL,
-            timestamp TEXT DEFAULT (datetime('now', 'localtime'))
-        )`);
-
-        this.dirty = true;
-        this.guardarADisco();
-
-        // Auto-guardar cada 3 segundos
-        this.saveTimer = setInterval(() => this.guardarADisco(), 3000);
-    }
-
-    initQueens(queensArray) {
-        const countRow = this.queryOne('SELECT COUNT(*) as total FROM queens');
-        if (countRow && countRow.total > 0) return;
-
-        const colores = { Amy: '#ff1493', Ray: '#ffd700', Nucita: '#00ffff', Venus: '#b026ff' };
-        for (const name of queensArray) {
-            const existing = this.queryOne('SELECT name FROM queens WHERE name = ?', [name]);
-            if (!existing) {
-                this.runSql('INSERT INTO queens (name, color, activo) VALUES (?, ?, 1)', [name, colores[name] || '#ffffff']);
+    async ensureUserId() {
+        if (this.userId) return this.userId;
+        try {
+            let res = await query('SELECT id FROM users WHERE LOWER(username) = LOWER($1)', [this.username]);
+            if (res.rows.length === 0) {
+                const crypto = require('crypto');
+                const salt = crypto.randomBytes(16).toString('hex');
+                const hashed = `${salt}:${crypto.pbkdf2Sync(this.username, salt, 1000, 64, 'sha512').toString('hex')}`;
+                const instRes = await query('INSERT INTO users (username, password, name) VALUES ($1, $2, $3) RETURNING id', [this.username.toLowerCase(), hashed, this.username]);
+                if (instRes.rows.length > 0) this.userId = instRes.rows[0].id;
+            } else {
+                this.userId = res.rows[0].id;
             }
+        } catch (e) {
+            console.error('Error en ensureUserId:', e.message);
+        }
+        return this.userId;
+    }
+
+    async init(userId) {
+        if (userId) this.userId = userId;
+        await this.ensureUserId();
+        await this.cargarCache();
+    }
+
+    async cargarCache() {
+        const uId = await this.ensureUserId();
+        if (!uId) return;
+        try {
+            const qRes = await query('SELECT * FROM queens WHERE user_id = $1 ORDER BY activo DESC, name', [uId]);
+            this.cacheQueens = qRes.rows;
+
+            const aRes = await query('SELECT a.alias_name, q.name as queen_name FROM aliases a JOIN queens q ON a.queen_id = q.id WHERE q.user_id = $1', [uId]);
+            this.cacheAliases = aRes.rows;
+
+            const gRes = await query('SELECT * FROM grupos WHERE user_id = $1 ORDER BY nombre', [uId]);
+            this.cacheGrupos = gRes.rows;
+
+            const cRes = await query('SELECT clave, valor FROM config WHERE user_id = $1', [uId]);
+            this.cacheConfig = {};
+            cRes.rows.forEach(r => { this.cacheConfig[r.clave] = r.valor; });
+
+            const sRes = await query('SELECT evento, url FROM sonidos WHERE user_id = $1', [uId]);
+            this.cacheSonidos = {};
+            sRes.rows.forEach(r => { this.cacheSonidos[r.evento] = r.url; });
+
+            const rcRes = await query('SELECT * FROM regalos_custom WHERE user_id = $1 ORDER BY id DESC', [uId]);
+            this.cacheRegalosCustom = rcRes.rows;
+        } catch (e) {
+            console.error(`⚠️ Error cargando cache desde Supabase para ${this.username}:`, e.message);
+        }
+    }
+
+    async initQueens(queensArray) {
+        const uId = await this.ensureUserId();
+        if (!uId) return;
+        try {
+            const countRes = await query('SELECT COUNT(*) as total FROM queens WHERE user_id = $1', [uId]);
+            if (parseInt(countRes.rows[0].total) > 0) return;
+
+            const colores = { Amy: '#ff1493', Ray: '#ffd700', Nucita: '#00ffff', Venus: '#b026ff' };
+            for (const name of queensArray) {
+                await query(
+                    'INSERT INTO queens (user_id, name, color, activo) VALUES ($1, $2, $3, 1) ON CONFLICT (user_id, name) DO NOTHING',
+                    [uId, name, colores[name] || '#ffffff']
+                );
+            }
+            await this.cargarCache();
+        } catch (e) {
+            console.error('Error en initQueens:', e.message);
         }
     }
 
     getActiveQueenNames() {
-        return this.queryAll('SELECT name FROM queens WHERE activo = 1 ORDER BY name').map(q => q.name);
+        return this.cacheQueens.filter(q => q.activo === 1 || q.activo === true).map(q => q.name);
     }
 
     getAllQueensFull() {
-        return this.queryAll('SELECT * FROM queens ORDER BY activo DESC, name');
+        return this.cacheQueens;
     }
 
-    crearQueen(name, color, apodo = '', regaloImg = '', regaloPts = 0, avatarImg = '') {
-        const existing = this.queryOne('SELECT name FROM queens WHERE name = ?', [name]);
-        if (existing) {
-            this.runSql('UPDATE queens SET activo = 1, color = ?, apodo = ?, regalo_img = ?, regalo_pts = ?, avatar_img = ? WHERE name = ?', [color, apodo, regaloImg, regaloPts, avatarImg, name]);
-        } else {
-            this.runSql('INSERT INTO queens (name, color, activo, apodo, regalo_img, regalo_pts, avatar_img) VALUES (?, ?, 1, ?, ?, ?, ?)', [name, color, apodo, regaloImg, regaloPts, avatarImg]);
+    async crearQueen(name, color, apodo = '', regaloImg = '', regaloPts = 0, avatarImg = '') {
+        const uId = await this.ensureUserId();
+        if (!uId) return;
+        try {
+            await query(`
+                INSERT INTO queens (user_id, name, color, apodo, regalo_img, regalo_pts, avatar_img, activo)
+                VALUES ($1, $2, $3, $4, $5, $6, $7, 1)
+                ON CONFLICT (user_id, name) DO UPDATE SET
+                    color = EXCLUDED.color,
+                    apodo = EXCLUDED.apodo,
+                    regalo_img = EXCLUDED.regalo_img,
+                    regalo_pts = EXCLUDED.regalo_pts,
+                    avatar_img = EXCLUDED.avatar_img,
+                    activo = 1
+            `, [uId, name, color, apodo, regaloImg, regaloPts, avatarImg]);
+            await this.cargarCache();
+        } catch (e) {
+            console.error('Error en crearQueen:', e.message);
         }
     }
 
-    editarQueen(name, color, apodo = null, regaloImg = null, regaloPts = null, avatarImg = null) {
-        let sets = ['color = ?'];
-        let vals = [color];
-        if (apodo     !== null) { sets.push('apodo = ?');       vals.push(apodo.trim()); }
-        if (regaloImg !== null) { sets.push('regalo_img = ?');  vals.push(regaloImg); }
-        if (regaloPts !== null) { sets.push('regalo_pts = ?');  vals.push(regaloPts); }
-        if (avatarImg !== null) { sets.push('avatar_img = ?');  vals.push(avatarImg); }
-        vals.push(name);
-        this.runSql(`UPDATE queens SET ${sets.join(', ')} WHERE name = ?`, vals);
+    async editarQueen(name, color, apodo = null, regaloImg = null, regaloPts = null, avatarImg = null) {
+        const uId = await this.ensureUserId();
+        if (!uId) return;
+        try {
+            let sets = ['color = $1'];
+            let vals = [color, uId, name];
+            let idx = 2;
+            if (apodo !== null)     { sets.push(`apodo = $${++idx}`); vals.push(apodo.trim()); }
+            if (regaloImg !== null) { sets.push(`regalo_img = $${++idx}`); vals.push(regaloImg); }
+            if (regaloPts !== null) { sets.push(`regalo_pts = $${++idx}`); vals.push(regaloPts); }
+            if (avatarImg !== null) { sets.push(`avatar_img = $${++idx}`); vals.push(avatarImg); }
+
+            await query(`UPDATE queens SET ${sets.join(', ')} WHERE user_id = $2 AND LOWER(name) = LOWER($3)`, vals);
+            await this.cargarCache();
+        } catch (e) {
+            console.error('Error en editarQueen:', e.message);
+        }
     }
 
     getApodosMap() {
-        const queens = this.queryAll('SELECT name, apodo FROM queens');
         const map = {};
-        queens.forEach(q => { map[q.name] = (q.apodo && q.apodo.trim()) ? q.apodo.trim() : q.name; });
+        this.cacheQueens.forEach(q => { map[q.name] = (q.apodo && q.apodo.trim()) ? q.apodo.trim() : q.name; });
         return map;
     }
 
-    toggleQueenActivo(name) {
-        this.runSql('UPDATE queens SET activo = CASE WHEN activo = 1 THEN 0 ELSE 1 END WHERE name = ?', [name]);
-        const row = this.queryOne('SELECT activo FROM queens WHERE name = ?', [name]);
-        return row ? row.activo : 0;
+    async toggleQueenActivo(name) {
+        const uId = await this.ensureUserId();
+        if (!uId) return 0;
+        try {
+            const res = await query('UPDATE queens SET activo = CASE WHEN activo = 1 THEN 0 ELSE 1 END WHERE user_id = $1 AND LOWER(name) = LOWER($2) RETURNING activo', [uId, name]);
+            await this.cargarCache();
+            return res.rows.length > 0 ? res.rows[0].activo : 0;
+        } catch (e) {
+            console.error('Error en toggleQueenActivo:', e.message);
+            return 0;
+        }
     }
 
-    renombrarQueen(nombreViejo, nombreNuevo) {
-        this.runSql('UPDATE aliases SET queen_name = ? WHERE queen_name = ?', [nombreNuevo, nombreViejo]);
-        this.runSql('UPDATE grupo_miembros SET queen_name = ? WHERE queen_name = ?', [nombreNuevo, nombreViejo]);
-        this.runSql('UPDATE queens SET name = ? WHERE name = ?', [nombreNuevo, nombreViejo]);
+    async renombrarQueen(nombreViejo, nombreNuevo) {
+        const uId = await this.ensureUserId();
+        if (!uId) return;
+        try {
+            await query('UPDATE queens SET name = $1 WHERE user_id = $2 AND LOWER(name) = LOWER($3)', [nombreNuevo, uId, nombreViejo]);
+            await this.cargarCache();
+        } catch (e) {
+            console.error('Error en renombrarQueen:', e.message);
+        }
     }
 
-    eliminarQueen(nombre) {
-        this.runSql('DELETE FROM grupo_miembros WHERE queen_name = ?', [nombre]);
-        this.runSql('DELETE FROM aliases WHERE queen_name = ?', [nombre]);
-        this.runSql('DELETE FROM queens WHERE name = ?', [nombre]);
+    async eliminarQueen(nombre) {
+        const uId = await this.ensureUserId();
+        if (!uId) return;
+        try {
+            await query('DELETE FROM queens WHERE user_id = $1 AND LOWER(name) = LOWER($2)', [uId, nombre]);
+            await this.cargarCache();
+        } catch (e) {
+            console.error('Error en eliminarQueen:', e.message);
+        }
     }
 
     getRanking() {
-        const queens = this.queryAll('SELECT name, ranking_semanal FROM queens ORDER BY ranking_semanal DESC');
         const obj = {};
-        queens.forEach(q => obj[q.name] = q.ranking_semanal);
+        this.cacheQueens.forEach(q => obj[q.name] = q.ranking_semanal || 0);
         return obj;
     }
 
     getRankingMensual() {
-        const queens = this.queryAll('SELECT name, ranking_mensual FROM queens ORDER BY ranking_mensual DESC');
         const obj = {};
-        queens.forEach(q => obj[q.name] = q.ranking_mensual);
+        this.cacheQueens.forEach(q => obj[q.name] = q.ranking_mensual || 0);
         return obj;
     }
 
     getRankingDiario() {
-        const queens = this.queryAll('SELECT name, ranking_diario FROM queens ORDER BY ranking_diario DESC');
         const obj = {};
-        queens.forEach(q => obj[q.name] = q.ranking_diario);
+        this.cacheQueens.forEach(q => obj[q.name] = q.ranking_diario || 0);
         return obj;
     }
 
     getVictorias() {
-        const queens = this.queryAll('SELECT name, victorias FROM queens');
         const obj = {};
-        queens.forEach(q => obj[q.name] = q.victorias);
+        this.cacheQueens.forEach(q => obj[q.name] = q.victorias || 0);
         return obj;
     }
 
     getCopa() {
-        const queens = this.queryAll('SELECT name, copa FROM queens');
         const obj = {};
-        queens.forEach(q => obj[q.name] = q.copa);
+        this.cacheQueens.forEach(q => obj[q.name] = q.copa || 0);
         return obj;
-    }
-
-    sumarPuntos(name, puntos) {
-        this.runSql('UPDATE queens SET ranking_semanal = MAX(0, ranking_semanal + ?), ranking_mensual = MAX(0, ranking_mensual + ?), ranking_diario = MAX(0, ranking_diario + ?), copa = MAX(0, copa + ?) WHERE name = ?', [puntos, puntos, puntos, puntos, name]);
-    }
-
-    sumarVictoria(name) {
-        this.runSql('UPDATE queens SET victorias = victorias + 1 WHERE name = ?', [name]);
-    }
-
-    sumarEmpate(name) {
-        this.runSql('UPDATE queens SET empates = empates + 1 WHERE name = ?', [name]);
-    }
-
-    sumarDerrota(name) {
-        this.runSql('UPDATE queens SET derrotas = derrotas + 1 WHERE name = ?', [name]);
-    }
-
-    resetSemanal() { this.runSql('UPDATE queens SET ranking_semanal = 0'); }
-    resetMensual() { this.runSql('UPDATE queens SET ranking_mensual = 0'); }
-    resetDiario()  { this.runSql('UPDATE queens SET ranking_diario = 0'); }
-    resetCopa() { this.runSql('UPDATE queens SET copa = 0'); }
-    resetVictorias() { 
-        this.runSql('UPDATE queens SET victorias = 0'); 
-        this.runSql('UPDATE queens SET empates = 0'); 
-        this.runSql('UPDATE queens SET derrotas = 0'); 
-    }
-
-    resolverAlias(aliasName) {
-        const row = this.queryOne('SELECT queen_name FROM aliases WHERE alias_name = ? COLLATE NOCASE', [aliasName]);
-        return row ? row.queen_name : null;
-    }
-
-    agregarAlias(aliasName, queenName) {
-        this.runSql('INSERT OR REPLACE INTO aliases (alias_name, queen_name) VALUES (?, ?)', [aliasName, queenName]);
-    }
-
-    eliminarAlias(aliasName) {
-        this.runSql('DELETE FROM aliases WHERE alias_name = ?', [aliasName]);
-    }
-
-    getAliases() {
-        return this.queryAll('SELECT * FROM aliases ORDER BY queen_name');
-    }
-
-    getAliasesPorQueen(queenName) {
-        return this.queryAll('SELECT alias_name FROM aliases WHERE queen_name = ?', [queenName]).map(r => r.alias_name);
-    }
-
-    crearGrupo(nombre, color) {
-        this.runSql('INSERT INTO grupos (nombre, color) VALUES (?, ?)', [nombre, color]);
-        const row = this.queryOne('SELECT last_insert_rowid() as id');
-        return row ? row.id : null;
-    }
-
-    getGrupos() {
-        const grupos = this.queryAll('SELECT * FROM grupos ORDER BY nombre');
-        return grupos.map(g => ({
-            ...g,
-            miembros: this.queryAll('SELECT queen_name FROM grupo_miembros WHERE grupo_id = ?', [g.id]).map(m => m.queen_name)
-        }));
-    }
-
-    eliminarGrupo(id) {
-        this.runSql('DELETE FROM grupo_miembros WHERE grupo_id = ?', [id]);
-        this.runSql('DELETE FROM grupos WHERE id = ?', [id]);
-    }
-
-    agregarMiembro(grupoId, queenName) {
-        this.runSql('INSERT OR IGNORE INTO grupo_miembros (grupo_id, queen_name) VALUES (?, ?)', [grupoId, queenName]);
-    }
-
-    removerMiembro(grupoId, queenName) {
-        this.runSql('DELETE FROM grupo_miembros WHERE grupo_id = ? AND queen_name = ?', [grupoId, queenName]);
-    }
-
-    getSonidos() {
-        return this.queryAll('SELECT * FROM sonidos');
-    }
-
-    setSonido(evento, url) {
-        this.runSql('INSERT OR REPLACE INTO sonidos (evento, url) VALUES (?, ?)', [evento, url]);
-    }
-
-    getDinamicas() {
-        return this.queryAll('SELECT * FROM dinamicas ORDER BY id DESC').map(d => ({ ...d, reglas: JSON.parse(d.reglas || '{}') }));
-    }
-
-    getDinamica(id) {
-        const d = this.queryOne('SELECT * FROM dinamicas WHERE id = ?', [id]);
-        return d ? { ...d, reglas: JSON.parse(d.reglas || '{}') } : null;
-    }
-
-    crearDinamica(data) {
-        this.runSql(`INSERT INTO dinamicas (nombre, descripcion, icono, color, participantes, reglas) VALUES (?, ?, ?, ?, ?, ?)`,
-            [data.nombre, data.descripcion || '', data.icono || '⚔️', data.color || '#6366f1', data.participantes || 'todas', JSON.stringify(data.reglas || {})]);
-    }
-
-    editarDinamica(id, data) {
-        this.runSql(`UPDATE dinamicas SET nombre=?, descripcion=?, icono=?, color=?, participantes=?, reglas=? WHERE id=?`,
-            [data.nombre, data.descripcion || '', data.icono || '⚔️', data.color || '#6366f1', data.participantes || 'todas', JSON.stringify(data.reglas || {}), id]);
-    }
-
-    eliminarDinamica(id) {
-        this.runSql('DELETE FROM dinamicas WHERE id = ?', [id]);
-    }
-
-    duplicarDinamica(id) {
-        const d = this.queryOne('SELECT * FROM dinamicas WHERE id = ?', [id]);
-        if (!d) return;
-        this.runSql(`INSERT INTO dinamicas (nombre, descripcion, icono, color, participantes, reglas) VALUES (?, ?, ?, ?, ?, ?)`,
-            ['[Copia] ' + d.nombre, d.descripcion, d.icono, d.color, d.participantes, d.reglas]);
-    }
-
-    getConfigVal(clave) {
-        const row = this.queryOne('SELECT valor FROM config WHERE clave = ?', [clave]);
-        return row ? row.valor : null;
-    }
-
-    setConfigVal(clave, valor) {
-        this.runSql('INSERT INTO config (clave, valor) VALUES (?, ?) ON CONFLICT(clave) DO UPDATE SET valor=excluded.valor', [clave, valor]);
-    }
-
-    getRegalosCustom() {
-        return this.queryAll('SELECT * FROM regalos_custom ORDER BY id DESC');
-    }
-
-    crearRegaloCustom(data) {
-        this.runSql(`INSERT INTO regalos_custom (nombre, accion, imagen) VALUES (?, ?, ?)`,
-            [data.nombre, data.accion || '', data.imagen || '']);
-    }
-
-    editarRegaloCustom(id, data) {
-        this.runSql(`UPDATE regalos_custom SET nombre=?, accion=?, imagen=? WHERE id=?`,
-            [data.nombre, data.accion || '', data.imagen || '', id]);
-    }
-
-    eliminarRegaloCustom(id) {
-        this.runSql('DELETE FROM regalos_custom WHERE id = ?', [id]);
-    }
-
-    registrarRegalo(queenName, giftName, diamonds, viewerName) {
-        this.runSql('INSERT INTO historial_regalos (queen_name, gift_name, diamonds, viewer_name) VALUES (?, ?, ?, ?)', [queenName, giftName, diamonds, viewerName]);
-    }
-
-    getResumenAnalytics() {
-        const totalHistorico = this.queryOne("SELECT COALESCE(SUM(diamonds), 0) as total FROM historial_regalos").total;
-        const totalHoy = this.queryOne("SELECT COALESCE(SUM(diamonds), 0) as total FROM historial_regalos WHERE date(timestamp) = date('now', 'localtime')").total;
-        const totalMes = this.queryOne("SELECT COALESCE(SUM(diamonds), 0) as total FROM historial_regalos WHERE strftime('%Y-%m', timestamp) = strftime('%Y-%m', 'now', 'localtime')").total;
-        
-        const porQueen = this.queryAll("SELECT queen_name, COALESCE(SUM(diamonds), 0) as total_diamantes, COUNT(*) as cantidad_regalos FROM historial_regalos GROUP BY queen_name ORDER BY total_diamantes DESC");
-        
-        return {
-            totalHistorico,
-            totalHoy,
-            totalMes,
-            porQueen
-        };
-    }
-
-    getHistorialRegalos(limite = 50) {
-        return this.queryAll("SELECT * FROM historial_regalos ORDER BY id DESC LIMIT ?", [limite]);
-    }
-
-    getTopGifters(limite = 5) {
-        return this.queryAll("SELECT viewer_name, COALESCE(SUM(diamonds), 0) as total_donado, COUNT(*) as cantidad_regalos FROM historial_regalos GROUP BY viewer_name ORDER BY total_donado DESC LIMIT ?", [limite]);
-    }
-
-    getRegalosPorDia() {
-        return this.queryAll(`
-            SELECT strftime('%Y-%m-%d', timestamp) as dia, COALESCE(SUM(diamonds), 0) as total_diamantes
-            FROM historial_regalos
-            WHERE timestamp >= datetime('now', '-6 days', 'start of day', 'localtime')
-            GROUP BY dia
-            ORDER BY dia ASC
-        `);
-    }
-
-    getRegalosPorMes() {
-        return this.queryAll(`
-            SELECT strftime('%Y-%m', timestamp) as mes, COALESCE(SUM(diamonds), 0) as total_diamantes
-            FROM historial_regalos
-            WHERE timestamp >= datetime('now', '-5 months', 'start of month', 'localtime')
-            GROUP BY mes
-            ORDER BY mes ASC
-        `);
-    }
-
-    getDateFilterSQL(periodo) {
-        if (!periodo) return "1=1";
-        const p = String(periodo).trim();
-        if (p === 'diario')  return "date(timestamp) = date('now', 'localtime')";
-        if (p === 'semanal') return "timestamp >= datetime('now', '-6 days', 'start of day', 'localtime')";
-        if (p === 'mensual') return "strftime('%Y-%m', timestamp) = strftime('%Y-%m', 'now', 'localtime')";
-        
-        let targetMonth = null;
-        if (p.startsWith('mes:')) targetMonth = p.replace('mes:', '').trim();
-        else if (/^\d{4}-\d{2}$/.test(p)) targetMonth = p;
-
-        if (targetMonth) {
-            return `strftime('%Y-%m', timestamp) = '${targetMonth}'`;
-        }
-        return "1=1";
-    }
-
-    getMesesConHistorial() {
-        return this.queryAll(`
-            SELECT DISTINCT strftime('%Y-%m', timestamp) as mes 
-            FROM historial_regalos 
-            WHERE timestamp IS NOT NULL AND timestamp != ''
-            ORDER BY mes DESC
-        `);
-    }
-
-    getQueensAnalyticsPorPeriodo(periodo = 'historico') {
-        const filter = this.getDateFilterSQL(periodo);
-        return this.queryAll(`
-            SELECT queen_name, 
-                   COALESCE(SUM(diamonds), 0) as total_diamantes, 
-                   COUNT(*) as cantidad_regalos,
-                   COALESCE(ROUND(AVG(diamonds), 1), 0) as promedio
-            FROM historial_regalos 
-            WHERE ${filter} 
-            GROUP BY queen_name 
-            ORDER BY total_diamantes DESC
-        `);
-    }
-
-    getDatosBailarina(name, periodo = 'historico') {
-        const filter = this.getDateFilterSQL(periodo);
-        const stats = this.queryOne(`
-            SELECT COALESCE(SUM(diamonds), 0) as total, 
-                   COUNT(*) as total_regalos, 
-                   COALESCE(ROUND(AVG(diamonds), 1), 0) as promedio 
-            FROM historial_regalos 
-            WHERE LOWER(queen_name) = LOWER(?) AND ${filter}
-        `, [name]) || { total: 0, total_regalos: 0, promedio: 0 };
-
-        const horaPicoRow = this.queryOne(`
-            SELECT strftime('%H', timestamp) as hora, SUM(diamonds) as total 
-            FROM historial_regalos 
-            WHERE LOWER(queen_name) = LOWER(?) AND ${filter} 
-            GROUP BY hora 
-            ORDER BY total DESC LIMIT 1
-        `, [name]);
-
-        return {
-            ...stats,
-            hora_pico: horaPicoRow ? `${horaPicoRow.hora}:00` : 'N/A'
-        };
-    }
-
-    getTopDonadoresBailarina(name, limite = 5, periodo = 'historico') {
-        const filter = this.getDateFilterSQL(periodo);
-        return this.queryAll(`
-            SELECT viewer_name, COALESCE(SUM(diamonds), 0) as total_donado, COUNT(*) as cantidad_regalos 
-            FROM historial_regalos 
-            WHERE LOWER(queen_name) = LOWER(?) AND ${filter} 
-            GROUP BY viewer_name 
-            ORDER BY total_donado DESC LIMIT ?
-        `, [name, limite]);
-    }
-
-    getDistribucionRegalosBailarina(name, periodo = 'historico') {
-        const filter = this.getDateFilterSQL(periodo);
-        return this.queryAll(`
-            SELECT gift_name, COALESCE(SUM(diamonds), 0) as total_diamantes, COUNT(*) as cantidad 
-            FROM historial_regalos 
-            WHERE LOWER(queen_name) = LOWER(?) AND ${filter} 
-            GROUP BY gift_name 
-            ORDER BY total_diamantes DESC
-        `, [name]);
-    }
-
-    getEvolucionBailarina(name, periodo = 'semanal') {
-        const p = String(periodo || '').trim();
-        let targetMonth = null;
-        if (p.startsWith('mes:')) targetMonth = p.replace('mes:', '').trim();
-        else if (/^\d{4}-\d{2}$/.test(p)) targetMonth = p;
-
-        if (targetMonth) {
-            const rows = this.queryAll(`
-                SELECT strftime('%Y-%m-%d', timestamp) as dia, COALESCE(SUM(diamonds), 0) as total
-                FROM historial_regalos
-                WHERE LOWER(queen_name) = LOWER(?) AND strftime('%Y-%m', timestamp) = ?
-                GROUP BY dia
-            `, [name, targetMonth]);
-            const parts = targetMonth.split('-');
-            const year = parseInt(parts[0]);
-            const month = parseInt(parts[1]);
-            const daysInMonth = new Date(year, month, 0).getDate();
-            const result = [];
-            for (let day = 1; day <= daysInMonth; day++) {
-                const dayStr = day.toString().padStart(2, '0');
-                const fullDateStr = `${targetMonth}-${dayStr}`;
-                const found = rows.find(r => r.dia === fullDateStr);
-                result.push({ label: `${dayStr}/${month}`, total: found ? found.total : 0 });
-            }
-            return result;
-        }
-
-        if (periodo === 'diario') {
-            const rows = this.queryAll(`
-                SELECT strftime('%H', timestamp) as hora, COALESCE(SUM(diamonds), 0) as total
-                FROM historial_regalos
-                WHERE LOWER(queen_name) = LOWER(?) AND date(timestamp) = date('now', 'localtime')
-                GROUP BY hora
-            `, [name]);
-            const result = [];
-            for (let i = 0; i < 24; i++) {
-                const h = i.toString().padStart(2, '0');
-                const found = rows.find(r => r.hora === h);
-                result.push({ label: `${h}:00`, total: found ? found.total : 0 });
-            }
-            return result;
-        } else if (periodo === 'mensual') {
-            const rows = this.queryAll(`
-                SELECT strftime('%Y-%m-%d', timestamp) as dia, COALESCE(SUM(diamonds), 0) as total
-                FROM historial_regalos
-                WHERE LOWER(queen_name) = LOWER(?) AND timestamp >= datetime('now', '-29 days', 'start of day', 'localtime')
-                GROUP BY dia
-            `, [name]);
-            const result = [];
-            for (let i = 29; i >= 0; i--) {
-                const d = new Date();
-                d.setDate(d.getDate() - i);
-                const dateStr = d.toISOString().split('T')[0];
-                const labelStr = d.toLocaleDateString([], { day: 'numeric', month: 'short' });
-                const found = rows.find(r => r.dia === dateStr);
-                result.push({ label: labelStr, total: found ? found.total : 0 });
-            }
-            return result;
-        } else if (periodo === 'historico') {
-            const rows = this.queryAll(`
-                SELECT strftime('%Y-%m', timestamp) as mes, COALESCE(SUM(diamonds), 0) as total
-                FROM historial_regalos
-                WHERE LOWER(queen_name) = LOWER(?) AND timestamp >= datetime('now', '-5 months', 'start of month', 'localtime')
-                GROUP BY mes
-            `, [name]);
-            const meses = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
-            const result = [];
-            for (let i = 5; i >= 0; i--) {
-                const d = new Date();
-                d.setMonth(d.getMonth() - i);
-                const mKey = `${d.getFullYear()}-${(d.getMonth() + 1).toString().padStart(2, '0')}`;
-                const labelStr = `${meses[d.getMonth()]} ${d.getFullYear()}`;
-                const found = rows.find(r => r.mes === mKey);
-                result.push({ label: labelStr, total: found ? found.total : 0 });
-            }
-            return result;
-        } else {
-            // 'semanal' default (7 días)
-            const rows = this.queryAll(`
-                SELECT strftime('%Y-%m-%d', timestamp) as dia, COALESCE(SUM(diamonds), 0) as total
-                FROM historial_regalos
-                WHERE LOWER(queen_name) = LOWER(?) AND timestamp >= datetime('now', '-6 days', 'start of day', 'localtime')
-                GROUP BY dia
-            `, [name]);
-            const result = [];
-            for (let i = 6; i >= 0; i--) {
-                const d = new Date();
-                d.setDate(d.getDate() - i);
-                const dateStr = d.toISOString().split('T')[0];
-                const labelStr = d.toLocaleDateString([], { day: 'numeric', month: 'short' });
-                const found = rows.find(r => r.dia === dateStr);
-                result.push({ label: labelStr, total: found ? found.total : 0 });
-            }
-            return result;
-        }
-    }
-
-    getDonacionesPorHora() {
-        return this.queryAll(`
-            SELECT strftime('%H', timestamp) as hora, COALESCE(SUM(diamonds), 0) as total_diamantes
-            FROM historial_regalos
-            GROUP BY hora
-            ORDER BY hora ASC
-        `);
-    }
-
-    close() {
-        if (this.saveTimer) clearInterval(this.saveTimer);
-        this.guardarADisco();
-        if (this.db) this.db.close();
-    }
-
-    getFutbolConfig() {
-        const raw = this.getConfigVal('futbol_config');
-        if(raw) {
-            try {
-                return JSON.parse(raw);
-            } catch(e){}
-        }
-        return {
-            equipo1: { nombre: 'BARCELONA', color1: '#004D98', color2: '#A50044', miembros: ['Ray', 'Nucita'] },
-            equipo2: { nombre: 'REAL MADRID', color1: '#FFFFFF', color2: '#CCCCCC', miembros: ['Amy', 'Venus'] }
-        };
-    }
-
-    setFutbolConfig(configObj) {
-        this.setConfigVal('futbol_config', JSON.stringify(configObj));
     }
 
     getRankingTitulos() {
         return {
-            semanal: this.getConfigVal('ranking_titulo_semanal') || 'RANKING SEMANAL',
-            mensual: this.getConfigVal('ranking_titulo_mensual') || 'RANKING MENSUAL',
-            diario:  this.getConfigVal('ranking_titulo_diario')  || 'RANKING DEL DÍA'
+            semanal: this.getConfigVal('titulo_semanal') || '',
+            mensual: this.getConfigVal('titulo_mensual') || '',
+            diario:  this.getConfigVal('titulo_diario') || ''
         };
     }
 
-    setRankingTitulos(titulos = {}) {
-        if (titulos.semanal !== undefined) this.setConfigVal('ranking_titulo_semanal', String(titulos.semanal).trim());
-        if (titulos.mensual !== undefined) this.setConfigVal('ranking_titulo_mensual', String(titulos.mensual).trim());
-        if (titulos.diario  !== undefined) this.setConfigVal('ranking_titulo_diario',  String(titulos.diario).trim());
+    async setRankingTitulos({ semanal, mensual, diario }) {
+        if (semanal !== undefined) await this.setConfigVal('titulo_semanal', semanal);
+        if (mensual !== undefined) await this.setConfigVal('titulo_mensual', mensual);
+        if (diario  !== undefined) await this.setConfigVal('titulo_diario', diario);
     }
 
-    migrarDesdeJSON(filePath) {
-        if (!fs.existsSync(filePath)) return false;
-        
-        const queens = this.queryAll('SELECT name, ranking_semanal FROM queens');
-        const totalPuntos = queens.reduce((s, q) => s + q.ranking_semanal, 0);
-        if (totalPuntos > 0) return false;
-        
+    // Config Futbol
+    getFutbolConfig() {
+        const raw = this.getConfigVal('futbol_config');
         try {
-            const data = JSON.parse(fs.readFileSync(filePath, 'utf8'));
-            const rankingData = data.ranking || data;
-            const victoriasData = data.victorias || {};
-            const copaData = data.copa || {};
-            
-            for (const name in rankingData) {
-                this.runSql('UPDATE queens SET ranking_semanal = ?, ranking_mensual = ? WHERE name = ?', [rankingData[name] || 0, rankingData[name] || 0, name]);
-            }
-            for (const name in victoriasData) {
-                this.runSql('UPDATE queens SET victorias = ? WHERE name = ?', [victoriasData[name] || 0, name]);
-            }
-            for (const name in copaData) {
-                this.runSql('UPDATE queens SET copa = ? WHERE name = ?', [copaData[name] || 0, name]);
-            }
-            
-            console.log('✅ Datos migrados desde datos.json a SQLite');
-            return true;
+            return raw ? JSON.parse(raw) : { equipo1: [], equipo2: [] };
         } catch (e) {
-            console.error('⚠️ Error migrando datos.json:', e.message);
-            return false;
+            return { equipo1: [], equipo2: [] };
+        }
+    }
+
+    async setFutbolConfig(config) {
+        await this.setConfigVal('futbol_config', JSON.stringify(config || {}));
+    }
+
+    // Config Agencia
+    getAgenciaConfig() {
+        const raw = this.getConfigVal('agencia_config');
+        try {
+            return raw ? JSON.parse(raw) : {};
+        } catch (e) {
+            return {};
+        }
+    }
+
+    async setAgenciaConfig(config) {
+        await this.setConfigVal('agencia_config', JSON.stringify(config || {}));
+    }
+
+    async sumarPuntos(name, puntos) {
+        const uId = await this.ensureUserId();
+        if (!uId) return;
+        try {
+            const q = this.cacheQueens.find(item => item.name.toLowerCase() === name.toLowerCase());
+            if (q) {
+                q.ranking_semanal = Math.max(0, (q.ranking_semanal || 0) + puntos);
+                q.ranking_mensual = Math.max(0, (q.ranking_mensual || 0) + puntos);
+                q.ranking_diario  = Math.max(0, (q.ranking_diario || 0) + puntos);
+                q.copa            = Math.max(0, (q.copa || 0) + puntos);
+            }
+            await query(`
+                UPDATE queens 
+                SET ranking_semanal = GREATEST(0, ranking_semanal + $1),
+                    ranking_mensual = GREATEST(0, ranking_mensual + $1),
+                    ranking_diario = GREATEST(0, ranking_diario + $1),
+                    copa = GREATEST(0, copa + $1)
+                WHERE user_id = $2 AND LOWER(name) = LOWER($3)
+            `, [puntos, uId, name]);
+        } catch (e) {
+            console.error('Error en sumarPuntos:', e.message);
+        }
+    }
+
+    async sumarVictoria(name) {
+        const uId = await this.ensureUserId();
+        if (!uId) return;
+        try {
+            await query('UPDATE queens SET victorias = victorias + 1 WHERE user_id = $1 AND LOWER(name) = LOWER($2)', [uId, name]);
+            await this.cargarCache();
+        } catch (e) {
+            console.error('Error en sumarVictoria:', e.message);
+        }
+    }
+
+    async sumarEmpate(name) {
+        const uId = await this.ensureUserId();
+        if (!uId) return;
+        try {
+            await query('UPDATE queens SET empates = empates + 1 WHERE user_id = $1 AND LOWER(name) = LOWER($2)', [uId, name]);
+            await this.cargarCache();
+        } catch (e) {
+            console.error('Error en sumarEmpate:', e.message);
+        }
+    }
+
+    async sumarDerrota(name) {
+        const uId = await this.ensureUserId();
+        if (!uId) return;
+        try {
+            await query('UPDATE queens SET derrotas = derrotas + 1 WHERE user_id = $1 AND LOWER(name) = LOWER($2)', [uId, name]);
+            await this.cargarCache();
+        } catch (e) {
+            console.error('Error en sumarDerrota:', e.message);
+        }
+    }
+
+    async resetSemanal() {
+        const uId = await this.ensureUserId();
+        if (!uId) return;
+        await query('UPDATE queens SET ranking_semanal = 0 WHERE user_id = $1', [uId]);
+        await this.cargarCache();
+    }
+
+    async resetMensual() {
+        const uId = await this.ensureUserId();
+        if (!uId) return;
+        await query('UPDATE queens SET ranking_mensual = 0 WHERE user_id = $1', [uId]);
+        await this.cargarCache();
+    }
+
+    async resetDiario() {
+        const uId = await this.ensureUserId();
+        if (!uId) return;
+        await query('UPDATE queens SET ranking_diario = 0 WHERE user_id = $1', [uId]);
+        await this.cargarCache();
+    }
+
+    async resetCopa() {
+        const uId = await this.ensureUserId();
+        if (!uId) return;
+        await query('UPDATE queens SET copa = 0 WHERE user_id = $1', [uId]);
+        await this.cargarCache();
+    }
+
+    async resetVictorias() {
+        const uId = await this.ensureUserId();
+        if (!uId) return;
+        await query('UPDATE queens SET victorias = 0, empates = 0, derrotas = 0 WHERE user_id = $1', [uId]);
+        await this.cargarCache();
+    }
+
+    resolverAlias(aliasName) {
+        const found = this.cacheAliases.find(a => a.alias_name.toLowerCase() === aliasName.toLowerCase());
+        return found ? found.queen_name : null;
+    }
+
+    async agregarAlias(aliasName, queenName) {
+        const uId = await this.ensureUserId();
+        if (!uId) return;
+        try {
+            const qRes = await query('SELECT id FROM queens WHERE user_id = $1 AND LOWER(name) = LOWER($2)', [uId, queenName]);
+            if (qRes.rows.length === 0) return;
+            const queenId = qRes.rows[0].id;
+            await query('INSERT INTO aliases (queen_id, alias_name) VALUES ($1, $2) ON CONFLICT (queen_id, alias_name) DO NOTHING', [queenId, aliasName]);
+            await this.cargarCache();
+        } catch (e) {
+            console.error('Error en agregarAlias:', e.message);
+        }
+    }
+
+    async eliminarAlias(aliasName) {
+        const uId = await this.ensureUserId();
+        if (!uId) return;
+        try {
+            await query('DELETE FROM aliases WHERE LOWER(alias_name) = LOWER($1) AND queen_id IN (SELECT id FROM queens WHERE user_id = $2)', [aliasName, uId]);
+            await this.cargarCache();
+        } catch (e) {
+            console.error('Error en eliminarAlias:', e.message);
+        }
+    }
+
+    getAliases() {
+        return this.cacheAliases;
+    }
+
+    getAliasesPorQueen(queenName) {
+        return this.cacheAliases.filter(a => a.queen_name === queenName).map(a => a.alias_name);
+    }
+
+    // Grupos
+    getGrupos() {
+        return this.cacheGrupos.map(g => ({
+            ...g,
+            miembros: []
+        }));
+    }
+
+    async crearGrupo(nombre, color) {
+        const uId = await this.ensureUserId();
+        if (!uId) return null;
+        const res = await query('INSERT INTO grupos (user_id, nombre, color) VALUES ($1, $2, $3) RETURNING id', [uId, nombre, color]);
+        await this.cargarCache();
+        return res.rows[0]?.id;
+    }
+
+    async eliminarGrupo(id) {
+        const uId = await this.ensureUserId();
+        if (!uId) return;
+        await query('DELETE FROM grupos WHERE user_id = $1 AND id = $2', [uId, id]);
+        await this.cargarCache();
+    }
+
+    async agregarMiembro(grupoId, queenName) {
+        const uId = await this.ensureUserId();
+        if (!uId) return;
+        const qRes = await query('SELECT id FROM queens WHERE user_id = $1 AND LOWER(name) = LOWER($2)', [uId, queenName]);
+        if (qRes.rows.length > 0) {
+            await query('INSERT INTO grupo_miembros (grupo_id, queen_id) VALUES ($1, $2) ON CONFLICT DO NOTHING', [grupoId, qRes.rows[0].id]);
+        }
+    }
+
+    async removerMiembro(grupoId, queenName) {
+        const uId = await this.ensureUserId();
+        if (!uId) return;
+        const qRes = await query('SELECT id FROM queens WHERE user_id = $1 AND LOWER(name) = LOWER($2)', [uId, queenName]);
+        if (qRes.rows.length > 0) {
+            await query('DELETE FROM grupo_miembros WHERE grupo_id = $1 AND queen_id = $2', [grupoId, qRes.rows[0].id]);
+        }
+    }
+
+    // Sonidos
+    getSonidos() {
+        return Object.keys(this.cacheSonidos).map(evento => ({ evento, url: this.cacheSonidos[evento] }));
+    }
+
+    async setSonido(evento, url) {
+        const uId = await this.ensureUserId();
+        if (!uId) return;
+        await query('INSERT INTO sonidos (user_id, evento, url) VALUES ($1, $2, $3) ON CONFLICT (user_id, evento) DO UPDATE SET url = EXCLUDED.url', [uId, evento, url]);
+        this.cacheSonidos[evento] = url;
+    }
+
+    // Dinámicas personalizadas
+    getDinamicas() {
+        return this.cacheDinamicas;
+    }
+
+    getDinamica(id) {
+        return this.cacheDinamicas.find(d => d.id === parseInt(id)) || null;
+    }
+
+    async crearDinamica(data) {
+        this.cacheDinamicas.push({ id: Date.now(), ...data });
+    }
+
+    async editarDinamica(id, data) {
+        const idx = this.cacheDinamicas.findIndex(d => d.id === parseInt(id));
+        if (idx !== -1) {
+            this.cacheDinamicas[idx] = { id: parseInt(id), ...data };
+        }
+    }
+
+    async eliminarDinamica(id) {
+        this.cacheDinamicas = this.cacheDinamicas.filter(d => d.id !== parseInt(id));
+    }
+
+    async duplicarDinamica(id) {
+        const d = this.getDinamica(id);
+        if (d) {
+            this.cacheDinamicas.push({ ...d, id: Date.now(), nombre: '[Copia] ' + d.nombre });
+        }
+    }
+
+    // Regalos Custom
+    getRegalosCustom() {
+        return this.cacheRegalosCustom;
+    }
+
+    async crearRegaloCustom(data) {
+        const uId = await this.ensureUserId();
+        if (!uId) return;
+        await query('INSERT INTO regalos_custom (user_id, nombre, accion, imagen) VALUES ($1, $2, $3, $4)', [uId, data.nombre, data.accion || '', data.imagen || '']);
+        await this.cargarCache();
+    }
+
+    async editarRegaloCustom(id, data) {
+        const uId = await this.ensureUserId();
+        if (!uId) return;
+        await query('UPDATE regalos_custom SET nombre=$1, accion=$2, imagen=$3 WHERE user_id=$4 AND id=$5', [data.nombre, data.accion || '', data.imagen || '', uId, id]);
+        await this.cargarCache();
+    }
+
+    async eliminarRegaloCustom(id) {
+        const uId = await this.ensureUserId();
+        if (!uId) return;
+        await query('DELETE FROM regalos_custom WHERE user_id=$1 AND id=$2', [uId, id]);
+        await this.cargarCache();
+    }
+
+    // Config
+    getConfigVal(clave) {
+        return this.cacheConfig[clave] || null;
+    }
+
+    async setConfigVal(clave, valor) {
+        const uId = await this.ensureUserId();
+        if (!uId) return;
+        try {
+            await query(`
+                INSERT INTO config (user_id, clave, valor) VALUES ($1, $2, $3)
+                ON CONFLICT (user_id, clave) DO UPDATE SET valor = EXCLUDED.valor
+            `, [uId, clave, String(valor)]);
+            this.cacheConfig[clave] = String(valor);
+        } catch (e) {
+            console.error('Error en setConfigVal:', e.message);
+        }
+    }
+
+    // REGISTRO DE REGALOS (Garantizado para Analíticas)
+    async registrarRegalo(queenName, giftName, diamonds, viewerName) {
+        const uId = await this.ensureUserId();
+        if (!uId) return;
+        try {
+            let qRes = await query('SELECT id FROM queens WHERE user_id = $1 AND LOWER(name) = LOWER($2)', [uId, queenName]);
+            let queenId = null;
+            if (qRes.rows.length === 0) {
+                const insRes = await query('INSERT INTO queens (user_id, name, activo) VALUES ($1, $2, 1) RETURNING id', [uId, queenName]);
+                if (insRes.rows.length > 0) queenId = insRes.rows[0].id;
+            } else {
+                queenId = qRes.rows[0].id;
+            }
+            if (!queenId) return;
+            await query(
+                'INSERT INTO historial_regalos (user_id, queen_id, gift_name, diamonds, viewer_name) VALUES ($1, $2, $3, $4, $5)',
+                [uId, queenId, giftName || 'Regalo', diamonds || 0, viewerName || 'Anónimo']
+            );
+        } catch (e) {
+            console.error('Error en registrarRegalo:', e.message);
+        }
+    }
+
+    // CONSULTAS DE ANALÍTICAS
+    async getResumenAnalytics() {
+        const uId = await this.ensureUserId();
+        if (!uId) return { totalHistorico: 0, totalHoy: 0, totalMes: 0, porQueen: [] };
+        try {
+            const hist = await query("SELECT COALESCE(SUM(diamonds), 0) as total FROM historial_regalos WHERE user_id = $1", [uId]);
+            const hoy = await query("SELECT COALESCE(SUM(diamonds), 0) as total FROM historial_regalos WHERE user_id = $1 AND timestamp::date = CURRENT_DATE", [uId]);
+            const mes = await query("SELECT COALESCE(SUM(diamonds), 0) as total FROM historial_regalos WHERE user_id = $1 AND DATE_TRUNC('month', timestamp) = DATE_TRUNC('month', CURRENT_DATE)", [uId]);
+
+            const pq = await query(`
+                SELECT q.name as queen_name, COALESCE(SUM(h.diamonds), 0) as total_diamantes, COUNT(h.id) as cantidad_regalos
+                FROM historial_regalos h
+                JOIN queens q ON h.queen_id = q.id
+                WHERE h.user_id = $1
+                GROUP BY q.name
+                ORDER BY total_diamantes DESC
+            `, [uId]);
+
+            return {
+                totalHistorico: parseInt(hist.rows[0].total),
+                totalHoy: parseInt(hoy.rows[0].total),
+                totalMes: parseInt(mes.rows[0].total),
+                porQueen: pq.rows
+            };
+        } catch (e) {
+            console.error('Error en getResumenAnalytics:', e.message);
+            return { totalHistorico: 0, totalHoy: 0, totalMes: 0, porQueen: [] };
+        }
+    }
+
+    async getHistorialRegalos(limite = 50) {
+        const uId = await this.ensureUserId();
+        if (!uId) return [];
+        try {
+            const res = await query(`
+                SELECT h.id, q.name as queen_name, h.gift_name, h.diamonds, h.viewer_name, h.timestamp
+                FROM historial_regalos h
+                JOIN queens q ON h.queen_id = q.id
+                WHERE h.user_id = $1
+                ORDER BY h.id DESC LIMIT $2
+            `, [uId, limite]);
+            return res.rows;
+        } catch (e) {
+            console.error('Error en getHistorialRegalos:', e.message);
+            return [];
+        }
+    }
+
+    async getTopGifters(limite = 5) {
+        const uId = await this.ensureUserId();
+        if (!uId) return [];
+        try {
+            const res = await query(`
+                SELECT viewer_name, COALESCE(SUM(diamonds), 0) as total_donado, COUNT(*) as cantidad_regalos
+                FROM historial_regalos
+                WHERE user_id = $1
+                GROUP BY viewer_name
+                ORDER BY total_donado DESC LIMIT $2
+            `, [uId, limite]);
+            return res.rows;
+        } catch (e) {
+            console.error('Error en getTopGifters:', e.message);
+            return [];
+        }
+    }
+
+    async getRegalosPorDia() {
+        const uId = await this.ensureUserId();
+        if (!uId) return [];
+        try {
+            const res = await query(`
+                SELECT TO_CHAR(timestamp, 'YYYY-MM-DD') as dia, COALESCE(SUM(diamonds), 0) as total_diamantes
+                FROM historial_regalos
+                WHERE user_id = $1 AND timestamp >= NOW() - INTERVAL '7 days'
+                GROUP BY dia
+                ORDER BY dia ASC
+            `, [uId]);
+            return res.rows;
+        } catch (e) {
+            console.error('Error en getRegalosPorDia:', e.message);
+            return [];
+        }
+    }
+
+    async getRegalosPorMes() {
+        const uId = await this.ensureUserId();
+        if (!uId) return [];
+        try {
+            const res = await query(`
+                SELECT TO_CHAR(timestamp, 'YYYY-MM') as mes, COALESCE(SUM(diamonds), 0) as total_diamantes
+                FROM historial_regalos
+                WHERE user_id = $1 AND timestamp >= NOW() - INTERVAL '6 months'
+                GROUP BY mes
+                ORDER BY mes ASC
+            `, [uId]);
+            return res.rows;
+        } catch (e) {
+            console.error('Error en getRegalosPorMes:', e.message);
+            return [];
+        }
+    }
+
+    async getMesesConHistorial() {
+        const uId = await this.ensureUserId();
+        if (!uId) return [];
+        try {
+            const res = await query(`
+                SELECT DISTINCT TO_CHAR(timestamp, 'YYYY-MM') as mes
+                FROM historial_regalos
+                WHERE user_id = $1 AND timestamp IS NOT NULL
+                ORDER BY mes DESC
+            `, [uId]);
+            return res.rows;
+        } catch (e) {
+            console.error('Error en getMesesConHistorial:', e.message);
+            return [];
+        }
+    }
+
+    getDateFilterSQL(periodo) {
+        if (!periodo || periodo === 'historico') return "1=1";
+        const p = String(periodo).trim();
+        if (p === 'diario')  return "timestamp::date = CURRENT_DATE";
+        if (p === 'semanal') return "timestamp >= NOW() - INTERVAL '7 days'";
+        if (p === 'mensual') return "DATE_TRUNC('month', timestamp) = DATE_TRUNC('month', CURRENT_DATE)";
+        if (/^\d{4}-\d{2}$/.test(p)) return `TO_CHAR(timestamp, 'YYYY-MM') = '${p}'`;
+        return "1=1";
+    }
+
+    async getQueensAnalyticsPorPeriodo(periodo = 'historico') {
+        const uId = await this.ensureUserId();
+        if (!uId) return [];
+        const filter = this.getDateFilterSQL(periodo);
+        try {
+            const res = await query(`
+                SELECT q.name as queen_name, 
+                       COALESCE(SUM(h.diamonds), 0) as total_diamantes, 
+                       COUNT(h.id) as cantidad_regalos,
+                       COALESCE(ROUND(AVG(h.diamonds), 1), 0) as promedio
+                FROM historial_regalos h
+                JOIN queens q ON h.queen_id = q.id
+                WHERE h.user_id = $1 AND ${filter}
+                GROUP BY q.name 
+                ORDER BY total_diamantes DESC
+            `, [uId]);
+            return res.rows;
+        } catch (e) {
+            console.error('Error en getQueensAnalyticsPorPeriodo:', e.message);
+            return [];
+        }
+    }
+
+    async getDatosBailarina(name, periodo = 'historico') {
+        const uId = await this.ensureUserId();
+        if (!uId) return { total: 0, total_regalos: 0, promedio: 0 };
+        const filter = this.getDateFilterSQL(periodo);
+        try {
+            const res = await query(`
+                SELECT COALESCE(SUM(h.diamonds), 0) as total, 
+                       COUNT(h.id) as total_regalos, 
+                       COALESCE(ROUND(AVG(h.diamonds), 1), 0) as promedio 
+                FROM historial_regalos h
+                JOIN queens q ON h.queen_id = q.id
+                WHERE h.user_id = $1 AND LOWER(q.name) = LOWER($2) AND ${filter}
+            `, [uId, name]);
+            return res.rows[0] || { total: 0, total_regalos: 0, promedio: 0 };
+        } catch (e) {
+            console.error('Error en getDatosBailarina:', e.message);
+            return { total: 0, total_regalos: 0, promedio: 0 };
+        }
+    }
+
+    async getTopDonadoresBailarina(name, limite = 5, periodo = 'historico') {
+        const uId = await this.ensureUserId();
+        if (!uId) return [];
+        const filter = this.getDateFilterSQL(periodo);
+        try {
+            const res = await query(`
+                SELECT h.viewer_name, COALESCE(SUM(h.diamonds), 0) as total_donado, COUNT(h.id) as cantidad_regalos
+                FROM historial_regalos h
+                JOIN queens q ON h.queen_id = q.id
+                WHERE h.user_id = $1 AND LOWER(q.name) = LOWER($2) AND ${filter}
+                GROUP BY h.viewer_name
+                ORDER BY total_donado DESC LIMIT $3
+            `, [uId, name, limite]);
+            return res.rows;
+        } catch (e) {
+            console.error('Error en getTopDonadoresBailarina:', e.message);
+            return [];
+        }
+    }
+
+    async getDistribucionRegalosBailarina(name, periodo = 'historico') {
+        const uId = await this.ensureUserId();
+        if (!uId) return [];
+        const filter = this.getDateFilterSQL(periodo);
+        try {
+            const res = await query(`
+                SELECT h.gift_name, COALESCE(SUM(h.diamonds), 0) as total_diamantes, COUNT(h.id) as cantidad
+                FROM historial_regalos h
+                JOIN queens q ON h.queen_id = q.id
+                WHERE h.user_id = $1 AND LOWER(q.name) = LOWER($2) AND ${filter}
+                GROUP BY h.gift_name
+                ORDER BY total_diamantes DESC
+            `, [uId, name]);
+            return res.rows;
+        } catch (e) {
+            console.error('Error en getDistribucionRegalosBailarina:', e.message);
+            return [];
+        }
+    }
+
+    async getEvolucionBailarina(name, periodo = 'historico') {
+        const uId = await this.ensureUserId();
+        if (!uId) return [];
+        const filter = this.getDateFilterSQL(periodo);
+        try {
+            const res = await query(`
+                SELECT TO_CHAR(h.timestamp, 'YYYY-MM-DD') as dia, COALESCE(SUM(h.diamonds), 0) as total_diamantes
+                FROM historial_regalos h
+                JOIN queens q ON h.queen_id = q.id
+                WHERE h.user_id = $1 AND LOWER(q.name) = LOWER($2) AND ${filter}
+                GROUP BY dia
+                ORDER BY dia ASC
+            `, [uId, name]);
+            return res.rows;
+        } catch (e) {
+            console.error('Error en getEvolucionBailarina:', e.message);
+            return [];
+        }
+    }
+
+    async getDonacionesPorHora() {
+        const uId = await this.ensureUserId();
+        if (!uId) return [];
+        try {
+            const res = await query(`
+                SELECT EXTRACT(HOUR FROM timestamp) as hora, COALESCE(SUM(diamonds), 0) as total_diamantes, COUNT(id) as cantidad_regalos
+                FROM historial_regalos
+                WHERE user_id = $1
+                GROUP BY hora
+                ORDER BY hora ASC
+            `, [uId]);
+            return res.rows;
+        } catch (e) {
+            console.error('Error en getDonacionesPorHora:', e.message);
+            return [];
         }
     }
 }
 
 module.exports = {
-    initSQL,
     DBInstance
 };
