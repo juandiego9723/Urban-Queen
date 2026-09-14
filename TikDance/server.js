@@ -12,7 +12,7 @@ const MasterDB = require('./masterDb');
 
 // ── Módulos propios ──────────────────────────────────────────────
 try { require('./scripts/cleanupProject'); } catch(e) {}
-try { require('./scripts/gitPush'); } catch(e) {}
+
 
 
 
