@@ -124,14 +124,20 @@ class DBInstance {
         if (!uId) return;
         try {
             let sets = ['color = $1'];
-            let vals = [color, uId, name];
-            let idx = 2;
+            let vals = [color];
+            let idx = 1;
+
             if (apodo !== null)     { sets.push(`apodo = $${++idx}`); vals.push(apodo.trim()); }
             if (regaloImg !== null) { sets.push(`regalo_img = $${++idx}`); vals.push(regaloImg); }
             if (regaloPts !== null) { sets.push(`regalo_pts = $${++idx}`); vals.push(regaloPts); }
             if (avatarImg !== null) { sets.push(`avatar_img = $${++idx}`); vals.push(avatarImg); }
 
-            await query(`UPDATE queens SET ${sets.join(', ')} WHERE user_id = $2 AND LOWER(name) = LOWER($3)`, vals);
+            vals.push(uId);
+            const idxUid = ++idx;
+            vals.push(name);
+            const idxName = ++idx;
+
+            await query(`UPDATE queens SET ${sets.join(', ')} WHERE user_id = $${idxUid} AND LOWER(name) = LOWER($${idxName})`, vals);
             await this.cargarCache();
         } catch (e) {
             console.error('Error en editarQueen:', e.message);

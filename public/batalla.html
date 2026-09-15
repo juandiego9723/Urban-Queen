@@ -509,7 +509,8 @@
             giftRow.innerHTML = '';
             participantes.forEach(chica => {
                 const eq = equipos[chica] || { nombre: chica, color: '#fff', regalo_img: '' };
-                const imgSrc = eq.regalo_img ? `/regalos/${encodeURIComponent(eq.regalo_img)}` : '';
+                const rawImg = eq.regalo_img || '';
+                const imgSrc = rawImg ? (rawImg.startsWith('/') || rawImg.startsWith('http') ? rawImg : '/regalos/' + rawImg) : '';
                 giftRow.innerHTML += `
                 <div class="gift-slot">
                     ${imgSrc

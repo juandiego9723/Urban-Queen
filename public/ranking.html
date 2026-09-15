@@ -312,7 +312,8 @@
                 // 3. Update Avatar (prefers custom avatar_img, falls back to regalo_img, then to initials)
                 const customAvatar = AVATAR_IMGS_MAP[fila.name] || '';
                 const giftImg = REGALOS_IMGS_MAP[fila.name] || '';
-                const avatarSrc = customAvatar || (giftImg ? `/regalos/${encodeURIComponent(giftImg)}` : '');
+                const giftImgSrc = giftImg ? (giftImg.startsWith('/') || giftImg.startsWith('http') ? giftImg : '/regalos/' + giftImg) : '';
+                const avatarSrc = customAvatar || giftImgSrc;
                 
                 if (avatarSrc) {
                     imgEl.src = avatarSrc;
