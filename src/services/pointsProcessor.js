@@ -16,6 +16,44 @@ function createPointsProcessor(io, activeSessions, resolverNombreFn, timerHandle
         const repeat = parseInt(data.repeatCount) || 1;
         const giftImgSrc = data.giftPictureUrl || '';
         
+        const MAPA_REGALOS_RESPALDO = {
+            'rose': '/regalos/Rosa.png',
+            'tiktok': '/regalos/tiktok.png',
+            'gg': '/regalos/GG.png',
+            'heart': '/regalos/corazon.png',
+            'finger heart': '/regalos/Hand Hearts.png',
+            'sunglasses': '/regalos/gafas verdes.png',
+            'hand heart': '/regalos/Hand Hearts.png',
+            'cap': '/regalos/gorra.png',
+            'crown': '/regalos/corona.png',
+            'galaxy': '/regalos/Galaxy.png',
+            'tiktok universe': '/regalos/TikTok Universe.png',
+            'diamond gun': '/regalos/Diamond Gun.png',
+            'corgi': '/regalos/Corgi.png',
+            'doughnut': '/regalos/dona.png'
+        };
+
+        function resolverImagenRegalo(rawSrc, gName, eqImg) {
+            let img = (rawSrc || '').trim();
+            if (!img && gName) {
+                const lowerName = gName.trim().toLowerCase();
+                if (session.catalogoRegalos && session.catalogoRegalos.length > 0) {
+                    const match = session.catalogoRegalos.find(r => r.name && r.name.toLowerCase() === lowerName);
+                    if (match && match.imageUrl) img = match.imageUrl;
+                }
+                if (!img && MAPA_REGALOS_RESPALDO[lowerName]) {
+                    img = MAPA_REGALOS_RESPALDO[lowerName];
+                }
+            }
+            if (!img && eqImg) {
+                img = eqImg;
+            }
+            if (img && !img.startsWith('/') && !img.startsWith('http')) {
+                img = '/regalos/' + img;
+            }
+            return img;
+        }
+
         // De acuerdo a la especificación oficial de tiktok-live-connector:
         // Los regalos de ráfaga (giftType === 1) envían eventos intermedios con repeatEnd: false.
         // Solo cuando se completa la ráfaga (repeatEnd: true o giftType !== 1) se acredita el valor final en puntos (diamondCount * repeatCount).
@@ -72,9 +110,10 @@ function createPointsProcessor(io, activeSessions, resolverNombreFn, timerHandle
                 const customPts = parseInt(eq.regalo_pts);
                 const pts = (!isNaN(customPts) && customPts > 0) ? (customPts * repeat) : coins;
                 destinatarioFinal = queenActivadora;
+                const giftImgFinal = resolverImagenRegalo(giftImgSrc, giftName, eq.regalo_img);
                 
                 if (!isStreakInProgress) {
-                    session.queueUpdate.push({ nombre: queenActivadora, puntos: pts, saltaTurno: queenSalto, viewer, avatar, giftName, giftImg: eq.regalo_img || giftImgSrc, repeat });
+                    session.queueUpdate.push({ nombre: queenActivadora, puntos: pts, saltaTurno: queenSalto, viewer, avatar, giftName, giftImg: giftImgFinal, repeat });
                     session.db.registrarRegalo(queenActivadora, giftName, pts, viewer);
                     session.lealtadUsuarios[viewer] = queenActivadora;
                 }
@@ -83,7 +122,7 @@ function createPointsProcessor(io, activeSessions, resolverNombreFn, timerHandle
                     nombre: queenActivadora,
                     viewer,
                     avatar,
-                    giftImg: eq.regalo_img || giftImgSrc,
+                    giftImg: giftImgFinal,
                     queenColor: eq.color || '#fff',
                     coins: pts,
                     giftName
@@ -93,8 +132,9 @@ function createPointsProcessor(io, activeSessions, resolverNombreFn, timerHandle
                 if (queenAsignada && session.QUEENS.includes(queenAsignada)) {
                     destinatarioFinal = queenAsignada;
                     const eq = session.equipos[queenAsignada] || {};
+                    const giftImgFinal = resolverImagenRegalo(giftImgSrc, giftName, eq.regalo_img);
                     if (!isStreakInProgress) {
-                        session.queueUpdate.push({ nombre: queenAsignada, puntos: coins, saltaTurno: queenSalto, viewer, avatar, giftName, giftImg: eq.regalo_img || giftImgSrc, repeat });
+                        session.queueUpdate.push({ nombre: queenAsignada, puntos: coins, saltaTurno: queenSalto, viewer, avatar, giftName, giftImg: giftImgFinal, repeat });
                         session.db.registrarRegalo(queenAsignada, giftName, coins, viewer);
                     }
                     
@@ -102,7 +142,7 @@ function createPointsProcessor(io, activeSessions, resolverNombreFn, timerHandle
                         nombre: queenAsignada,
                         viewer,
                         avatar,
-                        giftImg: eq.regalo_img || giftImgSrc,
+                        giftImg: giftImgFinal,
                         queenColor: eq.color || '#fff',
                         coins,
                         giftName
@@ -110,8 +150,9 @@ function createPointsProcessor(io, activeSessions, resolverNombreFn, timerHandle
                 } else if (queenSalto && session.QUEENS.includes(queenSalto)) {
                     destinatarioFinal = queenSalto;
                     const eq = session.equipos[queenSalto] || {};
+                    const giftImgFinal = resolverImagenRegalo(giftImgSrc, giftName, eq.regalo_img);
                     if (!isStreakInProgress) {
-                        session.queueUpdate.push({ nombre: queenSalto, puntos: coins, saltaTurno: queenSalto, viewer, avatar, giftName, giftImg: eq.regalo_img || giftImgSrc, repeat });
+                        session.queueUpdate.push({ nombre: queenSalto, puntos: coins, saltaTurno: queenSalto, viewer, avatar, giftName, giftImg: giftImgFinal, repeat });
                         session.db.registrarRegalo(queenSalto, giftName, coins, viewer);
                     }
                     
@@ -119,14 +160,15 @@ function createPointsProcessor(io, activeSessions, resolverNombreFn, timerHandle
                         nombre: queenSalto,
                         viewer,
                         avatar,
-                        giftImg: eq.regalo_img || giftImgSrc,
+                        giftImg: giftImgFinal,
                         queenColor: eq.color || '#fff',
                         coins,
                         giftName
                     });
                 } else {
+                    const giftImgFinal = resolverImagenRegalo(giftImgSrc, giftName, '');
                     if (!isStreakInProgress) {
-                        session.queueUpdate.push({ nombre: null, puntos: coins, saltaTurno: queenSalto, viewer, avatar, giftName, giftImg: giftImgSrc, repeat });
+                        session.queueUpdate.push({ nombre: null, puntos: coins, saltaTurno: queenSalto, viewer, avatar, giftName, giftImg: giftImgFinal, repeat });
                         
                         const giftId = `gift-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
                         const giftInstance = {

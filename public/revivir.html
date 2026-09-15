@@ -574,11 +574,13 @@
                 giftsList.innerHTML = '';
                 return;
             }
-            giftsList.innerHTML = Object.entries(regalos).map(([name, count]) => {
-                const img = imgs[name] || '';
+            // Mostrar los últimos 5 regalos más recientes con el más nuevo a la izquierda
+            giftsList.innerHTML = Object.entries(regalos).slice(-5).reverse().map(([name, count]) => {
+                const rawImg = (imgs && imgs[name]) || '';
+                const imgSrc = rawImg ? (rawImg.startsWith('/') || rawImg.startsWith('http') ? rawImg : '/regalos/' + rawImg) : '';
                 return `
                     <div class="gift-pill-item">
-                        <img class="gift-pill-img" src="${img}">
+                        ${imgSrc ? `<img class="gift-pill-img" src="${imgSrc}" onerror="this.style.display='none'">` : ''}
                         <span class="gift-pill-multiplier">x${count}</span>
                     </div>
                 `;
