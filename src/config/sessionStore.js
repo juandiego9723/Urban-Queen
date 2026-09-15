@@ -9,7 +9,7 @@ function getUserId(req) {
     if (req.query && req.query.user) return req.query.user;
     if (req.body && req.body.user) return req.body.user;
     if (req.session && req.session.user) return req.session.user;
-    return null;
+    return 'urban';
 }
 
 function getSocketUser(socket) {
@@ -31,7 +31,7 @@ function getSocketUser(socket) {
             return sessions[sessionToken].user;
         }
     }
-    return null;
+    return 'urban';
 }
 
 async function getUserSessionAsync(username, io, procesarPuntosFn) {
@@ -128,7 +128,6 @@ function getUserSession(username, io, procesarPuntosFn) {
     if (!activeSessions[username]) {
         // Enrutador síncrono que inicializa el objeto sesión de forma inmediata
         const dbInstance = new DBInstance(username);
-        dbInstance.init().catch(err => console.error('Error cargando BD Supabase para usuario:', username, err));
 
         const session = {
             db: dbInstance,
@@ -174,6 +173,16 @@ function getUserSession(username, io, procesarPuntosFn) {
             vistaAcumuladosActiva: '/'
         };
 
+        dbInstance.init().then(() => {
+            reconstruirQueens(session);
+            session.participantesActuales = [...session.QUEENS];
+            session.timerBaile.orden = [...session.QUEENS];
+            session.conociendo.orden = [...session.QUEENS];
+            if (io) {
+                io.to(username).emit('queensActualizadas', { queens: session.QUEENS, equipos: session.equipos, apodos: session.db.getApodosMap() });
+            }
+        }).catch(err => console.error('Error cargando BD Supabase para usuario:', username, err));
+
         if (typeof procesarPuntosFn === 'function') {
             session.batchInterval = setInterval(() => {
                 procesarPuntosFn(username);
@@ -208,6 +217,9 @@ async function requireSession(req, res, next) {
     let session = activeSessions[username];
     if (!session) {
         session = await getUserSessionAsync(username);
+    } else if (!session.QUEENS || session.QUEENS.length === 0) {
+        await session.db.init();
+        reconstruirQueens(session);
     }
     if (!session) {
         return res.status(404).send('Usuario no encontrado');

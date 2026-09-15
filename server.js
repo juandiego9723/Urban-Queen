@@ -249,7 +249,7 @@ function getSocketUserLocal(socket) {
         const sessionToken = list['session_token'];
         if (sessionToken && sessions[sessionToken]) return sessions[sessionToken].user;
     }
-    return null;
+    return 'urban';
 }
 
 io.on('connection', (socket) => {
