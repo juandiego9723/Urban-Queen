@@ -231,7 +231,16 @@
             modo = CICLO[modo];
             document.getElementById('titulo-ranking').innerText = TITULOS[modo] || 'RANKING';
             reordenarTabla();
+            socket.emit('cambiarModoRanking', modo);
         }
+
+        socket.on('modoRankingCambiado', (nuevoModo) => {
+            if (nuevoModo && TITULOS[nuevoModo]) {
+                modo = nuevoModo;
+                document.getElementById('titulo-ranking').innerText = TITULOS[modo] || 'RANKING';
+                reordenarTabla();
+            }
+        });
 
         function getDatos() {
             if (modo === 'mensual') return dataMensual;

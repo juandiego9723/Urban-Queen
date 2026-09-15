@@ -43,6 +43,7 @@ function setupRevivirDynamics(app, io, requireSession, activeSessions) {
         const eraActivo = s.revivir.activo;
         s.revivir.activo = false;
         s.revivir.estado = 'inactivo';
+        clearTimeout(s.introTimeoutRevivir);
         clearInterval(s.intervaloRevivir);
         io.to(username).emit('revivirCancelado');
 
@@ -100,6 +101,7 @@ function setupRevivirDynamics(app, io, requireSession, activeSessions) {
         s.revivir.activo = true;
         s.revivir.estado = 'activo';
 
+        clearTimeout(s.introTimeoutRevivir);
         clearInterval(s.intervaloRevivir);
 
         io.to(user).emit('revivirInicio', {
@@ -116,53 +118,58 @@ function setupRevivirDynamics(app, io, requireSession, activeSessions) {
             topDonantes: []
         });
 
-        s.intervaloRevivir = setInterval(() => {
-            if (s.revivir.estado === 'activo') {
-                if (s.revivir.tiempo > 0) {
-                    s.revivir.tiempo--;
-                    io.to(user).emit('revivirTick', s.revivir.tiempo);
-                } else {
-                    io.to(user).emit('revivirTick', 0);
-                    clearInterval(s.intervaloRevivir);
-                    
-                    const exito = s.revivir.puntos >= s.revivir.meta;
+        // Retrasar el inicio del descuento en el servidor 4.2s para sincronizar con la intro (PREPÁRATE -> READY -> SET -> GO!)
+        s.introTimeoutRevivir = setTimeout(() => {
+            if (!s.revivir || !s.revivir.activo) return;
 
-                    if (exito) {
-                        s.revivir.estado = 'inactivo';
-                        s.revivir.activo = false;
-                        
-                        let mvpName = '';
-                        let mvpAvatar = '';
-                        const sortedDonors = Object.entries(s.revivir.donantes)
-                            .map(([name, pts]) => ({ name, pts, avatar: s.revivir.donantesAvatars[name] || '' }))
-                            .sort((a, b) => b.pts - a.pts);
-                        if (sortedDonors.length > 0) {
-                            mvpName = sortedDonors[0].name;
-                            mvpAvatar = sortedDonors[0].avatar;
-                        }
-
-                        io.to(user).emit('revivirFin', { 
-                            exito: true, 
-                            puntos: s.revivir.puntos, 
-                            meta: s.revivir.meta,
-                            mvpName,
-                            mvpAvatar
-                        });
-
-                        if (s.timerBaile.modoTorneo) {
-                            concluirSalvacionTorneo(user, true);
-                        }
+            s.intervaloRevivir = setInterval(() => {
+                if (s.revivir.estado === 'activo') {
+                    if (s.revivir.tiempo > 0) {
+                        s.revivir.tiempo--;
+                        io.to(user).emit('revivirTick', s.revivir.tiempo);
                     } else {
-                        s.revivir.estado = 'esperando_confirmacion_fallo';
-                        io.to(user).emit('revivirFalloTiempoOut', {
-                            chica: s.revivir.chicaActual,
-                            puntos: s.revivir.puntos,
-                            meta: s.revivir.meta
-                        });
+                        io.to(user).emit('revivirTick', 0);
+                        clearInterval(s.intervaloRevivir);
+                        
+                        const exito = s.revivir.puntos >= s.revivir.meta;
+
+                        if (exito) {
+                            s.revivir.estado = 'inactivo';
+                            s.revivir.activo = false;
+                            
+                            let mvpName = '';
+                            let mvpAvatar = '';
+                            const sortedDonors = Object.entries(s.revivir.donantes)
+                                .map(([name, pts]) => ({ name, pts, avatar: s.revivir.donantesAvatars[name] || '' }))
+                                .sort((a, b) => b.pts - a.pts);
+                            if (sortedDonors.length > 0) {
+                                mvpName = sortedDonors[0].name;
+                                mvpAvatar = sortedDonors[0].avatar;
+                            }
+
+                            io.to(user).emit('revivirFin', { 
+                                exito: true, 
+                                puntos: s.revivir.puntos, 
+                                meta: s.revivir.meta,
+                                mvpName,
+                                mvpAvatar
+                            });
+
+                            if (s.timerBaile.modoTorneo) {
+                                concluirSalvacionTorneo(user, true);
+                            }
+                        } else {
+                            s.revivir.estado = 'esperando_confirmacion_fallo';
+                            io.to(user).emit('revivirFalloTiempoOut', {
+                                chica: s.revivir.chicaActual,
+                                puntos: s.revivir.puntos,
+                                meta: s.revivir.meta
+                            });
+                        }
                     }
                 }
-            }
-        }, 1000);
+            }, 1000);
+        }, 4200);
 
         res.send("OK");
     });

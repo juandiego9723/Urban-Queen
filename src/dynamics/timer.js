@@ -45,6 +45,7 @@ function setupTimerDynamics(app, io, requireSession, activeSessions) {
             s.timerBaile.chicaActual = nextChica;
             s.timerBaile.tiempo = s.timerBaile.tiempoBase || 90;
             s.timerBaile.puntosTurnoActual = 0;
+            s.timerBaile.estado = 'intro';
             
             // Limpiar donantes y regalos del turno
             s.timerBaile.donantesTorneo = {};
@@ -65,6 +66,13 @@ function setupTimerDynamics(app, io, requireSession, activeSessions) {
                 regalosImgs: {},
                 topDonantes: []
             });
+
+            clearTimeout(s.introTimeoutTorneo);
+            s.introTimeoutTorneo = setTimeout(() => {
+                if (s.timerBaile && s.timerBaile.modoTorneo && s.timerBaile.estado === 'intro') {
+                    s.timerBaile.estado = 'bailando';
+                }
+            }, 4200);
         }
     }
 
@@ -192,7 +200,7 @@ function setupTimerDynamics(app, io, requireSession, activeSessions) {
         s.timerBaile.tiempo = tiempoBase;
         s.timerBaile.tiempoBase = tiempoBase;
         s.timerBaile.chicaActual = participantes[0];
-        s.timerBaile.estado = 'bailando';
+        s.timerBaile.estado = 'intro';
         s.timerBaile.metaTurno = metaTurno;
         s.timerBaile.puntosTorneo = {};
         s.timerBaile.puntosTurnoActual = 0;
@@ -212,6 +220,7 @@ function setupTimerDynamics(app, io, requireSession, activeSessions) {
         io.to(user).emit('cambioVista', '/revivir');
         io.to(user).emit('cambioVistaAcumulados', '/revivir-ranking');
 
+        clearTimeout(s.introTimeoutTorneo);
         clearInterval(s.intervaloTimerBaile);
 
         // Emitir el inicio al overlay de revivir
@@ -228,6 +237,12 @@ function setupTimerDynamics(app, io, requireSession, activeSessions) {
             regalosImgs: {},
             topDonantes: []
         });
+
+        s.introTimeoutTorneo = setTimeout(() => {
+            if (s.timerBaile && s.timerBaile.modoTorneo && s.timerBaile.estado === 'intro') {
+                s.timerBaile.estado = 'bailando';
+            }
+        }, 4200);
 
         // Iniciar loop del timer
         s.intervaloTimerBaile = setInterval(() => {
@@ -340,7 +355,7 @@ function setupTimerDynamics(app, io, requireSession, activeSessions) {
         s.timerBaile.chicaActual = s.timerBaile.orden[0];
         s.timerBaile.tiempo = s.timerBaile.tiempoBase || 90;
         s.timerBaile.puntosTurnoActual = 0;
-        s.timerBaile.estado = 'bailando';
+        s.timerBaile.estado = 'intro';
 
         // Limpiar donantes y regalos del turno
         s.timerBaile.donantesTorneo = {};
@@ -351,6 +366,7 @@ function setupTimerDynamics(app, io, requireSession, activeSessions) {
         io.to(user).emit('cambioVista', '/revivir');
         io.to(user).emit('cambioVistaAcumulados', '/revivir-ranking');
 
+        clearTimeout(s.introTimeoutTorneo);
         clearInterval(s.intervaloTimerBaile);
 
         // Emitir el inicio al overlay de revivir
@@ -367,6 +383,12 @@ function setupTimerDynamics(app, io, requireSession, activeSessions) {
             regalosImgs: {},
             topDonantes: []
         });
+
+        s.introTimeoutTorneo = setTimeout(() => {
+            if (s.timerBaile && s.timerBaile.modoTorneo && s.timerBaile.estado === 'intro') {
+                s.timerBaile.estado = 'bailando';
+            }
+        }, 4200);
 
         // Iniciar loop del timer
         s.intervaloTimerBaile = setInterval(() => {
@@ -462,6 +484,7 @@ function setupTimerDynamics(app, io, requireSession, activeSessions) {
         s.timerBaile.chicaActual = '';
         s.timerBaile.chicaAEliminar = '';
         s.timerBaile.ganadora = '';
+        clearTimeout(s.introTimeoutTorneo);
         clearInterval(s.intervaloTimerBaile);
 
         // Reconstruir Queens para notificar a los clientes y refrescar interfaz

@@ -279,6 +279,10 @@ io.on('connection', (socket) => {
         const neonIntensity = session.db.getConfigVal('marca_neon_intensity') || 'normal';
         socket.emit('marcaCambiado', { logoUrl, fontFamily, neonIntensity });
         
+        if (session.modoRanking) {
+            socket.emit('modoRankingCambiado', session.modoRanking);
+        }
+
         if (session.dinamicaActiva) {
             socket.emit('dinamicaInicio', {
                 config: session.dinamicaActiva,
@@ -288,6 +292,13 @@ io.on('connection', (socket) => {
             });
         }
     }
+
+    socket.on('cambiarModoRanking', (modo) => {
+        if (session) {
+            session.modoRanking = modo;
+            io.to(username).emit('modoRankingCambiado', modo);
+        }
+    });
 });
 
 // ── Seguridad: escudo de excepciones ────────────────────────────
