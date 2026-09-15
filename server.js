@@ -22,7 +22,7 @@ try { require('./scripts/cleanupProject'); } catch(e) {}
 const {
     sessions, activeSessions,
     getUserId, getSocketUser, getUserSession,
-    requireSession, resolverNombre
+    requireSession, resolverNombre, cleanupUserSession
 } = require('./src/config/sessionStore');
 
 const createPointsProcessor   = require('./src/services/pointsProcessor');
@@ -155,6 +155,14 @@ app.post('/register', async (req, res) => {
 });
 
 app.all('/logout', (req, res) => {
+    const sessionToken = req.cookies['session_token'];
+    if (sessionToken && sessions[sessionToken]) {
+        const username = sessions[sessionToken].user;
+        if (username && activeSessions[username]) {
+            cleanupUserSession(activeSessions[username]);
+            delete activeSessions[username];
+        }
+    }
     res.clearSession();
     res.redirect('/login');
 });

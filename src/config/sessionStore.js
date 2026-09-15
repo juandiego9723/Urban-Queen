@@ -236,6 +236,25 @@ function resolverNombre(session, nombre) {
     return queenDeAlias || null;
 }
 
+function cleanupUserSession(session) {
+    if (!session) return;
+    if (session.batchInterval) {
+        clearInterval(session.batchInterval);
+        session.batchInterval = null;
+    }
+    if (session.tiktokConnection) {
+        try {
+            if (typeof session.tiktokConnection.removeAllListeners === 'function') {
+                session.tiktokConnection.removeAllListeners();
+            }
+            session.tiktokConnection.disconnect();
+        } catch (e) {}
+        session.tiktokConnection = null;
+    }
+    session.tiktokEstado = 'desconectado';
+    session.tiktokUsuario = '';
+}
+
 module.exports = {
     sessions,
     activeSessions,
@@ -246,5 +265,6 @@ module.exports = {
     reconstruirEquipos,
     reconstruirQueens,
     requireSession,
-    resolverNombre
+    resolverNombre,
+    cleanupUserSession
 };

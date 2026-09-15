@@ -293,17 +293,27 @@ function setupSystemRoutes(app, io, requireSession, activeSessions) {
 }
 
 function cleanupAllSessions(activeSessions) {
-    console.log('🧹 Cerrando bases de datos de todas las sesiones...');
+    console.log('🧹 Cerrando bases de datos y conexiones de todas las sesiones...');
     Object.keys(activeSessions).forEach(username => {
         const session = activeSessions[username];
         if (session) {
-            clearInterval(session.batchInterval);
+            if (session.batchInterval) {
+                clearInterval(session.batchInterval);
+                session.batchInterval = null;
+            }
             if (session.tiktokConnection) {
-                try { session.tiktokConnection.disconnect(); } catch (e) {}
+                try {
+                    if (typeof session.tiktokConnection.removeAllListeners === 'function') {
+                        session.tiktokConnection.removeAllListeners();
+                    }
+                    session.tiktokConnection.disconnect();
+                } catch (e) {}
+                session.tiktokConnection = null;
             }
             if (session.db) {
                 session.db.close();
             }
+            delete activeSessions[username];
         }
     });
 }

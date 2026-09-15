@@ -15,7 +15,44 @@ function createPointsProcessor(io, activeSessions, resolverNombreFn, timerHandle
         const giftName = (data.giftName || '').trim();
         const repeat = parseInt(data.repeatCount) || 1;
         const giftImgSrc = data.giftPictureUrl || '';
-        
+        const now = Date.now();
+
+        // 1. Desduplicación por msgId / giftId / evento único de TikTok
+        if (!session.processedGiftIds) session.processedGiftIds = new Map();
+        for (const [id, ts] of session.processedGiftIds.entries()) {
+            if (now - ts > 30000) session.processedGiftIds.delete(id);
+        }
+        const msgId = data.msgId || data.giftId;
+        if (msgId) {
+            const uniqueEventKey = `${msgId}_${repeat}`;
+            if (session.processedGiftIds.has(uniqueEventKey)) {
+                return; // Evento duplicado ignorado
+            }
+            session.processedGiftIds.set(uniqueEventKey, now);
+        }
+
+        // 2. Control de Ráfagas (Algoritmo de Delta Incremental)
+        if (!session.giftStreaks) session.giftStreaks = {};
+        const streakKey = `${viewer}_${giftName}`;
+        const previousStreak = session.giftStreaks[streakKey];
+
+        let deltaRepeat = repeat;
+        if (previousStreak && (now - previousStreak.lastTime < 6000)) {
+            if (repeat > previousStreak.count) {
+                deltaRepeat = repeat - previousStreak.count;
+            } else {
+                deltaRepeat = 0;
+            }
+        }
+
+        if (data.repeatEnd) {
+            delete session.giftStreaks[streakKey];
+        } else {
+            session.giftStreaks[streakKey] = { count: repeat, lastTime: now };
+        }
+
+        if (deltaRepeat <= 0) return;
+
         const MAPA_REGALOS_RESPALDO = {
             'rose': '/regalos/Rosa.png',
             'tiktok': '/regalos/tiktok.png',
@@ -54,11 +91,8 @@ function createPointsProcessor(io, activeSessions, resolverNombreFn, timerHandle
             return img;
         }
 
-        // De acuerdo a la especificación oficial de tiktok-live-connector:
-        // Los regalos de ráfaga (giftType === 1) envían eventos intermedios con repeatEnd: false.
-        // Solo cuando se completa la ráfaga (repeatEnd: true o giftType !== 1) se acredita el valor final en puntos (diamondCount * repeatCount).
-        const isStreakInProgress = (data.giftType === 1 && !data.repeatEnd);
-        const coins = (data.diamondCount || 1) * repeat;
+        const diamondUnit = parseInt(data.diamondCount || data.coins) || 1;
+        const coins = diamondUnit * deltaRepeat;
         
         let rawMapa = session.db.getConfigVal('tiktok_regalo_mapa');
         let mapa = rawMapa ? JSON.parse(rawMapa) : {};
@@ -108,15 +142,13 @@ function createPointsProcessor(io, activeSessions, resolverNombreFn, timerHandle
             if (esChicaValida) {
                 const eq = session.equipos[queenActivadora] || session.equipos[queenActivadoraClean] || {};
                 const customPts = parseInt(eq.regalo_pts);
-                const pts = (!isNaN(customPts) && customPts > 0) ? (customPts * repeat) : coins;
+                const pts = (!isNaN(customPts) && customPts > 0) ? (customPts * deltaRepeat) : coins;
                 destinatarioFinal = queenActivadora;
                 const giftImgFinal = resolverImagenRegalo(giftImgSrc, giftName, eq.regalo_img);
                 
-                if (!isStreakInProgress) {
-                    session.queueUpdate.push({ nombre: queenActivadora, puntos: pts, saltaTurno: queenSalto, viewer, avatar, giftName, giftImg: giftImgFinal, repeat });
-                    session.db.registrarRegalo(queenActivadora, giftName, pts, viewer);
-                    session.lealtadUsuarios[viewer] = queenActivadora;
-                }
+                session.queueUpdate.push({ nombre: queenActivadora, puntos: pts, saltaTurno: queenSalto, viewer, avatar, giftName, giftImg: giftImgFinal, repeat: deltaRepeat });
+                session.db.registrarRegalo(queenActivadora, giftName, pts, viewer);
+                session.lealtadUsuarios[viewer] = queenActivadora;
                 
                 io.to(username).emit('nuevoRegalo', {
                     nombre: queenActivadora,
@@ -133,10 +165,9 @@ function createPointsProcessor(io, activeSessions, resolverNombreFn, timerHandle
                     destinatarioFinal = queenAsignada;
                     const eq = session.equipos[queenAsignada] || {};
                     const giftImgFinal = resolverImagenRegalo(giftImgSrc, giftName, eq.regalo_img);
-                    if (!isStreakInProgress) {
-                        session.queueUpdate.push({ nombre: queenAsignada, puntos: coins, saltaTurno: queenSalto, viewer, avatar, giftName, giftImg: giftImgFinal, repeat });
-                        session.db.registrarRegalo(queenAsignada, giftName, coins, viewer);
-                    }
+                    
+                    session.queueUpdate.push({ nombre: queenAsignada, puntos: coins, saltaTurno: queenSalto, viewer, avatar, giftName, giftImg: giftImgFinal, repeat: deltaRepeat });
+                    session.db.registrarRegalo(queenAsignada, giftName, coins, viewer);
                     
                     io.to(username).emit('nuevoRegalo', {
                         nombre: queenAsignada,
@@ -151,10 +182,9 @@ function createPointsProcessor(io, activeSessions, resolverNombreFn, timerHandle
                     destinatarioFinal = queenSalto;
                     const eq = session.equipos[queenSalto] || {};
                     const giftImgFinal = resolverImagenRegalo(giftImgSrc, giftName, eq.regalo_img);
-                    if (!isStreakInProgress) {
-                        session.queueUpdate.push({ nombre: queenSalto, puntos: coins, saltaTurno: queenSalto, viewer, avatar, giftName, giftImg: giftImgFinal, repeat });
-                        session.db.registrarRegalo(queenSalto, giftName, coins, viewer);
-                    }
+                    
+                    session.queueUpdate.push({ nombre: queenSalto, puntos: coins, saltaTurno: queenSalto, viewer, avatar, giftName, giftImg: giftImgFinal, repeat: deltaRepeat });
+                    session.db.registrarRegalo(queenSalto, giftName, coins, viewer);
                     
                     io.to(username).emit('nuevoRegalo', {
                         nombre: queenSalto,
@@ -167,21 +197,19 @@ function createPointsProcessor(io, activeSessions, resolverNombreFn, timerHandle
                     });
                 } else {
                     const giftImgFinal = resolverImagenRegalo(giftImgSrc, giftName, '');
-                    if (!isStreakInProgress) {
-                        session.queueUpdate.push({ nombre: null, puntos: coins, saltaTurno: queenSalto, viewer, avatar, giftName, giftImg: giftImgFinal, repeat });
-                        
-                        const giftId = `gift-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
-                        const giftInstance = {
-                            id: giftId,
-                            giftName,
-                            viewer,
-                            coins,
-                            giftImgSrc,
-                            timestamp: new Date().toISOString()
-                        };
-                        session.regalosDetectados[giftId] = giftInstance;
-                        io.to(username).emit('regaloDetectado', giftInstance);
-                    }
+                    session.queueUpdate.push({ nombre: null, puntos: coins, saltaTurno: queenSalto, viewer, avatar, giftName, giftImg: giftImgFinal, repeat: deltaRepeat });
+                    
+                    const giftId = `gift-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
+                    const giftInstance = {
+                        id: giftId,
+                        giftName,
+                        viewer,
+                        coins,
+                        giftImgSrc,
+                        timestamp: new Date().toISOString()
+                    };
+                    session.regalosDetectados[giftId] = giftInstance;
+                    io.to(username).emit('regaloDetectado', giftInstance);
                 }
             }
 
@@ -383,8 +411,8 @@ function createPointsProcessor(io, activeSessions, resolverNombreFn, timerHandle
             if (nuevosPuntos > 0) {
                 session.revivir.puntos += nuevosPuntos;
 
-                // Si estamos en modo torneo, sumar los puntos de salvación directamente al marcador del torneo
-                if (session.timerBaile.modoTorneo) {
+                // Si estamos en modo torneo, sumar los puntos de salvación directamente al marcador del torneo (si el timer de baile no los sumó ya)
+                if (session.timerBaile.modoTorneo && (!session.timerBaile.activo || session.timerBaile.estado !== 'bailando')) {
                     session.timerBaile.puntosTorneo[chicaActual] = (session.timerBaile.puntosTorneo[chicaActual] || 0) + nuevosPuntos;
                     
                     // Emitir la actualización del marcador del torneo en vivo

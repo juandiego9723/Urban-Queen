@@ -7,7 +7,12 @@ function createTikTokService(app, io, requireSession, activeSessions, procesarRe
         if (!session) return;
 
         if (session.tiktokConnection) {
-            try { session.tiktokConnection.disconnect(); } catch (e) {}
+            try {
+                if (typeof session.tiktokConnection.removeAllListeners === 'function') {
+                    session.tiktokConnection.removeAllListeners();
+                }
+                session.tiktokConnection.disconnect();
+            } catch (e) {}
             session.tiktokConnection = null;
         }
 
@@ -158,7 +163,12 @@ function createTikTokService(app, io, requireSession, activeSessions, procesarRe
     app.all('/tiktok/desconectar', requireSession, (req, res) => {
         const s = req.userSession;
         if (s.tiktokConnection) {
-            try { s.tiktokConnection.disconnect(); } catch (e) {}
+            try {
+                if (typeof s.tiktokConnection.removeAllListeners === 'function') {
+                    s.tiktokConnection.removeAllListeners();
+                }
+                s.tiktokConnection.disconnect();
+            } catch (e) {}
             s.tiktokConnection = null;
         }
         s.tiktokEstado = 'desconectado';
