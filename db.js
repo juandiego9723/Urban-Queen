@@ -46,24 +46,22 @@ class DBInstance {
         const uId = await this.ensureUserId();
         if (!uId) return;
         try {
-            const qRes = await query('SELECT * FROM queens WHERE user_id = $1 ORDER BY activo DESC, name', [uId]);
+            const [qRes, aRes, gRes, cRes, sRes, rcRes] = await Promise.all([
+                query('SELECT * FROM queens WHERE user_id = $1 ORDER BY activo DESC, name', [uId]),
+                query('SELECT a.alias_name, q.name as queen_name FROM aliases a JOIN queens q ON a.queen_id = q.id WHERE q.user_id = $1', [uId]),
+                query('SELECT * FROM grupos WHERE user_id = $1 ORDER BY nombre', [uId]),
+                query('SELECT clave, valor FROM config WHERE user_id = $1', [uId]),
+                query('SELECT evento, url FROM sonidos WHERE user_id = $1', [uId]),
+                query('SELECT * FROM regalos_custom WHERE user_id = $1 ORDER BY id DESC', [uId])
+            ]);
+
             this.cacheQueens = qRes.rows;
-
-            const aRes = await query('SELECT a.alias_name, q.name as queen_name FROM aliases a JOIN queens q ON a.queen_id = q.id WHERE q.user_id = $1', [uId]);
             this.cacheAliases = aRes.rows;
-
-            const gRes = await query('SELECT * FROM grupos WHERE user_id = $1 ORDER BY nombre', [uId]);
             this.cacheGrupos = gRes.rows;
-
-            const cRes = await query('SELECT clave, valor FROM config WHERE user_id = $1', [uId]);
             this.cacheConfig = {};
             cRes.rows.forEach(r => { this.cacheConfig[r.clave] = r.valor; });
-
-            const sRes = await query('SELECT evento, url FROM sonidos WHERE user_id = $1', [uId]);
             this.cacheSonidos = {};
             sRes.rows.forEach(r => { this.cacheSonidos[r.evento] = r.url; });
-
-            const rcRes = await query('SELECT * FROM regalos_custom WHERE user_id = $1 ORDER BY id DESC', [uId]);
             this.cacheRegalosCustom = rcRes.rows;
         } catch (e) {
             console.error(`⚠️ Error cargando cache desde Supabase para ${this.username}:`, e.message);
@@ -285,8 +283,9 @@ class DBInstance {
         const uId = await this.ensureUserId();
         if (!uId) return;
         try {
+            const q = this.cacheQueens.find(item => item.name.toLowerCase() === name.toLowerCase());
+            if (q) q.victorias = (q.victorias || 0) + 1;
             await query('UPDATE queens SET victorias = victorias + 1 WHERE user_id = $1 AND LOWER(name) = LOWER($2)', [uId, name]);
-            await this.cargarCache();
         } catch (e) {
             console.error('Error en sumarVictoria:', e.message);
         }
@@ -296,8 +295,9 @@ class DBInstance {
         const uId = await this.ensureUserId();
         if (!uId) return;
         try {
+            const q = this.cacheQueens.find(item => item.name.toLowerCase() === name.toLowerCase());
+            if (q) q.empates = (q.empates || 0) + 1;
             await query('UPDATE queens SET empates = empates + 1 WHERE user_id = $1 AND LOWER(name) = LOWER($2)', [uId, name]);
-            await this.cargarCache();
         } catch (e) {
             console.error('Error en sumarEmpate:', e.message);
         }
@@ -307,8 +307,9 @@ class DBInstance {
         const uId = await this.ensureUserId();
         if (!uId) return;
         try {
+            const q = this.cacheQueens.find(item => item.name.toLowerCase() === name.toLowerCase());
+            if (q) q.derrotas = (q.derrotas || 0) + 1;
             await query('UPDATE queens SET derrotas = derrotas + 1 WHERE user_id = $1 AND LOWER(name) = LOWER($2)', [uId, name]);
-            await this.cargarCache();
         } catch (e) {
             console.error('Error en sumarDerrota:', e.message);
         }
@@ -317,36 +318,36 @@ class DBInstance {
     async resetSemanal() {
         const uId = await this.ensureUserId();
         if (!uId) return;
+        this.cacheQueens.forEach(q => q.ranking_semanal = 0);
         await query('UPDATE queens SET ranking_semanal = 0 WHERE user_id = $1', [uId]);
-        await this.cargarCache();
     }
 
     async resetMensual() {
         const uId = await this.ensureUserId();
         if (!uId) return;
+        this.cacheQueens.forEach(q => q.ranking_mensual = 0);
         await query('UPDATE queens SET ranking_mensual = 0 WHERE user_id = $1', [uId]);
-        await this.cargarCache();
     }
 
     async resetDiario() {
         const uId = await this.ensureUserId();
         if (!uId) return;
+        this.cacheQueens.forEach(q => q.ranking_diario = 0);
         await query('UPDATE queens SET ranking_diario = 0 WHERE user_id = $1', [uId]);
-        await this.cargarCache();
     }
 
     async resetCopa() {
         const uId = await this.ensureUserId();
         if (!uId) return;
+        this.cacheQueens.forEach(q => q.copa = 0);
         await query('UPDATE queens SET copa = 0 WHERE user_id = $1', [uId]);
-        await this.cargarCache();
     }
 
     async resetVictorias() {
         const uId = await this.ensureUserId();
         if (!uId) return;
+        this.cacheQueens.forEach(q => { q.victorias = 0; q.empates = 0; q.derrotas = 0; });
         await query('UPDATE queens SET victorias = 0, empates = 0, derrotas = 0 WHERE user_id = $1', [uId]);
-        await this.cargarCache();
     }
 
     resolverAlias(aliasName) {
@@ -479,22 +480,31 @@ class DBInstance {
     async crearRegaloCustom(data) {
         const uId = await this.ensureUserId();
         if (!uId) return;
-        await query('INSERT INTO regalos_custom (user_id, nombre, accion, imagen) VALUES ($1, $2, $3, $4)', [uId, data.nombre, data.accion || '', data.imagen || '']);
-        await this.cargarCache();
+        const res = await query('INSERT INTO regalos_custom (user_id, nombre, accion, imagen) VALUES ($1, $2, $3, $4) RETURNING *', [uId, data.nombre, data.accion || '', data.imagen || '']);
+        if (res.rows && res.rows.length > 0) {
+            this.cacheRegalosCustom.unshift(res.rows[0]);
+        } else {
+            await this.cargarCache();
+        }
     }
 
     async editarRegaloCustom(id, data) {
         const uId = await this.ensureUserId();
         if (!uId) return;
         await query('UPDATE regalos_custom SET nombre=$1, accion=$2, imagen=$3 WHERE user_id=$4 AND id=$5', [data.nombre, data.accion || '', data.imagen || '', uId, id]);
-        await this.cargarCache();
+        const item = this.cacheRegalosCustom.find(r => r.id === id);
+        if (item) {
+            item.nombre = data.nombre;
+            item.accion = data.accion || '';
+            item.imagen = data.imagen || '';
+        }
     }
 
     async eliminarRegaloCustom(id) {
         const uId = await this.ensureUserId();
         if (!uId) return;
         await query('DELETE FROM regalos_custom WHERE user_id=$1 AND id=$2', [uId, id]);
-        await this.cargarCache();
+        this.cacheRegalosCustom = this.cacheRegalosCustom.filter(r => r.id !== id);
     }
 
     // Config

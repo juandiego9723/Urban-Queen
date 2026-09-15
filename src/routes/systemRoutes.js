@@ -74,32 +74,32 @@ function setupSystemRoutes(app, io, requireSession, activeSessions) {
         }
     }
 
-    app.all('/api/regalos-custom/crear', requireSession, (req, res) => {
+    app.all('/api/regalos-custom/crear', requireSession, async (req, res) => {
         const s = req.userSession;
         const data = req.body || {};
         if (!data.nombre) return res.status(400).send('Falta nombre');
         data.imagen = procesarImagenBase64(data.imagen);
-        s.db.crearRegaloCustom(data);
+        await s.db.crearRegaloCustom(data);
         io.to(req.username).emit('regalosCustomActualizados', s.db.getRegalosCustom());
         res.send('OK');
     });
 
-    app.all('/api/regalos-custom/editar', requireSession, (req, res) => {
+    app.all('/api/regalos-custom/editar', requireSession, async (req, res) => {
         const s = req.userSession;
         const data = req.body || {};
         const id = parseInt(req.query.id || data.id);
         if (!id || !data.nombre) return res.status(400).send('Datos incompletos');
         data.imagen = procesarImagenBase64(data.imagen);
-        s.db.editarRegaloCustom(id, data);
+        await s.db.editarRegaloCustom(id, data);
         io.to(req.username).emit('regalosCustomActualizados', s.db.getRegalosCustom());
         res.send('OK');
     });
 
-    app.all('/api/regalos-custom/eliminar', requireSession, (req, res) => {
+    app.all('/api/regalos-custom/eliminar', requireSession, async (req, res) => {
         const s = req.userSession;
         const id = parseInt(req.query.id || (req.body && req.body.id));
         if (!id) return res.status(400).send('Falta id');
-        s.db.eliminarRegaloCustom(id);
+        await s.db.eliminarRegaloCustom(id);
         io.to(req.username).emit('regalosCustomActualizados', s.db.getRegalosCustom());
         res.send('OK');
     });
@@ -114,12 +114,12 @@ function setupSystemRoutes(app, io, requireSession, activeSessions) {
         });
     });
 
-    app.post('/api/marca', requireSession, (req, res) => {
+    app.post('/api/marca', requireSession, async (req, res) => {
         const s = req.userSession;
         const { logoUrl, fontFamily, neonIntensity } = req.body;
-        s.db.setConfigVal('marca_logo_url', logoUrl || '');
-        s.db.setConfigVal('marca_font_family', fontFamily || 'Inter');
-        s.db.setConfigVal('marca_neon_intensity', neonIntensity || 'normal');
+        await s.db.setConfigVal('marca_logo_url', logoUrl || '');
+        await s.db.setConfigVal('marca_font_family', fontFamily || 'Inter');
+        await s.db.setConfigVal('marca_neon_intensity', neonIntensity || 'normal');
         const config = { logoUrl, fontFamily, neonIntensity };
         io.to(req.username).emit('marcaCambiado', config);
         res.json({ status: 'OK', config });

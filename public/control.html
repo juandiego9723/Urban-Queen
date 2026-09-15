@@ -1121,10 +1121,9 @@
                 <a class="topbar-link" href="/" target="_blank">🏆 Ranking</a>
                 <a class="topbar-link" href="/batalla" target="_blank">⚔️ Batalla</a>
                 <a class="topbar-link" href="/batalla-futbol" target="_blank">⚽ Clásico</a>
-                <a class="topbar-link" href="/batalla-pk" target="_blank">⚡ Batalla PK</a>
+                <a class="topbar-link" href="/revivir" target="_blank">❤️ Revivir</a>
                 <a class="topbar-link" href="/timer" target="_blank">💃 Timer</a>
                 <a class="topbar-link" href="/conociendo" target="_blank">👑 Conociendo</a>
-                <a class="topbar-link" href="/revivir" target="_blank">❤️ Revivir</a>
                 <a class="topbar-link" href="/revivir-ranking" target="_blank">📊 Ranking Revivir</a>
                 <a class="topbar-link" href="/copa" target="_blank">🥇 Copa</a>
                 <a class="topbar-link" href="/lista-regalos" target="_blank">🎁 Regalos</a>
@@ -1721,12 +1720,11 @@
                             </p>
                             <div style="display: flex; flex-direction: column; gap: 8px; margin-top: 10px;" id="universal-overlay-controls">
                                 <button class="btn btn-primary" onclick="cambiarVistaUniversal('/batalla')" id="btn-view-batalla" style="transition: all 0.3s ease; text-align: left; padding: 12px 16px;">⚔️ Batalla Normal</button>
-                                <button class="btn btn-primary" onclick="cambiarVistaUniversal('/batalla-pk')" id="btn-view-batalla-pk" style="transition: all 0.3s ease; text-align: left; padding: 12px 16px;">⚡ Batalla PK</button>
+                                <button class="btn btn-primary" onclick="cambiarVistaUniversal('/revivir')" id="btn-view-revivir" style="transition: all 0.3s ease; text-align: left; padding: 12px 16px;">❤️ Dinámica Revivir</button>
                                 <button class="btn btn-primary" onclick="cambiarVistaUniversal('/batalla-futbol')" id="btn-view-batalla-futbol" style="transition: all 0.3s ease; text-align: left; padding: 12px 16px;">⚽ El Clásico (Fútbol)</button>
                                 <button class="btn btn-primary" onclick="cambiarVistaUniversal('/timer')" id="btn-view-timer" style="transition: all 0.3s ease; text-align: left; padding: 12px 16px;">💃 Timer de Baile</button>
                                 <button class="btn btn-primary" onclick="cambiarVistaUniversal('/conociendo')" id="btn-view-conociendo" style="transition: all 0.3s ease; text-align: left; padding: 12px 16px;">👑 Conociendo a mi Queen</button>
                                 <button class="btn btn-primary" onclick="cambiarVistaUniversal('/lista-regalos')" id="btn-view-lista-regalos" style="transition: all 0.3s ease; text-align: left; padding: 12px 16px;">🎁 Lista Regalos</button>
-                                <button class="btn btn-primary" onclick="cambiarVistaUniversal('/multicam')" id="btn-view-multicam" style="transition: all 0.3s ease; text-align: left; padding: 12px 16px;">📺 Grid Multicámara</button>
                                 <button class="btn btn-primary" onclick="cambiarVistaUniversal('/dinamica')" id="btn-view-dinamica" style="transition: all 0.3s ease; text-align: left; padding: 12px 16px;">⚡ Dinámica Personalizada</button>
                                 <button class="btn btn-primary" onclick="cambiarVistaUniversal('/gestor-regalos')" id="btn-view-gestor-regalos" style="transition: all 0.3s ease; text-align: left; padding: 12px 16px;">🎁 Overlay Custom (Gestor de Regalos)</button>
                             </div>
@@ -1742,6 +1740,7 @@
                             </p>
                             <div style="display: flex; flex-direction: column; gap: 8px; margin-top: 10px;" id="acumulados-overlay-controls">
                                 <button class="btn btn-primary" onclick="cambiarVistaAcumulados('/')" id="btn-view-ranking" style="transition: all 0.3s ease; text-align: left; padding: 12px 16px;">🏆 Ranking General</button>
+                                <button class="btn btn-primary" onclick="cambiarVistaAcumulados('/revivir-ranking')" id="btn-view-revivir-ranking" style="transition: all 0.3s ease; text-align: left; padding: 12px 16px;">📊 Ranking Revivir</button>
                                 <button class="btn btn-primary" onclick="cambiarVistaAcumulados('/copa')" id="btn-view-copa" style="transition: all 0.3s ease; text-align: left; padding: 12px 16px;">🥇 Copa del Día</button>
                             </div>
                         </div>
@@ -2144,7 +2143,7 @@
                                     style="flex:1; min-width: 150px;">
                                 <input type="file" id="gestorFile" accept="image/*" class="input"
                                     style="flex:1; min-width: 200px;" onchange="previewGestorFile(event)">
-                                <button class="btn btn-success" onclick="guardarRegaloCustom()">+ Agregar</button>
+                                <button class="btn btn-success" onclick="guardarRegaloCustom(event)">+ Agregar</button>
                             </div>
                             <div class="divider"></div>
                             <div id="lista-gestor-regalos" class="col" style="gap:8px;"></div>
@@ -2335,7 +2334,7 @@
                 { emoji: '🏆', nombre: 'Ranking', url: '/', desc: 'Clasificación semanal y mensual. Pón esto en OBS como fuente de navegador.' },
                 { emoji: '⚔️', nombre: 'Batalla Normal', url: '/batalla', desc: 'Modo batalla con barra de puntos, timer y ganadora. Hasta 4 bailarinas.' },
                 { emoji: '⚽', nombre: 'El Clásico', url: '/batalla-futbol', desc: 'Modo fútbol con equipos, tarjetas amarilla/roja y goles.' },
-                { emoji: '⚡', nombre: 'Batalla PK', url: '/batalla-pk', desc: 'Modo Batalla 1vs1 (o Team A vs Team B) con barra PK, rayo divisor neón y efecto de congelación Icy Clash.' },
+                { emoji: '❤️', nombre: 'Dinámica Revivir', url: '/revivir', desc: 'Dinámica de eliminación y revivir por meta de puntos.' },
                 { emoji: '💃', nombre: 'Timer de Baile', url: '/timer', desc: 'Turno automático entre bailarinas. Cada regalo extiende el tiempo.' },
                 { emoji: '👑', nombre: 'Conociendo a mi Queen', url: '/conociendo', desc: 'Meta de puntos por bailarina con barra de progreso.' },
                 { emoji: '🥇', nombre: 'Copa del Día', url: '/copa', desc: 'Acumulado del día en El Clásico. Muestra el equipo líder.' },
@@ -5036,24 +5035,39 @@
                 r.onload = ev => gestorBase64 = ev.target.result;
                 r.readAsDataURL(file);
             }
-            async function guardarRegaloCustom() {
+            async function guardarRegaloCustom(e) {
                 const nombre = document.getElementById('gestorNombre').value.trim();
                 if (!nombre || !gestorBase64) return alert('Falta nombre o imagen');
 
-                const btn = event.target;
-                btn.disabled = true;
-                btn.textContent = 'Guardando...';
+                const btn = (e && e.target) ? e.target : document.querySelector('#tab-gestor .btn-success');
+                if (btn) {
+                    btn.disabled = true;
+                    btn.textContent = 'Guardando...';
+                }
 
-                await fetch('/api/regalos-custom/crear', {
-                    method: 'POST', headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ nombre, imagen: gestorBase64 })
-                });
-                document.getElementById('gestorNombre').value = '';
-                document.getElementById('gestorFile').value = '';
-                gestorBase64 = '';
+                try {
+                    const res = await fetch('/api/regalos-custom/crear', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ nombre, imagen: gestorBase64 })
+                    });
 
-                btn.disabled = false;
-                btn.textContent = '+ Agregar';
+                    if (res.ok) {
+                        document.getElementById('gestorNombre').value = '';
+                        document.getElementById('gestorFile').value = '';
+                        gestorBase64 = '';
+                        await cargarGestorRegalos();
+                    } else {
+                        alert('Error al guardar regalo');
+                    }
+                } catch (err) {
+                    console.error('Error guardando regalo custom:', err);
+                } finally {
+                    if (btn) {
+                        btn.disabled = false;
+                        btn.textContent = '+ Agregar';
+                    }
+                }
             }
             async function cargarGestorRegalos() {
                 const res = await fetch('/api/regalos-custom');
@@ -5080,6 +5094,7 @@
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({ id, nombre: nuevoNombre.trim(), imagen: imagenActual })
                     });
+                    await cargarGestorRegalos();
                 } catch(e) {
                     console.error("Error editando regalo:", e);
                 }
@@ -5093,7 +5108,7 @@
                             headers: { 'Content-Type': 'application/json' },
                             body: JSON.stringify({ id })
                         });
-                        // La lista se actualizará por socket
+                        await cargarGestorRegalos();
                     } catch (e) {
                         console.error("Error al eliminar regalo:", e);
                     }
