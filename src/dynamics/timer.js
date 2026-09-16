@@ -13,27 +13,35 @@ function setupTimerDynamics(app, io, requireSession, activeSessions) {
             let idx = s.timerBaile.orden.indexOf(s.timerBaile.chicaActual);
             const esUltimaBailarina = (idx === s.timerBaile.orden.length - 1);
             if (esUltimaBailarina) {
-                // Fin de ronda (cualquier ronda, intermedia o final)
+                // Fin de ronda: Pausar el timer e iniciar la fase de gestión de decisiones de la ronda
                 clearInterval(s.intervaloTimerBaile);
                 
-                const participantes = s.timerBaile.orden; // Usar orden actual (sólo activas)
-                let lowestQueen = participantes[0];
-                let lowestPoints = s.timerBaile.puntosTorneo[lowestQueen] || 0;
-                participantes.forEach(q => {
-                    const pts = s.timerBaile.puntosTorneo[q] || 0;
-                    if (pts < lowestPoints) {
-                        lowestPoints = pts;
-                        lowestQueen = q;
-                    }
-                });
-
-                s.timerBaile.chicaAEliminar = lowestQueen;
                 s.timerBaile.estado = 'esperando_decision_ronda';
 
+                if (!s.timerBaile.enRiesgo) s.timerBaile.enRiesgo = [];
+                if (!s.timerBaile.salvadas) s.timerBaile.salvadas = [];
+                if (!s.timerBaile.eliminadas) s.timerBaile.eliminadas = [];
+
+                // Determinar la última bailarina de esta ronda (la de menor puntaje acumulado en el torneo que no esté ya salvada ni eliminada)
+                const candidatas = (s.timerBaile.participantesActivas || []).filter(c => 
+                    !s.timerBaile.salvadas.includes(c) && !s.timerBaile.eliminadas.includes(c)
+                );
+
+                if (candidatas.length > 0) {
+                    candidatas.sort((a, b) => (s.timerBaile.puntosTorneo[a] || 0) - (s.timerBaile.puntosTorneo[b] || 0));
+                    const ultimaLugar = candidatas[0];
+                    if (ultimaLugar && !s.timerBaile.enRiesgo.includes(ultimaLugar)) {
+                        s.timerBaile.enRiesgo.push(ultimaLugar);
+                    }
+                }
+
                 io.to(username).emit('torneoFinRondaEsperandoDecision', {
-                    chica: lowestQueen,
-                    puntos: lowestPoints,
-                    rondaActual: s.timerBaile.rondaActual
+                    rondaActual: s.timerBaile.rondaActual,
+                    puntosTorneo: s.timerBaile.puntosTorneo,
+                    participantesActivas: s.timerBaile.participantesActivas,
+                    eliminadas: s.timerBaile.eliminadas,
+                    salvadas: s.timerBaile.salvadas || [],
+                    enRiesgo: s.timerBaile.enRiesgo || []
                 });
                 return;
             } else {
@@ -196,6 +204,8 @@ function setupTimerDynamics(app, io, requireSession, activeSessions) {
         s.timerBaile.participantesOriginales = [...participantes];
         s.timerBaile.participantesActivas = [...participantes];
         s.timerBaile.eliminadas = [];
+        s.timerBaile.salvadas = [];
+        s.timerBaile.enRiesgo = [];
         s.timerBaile.revividasEnRonda = [];
         s.timerBaile.tiempo = tiempoBase;
         s.timerBaile.tiempoBase = tiempoBase;
@@ -291,25 +301,170 @@ function setupTimerDynamics(app, io, requireSession, activeSessions) {
         res.send("OK");
     });
 
+    app.all('/timer/start-salvacion', requireSession, (req, res) => {
+        const s = req.userSession;
+        const user = req.username;
+        const chica = req.query.chica || (req.body && req.body.chica) || '';
+        const tiempo = parseInt(req.query.tiempo || (req.body && req.body.tiempo)) || 90;
+        const meta = parseInt(req.query.meta || (req.body && req.body.meta)) || 500;
+
+        if (!chica) return res.status(400).send('Falta especificar la bailarina');
+
+        s.revivir.chicaActual = chica;
+        s.revivir.meta = meta;
+        s.revivir.tiempo = tiempo;
+        s.revivir.puntos = 0;
+        s.revivir.donantes = {};
+        s.revivir.donantesAvatars = {};
+        s.revivir.regalosEnviados = {};
+        s.revivir.regalosImgs = {};
+        s.revivir.activo = true;
+        s.revivir.estado = 'activo';
+
+        s.vistaActiva = '/revivir';
+        io.to(user).emit('cambioVista', '/revivir');
+
+        io.to(user).emit('revivirInicio', {
+            chica: s.revivir.chicaActual,
+            tiempo: s.revivir.tiempo,
+            meta: s.revivir.meta,
+            puntos: 0,
+            modoTorneo: true,
+            rondaActual: s.timerBaile.rondaActual,
+            rondasTotales: s.timerBaile.rondasTotales,
+            regalosEnviados: {},
+            regalosImgs: {},
+            topDonantes: []
+        });
+
+        clearTimeout(s.introTimeoutRevivir);
+        clearInterval(s.intervaloRevivir);
+
+        s.introTimeoutRevivir = setTimeout(() => {
+            if (!s.revivir || !s.revivir.activo) return;
+            s.intervaloRevivir = setInterval(() => {
+                if (s.revivir.estado === 'activo') {
+                    if (s.revivir.tiempo > 0) {
+                        s.revivir.tiempo--;
+                        io.to(user).emit('revivirTick', s.revivir.tiempo);
+                    } else {
+                        io.to(user).emit('revivirTick', 0);
+                        clearInterval(s.intervaloRevivir);
+                        const exito = s.revivir.puntos >= s.revivir.meta;
+                        s.revivir.activo = false;
+                        s.revivir.estado = 'inactivo';
+
+                        if (!s.timerBaile.salvadas) s.timerBaile.salvadas = [];
+                        if (!s.timerBaile.enRiesgo) s.timerBaile.enRiesgo = [];
+                        if (exito) {
+                            if (!s.timerBaile.salvadas.includes(chica)) s.timerBaile.salvadas.push(chica);
+                            if (!s.timerBaile.participantesActivas.includes(chica)) s.timerBaile.participantesActivas.push(chica);
+                            s.timerBaile.enRiesgo = s.timerBaile.enRiesgo.filter(n => n !== chica);
+                            s.timerBaile.eliminadas = s.timerBaile.eliminadas.filter(n => n !== chica);
+
+                            io.to(user).emit('queensActualizadas', { queens: s.QUEENS, equipos: s.equipos, apodos: s.db.getApodosMap() });
+                            io.to(user).emit('revivirCancelado');
+                            io.to(user).emit('torneoSalvacionConcluida', {
+                                chica,
+                                exito: true,
+                                rondaActual: s.timerBaile.rondaActual,
+                                participantesActivas: s.timerBaile.participantesActivas,
+                                salvadas: s.timerBaile.salvadas,
+                                eliminadas: s.timerBaile.eliminadas,
+                                enRiesgo: s.timerBaile.enRiesgo
+                            });
+                            s.timerBaile.estado = 'esperando_decision_ronda';
+                        } else {
+                            // En fallo por tiempo, NO eliminar automáticamente.
+                            // Mantener en riesgo, fijar chicaAEliminar y notificar fallo para que el admin decida en el control panel.
+                            s.timerBaile.chicaAEliminar = chica;
+                            if (!s.timerBaile.enRiesgo.includes(chica)) s.timerBaile.enRiesgo.push(chica);
+
+                            io.to(user).emit('revivirFalloTiempoOut', {
+                                chica,
+                                apodo: s.db.getApodosMap()[chica] || chica,
+                                puntos: s.revivir.puntos,
+                                meta: s.revivir.meta
+                            });
+
+                            io.to(user).emit('torneoSalvacionConcluida', {
+                                chica,
+                                exito: false,
+                                tiempoOut: true,
+                                rondaActual: s.timerBaile.rondaActual,
+                                participantesActivas: s.timerBaile.participantesActivas,
+                                salvadas: s.timerBaile.salvadas || [],
+                                eliminadas: s.timerBaile.eliminadas || [],
+                                enRiesgo: s.timerBaile.enRiesgo
+                            });
+                            s.timerBaile.estado = 'esperando_decision_ronda';
+                        }
+                    }
+                }
+            }, 1000);
+        }, 4200);
+
+        res.send("OK");
+    });
+
+    app.all('/timer/save-direct', requireSession, (req, res) => {
+        const s = req.userSession;
+        const user = req.username;
+        const chica = req.query.chica || (req.body && req.body.chica) || '';
+        if (!chica) return res.status(400).send('Falta especificar la bailarina');
+
+        if (!s.timerBaile.salvadas) s.timerBaile.salvadas = [];
+        if (!s.timerBaile.enRiesgo) s.timerBaile.enRiesgo = [];
+        if (!s.timerBaile.salvadas.includes(chica)) s.timerBaile.salvadas.push(chica);
+        if (!s.timerBaile.participantesActivas.includes(chica)) s.timerBaile.participantesActivas.push(chica);
+        s.timerBaile.enRiesgo = s.timerBaile.enRiesgo.filter(n => n !== chica);
+        s.timerBaile.eliminadas = s.timerBaile.eliminadas.filter(n => n !== chica);
+
+        io.to(user).emit('queensActualizadas', { queens: s.QUEENS, equipos: s.equipos, apodos: s.db.getApodosMap() });
+        io.to(user).emit('torneoSalvacionConcluida', {
+            chica,
+            exito: true,
+            paseDirecto: true,
+            rondaActual: s.timerBaile.rondaActual,
+            participantesActivas: s.timerBaile.participantesActivas,
+            salvadas: s.timerBaile.salvadas,
+            eliminadas: s.timerBaile.eliminadas,
+            enRiesgo: s.timerBaile.enRiesgo
+        });
+
+        res.send("OK");
+    });
+
     app.all('/timer/confirm-elimination', requireSession, (req, res) => {
         const s = req.userSession;
         const user = req.username;
-        const chica = s.timerBaile.chicaAEliminar;
+        const chica = req.query.chica || (req.body && req.body.chica) || s.timerBaile.chicaAEliminar;
         if (!chica) return res.status(400).send('No hay bailarina por eliminar');
         
-        // Registrar eliminación en el torneo sin apagar en la base de datos
         if (!s.timerBaile.eliminadas.includes(chica)) {
             s.timerBaile.eliminadas.push(chica);
         }
         s.timerBaile.participantesActivas = s.timerBaile.participantesActivas.filter(n => n !== chica);
+        if (!s.timerBaile.enRiesgo) s.timerBaile.enRiesgo = [];
+        s.timerBaile.enRiesgo = s.timerBaile.enRiesgo.filter(n => n !== chica);
+        if (s.timerBaile.salvadas) {
+            s.timerBaile.salvadas = s.timerBaile.salvadas.filter(n => n !== chica);
+        }
         io.to(user).emit('queensActualizadas', { queens: s.QUEENS, equipos: s.equipos, apodos: s.db.getApodosMap() });
 
-        // Ocultar el overlay
         io.to(user).emit('revivirCancelado');
+        io.to(user).emit('torneoSalvacionConcluida', {
+            chica,
+            exito: false,
+            eliminada: true,
+            rondaActual: s.timerBaile.rondaActual,
+            participantesActivas: s.timerBaile.participantesActivas,
+            salvadas: s.timerBaile.salvadas || [],
+            eliminadas: s.timerBaile.eliminadas,
+            enRiesgo: s.timerBaile.enRiesgo
+        });
 
-        // Verificar si el torneo ha terminado (queda 1 sola bailarina activa)
         const torneoTerminado = (s.timerBaile.participantesActivas.length <= 1);
-        
         if (torneoTerminado) {
             s.timerBaile.estado = 'torneo_finalizado';
             s.timerBaile.ganadora = s.timerBaile.participantesActivas[0] || '';
@@ -318,16 +473,10 @@ function setupTimerDynamics(app, io, requireSession, activeSessions) {
                 puntosTotales: s.timerBaile.puntosTorneo[s.timerBaile.ganadora] || 0
             });
         } else {
-            // Pausar torneo esperando continuación manual del admin
-            s.timerBaile.estado = 'esperando_siguiente_ronda';
+            s.timerBaile.estado = 'esperando_decision_ronda';
             s.timerBaile.chicaAEliminar = '';
-            
-            // Avisar al panel que esta ronda se definió
-            io.to(user).emit('torneoRondaDecidida', {
-                siguienteRonda: s.timerBaile.rondaActual + 1
-            });
         }
-        
+
         res.send("OK");
     });
 
@@ -335,12 +484,14 @@ function setupTimerDynamics(app, io, requireSession, activeSessions) {
         const s = req.userSession;
         const user = req.username;
 
-        if (!s.timerBaile.modoTorneo || s.timerBaile.estado !== 'esperando_siguiente_ronda') {
-            return res.status(400).send(`No se puede iniciar la siguiente ronda. modoTorneo: ${s.timerBaile.modoTorneo}, estado: ${s.timerBaile.estado}`);
+        if (!s.timerBaile.modoTorneo) {
+            return res.status(400).send('El modo torneo no está activo');
         }
 
         s.timerBaile.rondaActual++;
         s.timerBaile.revividasEnRonda = [];
+        s.timerBaile.salvadas = [];
+        s.timerBaile.enRiesgo = [];
         
         // Filtrar orden participante a las que sigan activas en el torneo
         s.timerBaile.orden = [...s.timerBaile.participantesActivas];
@@ -379,6 +530,9 @@ function setupTimerDynamics(app, io, requireSession, activeSessions) {
             rondaActual: s.timerBaile.rondaActual,
             rondasTotales: s.timerBaile.rondasTotales,
             clasificadas: s.timerBaile.clasificadas,
+            participantesActivas: s.timerBaile.participantesActivas,
+            salvadas: [],
+            enRiesgo: [],
             regalosEnviados: {},
             regalosImgs: {},
             topDonantes: []
@@ -455,7 +609,13 @@ function setupTimerDynamics(app, io, requireSession, activeSessions) {
         const s = req.userSession;
         const user = req.username;
 
-        if (s.timerBaile.estado === 'torneo_finalizado' && s.timerBaile.ganadora) {
+        if (!s.timerBaile.ganadora && s.timerBaile.participantesActivas && s.timerBaile.participantesActivas.length <= 1) {
+            s.timerBaile.ganadora = s.timerBaile.participantesActivas[0] || '';
+            s.timerBaile.estado = 'torneo_finalizado';
+        }
+
+        if (s.timerBaile.ganadora) {
+            s.timerBaile.estado = 'torneo_finalizado';
             io.to(user).emit('torneoCampeonaPantalla', {
                 ganadora: s.timerBaile.ganadora,
                 puntosTotales: s.timerBaile.puntosTorneo[s.timerBaile.ganadora] || 0

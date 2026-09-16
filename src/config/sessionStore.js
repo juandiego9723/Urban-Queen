@@ -9,7 +9,7 @@ function getUserId(req) {
     if (req.query && req.query.user) return req.query.user;
     if (req.body && req.body.user) return req.body.user;
     if (req.session && req.session.user) return req.session.user;
-    return 'urban';
+    return null;
 }
 
 function getSocketUser(socket) {
@@ -31,7 +31,7 @@ function getSocketUser(socket) {
             return sessions[sessionToken].user;
         }
     }
-    return 'urban';
+    return null;
 }
 
 async function getUserSessionAsync(username, io, procesarPuntosFn) {

@@ -4,22 +4,43 @@ function setupRevivirDynamics(app, io, requireSession, activeSessions) {
         const s = activeSessions[username];
         if (!s || !s.timerBaile.modoTorneo) return;
 
-        const { reconstruirQueens } = require('../config/sessionStore');
-        const chica = s.timerBaile.chicaAEliminar || s.revivir.chicaActual;
+        const chica = s.revivir.chicaActual || s.timerBaile.chicaAEliminar;
         
-        if (!exito) {
-            // Falló la salvación -> Registrar eliminación en el torneo sin apagar en la base de datos
+        if (!s.timerBaile.salvadas) s.timerBaile.salvadas = [];
+
+        if (exito) {
+            // Éxito en salvación -> Marcar como salvada y asegurar que permanezca activa
+            if (!s.timerBaile.salvadas.includes(chica)) {
+                s.timerBaile.salvadas.push(chica);
+            }
+            if (!s.timerBaile.participantesActivas.includes(chica)) {
+                s.timerBaile.participantesActivas.push(chica);
+            }
+            s.timerBaile.eliminadas = s.timerBaile.eliminadas.filter(n => n !== chica);
+        } else {
+            // Falló la salvación -> Registrar eliminación
             if (!s.timerBaile.eliminadas.includes(chica)) {
                 s.timerBaile.eliminadas.push(chica);
             }
             s.timerBaile.participantesActivas = s.timerBaile.participantesActivas.filter(n => n !== chica);
-            io.to(username).emit('queensActualizadas', { queens: s.QUEENS, equipos: s.equipos, apodos: s.db.getApodosMap() });
+            s.timerBaile.salvadas = s.timerBaile.salvadas.filter(n => n !== chica);
         }
+
+        io.to(username).emit('queensActualizadas', { queens: s.QUEENS, equipos: s.equipos, apodos: s.db.getApodosMap() });
 
         // Ocultar overlay
         io.to(username).emit('revivirCancelado');
 
-        // Al concluir la salvación (éxito o fallo), verificar si el torneo ha terminado (1 sola activa) o avanzar a la siguiente ronda
+        // Notificar al panel sobre el resultado de la salvación de esta chica
+        io.to(username).emit('torneoSalvacionConcluida', {
+            chica,
+            exito,
+            rondaActual: s.timerBaile.rondaActual,
+            participantesActivas: s.timerBaile.participantesActivas,
+            salvadas: s.timerBaile.salvadas,
+            eliminadas: s.timerBaile.eliminadas
+        });
+
         const torneoTerminado = (s.timerBaile.participantesActivas.length <= 1);
         if (torneoTerminado) {
             s.timerBaile.estado = 'torneo_finalizado';
@@ -29,12 +50,8 @@ function setupRevivirDynamics(app, io, requireSession, activeSessions) {
                 puntosTotales: s.timerBaile.puntosTorneo[s.timerBaile.ganadora] || 0
             });
         } else {
-            // Avanzar a la siguiente ronda (muestra botón de Iniciar Ronda X en el panel)
-            s.timerBaile.estado = 'esperando_siguiente_ronda';
+            s.timerBaile.estado = 'esperando_decision_ronda';
             s.timerBaile.chicaAEliminar = '';
-            io.to(username).emit('torneoRondaDecidida', {
-                siguienteRonda: s.timerBaile.rondaActual + 1
-            });
         }
     }
     function detenerRevivir(username, forceSuccess = false) {
@@ -178,17 +195,19 @@ function setupRevivirDynamics(app, io, requireSession, activeSessions) {
         const s = req.userSession;
         const user = req.username;
 
-        if (s.revivir.activo && s.revivir.estado === 'esperando_confirmacion_fallo') {
-            s.revivir.estado = 'inactivo';
-            s.revivir.activo = false;
+        if ((s.revivir && s.revivir.activo && s.revivir.estado === 'esperando_confirmacion_fallo') || (s.timerBaile && s.timerBaile.modoTorneo && s.timerBaile.chicaAEliminar)) {
+            if (s.revivir) {
+                s.revivir.estado = 'inactivo';
+                s.revivir.activo = false;
+            }
             
             io.to(user).emit('revivirFin', {
                 exito: false,
-                puntos: s.revivir.puntos,
-                meta: s.revivir.meta
+                puntos: (s.revivir && s.revivir.puntos) || 0,
+                meta: (s.revivir && s.revivir.meta) || 0
             });
 
-            if (s.timerBaile.modoTorneo) {
+            if (s.timerBaile && s.timerBaile.modoTorneo) {
                 concluirSalvacionTorneo(user, false);
             }
             res.send("OK");

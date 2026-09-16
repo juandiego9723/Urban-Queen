@@ -47,6 +47,9 @@ app.use((req, res, next) => {
     res.header("Access-Control-Allow-Origin", "*");
     res.header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
     res.header("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept");
+    res.header("Cache-Control", "no-cache, no-store, must-revalidate");
+    res.header("Pragma", "no-cache");
+    res.header("Expires", "0");
     if (req.method === 'OPTIONS') return res.status(200).end();
     next();
 });
@@ -257,7 +260,7 @@ function getSocketUserLocal(socket) {
         const sessionToken = list['session_token'];
         if (sessionToken && sessions[sessionToken]) return sessions[sessionToken].user;
     }
-    return 'urban';
+    return null;
 }
 
 io.on('connection', (socket) => {

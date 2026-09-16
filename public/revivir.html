@@ -787,15 +787,17 @@
         });
 
         socket.on('torneoFinRondaEsperandoDecision', (data) => {
-            if (data.chica) aplicarColoresTopCard(data.chica);
-            topCard.style.display = 'flex';
-            countdownText.style.display = 'none';
-            statusText.innerText = 'EN RIESGO ⚠️';
-            statusText.style.display = 'block';
-            statusText.style.width = '100%';
-            statusText.style.textAlign = 'center';
-            statusText.style.color = '#ff9500';
-            statusText.style.textShadow = '0 0 15px #ff9500';
+            if (data && data.chica) {
+                aplicarColoresTopCard(data.chica);
+                topCard.style.display = 'flex';
+                countdownText.style.display = 'none';
+                statusText.innerText = 'EN RIESGO ⚠️';
+                statusText.style.display = 'block';
+                statusText.style.width = '100%';
+                statusText.style.textAlign = 'center';
+                statusText.style.color = '#ff9500';
+                statusText.style.textShadow = '0 0 15px #ff9500';
+            }
         });
 
         socket.on('torneoTurnoTerminado', (data) => {
@@ -914,13 +916,16 @@
             // Ocultar contador de tiempo
             countdownText.style.display = 'none';
 
-            // Mostrar texto de estado centrado
+            // Mostrar texto de estado centrado sin cortarse
             statusText.style.display = 'block';
             statusText.style.width = '100%';
             statusText.style.textAlign = 'center';
-            statusText.innerText = 'NO LOGRADO';
+            statusText.innerText = '❌ ELIMINADA';
             statusText.style.color = '#ff3b30';
-            statusText.style.textShadow = '0 0 15px #ff3b30';
+            statusText.style.textShadow = '0 0 15px #ff3b30, 0 0 25px rgba(255, 0, 0, 0.8)';
+            statusText.style.fontSize = '20px';
+            statusText.style.fontWeight = '900';
+            statusText.style.letterSpacing = '1px';
         });
 
         socket.on('revivirCancelado', () => {
