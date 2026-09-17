@@ -49,8 +49,10 @@ function setupQueensRoutes(app, io, requireSession) {
         const regaloPts = parseInt(req.query.regalo_pts || (req.body && req.body.regalo_pts) || '0') || 0;
         const avatarImgRaw = req.query.avatar_img || (req.body && req.body.avatar_img) || '';
         const avatarImg = procesarAvatarBase64(avatarImgRaw);
+        const nombreImgRaw = req.query.nombre_img || (req.body && req.body.nombre_img) || '';
+        const nombreImg = procesarAvatarBase64(nombreImgRaw);
         if (!nombre) return res.status(400).send('Falta nombre');
-        s.db.crearQueen(nombre, color, apodo, regaloImg, regaloPts, avatarImg);
+        s.db.crearQueen(nombre, color, apodo, regaloImg, regaloPts, avatarImg, nombreImg);
         reconstruirQueens(s);
         s.QUEENS.forEach(q => { if (!s.rachasPerdidas[q]) s.rachasPerdidas[q] = 0; if (!s.amarillasAcumuladas[q]) s.amarillasAcumuladas[q] = 0; });
         io.to(req.username).emit('queensActualizadas', { queens: s.QUEENS, equipos: s.equipos, apodos: s.db.getApodosMap() });
@@ -67,8 +69,10 @@ function setupQueensRoutes(app, io, requireSession) {
         const regPts = p('regalo_pts') !== null ? parseInt(p('regalo_pts')) : null;
         const avatarImgRaw = p('avatar_img');
         const avatarImg = avatarImgRaw !== null ? procesarAvatarBase64(avatarImgRaw) : null;
+        const nombreImgRaw = p('nombre_img');
+        const nombreImg = nombreImgRaw !== null ? procesarAvatarBase64(nombreImgRaw) : null;
         if (!nombre || !color) return res.status(400).send('Faltan datos');
-        s.db.editarQueen(nombre, color, apodo, regImg, regPts, avatarImg);
+        s.db.editarQueen(nombre, color, apodo, regImg, regPts, avatarImg, nombreImg);
         reconstruirEquipos(s);
         io.to(req.username).emit('queensActualizadas', { queens: s.QUEENS, equipos: s.equipos, apodos: s.db.getApodosMap() });
         res.send('OK');

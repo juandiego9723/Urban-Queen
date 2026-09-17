@@ -101,7 +101,7 @@ function setupTimerDynamics(app, io, requireSession, activeSessions) {
     app.all('/timer/start', requireSession, (req, res) => {
         const s = req.userSession;
         const user = req.username;
-        const tiempoBase = parseInt(req.query.t) || 30;
+        const tiempoBase = parseInt(req.query.t) || 60;
         const segundosPorMoneda = parseInt(req.query.s) || 3;
         
         s.timerBaile.modoTorneo = false; // Asegurar que apaga torneo
@@ -132,7 +132,11 @@ function setupTimerDynamics(app, io, requireSession, activeSessions) {
                     s.timerBaile.tiempo += tiempoBase;
                     snipeBaile = 3;
                     subTickBaile = 0;
-                    io.to(user).emit('timerInicio', { chica: s.timerBaile.chicaActual, tiempo: s.timerBaile.tiempo });
+                    io.to(user).emit('timerInicio', {
+                        chica: s.timerBaile.chicaActual,
+                        tiempo: s.timerBaile.tiempo,
+                        segundosPorMoneda: s.timerBaile.segundosPorMoneda
+                    });
                 }
             } else if (s.timerBaile.estado === 'bailando') {
                 s.tiempoAcumulado[s.timerBaile.chicaActual] = (s.tiempoAcumulado[s.timerBaile.chicaActual] || 0) + 1;

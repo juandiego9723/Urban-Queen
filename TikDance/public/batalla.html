@@ -122,28 +122,29 @@
             }
         }
 
-        /* ── FILA IMÁGENES DE REGALO ── */
-        #gift-row {
+        /* ── REGALO JUNTO AL NOMBRE ── */
+        .queen-header-box {
             display: flex;
-            justify-content: space-around;
-            align-items: flex-end;
-            gap: 4px;
-            min-height: 70px;
-        }
-
-        .gift-slot {
-            display: flex;
-            flex-direction: column;
             align-items: center;
-            flex: 1;
+            justify-content: center;
+            gap: 8px;
         }
 
         .gift-img {
-            width: 64px;
-            height: 64px;
+            width: 44px;
+            height: 44px;
             object-fit: contain;
-            filter: drop-shadow(0 0 12px rgba(255, 255, 255, 0.8)) 
-                    drop-shadow(3px 3px 5px rgba(0, 0, 0, 0.7));
+            filter: drop-shadow(0 0 10px rgba(255, 255, 255, 0.8)) 
+                    drop-shadow(2px 2px 4px rgba(0, 0, 0, 0.7));
+            transition: transform 0.2s ease;
+        }
+
+        .queen-name-img {
+            height: 48px;
+            max-width: 160px;
+            object-fit: contain;
+            filter: drop-shadow(0 0 8px rgba(0, 0, 0, 0.9))
+                    drop-shadow(0 2px 4px rgba(0, 0, 0, 0.8));
             transition: transform 0.2s ease;
         }
 
@@ -156,7 +157,7 @@
                 transform: scale(1) rotate(0deg);
             }
             30% {
-                transform: scale(1.6) rotate(-10deg);
+                transform: scale(1.5) rotate(-10deg);
             }
             60% {
                 transform: scale(0.85) rotate(5deg);
@@ -172,7 +173,6 @@
         /* ── BARRA DE PUNTOS GLASSMORPHISM ── */
         #bar-outer {
             height: 56px;
-            border-radius: 28px;
             overflow: hidden;
             display: flex;
             background: rgba(0, 0, 0, 0.75);
@@ -201,7 +201,6 @@
             transition: width 0.8s cubic-bezier(0.25, 1, 0.5, 1);
             position: relative;
             overflow: hidden;
-            border-radius: 22px;
         }
 
         /* Efecto Glossy Superior */
@@ -269,94 +268,59 @@
             line-height: 1;
         }
 
-        /* Medallas Doradas de Victorias */
-        .queen-vics {
-            font-size: 21px;
-            font-weight: 900;
-            color: #FFD700;
-            background: linear-gradient(135deg, #FFE066 0%, #F5B041 100%);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.8);
-            filter: drop-shadow(0 2px 3px rgba(0,0,0,0.6));
-            letter-spacing: 0.5px;
-            animation: latido-suave 2.5s infinite ease-in-out;
-        }
-
-        @keyframes latido-suave {
-            0%, 100% { transform: scale(1); filter: brightness(1) drop-shadow(0 2px 3px rgba(0,0,0,0.6)); }
-            50% { transform: scale(1.06); filter: brightness(1.2) drop-shadow(0 4px 6px rgba(0,0,0,0.7)); }
-        }
-
-        /* ── FEED DE ESPECTADORES NEÓN ── */
-        .feed-debajo {
+        /* ── SILLAS / TOP 3 DONADORES DE CADA BAILARINA ── */
+        .donor-seats-pill {
             display: flex;
-            flex-direction: column;
             align-items: center;
-            gap: 5px;
+            justify-content: center;
+            gap: 8px;
+            padding: 6px 14px;
+            border-radius: 24px;
+            background: rgba(0, 0, 0, 0.45);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.6), inset 0 0 12px rgba(255, 255, 255, 0.05);
             margin-top: 6px;
-            min-height: 90px;
+            transition: all 0.3s ease;
         }
 
-        .bar-viewer-chip {
+        .donor-seat-circle {
+            width: 42px;
+            height: 42px;
+            border-radius: 50%;
+            border: 2px solid rgba(255, 255, 255, 0.4);
+            background: rgba(0, 0, 0, 0.6);
             display: flex;
             align-items: center;
-            gap: 6px;
-            background: rgba(0, 0, 0, 0.78);
-            backdrop-filter: blur(5px);
-            -webkit-backdrop-filter: blur(5px);
-            border: 1px solid rgba(255, 255, 255, 0.12);
-            border-radius: 18px;
-            padding: 3px 10px 3px 3px;
-            animation: slide-in-elastic 0.45s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
-            white-space: nowrap;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
-            transform-origin: center bottom;
-        }
-
-        @keyframes slide-in-elastic {
-            from {
-                opacity: 0;
-                transform: translateY(20px) scale(0.8) rotateX(-15deg);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0) scale(1) rotateX(0deg);
-            }
-        }
-
-        .bar-viewer-avatar {
-            width: 32px;
-            height: 32px;
-            border-radius: 50%;
-            object-fit: cover;
-            border: 2px solid rgba(255, 255, 255, 0.6);
-            box-shadow: 0 0 6px rgba(255, 255, 255, 0.25);
-            background: #222;
-        }
-
-        .bar-viewer-nick {
-            font-size: 12px;
-            font-weight: 800;
-            color: #fff;
-            text-shadow: 1px 1px 2px #000;
-            max-width: 80px;
+            justify-content: center;
             overflow: hidden;
-            text-overflow: ellipsis;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
+            position: relative;
+            transition: transform 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275), border-color 0.3s ease, box-shadow 0.3s ease;
         }
 
-        .bar-viewer-gift {
-            width: 16px;
-            height: 16px;
-            object-fit: contain;
+        .donor-seat-circle img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            border-radius: 50%;
         }
 
-        .bar-viewer-coins {
-            font-size: 11px;
-            font-weight: 900;
-            color: #FFD700;
-            text-shadow: 1px 1px 0 #000;
-            letter-spacing: 0.3px;
+        .donor-seat-circle .empty-seat-icon {
+            width: 22px;
+            height: 22px;
+            opacity: 0.35;
+            fill: currentColor;
+        }
+
+        .donor-seat-circle.filled {
+            animation: seat-pop 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        @keyframes seat-pop {
+            0% { transform: scale(0.7); }
+            50% { transform: scale(1.15); }
+            100% { transform: scale(1); }
         }
 
         /* ── BANNER GANADOR PREMIUM CON CONFETI ── */
@@ -452,13 +416,10 @@
     <div id="batalla-wrap">
         <div id="timer">ESPERANDO BATALLA...</div>
 
-        <!-- Imágenes de regalo -->
-        <div id="gift-row"></div>
-
         <!-- Barra de puntos -->
         <div id="bar-outer"></div>
 
-        <!-- Nombres y victorias -->
+        <!-- Nombres y Donadores -->
         <div id="names-row"></div>
 
     </div>
@@ -473,13 +434,11 @@
         let APODOS = {};
         let puntosActuales = {};
 
-        // Feed de espectadores por barra (máximo 3 chips visibles por bailarina)
-        const MAX_VIEWERS = 3;
-        let feedViewers = {}; // { [chica]: [{nick, avatar, giftImg, coins}] }
+        // Acumulado de donaciones por espectador para Top 3 donadores (Opción A)
+        let donorStats = {}; // { [chica]: { [nick]: { nick, avatar, totalCoins } } }
 
         const timerEl = document.getElementById('timer');
         const anuncio = document.getElementById('anuncio-fin');
-        const giftRow = document.getElementById('gift-row');
         const barOuter = document.getElementById('bar-outer');
         const namesRow = document.getElementById('names-row');
 
@@ -502,23 +461,9 @@
             participantesActivos = participantes;
             equiposInfo = equipos;
             puntosActuales = { ...puntos };
-            feedViewers = {}; // Reset feed en cada render
+            donorStats = {}; // Reset acumulados en nuevo render de batalla
 
             const pct = 100 / participantes.length;
-
-            // Imágenes de regalo
-            giftRow.innerHTML = '';
-            participantes.forEach(chica => {
-                const eq = equipos[chica] || { nombre: chica, color: '#fff', regalo_img: '' };
-                const imgSrc = eq.regalo_img ? `/regalos/${encodeURIComponent(eq.regalo_img)}` : '';
-                giftRow.innerHTML += `
-                <div class="gift-slot">
-                    ${imgSrc
-                        ? `<img id="gift-${chica}" class="gift-img" src="${imgSrc}" alt="${chica}" onerror="this.style.display='none'">`
-                        : `<div style="width:52px;height:52px"></div>`
-                    }
-                </div>`;
-            });
 
             // Barra de puntos
             barOuter.innerHTML = '';
@@ -535,17 +480,35 @@
                 barOuter.appendChild(bar);
             });
 
-            // Nombres
+            // Nombres y Píldora de Sillas/Donadores
             namesRow.innerHTML = '';
             participantes.forEach(chica => {
-                const eq = equipos[chica] || { nombre: chica, color: '#fff' };
+                const eq = equipos[chica] || { nombre: chica, color: '#fff', regalo_img: '', nombre_img: '' };
                 const label = APODOS[chica] || eq.nombre || chica.toUpperCase();
+                const regaloSrc = eq.regalo_img ? `/regalos/${encodeURIComponent(eq.regalo_img)}` : '';
+                const nombreImgSrc = eq.nombre_img ? `/regalos/${encodeURIComponent(eq.nombre_img)}` : '';
+
+                let nameContent = `<span class="queen-label" style="color:${eq.color}">${label}</span>`;
+                if (nombreImgSrc) {
+                    nameContent = `<img id="name-img-${chica}" class="queen-name-img" src="${nombreImgSrc}" alt="${chica}" onerror="this.style.display='none'; if(this.nextElementSibling) this.nextElementSibling.style.display='inline';">
+                    <span class="queen-label" style="color:${eq.color}; display:none;">${label}</span>`;
+                }
+
                 namesRow.innerHTML += `
                 <div class="queen-name-slot">
-                    <span class="queen-label" style="color:${eq.color}">${label}</span>
-                    <span class="queen-vics" id="vic-${chica}">👑 X${victorias[chica] || 0}</span>
-                    <div class="feed-debajo" id="feed-${chica}"></div>
+                    <div class="queen-header-box">
+                        ${regaloSrc
+                            ? `<img id="gift-${chica}" class="gift-img" src="${regaloSrc}" alt="${chica}" onerror="this.style.display='none'">`
+                            : ''
+                        }
+                        ${nameContent}
+                    </div>
+                    <div class="donor-seats-pill" id="seats-pill-${chica}" style="border: 1px solid ${eq.color}50; background: linear-gradient(135deg, rgba(0,0,0,0.6) 0%, ${eq.color}18 100%); box-shadow: 0 4px 15px rgba(0,0,0,0.5), inset 0 0 10px ${eq.color}25;">
+                        <div id="seats-${chica}" style="display:flex; gap:8px;"></div>
+                    </div>
                 </div>`;
+
+                renderFeed(chica);
             });
         }
 
@@ -585,16 +548,22 @@
             }
         }
 
-        // ── Feed de espectadores ──
+        // ── Top 3 Donadores por Puntos Acumulados ──
+        const EMPTY_SEAT_SVG = `<svg class="empty-seat-icon" viewBox="0 0 24 24"><path fill="currentColor" d="M19,10V7A3,3 0 0,0 16,4H8A3,3 0 0,0 5,7V10A3,3 0 0,0 2,13V18A1,1 0 0,0 3,19H4A1,1 0 0,0 5,18V17H19V18A1,1 0 0,0 20,19H21A1,1 0 0,0 22,18V13A3,3 0 0,0 19,10M7,7A1,1 0 0,1 8,6H16A1,1 0 0,1 17,7V10H7V7M20,15H4V13A1,1 0 0,1 5,12H19A1,1 0 0,1 20,13V15Z"/></svg>`;
+
         function agregarViewer(nick, avatar, giftImg, chica, coins) {
-            if (!feedViewers[chica]) feedViewers[chica] = [];
-            const fv = feedViewers[chica];
-            // Evitar duplicados consecutivos en la misma barra
-            if (fv.length && fv[0].nick === nick) return;
-            fv.unshift({ nick, avatar, giftImg, coins: coins || 0 });
-            if (fv.length > MAX_VIEWERS) fv.pop();
+            if (!chica || !participantesActivos.includes(chica)) return;
+
+            if (!donorStats[chica]) donorStats[chica] = {};
+            if (!donorStats[chica][nick]) {
+                donorStats[chica][nick] = { nick, avatar, totalCoins: 0 };
+            }
+            if (avatar) donorStats[chica][nick].avatar = avatar;
+            donorStats[chica][nick].totalCoins += (coins || 1);
+
             renderFeed(chica);
-            // Animar imagen del regalo
+
+            // Animar la imagen de regalo a la izquierda del nombre
             if (giftImg) {
                 const gifEl = document.getElementById('gift-' + chica);
                 if (gifEl) {
@@ -606,22 +575,40 @@
         }
 
         function renderFeed(chica) {
-            const feedContainer = document.getElementById('feed-' + chica);
-            if (!feedContainer) return;
+            const seatsContainer = document.getElementById('seats-' + chica);
+            if (!seatsContainer) return;
 
-            feedContainer.innerHTML = feedViewers[chica].map(v => {
-                const avatarHtml = v.avatar
-                    ? `<img class="bar-viewer-avatar" src="${v.avatar}" onerror="this.src='/regalos/corazon.png'">`
-                    : `<div class="bar-viewer-avatar" style="background:#555;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:800;color:#fff">${v.nick.slice(0, 1).toUpperCase()}</div>`;
-                const coinsHtml = v.coins > 0
-                    ? `<span class="bar-viewer-coins">💎${v.coins}</span>`
-                    : '';
-                return `<div class="bar-viewer-chip">
-                ${avatarHtml}
-                <span class="bar-viewer-nick">${v.nick}</span>
-                ${coinsHtml}
-            </div>`;
-            }).join('');
+            const eq = equiposInfo[chica] || { color: '#ffffff' };
+            const chicaDonors = Object.values(donorStats[chica] || {});
+            
+            // Ordenar de mayor a menor según los puntos acumulados
+            chicaDonors.sort((a, b) => b.totalCoins - a.totalCoins);
+
+            const top3 = chicaDonors.slice(0, 3);
+            let html = '';
+
+            for (let i = 0; i < 3; i++) {
+                const donor = top3[i];
+                if (donor && donor.avatar) {
+                    html += `
+                    <div class="donor-seat-circle filled" style="border-color: ${eq.color}; box-shadow: 0 0 10px ${eq.color}aa, 0 0 16px ${eq.color}44;">
+                        <img src="${donor.avatar}" title="${donor.nick} (${donor.totalCoins} pts)">
+                    </div>`;
+                } else if (donor) {
+                    const initial = donor.nick.slice(0, 1).toUpperCase();
+                    html += `
+                    <div class="donor-seat-circle filled" style="border-color: ${eq.color}; color: #fff; font-weight: 900; font-size: 16px; box-shadow: 0 0 10px ${eq.color}aa;">
+                        ${initial}
+                    </div>`;
+                } else {
+                    html += `
+                    <div class="donor-seat-circle" style="border-color: ${eq.color}50; color: ${eq.color};">
+                        ${EMPTY_SEAT_SVG}
+                    </div>`;
+                }
+            }
+
+            seatsContainer.innerHTML = html;
         }
 
         // Generar partículas de confeti de forma dinámica
@@ -650,7 +637,7 @@
             anuncio.style.display = 'none';
             timerEl.classList.remove('urgente');
             timerEl.style.color = '#FFD700';
-            feedViewers = {};
+            donorStats = {};
             renderBatalla(data.participantes, data.equipos || equiposInfo, data.victorias || {}, data.puntos || {});
         });
 
@@ -686,11 +673,6 @@
             anuncio.style.display = 'block';
             
             crearConfeti();
-            
-            if (!esEmpate && data.victorias) {
-                const vicEl = document.getElementById('vic-' + data.ganadora);
-                if (vicEl) vicEl.textContent = '👑 X' + data.victorias[data.ganadora];
-            }
             setTimeout(() => { anuncio.style.display = 'none'; }, 6000);
         });
 

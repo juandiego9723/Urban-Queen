@@ -85,14 +85,21 @@ app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ limit: '50mb', extended: true }));
 
 const _getUserSessionOriginal = getUserSession;
+let _verificarAutoReset = null; // Se asigna después de crear el servicio TikTok
 function getUserSessionWithBatch(username) {
     let session = activeSessions[username];
+    const esNueva = !session;
     if (!session) {
         session = _getUserSessionOriginal(username, io, (u) => procesarPuntosEnLote(u));
     } else if (!session.batchInterval && typeof procesarPuntosEnLote === 'function') {
         session.batchInterval = setInterval(() => {
             procesarPuntosEnLote(username);
         }, 300);
+    }
+    // Ejecutar auto-reset inmediatamente al crear sesión nueva
+    // para que el semanal/mensual se resetee antes de que el usuario vea datos
+    if (esNueva && session && _verificarAutoReset) {
+        _verificarAutoReset(session, username, io);
     }
     return session;
 }
@@ -107,7 +114,8 @@ const { procesarRegaloTikTok, procesarPuntosEnLote } = createPointsProcessor(
 );
 
 // ── Servicio TikTok ─────────────────────────────────────────────
-createTikTokService(app, io, requireSession, activeSessions, procesarRegaloTikTok);
+const tiktokService = createTikTokService(app, io, requireSession, activeSessions, procesarRegaloTikTok);
+_verificarAutoReset = tiktokService.verificarAutoReset;
 
 // ── Resto de dinámicas ──────────────────────────────────────────
 setupBatallaDynamics(app, io, requireSession);

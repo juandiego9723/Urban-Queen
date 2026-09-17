@@ -180,17 +180,46 @@
             countdownTransicion.style.textShadow = brillo;
         }
 
+        let currentSegundosPorMoneda = 3;
+
+        function actualizarTextoMonedas() {
+            const elMonedas = document.querySelector('#caja-reloj .texto-monedas');
+            if (elMonedas) {
+                elMonedas.textContent = `+${currentSegundosPorMoneda} SEGUNDOS POR MONEDA (O PUNTO)`;
+            }
+        }
+
+        fetch('/timer/status').then(r => r.json()).then(st => {
+            if (st && st.activo && !st.modoTorneo) {
+                if (st.segundosPorMoneda) currentSegundosPorMoneda = st.segundosPorMoneda;
+                actualizarTextoMonedas();
+                if (st.estado === 'bailando') {
+                    cajaTransicion.style.display = 'none';
+                    cajaReloj.style.display = 'flex';
+                    contenedor.classList.add('timer-activo');
+                    aplicarColoresChica(st.chicaActual);
+                    displayReloj.innerText = formatearTiempo(st.tiempo);
+                } else if (st.estado === 'transicion') {
+                    cajaReloj.style.display = 'none';
+                    cajaTransicion.style.display = 'flex';
+                    contenedor.classList.add('timer-activo');
+                    textoTransicion.innerHTML = '¡SIGUIENTE: ' + (APODOS[st.chicaActual] || st.chicaActual) + '!';
+                    countdownTransicion.innerText = st.tiempoTransicion || 5;
+                    aplicarColoresChica(st.chicaActual);
+                }
+            }
+        }).catch(() => {});
+
         socket.on('timerInicio', (data) => {
+            if (data.segundosPorMoneda) {
+                currentSegundosPorMoneda = data.segundosPorMoneda;
+            }
+            actualizarTextoMonedas();
             cajaTransicion.style.display = 'none';
             cajaReloj.style.display = 'flex';
             contenedor.classList.add('timer-activo');
             aplicarColoresChica(data.chica);
             displayReloj.innerText = formatearTiempo(data.tiempo);
-            const elMonedas = document.querySelector('#caja-reloj .texto-monedas');
-            if (elMonedas) {
-                const segs = data.segundosPorMoneda || 3;
-                elMonedas.textContent = `+${segs} SEGUNDOS POR MONEDA (O PUNTO)`;
-            }
         });
 
         socket.on('timerTick', (tiempo) => { displayReloj.innerText = formatearTiempo(tiempo); });

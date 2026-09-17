@@ -1429,7 +1429,7 @@
                         <div class="col">
                             <div class="row" style="margin-bottom: 10px;">
                                 <span class="label">Tiempo base (seg):</span>
-                                <input type="number" id="tiempoBaseTimer" value="30" min="10" max="300"
+                                <input type="number" id="tiempoBaseTimer" value="60" min="10" max="300"
                                     class="input input-num">
                             </div>
                             <div class="row" style="margin-bottom: 14px;">
@@ -1676,10 +1676,17 @@
                                     </div>
                                 </div>
                                 <div
-                                    style="display: grid; grid-template-columns: 1fr 1fr 100px; gap: 12px; align-items: flex-end;">
+                                    style="display: grid; grid-template-columns: 1fr 1fr 1fr 100px; gap: 12px; align-items: flex-end;">
                                     <div class="col" style="gap: 4px;">
                                         <label class="label" style="font-size: 10px;">Regalo Activador</label>
                                         <select id="regaloBailarina" class="select">
+                                            <option value="">— Sin imagen —</option>
+                                            <!-- Se llenará dinámicamente con REGALO_IMGS -->
+                                        </select>
+                                    </div>
+                                    <div class="col" style="gap: 4px;">
+                                        <label class="label" style="font-size: 10px;">Imagen Nombre (Batalla)</label>
+                                        <select id="nombreImgBailarina" class="select">
                                             <option value="">— Sin imagen —</option>
                                             <!-- Se llenará dinámicamente con REGALO_IMGS -->
                                         </select>
@@ -3736,7 +3743,7 @@
                 });
             }
             function iniciarTimer() {
-                const t = document.getElementById('tiempoBaseTimer').value || 30;
+                const t = document.getElementById('tiempoBaseTimer').value || 60;
                 const s = document.getElementById('timerSegundosPorMoneda').value || 3;
                 hacerFetch(`/timer/start?t=${t}&s=${s}`);
             }
@@ -3771,6 +3778,11 @@
                 const selRegalo = document.getElementById('regaloBailarina');
                 if (selRegalo && selRegalo.options.length <= 1 && typeof REGALO_IMGS !== 'undefined') {
                     selRegalo.innerHTML = '<option value="">— Sin imagen —</option>' +
+                        REGALO_IMGS.map(img => `<option value="${img}">${img.replace('.png', '').replace('.jpg', '')}</option>`).join('');
+                }
+                const selNombreImg = document.getElementById('nombreImgBailarina');
+                if (selNombreImg && selNombreImg.options.length <= 1 && typeof REGALO_IMGS !== 'undefined') {
+                    selNombreImg.innerHTML = '<option value="">— Sin imagen (Usar Apodo) —</option>' +
                         REGALO_IMGS.map(img => `<option value="${img}">${img.replace('.png', '').replace('.jpg', '')}</option>`).join('');
                 }
 
@@ -3821,6 +3833,13 @@
                         </select>
                         <input id="edit-rp" type="number" class="input" value="${q.regalo_pts || 0}" style="width: 52px; font-size: 12px; padding: 4px; height:28px" min="0">
                     </div>
+                </div>
+                <div class="col" style="gap: 4px;">
+                    <label style="font-size: 9px; color: var(--muted); margin:0;">Imagen Nombre (Batalla)</label>
+                    <select id="edit-ni" class="select" style="font-size: 12px; padding: 4px; height:28px">
+                        <option value="">— Sin imagen (Usar texto Apodo) —</option>
+                        ${REGALO_IMGS.map(img => `<option value="${img}" ${q.nombre_img === img ? 'selected' : ''}>${img.replace('.png', '').replace('.jpg', '')}</option>`).join('')}
+                    </select>
                 </div>
                 <div class="col" style="gap: 4px;">
                     <label style="font-size: 9px; color: var(--muted); margin:0;">Foto de Perfil</label>
@@ -3968,6 +3987,7 @@
                 const apodo = document.getElementById('edit-a').value.trim();
                 const regaloImg = document.getElementById('edit-ri').value.trim();
                 const regaloPts = parseInt(document.getElementById('edit-rp').value) || 0;
+                const nombreImg = document.getElementById('edit-ni') ? document.getElementById('edit-ni').value.trim() : '';
                 const fotoInput = document.getElementById('edit-foto');
 
                 if (!nuevo) return alert('El nombre no puede estar vacío');
@@ -3991,7 +4011,8 @@
                     apodo,
                     regalo_img: regaloImg,
                     regalo_pts: regaloPts,
-                    avatar_img: avatarBase64
+                    avatar_img: avatarBase64,
+                    nombre_img: nombreImg
                 };
 
                 await fetch('/api/queens/editar', {
@@ -4025,6 +4046,7 @@
                 const nombre = document.getElementById('nuevaBailarina').value.trim();
                 const apodo = document.getElementById('apodoBailarina').value.trim();
                 const regalo = document.getElementById('regaloBailarina').value;
+                const nombreImg = document.getElementById('nombreImgBailarina') ? document.getElementById('nombreImgBailarina').value : '';
                 const pts = parseInt(document.getElementById('ptsRegaloBailarina').value) || 0;
                 const color = document.getElementById('colorBailarina').value;
                 const fotoInput = document.getElementById('fotoBailarina');
@@ -4046,7 +4068,8 @@
                     apodo,
                     regalo_img: regalo,
                     regalo_pts: pts,
-                    avatar_img: avatarBase64
+                    avatar_img: avatarBase64,
+                    nombre_img: nombreImg
                 };
 
                 await fetch('/api/queens/crear', {
@@ -4058,6 +4081,7 @@
                 document.getElementById('nuevaBailarina').value = '';
                 document.getElementById('apodoBailarina').value = '';
                 document.getElementById('regaloBailarina').value = '';
+                if (document.getElementById('nombreImgBailarina')) document.getElementById('nombreImgBailarina').value = '';
                 document.getElementById('ptsRegaloBailarina').value = '';
                 if (fotoInput) fotoInput.value = '';
 

@@ -98,6 +98,7 @@ class DBInstance {
         try { this.db.run(`ALTER TABLE queens ADD COLUMN empates INTEGER NOT NULL DEFAULT 0`); } catch(e) {}
         try { this.db.run(`ALTER TABLE queens ADD COLUMN derrotas INTEGER NOT NULL DEFAULT 0`); } catch(e) {}
         try { this.db.run(`ALTER TABLE queens ADD COLUMN avatar_img TEXT NOT NULL DEFAULT ''`); } catch(e) {}
+        try { this.db.run(`ALTER TABLE queens ADD COLUMN nombre_img TEXT NOT NULL DEFAULT ''`); } catch(e) {}
 
         this.db.run(`CREATE TABLE IF NOT EXISTS aliases (
             alias_name TEXT PRIMARY KEY COLLATE NOCASE,
@@ -212,22 +213,23 @@ class DBInstance {
         return this.queryAll('SELECT * FROM queens ORDER BY activo DESC, name');
     }
 
-    crearQueen(name, color, apodo = '', regaloImg = '', regaloPts = 0, avatarImg = '') {
+    crearQueen(name, color, apodo = '', regaloImg = '', regaloPts = 0, avatarImg = '', nombreImg = '') {
         const existing = this.queryOne('SELECT name FROM queens WHERE name = ?', [name]);
         if (existing) {
-            this.runSql('UPDATE queens SET activo = 1, color = ?, apodo = ?, regalo_img = ?, regalo_pts = ?, avatar_img = ? WHERE name = ?', [color, apodo, regaloImg, regaloPts, avatarImg, name]);
+            this.runSql('UPDATE queens SET activo = 1, color = ?, apodo = ?, regalo_img = ?, regalo_pts = ?, avatar_img = ?, nombre_img = ? WHERE name = ?', [color, apodo, regaloImg, regaloPts, avatarImg, nombreImg, name]);
         } else {
-            this.runSql('INSERT INTO queens (name, color, activo, apodo, regalo_img, regalo_pts, avatar_img) VALUES (?, ?, 1, ?, ?, ?, ?)', [name, color, apodo, regaloImg, regaloPts, avatarImg]);
+            this.runSql('INSERT INTO queens (name, color, activo, apodo, regalo_img, regalo_pts, avatar_img, nombre_img) VALUES (?, ?, 1, ?, ?, ?, ?, ?)', [name, color, apodo, regaloImg, regaloPts, avatarImg, nombreImg]);
         }
     }
 
-    editarQueen(name, color, apodo = null, regaloImg = null, regaloPts = null, avatarImg = null) {
+    editarQueen(name, color, apodo = null, regaloImg = null, regaloPts = null, avatarImg = null, nombreImg = null) {
         let sets = ['color = ?'];
         let vals = [color];
         if (apodo     !== null) { sets.push('apodo = ?');       vals.push(apodo.trim()); }
         if (regaloImg !== null) { sets.push('regalo_img = ?');  vals.push(regaloImg); }
         if (regaloPts !== null) { sets.push('regalo_pts = ?');  vals.push(regaloPts); }
         if (avatarImg !== null) { sets.push('avatar_img = ?');  vals.push(avatarImg); }
+        if (nombreImg !== null) { sets.push('nombre_img = ?');  vals.push(nombreImg); }
         vals.push(name);
         this.runSql(`UPDATE queens SET ${sets.join(', ')} WHERE name = ?`, vals);
     }
