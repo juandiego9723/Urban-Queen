@@ -46,7 +46,7 @@ jobs:
             --allow-unauthenticated \
             --no-cpu-throttling \
             --session-affinity \
-            --set-env-vars DATABASE_URL="${{ secrets.DATABASE_URL }}",NODE_ENV="production"
+            --set-env-vars DATABASE_URL="${{ secrets.DATABASE_URL }}",NODE_ENV="production",SIGN_API_KEY="${{ secrets.SIGN_API_KEY }}"
 
   deploy-frontend:
     name: 🌐 Deploy Frontend to Firebase Hosting
