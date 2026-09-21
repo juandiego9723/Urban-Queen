@@ -29,14 +29,25 @@ async function initMasterDB() {
     }
 }
 
-async function registrarUsuario(username, password, name) {
+async function registrarUsuario(username, password, name, agencySlug = null) {
     const existing = await obtenerUsuario(username);
     if (existing) throw new Error('El usuario ya existe');
-    
+
+    let agencyId = null;
+    if (agencySlug) {
+        const agency = await getAgencyBySlug(agencySlug);
+        if (agency) agencyId = agency.id;
+    }
+
+    if (!agencyId) {
+        const defaultAgency = await getAgencyBySlug('urbanqueens') || await getAgencyBySlug('cosmic');
+        if (defaultAgency) agencyId = defaultAgency.id;
+    }
+
     const hashed = hashPassword(password);
     const res = await query(
-        'INSERT INTO users (username, password, name) VALUES ($1, $2, $3) RETURNING *',
-        [username.toLowerCase().trim(), hashed, name.trim()]
+        'INSERT INTO users (username, password, name, agency_id) VALUES ($1, $2, $3, $4) RETURNING *',
+        [username.toLowerCase().trim(), hashed, name.trim(), agencyId]
     );
     return res.rows[0];
 }

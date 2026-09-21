@@ -6,11 +6,21 @@
         try {
             // Determinar slug a partir de la URL /:agencySlug/...
             const pathSegments = window.location.pathname.split('/').filter(Boolean);
-            const reserved = ['login', 'control', 'batalla', 'futbol', 'revivir', 'timer', 'api', 'admin'];
+            const reserved = ['login', 'register', 'reset-password', 'control', 'batalla', 'futbol', 'revivir', 'timer', 'api', 'admin'];
             
             let agencySlug = '';
             if (pathSegments.length > 0 && !reserved.includes(pathSegments[0])) {
                 agencySlug = pathSegments[0];
+            }
+
+            if (agencySlug) {
+                window.CURRENT_AGENCY_SLUG = agencySlug;
+                document.querySelectorAll('a[href]').forEach(a => {
+                    const href = a.getAttribute('href');
+                    if (href === '/register' || href === '/login' || href === '/reset-password') {
+                        a.setAttribute('href', `/${agencySlug}${href}`);
+                    }
+                });
             }
 
             const url = agencySlug ? `/api/agency/config?agency=${agencySlug}` : '/api/agency/config';

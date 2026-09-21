@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>TikDance — Registrar Nueva Cuenta</title>
+    <script src="/js/agencyTheme.js"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
         :root {
@@ -183,15 +184,22 @@
             const password = document.getElementById('password').value;
             const errBox = document.getElementById('error-message');
 
+            const agencySlug = window.CURRENT_AGENCY_SLUG || (function() {
+                const segments = window.location.pathname.split('/').filter(Boolean);
+                const reserved = ['login', 'register', 'reset-password', 'control', 'api'];
+                return (segments.length > 0 && !reserved.includes(segments[0])) ? segments[0] : '';
+            })();
+
             try {
                 const res = await fetch('/register', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ name, username, password })
+                    body: JSON.stringify({ name, username, password, agency: agencySlug })
                 });
 
                 if (res.ok) {
-                    window.location.href = '/control';
+                    const targetControl = agencySlug ? `/${agencySlug}/control` : '/control';
+                    window.location.href = targetControl;
                 } else {
                     const text = await res.text();
                     errBox.textContent = text;

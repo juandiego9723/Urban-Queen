@@ -158,11 +158,12 @@ app.post('/login', async (req, res) => {
 
 app.get('/register', (req, res) => res.sendFile(pub('register.html')));
 app.post('/register', async (req, res) => {
-    const { name, username, password } = req.body;
+    const { name, username, password, agency } = req.body;
     if (!name || !username || !password) return res.status(400).send('Todos los campos son obligatorios');
+    const agencySlug = agency || req.agencySlug || (req.agency ? req.agency.slug : null);
     try {
-        await MasterDB.registrarUsuario(username, password, name);
-        res.setSession(username, { name });
+        await MasterDB.registrarUsuario(username, password, name, agencySlug);
+        res.setSession(username, { name, agencySlug });
         res.send('OK');
     } catch(e) {
         res.status(400).send(e.message || 'Error registrando usuario');
@@ -190,7 +191,8 @@ app.post('/api/forgot-password', (req, res) => {
         const token = MasterDB.crearTokenRecuperacion(username);
         const protocol = req.protocol || 'http';
         const host = req.get('host') || 'localhost:3000';
-        const resetUrl = `${protocol}://${host}/reset-password.html?token=${token}`;
+        const agencyPrefix = req.agencySlug ? `/${req.agencySlug}` : (req.agency ? `/${req.agency.slug}` : '');
+        const resetUrl = `${protocol}://${host}${agencyPrefix}/reset-password?token=${token}`;
         res.json({ status: 'OK', token, resetUrl, username });
     } catch(e) {
         res.status(400).send(e.message || 'Error al solicitar token de recuperación');
@@ -287,6 +289,20 @@ app.get('/:agencySlug', (req, res, next) => {
 app.get('/:agencySlug/login', (req, res, next) => {
     if (req.agency && req.params.agencySlug.toLowerCase() === req.agency.slug.toLowerCase()) {
         return res.sendFile(agencyPub(req.agency.slug, 'login.html'));
+    }
+    next();
+});
+
+app.get('/:agencySlug/register', (req, res, next) => {
+    if (req.agency && req.params.agencySlug.toLowerCase() === req.agency.slug.toLowerCase()) {
+        return res.sendFile(agencyPub(req.agency.slug, 'register.html'));
+    }
+    next();
+});
+
+app.get('/:agencySlug/reset-password', (req, res, next) => {
+    if (req.agency && req.params.agencySlug.toLowerCase() === req.agency.slug.toLowerCase()) {
+        return res.sendFile(agencyPub(req.agency.slug, 'reset-password.html'));
     }
     next();
 });
