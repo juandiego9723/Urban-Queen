@@ -2,27 +2,28 @@
 //  🏆 TikDance – agencyTheme.js (Frontend Dynamic Theme & Rules)
 // ═══════════════════════════════════════════════════════════════════
 (function () {
+    const pathSegments = window.location.pathname.split('/').filter(Boolean);
+    const reserved = ['login', 'register', 'reset-password', 'control', 'batalla', 'futbol', 'revivir', 'timer', 'api', 'admin'];
+    
+    let agencySlug = '';
+    if (pathSegments.length > 0 && !reserved.includes(pathSegments[0])) {
+        agencySlug = pathSegments[0];
+    }
+
+    function updateLinks() {
+        if (!agencySlug) return;
+        window.CURRENT_AGENCY_SLUG = agencySlug;
+        document.querySelectorAll('a[href]').forEach(a => {
+            const href = a.getAttribute('href');
+            if (href === '/register' || href === '/login' || href === '/reset-password') {
+                a.setAttribute('href', `/${agencySlug}${href}`);
+            }
+        });
+    }
+
     async function initAgencyTheme() {
+        updateLinks();
         try {
-            // Determinar slug a partir de la URL /:agencySlug/...
-            const pathSegments = window.location.pathname.split('/').filter(Boolean);
-            const reserved = ['login', 'register', 'reset-password', 'control', 'batalla', 'futbol', 'revivir', 'timer', 'api', 'admin'];
-            
-            let agencySlug = '';
-            if (pathSegments.length > 0 && !reserved.includes(pathSegments[0])) {
-                agencySlug = pathSegments[0];
-            }
-
-            if (agencySlug) {
-                window.CURRENT_AGENCY_SLUG = agencySlug;
-                document.querySelectorAll('a[href]').forEach(a => {
-                    const href = a.getAttribute('href');
-                    if (href === '/register' || href === '/login' || href === '/reset-password') {
-                        a.setAttribute('href', `/${agencySlug}${href}`);
-                    }
-                });
-            }
-
             const url = agencySlug ? `/api/agency/config?agency=${agencySlug}` : '/api/agency/config';
             const res = await fetch(url);
             if (!res.ok) return;
@@ -71,14 +72,19 @@
 
             // Exponer configuración global en el cliente
             window.AGENCY_CONFIG = agency;
+            updateLinks();
         } catch (e) {
             console.warn('⚠️ No se pudo aplicar la configuración dinámica de la agencia:', e.message);
         }
     }
 
     if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', initAgencyTheme);
+        document.addEventListener('DOMContentLoaded', function() {
+            updateLinks();
+            initAgencyTheme();
+        });
     } else {
+        updateLinks();
         initAgencyTheme();
     }
 })();
