@@ -16,27 +16,33 @@ function setupTimerDynamics(app, io, requireSession, activeSessions) {
                 // Fin de ronda: Pausar el timer e iniciar la fase de gestión de decisiones de la ronda
                 clearInterval(s.intervaloTimerBaile);
                 
+                const participantes = s.timerBaile.orden || [];
+                let lowestQueen = participantes[0];
+                let lowestPoints = (s.timerBaile.puntosTorneo && lowestQueen) ? (s.timerBaile.puntosTorneo[lowestQueen] || 0) : 0;
+                participantes.forEach(q => {
+                    const pts = (s.timerBaile.puntosTorneo && s.timerBaile.puntosTorneo[q]) || 0;
+                    if (pts < lowestPoints) {
+                        lowestPoints = pts;
+                        lowestQueen = q;
+                    }
+                });
+
+                s.timerBaile.chicaAEliminar = lowestQueen;
                 s.timerBaile.estado = 'esperando_decision_ronda';
 
                 if (!s.timerBaile.enRiesgo) s.timerBaile.enRiesgo = [];
                 if (!s.timerBaile.salvadas) s.timerBaile.salvadas = [];
                 if (!s.timerBaile.eliminadas) s.timerBaile.eliminadas = [];
 
-                // Determinar la última bailarina de esta ronda (la de menor puntaje acumulado en el torneo que no esté ya salvada ni eliminada)
-                const candidatas = (s.timerBaile.participantesActivas || []).filter(c => 
-                    !s.timerBaile.salvadas.includes(c) && !s.timerBaile.eliminadas.includes(c)
-                );
-
-                if (candidatas.length > 0) {
-                    candidatas.sort((a, b) => (s.timerBaile.puntosTorneo[a] || 0) - (s.timerBaile.puntosTorneo[b] || 0));
-                    const ultimaLugar = candidatas[0];
-                    if (ultimaLugar && !s.timerBaile.enRiesgo.includes(ultimaLugar)) {
-                        s.timerBaile.enRiesgo.push(ultimaLugar);
-                    }
+                if (lowestQueen && !s.timerBaile.enRiesgo.includes(lowestQueen)) {
+                    s.timerBaile.enRiesgo.push(lowestQueen);
                 }
 
                 io.to(username).emit('torneoFinRondaEsperandoDecision', {
+                    chica: lowestQueen,
+                    puntos: lowestPoints,
                     rondaActual: s.timerBaile.rondaActual,
+                    esUltimaRonda: (s.timerBaile.rondaActual === s.timerBaile.rondasTotales),
                     puntosTorneo: s.timerBaile.puntosTorneo,
                     participantesActivas: s.timerBaile.participantesActivas,
                     eliminadas: s.timerBaile.eliminadas,

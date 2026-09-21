@@ -1,0 +1,391 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <!-- Inyección de multi-cuenta -->
+    <script>
+        (function() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const user = urlParams.get('user');
+            if (user) {
+                const originalFetch = window.fetch;
+                window.fetch = function(url, options) {
+                    if (typeof url === 'string' && !url.includes('user=')) {
+                        const sep = url.includes('?') ? '&' : '?';
+                        url = url + sep + 'user=' + encodeURIComponent(user);
+                    }
+                    return originalFetch(url, options);
+                };
+                const originalIo = window.io;
+                if (originalIo) {
+                    window.io = function(opts) {
+                        opts = opts || {};
+                        opts.query = opts.query || {};
+                        opts.query.user = user;
+                        return originalIo(opts);
+                    };
+                } else {
+                    let _io = undefined;
+                    Object.defineProperty(window, 'io', {
+                        get: function() { return _io; },
+                        set: function(val) {
+                            _io = function(opts) {
+                                opts = opts || {};
+                                opts.query = opts.query || {};
+                                opts.query.user = user;
+                                return val(opts);
+                            };
+                        },
+                        configurable: true
+                    });
+                }
+            }
+        })();
+    </script>
+
+    <meta charset="UTF-8">
+    <title>El Clásico - TikDance</title>
+    <link href="https://fonts.googleapis.com/css2?family=Bangers&family=Inter:wght@700;800;900&display=swap" rel="stylesheet">
+    <style>
+        /* 🟩 FONDO CHROMA PARA CAPTURA PERFECTA 🟩 */
+        body { 
+            font-family: 'Bangers', cursive; 
+            text-align: center; 
+            background: #00FF00; 
+            color: white; 
+            margin: 0; 
+            padding: 10px; 
+            overflow: hidden; 
+            letter-spacing: 1px; 
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            box-sizing: border-box;
+        }
+
+        /* Configuración de brillo neón global */
+        body.neon-none * {
+            text-shadow: none !important;
+            box-shadow: none !important;
+            border-color: rgba(255,255,255,0.2) !important;
+        }
+        body.neon-low * {
+            text-shadow: 0 0 3px currentColor !important;
+            box-shadow: 0 0 5px currentColor !important;
+        }
+        
+        .copa-container {
+            background: #111111; 
+            border: 3px solid #FFD700; 
+            border-radius: 20px;
+            padding: 15px; 
+            width: 300px; 
+            box-sizing: border-box; 
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.9); 
+            display: flex; flex-direction: column; gap: 10px;
+        }
+        
+        .titulo-copa { font-size: 34px; color: #FFD700; margin: 0; text-transform: uppercase; text-shadow: 2px 2px 5px rgba(0,0,0,0.8); line-height: 1.1; }
+        
+        .subtitulo { 
+            font-size: 16px; color: #FFF; margin-bottom: 5px; font-weight: bold; 
+            background: #222; 
+            border: 1px solid rgba(255, 255, 255, 0.3); 
+            border-radius: 10px; padding: 4px;
+            text-shadow: 1px 1px 3px rgba(0,0,0,0.8);
+            letter-spacing: 2px;
+        }
+
+        #lista-clasico { display: flex; flex-direction: column; gap: 12px; }
+
+        /* Fila base de equipo */
+        .equipo-fila {
+            border-radius: 12px; 
+            padding: 10px;
+            display: flex; flex-direction: column; align-items: center; position: relative; overflow: hidden;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.5); 
+            transition: transform 0.3s, box-shadow 0.2s ease-out;
+            border: 2px solid white;
+        }
+        
+        .equipo-nombre { 
+            font-size: 30px; 
+            z-index: 2; 
+            text-shadow: 2px 2px 5px rgba(0,0,0,0.9); 
+            text-transform: uppercase; 
+            line-height: 1; 
+            margin-bottom: 2px; 
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .equipo-integrantes {
+            font-size: 14px;
+            z-index: 2;
+            color: #ddd;
+            margin-bottom: 8px;
+            text-shadow: 1px 1px 3px rgba(0,0,0,0.9);
+            font-family: sans-serif;
+            font-weight: bold;
+        }
+        
+        .puntos-container {
+            position: relative;
+            z-index: 2;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .equipo-puntos { 
+            font-family: 'Inter', sans-serif;
+            font-weight: 900;
+            font-size: 50px; 
+            line-height: 1; 
+            text-shadow: 0 0 8px rgba(0,0,0,1), 3px 3px 6px rgba(0,0,0,1); 
+            color: white;
+            transition: transform 0.2s ease-out, color 0.2s ease-out; 
+        }
+
+        /* ✨ ANIMACIÓN DE GOL ✨ */
+        @keyframes impactoGol {
+            0% { transform: translateY(0) scale(1) rotate(0); color: #fff; text-shadow: 0 0 5px #fff; }
+            30% { transform: translateY(-15px) scale(1.4) rotate(-10deg); color: gold; text-shadow: 0 0 15px gold, 0 0 30px gold; }
+            50% { transform: translateY(-12px) scale(1.35) rotate(5deg); }
+            70% { transform: translateY(-2px) scale(1.1) rotate(-3deg); }
+            100% { transform: translateY(0) scale(1) rotate(0); color: white; text-shadow: 0 0 5px rgba(0,0,0,1); }
+        }
+
+        .animar-puntos-gol { animation: impactoGol 0.6s ease-out; }
+
+        .particulas-gol {
+            position: absolute;
+            width: 180px; height: 180px;
+            background: radial-gradient(circle, rgba(255,215,0,1) 0%, rgba(255,255,255,0.7) 20%, rgba(0,0,0,0) 60%);
+            border-radius: 50%;
+            opacity: 0;
+            z-index: 1; 
+            transition: transform 0.1s, opacity 0.1s;
+        }
+
+        @keyframes explosionParticulas {
+            0% { transform: scale(0.1) rotate(0deg); opacity: 1; }
+            100% { transform: scale(1.5) rotate(180deg); opacity: 0; }
+        }
+
+        .animar-particulas-gol { animation: explosionParticulas 0.7s ease-out; }
+
+        .bg-color { position: absolute; top: 0; left: 0; width: 100%; height: 100%; opacity: 0.6; z-index: 1; }
+    </style>
+</head>
+<body>
+    <div class="copa-container">
+        <h1 class="titulo-copa">⚽ EL CLÁSICO ⚽</h1>
+        <div class="subtitulo">GLOBAL DEL DÍA</div>
+        <div id="lista-clasico"></div>
+    </div>
+
+    <script src="/js/iframe-bridge.js"></script>
+    <script src="/socket.io/socket.io.js"></script>
+    <script>
+        const socket = window.__iframeBridgeSocket || io();
+        const listaClasico = document.getElementById('lista-clasico');
+
+        // Memorias de puntos para saber cuándo animar
+        let prevPuntos = { eq1: 0, eq2: 0 };
+        let currPuntos = { eq1: 0, eq2: 0 };
+
+        
+        let futbolConfig = null;
+
+        function buildEquipos() {
+            if(!futbolConfig) return [];
+            return [
+                {
+                    id: 'eq1',
+                    nombre: futbolConfig.equipo1.nombre,
+                    integrantes: futbolConfig.equipo1.miembros.join(' Y '),
+                    colorPrincipal: futbolConfig.equipo1.color1,
+                    colorSecundario: futbolConfig.equipo1.color2,
+                    borde: futbolConfig.equipo1.color2,
+                    chicas: futbolConfig.equipo1.miembros
+                },
+                {
+                    id: 'eq2',
+                    nombre: futbolConfig.equipo2.nombre,
+                    integrantes: futbolConfig.equipo2.miembros.join(' Y '),
+                    colorPrincipal: futbolConfig.equipo2.color1,
+                    colorSecundario: futbolConfig.equipo2.color2,
+                    borde: futbolConfig.equipo2.color1,
+                    chicas: futbolConfig.equipo2.miembros
+                }
+            ];
+        }
+
+
+        function renderClasico() {
+            listaClasico.innerHTML = '';
+
+            // Ordenamos: el que tenga más puntos va arriba
+            let ordenados = buildEquipos().sort((a, b) => currPuntos[b.id] - currPuntos[a.id]);
+
+            ordenados.forEach((equipo, index) => {
+                const pts = currPuntos[equipo.id];
+
+                // Trofeo para el que va ganando (si tiene puntos)
+                let trofeo = '';
+                if (index === 0 && pts > 0 && currPuntos[ordenados[0].id] !== currPuntos[ordenados[1].id]) {
+                    trofeo = '<span style="font-size: 32px; margin-right: 8px; filter: drop-shadow(0 0 8px gold);">🏆</span>';
+                }
+
+                const div = document.createElement('div');
+                div.className = 'equipo-fila';
+                div.style.borderColor = equipo.borde; 
+                div.id = `fila-${equipo.id}`; 
+
+                // Color de fondo especial (degradado para Barça, sólido plateado para Madrid)
+                div.innerHTML = `
+                    <div class="bg-color" style="background: linear-gradient(135deg, ${equipo.colorPrincipal}, ${equipo.colorSecundario});"></div>
+                    <div class="equipo-nombre" style="color: white;">${trofeo}${equipo.nombre}</div>
+                    <div class="equipo-integrantes">${equipo.integrantes}</div>
+                    <div class="puntos-container">
+                        <div class="particulas-gol" id="particulas-${equipo.id}"></div>
+                        <div class="equipo-puntos" id="pts-${equipo.id}">${pts}</div>
+                    </div>
+                `;
+                listaClasico.appendChild(div);
+            });
+        }
+
+        function procesarDatosCopa(copaData) {
+            lastCopaData = copaData;
+            
+            // Sumamos los puntos de la memoria del servidor
+            let eq1 = 0; let eq2 = 0;
+            if(futbolConfig) {
+                futbolConfig.equipo1.miembros.forEach(m => eq1 += (copaData[m]||0));
+                futbolConfig.equipo2.miembros.forEach(m => eq2 += (copaData[m]||0));
+            }
+            currPuntos = { eq1: eq1, eq2: eq2 };
+
+            // Comprobamos si hubo un GOL (aumento de puntos)
+            ['eq1', 'eq2'].forEach(idEquipo => {
+
+                if(currPuntos[idEquipo] > prevPuntos[idEquipo]) {
+                    setTimeout(() => {
+                        const filaEl = document.getElementById(`fila-${idEquipo}`);
+                        const ptsEl = document.getElementById(`pts-${idEquipo}`);
+                        const partEl = document.getElementById(`particulas-${idEquipo}`);
+
+                        if(filaEl && ptsEl && partEl) {
+                            // Brillo de la tarjeta
+                            filaEl.style.boxShadow = `0 0 35px white`;
+                            
+                            // Animación de impacto
+                            ptsEl.classList.add('animar-puntos-gol');
+                            partEl.classList.add('animar-particulas-gol');
+
+                            setTimeout(() => {
+                                ptsEl.classList.remove('animar-puntos-gol');
+                                partEl.classList.remove('animar-particulas-gol');
+                                filaEl.style.boxShadow = "0 4px 10px rgba(0,0,0,0.5)";
+                            }, 750); 
+                        }
+                    }, 50);
+                }
+            });
+
+            renderClasico();
+            prevPuntos = {...currPuntos};
+        }
+
+        
+        let lastCopaData = null;
+        function cargarCopaCompleta() {
+            fetch('/api/copa').then(res => res.json()).then(data => {
+                if(data.copa) {
+                    lastCopaData = data.copa;
+                    procesarDatosCopa(data.copa);
+                }
+            });
+        }
+
+        fetch('/api/futbol/config').then(r=>r.json()).then(conf => {
+            futbolConfig = conf;
+            fetch('/api/copa').then(res => res.json()).then(data => {
+                if(data.copa) {
+                    lastCopaData = data.copa;
+                    let eq1 = 0; let eq2 = 0;
+                    futbolConfig.equipo1.miembros.forEach(m => eq1 += (data.copa[m]||0));
+                    futbolConfig.equipo2.miembros.forEach(m => eq2 += (data.copa[m]||0));
+                    prevPuntos = { eq1, eq2 };
+                    procesarDatosCopa(data.copa);
+                }
+            });
+        });
+
+        socket.on('futbolConfigActualizada', (conf) => {
+            futbolConfig = conf;
+            if(lastCopaData) procesarDatosCopa(lastCopaData);
+        });
+
+        // Actualización en vivo (recibe de server.js y el botón "Reiniciar Copa")
+        socket.on('actualizarCopa', (copaData) => {
+            procesarDatosCopa(copaData);
+        });
+
+        socket.on('rankingActualizado', () => {
+            cargarCopaCompleta();
+        });
+
+        // ── BRAND MANAGER LOGIC ──
+        function loadGoogleFont(fontName) {
+            if (!fontName) return;
+            const fontId = 'custom-google-font';
+            let link = document.getElementById(fontId);
+            if (!link) {
+                link = document.createElement('link');
+                link.id = fontId;
+                link.rel = 'stylesheet';
+                document.head.appendChild(link);
+            }
+            link.href = `https://fonts.googleapis.com/css2?family=${encodeURIComponent(fontName)}:wght@400;700;800;900&display=swap`;
+            document.body.style.fontFamily = `'${fontName}', sans-serif`;
+        }
+
+        function aplicarMarca(config) {
+            if (!config) return;
+            // Tipografía
+            if (config.fontFamily) {
+                loadGoogleFont(config.fontFamily);
+            }
+            // Logotipo
+            const logoContainer = document.getElementById('agency-logo-container');
+            const logoImg = document.getElementById('agency-logo');
+            if (logoContainer && logoImg) {
+                if (config.logoUrl) {
+                    logoImg.src = config.logoUrl;
+                    logoContainer.style.opacity = '1';
+                    logoContainer.style.transform = 'scale(1)';
+                } else {
+                    logoContainer.style.opacity = '0';
+                    logoContainer.style.transform = 'scale(0.8)';
+                }
+            }
+            // Brillo neón
+            document.body.classList.remove('neon-none', 'neon-low', 'neon-high');
+            if (config.neonIntensity && config.neonIntensity !== 'normal') {
+                document.body.classList.add('neon-' + config.neonIntensity);
+            }
+        }
+
+        socket.on('marcaCambiado', aplicarMarca);
+    </script>
+
+    <!-- Logotipo de la Agencia Flotante -->
+    <div id="agency-logo-container" style="position: absolute; top: 20px; right: 20px; z-index: 9999; pointer-events: none; transition: all 0.5s ease; opacity: 0; transform: scale(0.8);">
+        <img id="agency-logo" src="" style="max-height: 80px; max-width: 150px; object-fit: contain; filter: drop-shadow(0 0 10px rgba(0,0,0,0.5));">
+    </div>
+</body>
+</html>

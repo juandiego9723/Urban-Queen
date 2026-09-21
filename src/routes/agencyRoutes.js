@@ -5,6 +5,20 @@ const MasterDB = require('../../masterDb');
 const { getUserSession, activeSessions } = require('../config/sessionStore');
 
 function setupAgencyRoutes(app, requireSession) {
+    app.get('/api/agency/config', async (req, res) => {
+        const agencySlug = req.query.agency || (req.agency ? req.agency.slug : null) || 'urbanqueens';
+        const agency = await MasterDB.getAgencyBySlug(agencySlug);
+        if (!agency) {
+            return res.status(404).json({ error: 'Agencia no encontrada' });
+        }
+        res.json(agency);
+    });
+
+    app.get('/api/agency/list', async (req, res) => {
+        const agencies = await MasterDB.getAllAgencies();
+        res.json(agencies);
+    });
+
     app.get('/api/agency/overview', requireSession, async (req, res) => {
         if (req.username !== 'admin' && req.username !== 'master') {
             return res.status(403).json({ error: 'No autorizado' });

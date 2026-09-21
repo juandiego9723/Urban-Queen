@@ -40,6 +40,59 @@
         // Guardar la última vista cargada para evitar recargas redundantes del iframe
         let ultimaVista = '';
 
+        // Reenviar TODOS los eventos del socket principal al iframe vía postMessage
+        const originalOnevent = socket.onevent;
+        socket.onevent = function (packet) {
+            const args = packet.data || [];
+            const eventName = args[0];
+            const eventData = args[1];
+
+            if (eventName && frame && frame.contentWindow) {
+                try {
+                    frame.contentWindow.postMessage({
+                        type: 'SOCKET_IO_EVENT',
+                        event: eventName,
+                        data: eventData
+                    }, '*');
+                } catch (err) {
+                    console.error('[Overlay Acumulados Bridge] Error reenviando evento:', err);
+                }
+            }
+
+            if (originalOnevent) {
+                originalOnevent.call(this, packet);
+            }
+        };
+
+        window.addEventListener('message', (e) => {
+            if (e.data && e.data.type === 'IFRAME_BRIDGE_READY') {
+                if (frame && frame.contentWindow) {
+                    frame.contentWindow.postMessage({
+                        type: 'SOCKET_IO_CONNECT',
+                        connected: socket.connected
+                    }, '*');
+                }
+            }
+        });
+
+        socket.on('connect', () => {
+            if (frame && frame.contentWindow) {
+                frame.contentWindow.postMessage({
+                    type: 'SOCKET_IO_CONNECT',
+                    connected: true
+                }, '*');
+            }
+        });
+
+        socket.on('disconnect', () => {
+            if (frame && frame.contentWindow) {
+                frame.contentWindow.postMessage({
+                    type: 'SOCKET_IO_CONNECT',
+                    connected: false
+                }, '*');
+            }
+        });
+
         socket.on('cambioVistaAcumulados', (vista) => {
             if (!vista) return;
             if (vista === ultimaVista) return;

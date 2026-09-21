@@ -6,6 +6,7 @@ const express = require('express');
 const http = require('http');
 const { Server } = require('socket.io');
 const path = require('path');
+const fs = require('fs');
 const crypto = require('crypto');
 const { initSQL, DBInstance } = require('./db');
 const MasterDB = require('./masterDb');
@@ -39,6 +40,7 @@ const setupQueensRoutes        = require('./src/routes/queensRoutes');
 const setupAgencyRoutes        = require('./src/routes/agencyRoutes');
 const setupAnalyticsRoutes     = require('./src/routes/analyticsRoutes');
 const { setupSystemRoutes, cleanupAllSessions } = require('./src/routes/systemRoutes');
+const { agencyMiddleware } = require('./src/middlewares/agencyMiddleware');
 
 // ── Express + HTTP + Socket.IO ───────────────────────────────────
 const app = express();
@@ -53,6 +55,9 @@ app.use((req, res, next) => {
     if (req.method === 'OPTIONS') return res.status(200).end();
     next();
 });
+
+// Middleware de Agencias (Multi-Tenancy)
+app.use(agencyMiddleware);
 
 // Middleware de sesiones simple basado en cookies en memoria
 app.use((req, res, next) => {
@@ -140,8 +145,15 @@ app.post('/login', async (req, res) => {
     if (!username || !password) return res.status(400).send('Faltan datos');
     const user = await MasterDB.verificarCredenciales(username, password);
     if (!user) return res.status(401).send('Usuario o contraseña incorrectos');
-    res.setSession(user.username, { name: user.name });
-    res.send('OK');
+    
+    let agencySlug = 'urbanqueens';
+    if (user.agency_id) {
+        const agency = await MasterDB.getAgencyById(user.agency_id);
+        if (agency) agencySlug = agency.slug;
+    }
+    
+    res.setSession(user.username, { name: user.name, agencySlug });
+    res.json({ status: 'OK', agencySlug, username: user.username });
 });
 
 app.get('/register', (req, res) => res.sendFile(pub('register.html')));
@@ -216,6 +228,10 @@ app.get('/api/me', requireSession, (req, res) => {
 
 // Archivos estáticos
 app.use('/regalos', express.static(path.join(__dirname, 'public', 'regalos')));
+app.use('/assets', express.static(path.join(__dirname, 'public', 'assets')));
+app.get('/logo-tikdance-horizontal.png', (req, res) => res.sendFile(path.join(__dirname, 'public', 'assets', 'logo-tikdance-horizontal.png')));
+app.get('/logo-tikdance.jpg', (req, res) => res.sendFile(path.join(__dirname, 'public', 'assets', 'logo-tikdance.jpg')));
+app.get('/app-icon.ico', (req, res) => res.sendFile(path.join(__dirname, 'public', 'assets', 'app-icon.ico')));
 app.get('/custom_:file', (req, res) => {
     const file = `custom_${req.params.file}`;
     const regalosPath = path.join(__dirname, 'public', 'regalos', file);
@@ -238,12 +254,61 @@ app.get('/revivir',       (req, res) => res.sendFile(pub('revivir.html')));
 app.get('/revivir-ranking', (req, res) => res.sendFile(pub('revivir-ranking.html')));
 app.get('/copa',          (req, res) => res.sendFile(pub('copa.html')));
 app.get('/lista-regalos', (req, res) => res.sendFile(pub('lista-regalos.html')));
-app.get('/control',       (req, res) => res.sendFile(pub('control.html')));
+app.get('/control', (req, res) => {
+    if (!req.session || !req.session.user) return res.redirect('/login');
+    const slug = req.session.agencySlug || (req.agency ? req.agency.slug : null);
+    if (slug) {
+        return res.redirect(`/${slug}/control`);
+    }
+    return res.sendFile(pub('control.html'));
+});
 app.get('/dinamica',      (req, res) => res.sendFile(pub('dinamica.html')));
 app.get('/gestor-regalos',(req, res) => res.sendFile(pub('gestor-regalos.html')));
 app.get('/multicam',      (req, res) => res.sendFile(pub('multicam.html')));
 app.get('/overlay-universal', (req, res) => res.sendFile(pub('overlay-universal.html')));
 app.get('/overlay-acumulados', (req, res) => res.sendFile(pub('overlay-acumulados.html')));
+
+const agencyPub = (slug, file) => {
+    const customAgencyFile = path.join(__dirname, 'public', 'agencies', slug, file);
+    if (fs.existsSync(customAgencyFile)) {
+        return customAgencyFile;
+    }
+    return pub(file);
+};
+
+// ── Rutas Dinámicas por Agencia (/:agencySlug/*) ────────────────
+app.get('/:agencySlug', (req, res, next) => {
+    if (req.agency && req.params.agencySlug.toLowerCase() === req.agency.slug.toLowerCase()) {
+        return res.sendFile(agencyPub(req.agency.slug, 'ranking.html'));
+    }
+    next();
+});
+
+app.get('/:agencySlug/login', (req, res, next) => {
+    if (req.agency && req.params.agencySlug.toLowerCase() === req.agency.slug.toLowerCase()) {
+        return res.sendFile(agencyPub(req.agency.slug, 'login.html'));
+    }
+    next();
+});
+
+app.get('/:agencySlug/control', (req, res, next) => {
+    if (req.agency && req.params.agencySlug.toLowerCase() === req.agency.slug.toLowerCase()) {
+        if (!req.session || !req.session.user) return res.redirect(`/${req.agency.slug}/login`);
+        return res.sendFile(agencyPub(req.agency.slug, 'control.html'));
+    }
+    next();
+});
+
+app.get('/:agencySlug/:page', (req, res, next) => {
+    if (req.agency && req.params.agencySlug.toLowerCase() === req.agency.slug.toLowerCase()) {
+        const pageName = req.params.page.endsWith('.html') ? req.params.page : `${req.params.page}.html`;
+        const fileToServe = agencyPub(req.agency.slug, pageName);
+        if (fs.existsSync(fileToServe)) {
+            return res.sendFile(fileToServe);
+        }
+    }
+    next();
+});
 
 // ── Socket.IO ───────────────────────────────────────────────────
 function getSocketUserLocal(socket) {

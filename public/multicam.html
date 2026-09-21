@@ -260,6 +260,7 @@
         <!-- Renderizado dinámico de celdas de cámara -->
     </div>
 
+    <script src="/js/iframe-bridge.js"></script>
     <script src="/socket.io/socket.io.js"></script>
     <script>
         const urlParams = new URLSearchParams(window.location.search);
@@ -270,7 +271,7 @@
             document.body.classList.add('chroma');
         }
 
-        const socket = io({ query: user ? { user: user } : {} });
+        const socket = window.__iframeBridgeSocket || io({ query: user ? { user: user } : {} });
         let queensList = [];
         let equiposMap = {};
         

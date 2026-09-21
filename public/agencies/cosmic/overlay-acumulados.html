@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Universal Leaderboard Overlay — TikDance</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+        body, html {
+            width: 100vw;
+            height: 100vh;
+            background: transparent;
+            overflow: hidden;
+        }
+        #content-frame {
+            width: 100%;
+            height: 100%;
+            border: none;
+            background: transparent;
+            overflow: hidden;
+        }
+    </style>
+</head>
+<body>
+    <iframe id="content-frame" src="about:blank"></iframe>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script>
+        const urlParams = new URLSearchParams(window.location.search);
+        const userParam = urlParams.get('user') || '';
+
+        // Conectar a Socket.io pasando el usuario en el query param para OBS
+        const socket = io({ query: userParam ? { user: userParam } : {} });
+
+        const frame = document.getElementById('content-frame');
+
+        // Guardar la última vista cargada para evitar recargas redundantes del iframe
+        let ultimaVista = '';
+
+        // Reenviar TODOS los eventos del socket al iframe hijo vía postMessage
+        const originalOnevent = socket.onevent;
+        socket.onevent = function (packet) {
+            const args = packet.data || [];
+            const eventName = args[0];
+            const eventData = args[1];
+
+            if (eventName && frame && frame.contentWindow) {
+                try {
+                    frame.contentWindow.postMessage({
+                        type: 'SOCKET_IO_EVENT',
+                        event: eventName,
+                        data: eventData
+                    }, '*');
+                } catch (err) {
+                    console.error('[Cosmic Leaderboard Bridge] Error reenviando evento:', err);
+                }
+            }
+
+            if (originalOnevent) {
+                originalOnevent.call(this, packet);
+            }
+        };
+
+        window.addEventListener('message', (e) => {
+            if (e.data && e.data.type === 'IFRAME_BRIDGE_READY') {
+                if (frame && frame.contentWindow) {
+                    frame.contentWindow.postMessage({
+                        type: 'SOCKET_IO_CONNECT',
+                        connected: socket.connected
+                    }, '*');
+                }
+            }
+        });
+
+        socket.on('connect', () => {
+            if (frame && frame.contentWindow) {
+                frame.contentWindow.postMessage({
+                    type: 'SOCKET_IO_CONNECT',
+                    connected: true
+                }, '*');
+            }
+        });
+
+        socket.on('disconnect', () => {
+            if (frame && frame.contentWindow) {
+                frame.contentWindow.postMessage({
+                    type: 'SOCKET_IO_CONNECT',
+                    connected: false
+                }, '*');
+            }
+        });
+
+        socket.on('cambioVistaAcumulados', (vista) => {
+            if (!vista) return;
+            if (vista === ultimaVista) return;
+            ultimaVista = vista;
+
+            const pathParts = window.location.pathname.split('/').filter(Boolean);
+            const agencySlug = (pathParts.length > 0 && !pathParts[0].includes('.')) ? pathParts[0] : null;
+
+            let targetUrl = vista;
+            if (agencySlug && !targetUrl.startsWith(`/${agencySlug}`)) {
+                targetUrl = targetUrl === '/' ? `/${agencySlug}` : `/${agencySlug}${targetUrl}`;
+            }
+
+            if (userParam) {
+                const connector = targetUrl.includes('?') ? '&' : '?';
+                targetUrl += `${connector}user=${userParam}`;
+            }
+            frame.src = targetUrl;
+        });
+    </script>
+</body>
+</html>

@@ -96,28 +96,29 @@ class DBInstance {
         return this.cacheQueens;
     }
 
-    async crearQueen(name, color, apodo = '', regaloImg = '', regaloPts = 0, avatarImg = '') {
+    async crearQueen(name, color, apodo = '', regaloImg = '', regaloPts = 0, avatarImg = '', nombreImg = '') {
         const uId = await this.ensureUserId();
         if (!uId) return;
         try {
             await query(`
-                INSERT INTO queens (user_id, name, color, apodo, regalo_img, regalo_pts, avatar_img, activo)
-                VALUES ($1, $2, $3, $4, $5, $6, $7, 1)
+                INSERT INTO queens (user_id, name, color, apodo, regalo_img, regalo_pts, avatar_img, nombre_img, activo)
+                VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 1)
                 ON CONFLICT (user_id, name) DO UPDATE SET
                     color = EXCLUDED.color,
                     apodo = EXCLUDED.apodo,
                     regalo_img = EXCLUDED.regalo_img,
                     regalo_pts = EXCLUDED.regalo_pts,
                     avatar_img = EXCLUDED.avatar_img,
+                    nombre_img = EXCLUDED.nombre_img,
                     activo = 1
-            `, [uId, name, color, apodo, regaloImg, regaloPts, avatarImg]);
+            `, [uId, name, color, apodo, regaloImg, regaloPts, avatarImg, nombreImg]);
             await this.cargarCache();
         } catch (e) {
             console.error('Error en crearQueen:', e.message);
         }
     }
 
-    async editarQueen(name, color, apodo = null, regaloImg = null, regaloPts = null, avatarImg = null) {
+    async editarQueen(name, color, apodo = null, regaloImg = null, regaloPts = null, avatarImg = null, nombreImg = null) {
         const uId = await this.ensureUserId();
         if (!uId) return;
         try {
@@ -129,6 +130,7 @@ class DBInstance {
             if (regaloImg !== null) { sets.push(`regalo_img = $${++idx}`); vals.push(regaloImg); }
             if (regaloPts !== null) { sets.push(`regalo_pts = $${++idx}`); vals.push(regaloPts); }
             if (avatarImg !== null) { sets.push(`avatar_img = $${++idx}`); vals.push(avatarImg); }
+            if (nombreImg !== null) { sets.push(`nombre_img = $${++idx}`); vals.push(nombreImg); }
 
             vals.push(uId);
             const idxUid = ++idx;

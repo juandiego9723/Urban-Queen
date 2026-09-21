@@ -136,11 +136,12 @@
             <div class="final-trofeo">🏆</div>
             <div class="final-nombre" id="final-nombre">-</div>
         </div>
+        <script src="/js/iframe-bridge.js"></script>
         <script src="/socket.io/socket.io.js"></script>
         <script>
         const urlParams = new URLSearchParams(window.location.search);
         const userParam = urlParams.get('user') || '';
-        const socket = io({ query: userParam ? { user: userParam } : {} });
+        const socket = window.__iframeBridgeSocket || io({ query: userParam ? { user: userParam } : {} });
 let configActual = null;
 let participantes = [];
 let puntosActuales = {};

@@ -39,11 +39,134 @@
 
         // Guardar la última vista cargada para evitar recargas redundantes del iframe
         let ultimaVista = '';
+        // Cola de eventos pendientes mientras el iframe carga
+        let eventQueue = [];
+        let iframeReady = false;
 
+        // ── Función para reenviar un evento al iframe vía postMessage ──
+        function forwardToIframe(event, data) {
+            const msg = { type: 'socket-event', event: event, data: data };
+            if (iframeReady && frame.contentWindow) {
+                try { frame.contentWindow.postMessage(msg, '*'); } catch(e) {}
+            } else {
+                // Acumular mientras carga
+                eventQueue.push(msg);
+            }
+        }
+
+        // Cuando el iframe termine de cargar, enviar los eventos pendientes
+        frame.addEventListener('load', function() {
+            iframeReady = true;
+            // Dar un pequeño delay para que el script iframe-bridge.js se inicialice
+            setTimeout(function() {
+                eventQueue.forEach(function(msg) {
+                    try { frame.contentWindow.postMessage(msg, '*'); } catch(e) {}
+                });
+                eventQueue = [];
+            }, 150);
+        });
+
+        // ── Escuchar mensajes desde el iframe (puente bidireccional) ──
+        window.addEventListener('message', function(e) {
+            if (!e.data || !e.data.type) return;
+            if (e.data.type === 'IFRAME_BRIDGE_READY') {
+                forwardToIframe('connect', { connected: socket.connected });
+            } else if (e.data.type === 'SOCKET_IO_EMIT' || e.data.type === 'iframe-socket-emit') {
+                if (socket && e.data.event) {
+                    socket.emit(e.data.event, e.data.data);
+                }
+            }
+        });
+
+        // ══════════════════════════════════════════════════════════════
+        //  LISTA COMPLETA DE EVENTOS SOCKET.IO PARA REENVIAR AL IFRAME
+        //  Cualquier evento que emita el servidor se reenvía al iframe
+        // ══════════════════════════════════════════════════════════════
+
+        // ── Batalla ──
+        socket.on('batallaInicio', function(d) { forwardToIframe('batallaInicio', d); });
+        socket.on('batallaTick', function(d) { forwardToIframe('batallaTick', d); });
+        socket.on('batallaPuntos', function(d) { forwardToIframe('batallaPuntos', d); });
+        socket.on('batallaFin', function(d) { forwardToIframe('batallaFin', d); });
+        socket.on('batallaCancelada', function(d) { forwardToIframe('batallaCancelada', d); });
+        socket.on('nuevoRegalo', function(d) { forwardToIframe('nuevoRegalo', d); });
+
+        // ── Timer / Baile ──
+        socket.on('timerInicio', function(d) { forwardToIframe('timerInicio', d); });
+        socket.on('timerTick', function(d) { forwardToIframe('timerTick', d); });
+        socket.on('timerTransicion', function(d) { forwardToIframe('timerTransicion', d); });
+        socket.on('timerTransicionTick', function(d) { forwardToIframe('timerTransicionTick', d); });
+        socket.on('timerCancelado', function(d) { forwardToIframe('timerCancelado', d); });
+
+        // ── Conociendo ──
+        socket.on('conociendoInicio', function(d) { forwardToIframe('conociendoInicio', d); });
+        socket.on('conociendoTick', function(d) { forwardToIframe('conociendoTick', d); });
+        socket.on('conociendoPuntos', function(d) { forwardToIframe('conociendoPuntos', d); });
+        socket.on('conociendoTransicion', function(d) { forwardToIframe('conociendoTransicion', d); });
+        socket.on('conociendoTransicionTick', function(d) { forwardToIframe('conociendoTransicionTick', d); });
+        socket.on('conociendoCancelado', function(d) { forwardToIframe('conociendoCancelado', d); });
+
+        // ── Revivir / Torneo ──
+        socket.on('revivirInicio', function(d) { forwardToIframe('revivirInicio', d); });
+        socket.on('revivirTick', function(d) { forwardToIframe('revivirTick', d); });
+        socket.on('revivirPuntos', function(d) { forwardToIframe('revivirPuntos', d); });
+        socket.on('revivirFin', function(d) { forwardToIframe('revivirFin', d); });
+        socket.on('revivirFalloTiempoOut', function(d) { forwardToIframe('revivirFalloTiempoOut', d); });
+        socket.on('revivirCancelado', function(d) { forwardToIframe('revivirCancelado', d); });
+        socket.on('torneoFinRondaEsperandoDecision', function(d) { forwardToIframe('torneoFinRondaEsperandoDecision', d); });
+        socket.on('torneoTurnoTerminado', function(d) { forwardToIframe('torneoTurnoTerminado', d); });
+        socket.on('torneoCampeonaPantalla', function(d) { forwardToIframe('torneoCampeonaPantalla', d); });
+        socket.on('torneoPuntosActualizados', function(d) { forwardToIframe('torneoPuntosActualizados', d); });
+
+        // ── Dinámicas Personalizadas ──
+        socket.on('dinamicaInicio', function(d) { forwardToIframe('dinamicaInicio', d); });
+        socket.on('dinamicaTick', function(d) { forwardToIframe('dinamicaTick', d); });
+        socket.on('dinamicaPuntos', function(d) { forwardToIframe('dinamicaPuntos', d); });
+        socket.on('dinamicaFin', function(d) { forwardToIframe('dinamicaFin', d); });
+        socket.on('dinamicaCancelada', function(d) { forwardToIframe('dinamicaCancelada', d); });
+
+        // ── Copa / Fútbol ──
+        socket.on('actualizarCopa', function(d) { forwardToIframe('actualizarCopa', d); });
+        socket.on('futbolConfigActualizada', function(d) { forwardToIframe('futbolConfigActualizada', d); });
+
+        // ── Ranking ──
+        socket.on('rankingActualizado', function(d) { forwardToIframe('rankingActualizado', d); });
+        socket.on('actualizarRanking', function(d) { forwardToIframe('actualizarRanking', d); });
+        socket.on('rankingTitulosActualizados', function(d) { forwardToIframe('rankingTitulosActualizados', d); });
+        socket.on('resetRanking', function(d) { forwardToIframe('resetRanking', d); });
+        socket.on('resetMensual', function(d) { forwardToIframe('resetMensual', d); });
+        socket.on('resetDiario', function(d) { forwardToIframe('resetDiario', d); });
+        socket.on('modoRankingCambiado', function(d) { forwardToIframe('modoRankingCambiado', d); });
+
+        // ── Queens / Config ──
+        socket.on('queensActualizadas', function(d) { forwardToIframe('queensActualizadas', d); });
+        socket.on('marcaCambiado', function(d) { forwardToIframe('marcaCambiado', d); });
+        socket.on('tiktokEstado', function(d) { forwardToIframe('tiktokEstado', d); });
+        socket.on('tiktokLiveEvent', function(d) { forwardToIframe('tiktokLiveEvent', d); });
+        socket.on('catalogoCargado', function(d) { forwardToIframe('catalogoCargado', d); });
+        socket.on('regalosCustomActualizados', function(d) { forwardToIframe('regalosCustomActualizados', d); });
+        socket.on('mapaRegalosCambiado', function(d) { forwardToIframe('mapaRegalosCambiado', d); });
+        socket.on('mapaTimerCambiado', function(d) { forwardToIframe('mapaTimerCambiado', d); });
+        socket.on('regaloDetectado', function(d) { forwardToIframe('regaloDetectado', d); });
+
+        socket.on('connect', function() {
+            forwardToIframe('connect', { connected: true });
+        });
+        socket.on('disconnect', function() {
+            forwardToIframe('disconnect', { connected: false });
+        });
+
+        // ══════════════════════════════════════════════════════════════
+        //  CAMBIO DE VISTA — este es el evento que controla qué iframe cargar
+        // ══════════════════════════════════════════════════════════════
         socket.on('cambioVista', (vista) => {
             if (!vista) return;
             if (vista === ultimaVista) return;
             ultimaVista = vista;
+
+            // Resetear estado del iframe
+            iframeReady = false;
+            eventQueue = [];
 
             // Construir URL del iframe y propagar el usuario
             let targetUrl = vista;

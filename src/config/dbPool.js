@@ -6,16 +6,18 @@ const connectionString = process.env.DATABASE_URL;
 let pool = null;
 
 if (connectionString) {
+    const isLocal = connectionString.includes('localhost') || connectionString.includes('127.0.0.1');
+
     pool = new Pool({
         connectionString,
-        ssl: { rejectUnauthorized: false }, // Requerido para Supabase y conexiones SSL cloud
+        ssl: isLocal ? false : { rejectUnauthorized: false },
         max: 20,
         idleTimeoutMillis: 30000,
         connectionTimeoutMillis: 10000
     });
 
     pool.on('connect', () => {
-        console.log('⚡ Conexión establecida con Supabase PostgreSQL');
+        console.log(`⚡ Conexión establecida con PostgreSQL (${isLocal ? 'Local' : 'Supabase Cloud'})`);
     });
 
     pool.on('error', (err) => {

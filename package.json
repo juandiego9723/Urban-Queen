@@ -9,6 +9,12 @@
     "dev": "nodemon server.js",
     "clean": "node scripts/cleanupProject.js",
     "migrate:db": "node scripts/migrateFromSqliteToSupabase.js",
+    "init:local": "node scripts/initLocalDb.js",
+    "inspect": "node scripts/inspectBranch.js",
+    "inspect:details": "node scripts/extractCosmicDetails.js",
+    "inspect:deep": "node scripts/deepInspectCosmic.js",
+    "inspect:tree": "node scripts/listCosmicTree.js",
+    "extract:cosmic": "node scripts/extractCosmicBranchFiles.js",
     "push": "node scripts/gitPush.js"
   },
   "keywords": [],
@@ -16,12 +22,12 @@
   "license": "ISC",
   "type": "commonjs",
   "dependencies": {
-    "express": "^5.2.1",
-    "pg": "^8.11.5",
     "dotenv": "^16.4.5",
+    "express": "^5.2.1",
     "nodemon": "^3.1.0",
+    "pg": "^8.11.5",
     "socket.io": "^4.8.3",
     "sql.js": "^1.11.0",
-    "tiktok-live-connector": "^2.1.1-beta1"
+    "tiktok-live-connector": "^2.5.0"
   }
 }

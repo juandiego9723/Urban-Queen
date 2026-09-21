@@ -75,9 +75,10 @@
             <h3 class="titulo">⏭ SALTA EL TURNO ⏭</h3>
             <div id="lista"></div>
         </div>
+        <script src="/js/iframe-bridge.js"></script>
         <script src="/socket.io/socket.io.js"></script>
         <script>
-        const socket = io();
+        const socket = window.__iframeBridgeSocket || io();
 
         async function cargar() {
             const queens = await (await fetch('/api/queens/all')).json();

@@ -102,6 +102,45 @@ async function cambiarPasswordConToken(token, nuevaPassword) {
     return record.username;
 }
 
+async function getAgencyBySlug(slug) {
+    if (!slug) return null;
+    try {
+        const res = await query('SELECT * FROM agencies WHERE LOWER(slug) = LOWER($1)', [slug.trim()]);
+        return res.rows.length > 0 ? res.rows[0] : null;
+    } catch (e) {
+        console.error('Error al obtener agencia:', e.message);
+        return null;
+    }
+}
+
+async function getAllAgencies() {
+    try {
+        const res = await query('SELECT * FROM agencies ORDER BY name');
+        return res.rows;
+    } catch (e) {
+        console.error('Error al obtener lista de agencias:', e.message);
+        return [];
+    }
+}
+
+async function getAgencyById(id) {
+    if (!id) return null;
+    try {
+        const res = await query('SELECT * FROM agencies WHERE id = $1', [id]);
+        return res.rows.length > 0 ? res.rows[0] : null;
+    } catch (e) {
+        console.error('Error al obtener agencia por ID:', e.message);
+        return null;
+    }
+}
+
+async function asignarUsuarioAAgencia(username, agencySlug) {
+    const agency = await getAgencyBySlug(agencySlug);
+    if (!agency) throw new Error(`La agencia '${agencySlug}' no existe.`);
+    await query('UPDATE users SET agency_id = $1 WHERE LOWER(username) = LOWER($2)', [agency.id, username.trim()]);
+    return true;
+}
+
 module.exports = {
     initMasterDB,
     registrarUsuario,
@@ -111,5 +150,10 @@ module.exports = {
     eliminarUsuario,
     crearTokenRecuperacion,
     validarTokenRecuperacion,
-    cambiarPasswordConToken
+    cambiarPasswordConToken,
+    getAgencyBySlug,
+    getAgencyById,
+    getAllAgencies,
+    asignarUsuarioAAgencia
 };
+

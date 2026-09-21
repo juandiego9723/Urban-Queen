@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>TikDance — Iniciar Sesión</title>
+    <script src="/js/agencyTheme.js"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
         :root {
@@ -283,7 +284,11 @@
                 });
 
                 if (res.ok) {
-                    window.location.href = '/control';
+                    const data = await res.json().catch(() => ({}));
+                    const pathParts = window.location.pathname.split('/').filter(Boolean);
+                    const pathSlug = (pathParts.length > 0 && pathParts[0] !== 'login') ? pathParts[0] : null;
+                    const agencySlug = data.agencySlug || pathSlug || 'urbanqueens';
+                    window.location.href = `/${agencySlug}/control`;
                 } else {
                     const text = await res.text();
                     errBox.textContent = text;

@@ -179,9 +179,10 @@
         <div id="lista-clasico"></div>
     </div>
 
+    <script src="/js/iframe-bridge.js"></script>
     <script src="/socket.io/socket.io.js"></script>
     <script>
-        const socket = io();
+        const socket = window.__iframeBridgeSocket || io();
         const listaClasico = document.getElementById('lista-clasico');
 
         // Memorias de puntos para saber cuándo animar

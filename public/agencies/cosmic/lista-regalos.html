@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="es">
+    <head>
+    <!-- Inyección de multi-cuenta -->
+    <script>
+        (function() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const user = urlParams.get('user');
+            if (user) {
+                const originalFetch = window.fetch;
+                window.fetch = function(url, options) {
+                    if (typeof url === 'string' && !url.includes('user=')) {
+                        const sep = url.includes('?') ? '&' : '?';
+                        url = url + sep + 'user=' + encodeURIComponent(user);
+                    }
+                    return originalFetch(url, options);
+                };
+                const originalIo = window.io;
+                if (originalIo) {
+                    window.io = function(opts) {
+                        opts = opts || {};
+                        opts.query = opts.query || {};
+                        opts.query.user = user;
+                        return originalIo(opts);
+                    };
+                } else {
+                    let _io = undefined;
+                    Object.defineProperty(window, 'io', {
+                        get: function() { return _io; },
+                        set: function(val) {
+                            _io = function(opts) {
+                                opts = opts || {};
+                                opts.query = opts.query || {};
+                                opts.query.user = user;
+                                return val(opts);
+                            };
+                        },
+                        configurable: true
+                    });
+                }
+            }
+        })();
+    </script>
+
+        <meta charset="UTF-8">
+        <title>Lista de Regalos</title>
+        <link href="https://fonts.googleapis.com/css2?family=Bangers&display=swap"
+              rel="stylesheet">
+        <style>
+        body { font-family: 'Bangers', cursive; margin: 0; padding: 10px; background: #00FF00; color: white; overflow: hidden; letter-spacing: 1px; }
+
+        /* Configuración de brillo neón global */
+        body.neon-none * {
+            text-shadow: none !important;
+            box-shadow: none !important;
+            border-color: rgba(255,255,255,0.2) !important;
+        }
+        body.neon-low * {
+            text-shadow: 0 0 3px currentColor !important;
+            box-shadow: 0 0 5px currentColor !important;
+        }
+        .lista-container { display: flex; flex-direction: column; gap: 8px; background: rgba(0,0,0,0.75); border: 3px solid #39FF14; border-radius: 15px; padding: 14px; width: max-content; box-shadow: 0 0 15px rgba(57,255,20,0.5); }
+        .titulo { color: #39FF14; font-size: 22px; text-align: center; text-shadow: 2px 2px 4px #000; margin: 0 0 6px 0; }
+        .item-regalo { display: flex; align-items: center; gap: 12px; background: rgba(255,255,255,0.08); padding: 5px 14px; border-radius: 10px; border-left: 5px solid; }
+        .item-img { width: 46px; height: 46px; object-fit: contain; border-radius: 6px; }
+        .item-emoji { width: 46px; height: 46px; display: flex; align-items: center; justify-content: center; font-size: 34px; }
+        .info { display: flex; flex-direction: column; line-height: 1.15; }
+        .nombre { font-size: 22px; text-shadow: 1px 1px 3px #000; }
+        .costo { font-size: 14px; color: #FFD700; background: #000; padding: 0 5px; border-radius: 3px; width: fit-content; }
+        .costo-vacio { color: var(--muted, #888); font-size: 12px; }
+        </style>
+    </head>
+    <body>
+        <div class="lista-container">
+            <h3 class="titulo">⏭ SALTA EL TURNO ⏭</h3>
+            <div id="lista"></div>
+        </div>
+        <script src="/js/iframe-bridge.js"></script>
+        <script src="/socket.io/socket.io.js"></script>
+        <script>
+        const socket = window.__iframeBridgeSocket || io();
+
+        async function cargar() {
+            const queens = await (await fetch('/api/queens/all')).json();
+            const apodos = await (await fetch('/api/apodos')).json();
+            const mapaRaw = await (await fetch('/api/tiktok/timer_mapa')).json();
+            const catData = await (await fetch('/api/tiktok/catalogo')).json();
+            const catalogo = catData.regalos || [];
+
+            // Invertir mapa (Queen -> GiftName)
+            const reinaAregalo = {};
+            for (let gift in mapaRaw) {
+                const queenName = mapaRaw[gift];
+                if (!reinaAregalo[queenName]) reinaAregalo[queenName] = gift;
+            }
+
+            const lista = document.getElementById('lista');
+            lista.innerHTML = '';
+            
+            queens.filter(q => q.activo).forEach(q => {
+                const nombre = (apodos[q.name] || q.name).toUpperCase();
+                const color = q.color || '#ffffff';
+                
+                // Buscar si tiene regalo asignado en TikTok
+                const giftName = reinaAregalo[q.name];
+                const giftOficial = giftName ? catalogo.find(g => g.name === giftName) : null;
+                
+                let img = '';
+                let pts = q.regalo_pts || 0; // fallback a puntos configurados
+                let costoHtml = '';
+
+                if (giftOficial) {
+                    img = giftOficial.imageUrl || '';
+                    pts = giftOficial.diamondCount || pts;
+                    costoHtml = pts > 0 ? `<span class="costo">${pts} 💎</span>` : '';
+                } else {
+                    // Fallback a imagen preconfigurada si no está mapeada en TikTok
+                    const rawImg = q.regalo_img || '';
+                    img = rawImg && !rawImg.startsWith('/') && !rawImg.startsWith('http') ? '/regalos/' + rawImg : rawImg;
+                    costoHtml = pts > 0 ? `<span class="costo">${pts} PTS</span>` : `<span class="costo-vacio">sin asignar</span>`;
+                }
+
+                const mediaHtml = img
+                    ? `<img class="item-img" src="${img}" alt="🎁" onerror="this.style.display='none';this.nextSibling.style.display='flex'">\
+<div class="item-emoji" style="display:none">🎁</div>`
+                    : `<div class="item-emoji">🎁</div>`;
+
+                lista.innerHTML += `
+                    <div class="item-regalo" style="border-color:${color}">
+                        ${mediaHtml}
+                        <div class="info">
+                            <span class="nombre" style="color:${color}">${nombre}</span>
+                            ${costoHtml}
+                        </div>
+                    </div>`;
+            });
+        }
+
+        socket.on('queensActualizadas', cargar);
+        cargar();
+
+        // ── BRAND MANAGER LOGIC ──
+        function loadGoogleFont(fontName) {
+            if (!fontName) return;
+            const fontId = 'custom-google-font';
+            let link = document.getElementById(fontId);
+            if (!link) {
+                link = document.createElement('link');
+                link.id = fontId;
+                link.rel = 'stylesheet';
+                document.head.appendChild(link);
+            }
+            link.href = `https://fonts.googleapis.com/css2?family=${encodeURIComponent(fontName)}:wght@400;700;800;900&display=swap`;
+            document.body.style.fontFamily = `'${fontName}', sans-serif`;
+        }
+
+        function aplicarMarca(config) {
+            if (!config) return;
+            // Tipografía
+            if (config.fontFamily) {
+                loadGoogleFont(config.fontFamily);
+            }
+            // Logotipo
+            const logoContainer = document.getElementById('agency-logo-container');
+            const logoImg = document.getElementById('agency-logo');
+            if (logoContainer && logoImg) {
+                if (config.logoUrl) {
+                    logoImg.src = config.logoUrl;
+                    logoContainer.style.opacity = '1';
+                    logoContainer.style.transform = 'scale(1)';
+                } else {
+                    logoContainer.style.opacity = '0';
+                    logoContainer.style.transform = 'scale(0.8)';
+                }
+            }
+            // Brillo neón
+            document.body.classList.remove('neon-none', 'neon-low', 'neon-high');
+            if (config.neonIntensity && config.neonIntensity !== 'normal') {
+                document.body.classList.add('neon-' + config.neonIntensity);
+            }
+        }
+
+        socket.on('marcaCambiado', aplicarMarca);
+        </script>
+
+    <!-- Logotipo de la Agencia Flotante -->
+    <div id="agency-logo-container" style="position: absolute; top: 20px; right: 20px; z-index: 9999; pointer-events: none; transition: all 0.5s ease; opacity: 0; transform: scale(0.8);">
+        <img id="agency-logo" src="" style="max-height: 80px; max-width: 150px; object-fit: contain; filter: drop-shadow(0 0 10px rgba(0,0,0,0.5));">
+    </div>
+</body>
+</html>

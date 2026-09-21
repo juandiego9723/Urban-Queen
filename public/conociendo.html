@@ -123,9 +123,10 @@
                 </div>
             </div>
         </div>
+        <script src="/js/iframe-bridge.js"></script>
         <script src="/socket.io/socket.io.js"></script>
         <script>
-        const socket = io();
+        const socket = window.__iframeBridgeSocket || io();
         let QUEEN_COLORS = {};
         let APODOS = {};
         const contenedor = document.getElementById('contenedor-principal');

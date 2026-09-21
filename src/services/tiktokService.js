@@ -1,10 +1,61 @@
-const { WebcastPushConnection } = require('tiktok-live-connector');
+let WebcastPushConnection;
+let RouteConfig;
+let RoomIdRouteConfig;
+let IsLiveRouteConfig;
+
+try {
+    const tlcMain = require('tiktok-live-connector');
+    RouteConfig = tlcMain.RouteConfig;
+    RoomIdRouteConfig = tlcMain.RoomIdRouteConfig;
+    IsLiveRouteConfig = tlcMain.IsLiveRouteConfig;
+} catch (e) {}
+
+try {
+    const tlcLegacy = require('tiktok-live-connector/legacy');
+    WebcastPushConnection = tlcLegacy.WebcastPushConnection || tlcLegacy.TikTokLiveConnection || tlcLegacy;
+    if (!RouteConfig) RouteConfig = tlcLegacy.RouteConfig;
+    if (!RoomIdRouteConfig) RoomIdRouteConfig = tlcLegacy.RoomIdRouteConfig;
+    if (!IsLiveRouteConfig) IsLiveRouteConfig = tlcLegacy.IsLiveRouteConfig;
+} catch (e) {
+    const tlc = require('tiktok-live-connector');
+    WebcastPushConnection = tlc.WebcastPushConnection || tlc.TikTokLiveConnection || tlc;
+    if (!RouteConfig) RouteConfig = tlc.RouteConfig;
+    if (!RoomIdRouteConfig) RoomIdRouteConfig = tlc.RoomIdRouteConfig;
+    if (!IsLiveRouteConfig) IsLiveRouteConfig = tlc.IsLiveRouteConfig;
+}
+
+// Desactivar completamente los fallbacks externos a EulerStream (evita Rate Limits anónimos y peticiones de planes de pago)
+if (RoomIdRouteConfig) RoomIdRouteConfig.skipFetchRoomIdFromEulerRoute = true;
+if (IsLiveRouteConfig) IsLiveRouteConfig.skipFetchRoomIdFromEulerRoute = true;
+
+// Parche de respaldo: Si EulerStream rechaza la firma por requerir plan pago Business, continuar con la URL directa
+if (RouteConfig && RouteConfig.fetchWebcastSignatureFromProvider) {
+    const originalFetchSignature = RouteConfig.fetchWebcastSignatureFromProvider;
+    RouteConfig.fetchWebcastSignatureFromProvider = async (args) => {
+        try {
+            return await originalFetchSignature(args);
+        } catch (err) {
+            const errStr = (err && err.message) ? err.message : String(err);
+            if (errStr.includes('Business plan') || errStr.includes('Euler') || errStr.includes('rate_limit') || errStr.includes('pricing')) {
+                console.warn('⚠️ [TikTok Connector] Omitiendo firmas de EulerStream (Rate Limit / Business Plan). Continuando con conexión directa.');
+                return { response: { signedUrl: args.url, userAgent: args.userAgent } };
+            }
+            throw err;
+        }
+    };
+}
 
 function createTikTokService(app, io, requireSession, activeSessions, procesarRegaloTikTokFn) {
 
     function conectarTikTok(username, usuarioTikTok) {
         const session = activeSessions[username];
         if (!session) return;
+
+        // Si ya está intentando conectar con el mismo usuario en este momento, ignorar para evitar Rate Limits
+        if (session.tiktokEstado === 'conectando' && session.tiktokUsuario === usuarioTikTok) {
+            console.log(`[TikTok] Conexión en curso para @${usuarioTikTok}. Ignorando petición duplicada.`);
+            return;
+        }
 
         if (session.tiktokConnection) {
             try {
@@ -22,7 +73,14 @@ function createTikTokService(app, io, requireSession, activeSessions, procesarRe
         io.to(username).emit('tiktokEstado', { estado: 'conectando', usuario: usuarioTikTok });
 
         const connection = new WebcastPushConnection(usuarioTikTok, {
-            enableExtendedGiftInfo: true
+            enableExtendedGiftInfo: true,
+            requestOptions: {
+                timeout: 15000
+            },
+            clientParams: {
+                app_language: 'es-ES',
+                webcast_language: 'es-ES'
+            }
         });
 
         session.tiktokConnection = connection;
@@ -106,7 +164,19 @@ function createTikTokService(app, io, requireSession, activeSessions, procesarRe
         }).catch(err => {
             console.error('Error al conectar TikTok:', err);
             session.tiktokEstado = 'error';
-            session.tiktokMensajeError = err.message || (err.toString ? err.toString() : 'Error desconocido');
+            
+            let rawErr = (err && err.message) ? err.message : (err ? err.toString() : 'Error desconocido');
+            const errDetails = JSON.stringify(err || {});
+            
+            if (rawErr.includes('user_not_found') || errDetails.includes('19881007') || rawErr.includes('FetchIsLiveError')) {
+                rawErr = `El usuario @${usuarioTikTok} no existe o no está transmitiendo EN VIVO en este momento.`;
+            } else if (rawErr.includes('Rate Limited') || rawErr.includes('rate_limit')) {
+                rawErr = `Se alcanzó el límite anónimo del servidor externo EulerStream. Se ha desactivado EulerStream para usar la conexión directa de TikTok.`;
+            } else if (rawErr.includes('Sign Error') || rawErr.includes('500')) {
+                rawErr = `Error 500 del servidor de firmas de TikTok. Verifica que la cuenta esté en vivo o reintenta en un momento.`;
+            }
+            
+            session.tiktokMensajeError = rawErr;
             io.to(username).emit('tiktokEstado', { estado: 'error', usuario: usuarioTikTok, error: session.tiktokMensajeError });
             session.tiktokConnection = null;
         });

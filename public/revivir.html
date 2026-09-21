@@ -437,9 +437,10 @@
             </div>
         </div>
 
+        <script src="/js/iframe-bridge.js"></script>
         <script src="/socket.io/socket.io.js"></script>
         <script>
-        const socket = io();
+        const socket = window.__iframeBridgeSocket || io();
         
         let QUEEN_COLORS = {};
         let QUEEN_AVATARS = {};

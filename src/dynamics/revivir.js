@@ -4,34 +4,54 @@ function setupRevivirDynamics(app, io, requireSession, activeSessions) {
         const s = activeSessions[username];
         if (!s || !s.timerBaile.modoTorneo) return;
 
-        const chica = s.revivir.chicaActual || s.timerBaile.chicaAEliminar;
+        const chica = s.timerBaile.chicaAEliminar || s.revivir.chicaActual;
         
         if (!s.timerBaile.salvadas) s.timerBaile.salvadas = [];
 
-        if (exito) {
-            // Éxito en salvación -> Marcar como salvada y asegurar que permanezca activa
-            if (!s.timerBaile.salvadas.includes(chica)) {
-                s.timerBaile.salvadas.push(chica);
-            }
-            if (!s.timerBaile.participantesActivas.includes(chica)) {
-                s.timerBaile.participantesActivas.push(chica);
-            }
-            s.timerBaile.eliminadas = s.timerBaile.eliminadas.filter(n => n !== chica);
-        } else {
+        if (!exito) {
             // Falló la salvación -> Registrar eliminación
             if (!s.timerBaile.eliminadas.includes(chica)) {
                 s.timerBaile.eliminadas.push(chica);
             }
             s.timerBaile.participantesActivas = s.timerBaile.participantesActivas.filter(n => n !== chica);
-            s.timerBaile.salvadas = s.timerBaile.salvadas.filter(n => n !== chica);
+        } else {
+            // Éxito en salvación
+            if (!s.timerBaile.salvadas.includes(chica)) {
+                s.timerBaile.salvadas.push(chica);
+            }
         }
 
         io.to(username).emit('queensActualizadas', { queens: s.QUEENS, equipos: s.equipos, apodos: s.db.getApodosMap() });
-
-        // Ocultar overlay
         io.to(username).emit('revivirCancelado');
 
-        // Notificar al panel sobre el resultado de la salvación de esta chica
+        if (exito) {
+            // Se salvó: buscar a la siguiente chica con menor puntaje no eliminada
+            const participantes = (s.timerBaile.participantesActivas || []).filter(c => !s.timerBaile.salvadas.includes(c));
+            if (participantes.length > 0) {
+                let lowestQueen = participantes[0];
+                let lowestPoints = s.timerBaile.puntosTorneo[lowestQueen] || 0;
+                participantes.forEach(q => {
+                    const pts = s.timerBaile.puntosTorneo[q] || 0;
+                    if (pts < lowestPoints) {
+                        lowestPoints = pts;
+                        lowestQueen = q;
+                    }
+                });
+
+                s.timerBaile.chicaAEliminar = lowestQueen;
+                io.to(username).emit('torneoFinRondaEsperandoDecision', {
+                    chica: lowestQueen,
+                    puntos: lowestPoints,
+                    rondaActual: s.timerBaile.rondaActual,
+                    esUltimaRonda: (s.timerBaile.rondaActual === s.timerBaile.rondasTotales),
+                    puntosTorneo: s.timerBaile.puntosTorneo,
+                    participantesActivas: s.timerBaile.participantesActivas,
+                    eliminadas: s.timerBaile.eliminadas
+                });
+                return;
+            }
+        }
+
         io.to(username).emit('torneoSalvacionConcluida', {
             chica,
             exito,
