@@ -16,7 +16,7 @@
     "inspect:tree": "node scripts/listCosmicTree.js",
     "extract:cosmic": "node scripts/extractCosmicBranchFiles.js",
     "push": "node scripts/gitPush.js",
-    "postinstall": "node scripts/patch-tiktok-connector.js"
+    "postinstall": "node -e \"try { if (require('fs').existsSync('./scripts/patch-tiktok-connector.js')) require('./scripts/patch-tiktok-connector.js'); } catch(e){}\""
   },
   "keywords": [],
   "author": "",
