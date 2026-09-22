@@ -66,11 +66,15 @@ function createPointsProcessor(io, activeSessions, resolverNombreFn, timerHandle
         ).trim();
 
         function resolverStringUrl(val) {
-            if (typeof val === 'string' && val.length > 5 && (val.startsWith('http://') || val.startsWith('https://'))) {
-                return val;
+            if (typeof val === 'string' && val.length > 5) {
+                let str = val.trim();
+                if (str.startsWith('//')) str = 'https:' + str;
+                if (str.startsWith('http://') || str.startsWith('https://')) {
+                    return str;
+                }
             }
             if (Array.isArray(val) && val.length > 0) {
-                return resolverStringUrl(val.find(x => typeof x === 'string' && x.includes('100x100')) || val[0]);
+                return resolverStringUrl(val.find(x => typeof x === 'string' && (x.includes('100x100') || x.includes('.webp'))) || val[0]);
             }
             if (val && typeof val === 'object') {
                 const list = val.urlList || val.url_list || val.urls || val.url;
