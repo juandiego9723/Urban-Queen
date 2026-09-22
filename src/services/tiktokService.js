@@ -1,3 +1,7 @@
+try {
+    require('../../scripts/patch-tiktok-connector.js');
+} catch (e) {}
+
 let WebcastPushConnection;
 let RouteConfig;
 let RoomIdRouteConfig;

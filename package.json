@@ -15,7 +15,8 @@
     "inspect:deep": "node scripts/deepInspectCosmic.js",
     "inspect:tree": "node scripts/listCosmicTree.js",
     "extract:cosmic": "node scripts/extractCosmicBranchFiles.js",
-    "push": "node scripts/gitPush.js"
+    "push": "node scripts/gitPush.js",
+    "postinstall": "node scripts/patch-tiktok-connector.js"
   },
   "keywords": [],
   "author": "",
