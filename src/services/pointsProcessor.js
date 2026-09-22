@@ -65,15 +65,29 @@ function createPointsProcessor(io, activeSessions, resolverNombreFn, timerHandle
             ''
         ).trim();
 
+        function resolverStringUrl(val) {
+            if (typeof val === 'string' && val.length > 5 && (val.startsWith('http://') || val.startsWith('https://'))) {
+                return val;
+            }
+            if (Array.isArray(val) && val.length > 0) {
+                return resolverStringUrl(val.find(x => typeof x === 'string' && x.includes('100x100')) || val[0]);
+            }
+            if (val && typeof val === 'object') {
+                const list = val.urlList || val.url_list || val.urls || val.url;
+                if (list) return resolverStringUrl(list);
+            }
+            return '';
+        }
+
         const avatar = (
-            data.profilePictureUrl ||
-            data.user?.profilePictureUrl ||
-            data.userDetails?.profilePictureUrl ||
-            data.senderDetails?.profilePictureUrl ||
-            data.avatar ||
-            data.profilePictureUrls ||
-            (data.user?.avatarLarge?.urlList?.[0] || data.user?.avatarLarge?.url_list?.[0]) ||
-            (data.user?.avatarThumb?.urlList?.[0] || data.user?.avatarThumb?.url_list?.[0]) ||
+            resolverStringUrl(data.profilePictureUrl) ||
+            resolverStringUrl(data.user?.profilePictureUrl) ||
+            resolverStringUrl(data.userDetails?.profilePictureUrl || data.userDetails?.profilePictureUrls) ||
+            resolverStringUrl(data.senderDetails?.profilePictureUrl) ||
+            resolverStringUrl(data.avatar) ||
+            resolverStringUrl(data.user?.avatarLarge) ||
+            resolverStringUrl(data.user?.avatarMedium) ||
+            resolverStringUrl(data.user?.avatarThumb) ||
             ''
         );
         const giftName = (

@@ -218,31 +218,44 @@ function createTikTokService(app, io, requireSession, activeSessions, procesarRe
         });
 
         function resolverAvatarUsuario(data) {
-            if (data.profilePictureUrl) return data.profilePictureUrl;
-            if (data.userDetails?.profilePictureUrl) return data.userDetails.profilePictureUrl;
-            if (data.senderDetails?.profilePictureUrl) return data.senderDetails.profilePictureUrl;
-            
+            if (!data) return '';
+            function extraerUrl(val) {
+                if (typeof val === 'string' && val.length > 5 && (val.startsWith('http://') || val.startsWith('https://'))) {
+                    return val;
+                }
+                if (Array.isArray(val) && val.length > 0) {
+                    return extraerUrl(val.find(x => typeof x === 'string' && x.includes('100x100')) || val[0]);
+                }
+                if (val && typeof val === 'object') {
+                    const list = val.urlList || val.url_list || val.urls || val.url;
+                    if (list) return extraerUrl(list);
+                }
+                return '';
+            }
+
+            const c1 = extraerUrl(data.profilePictureUrl);
+            if (c1) return c1;
+
+            const c2 = extraerUrl(data.userDetails?.profilePictureUrl || data.userDetails?.profilePictureUrls);
+            if (c2) return c2;
+
+            const c3 = extraerUrl(data.senderDetails?.profilePictureUrl);
+            if (c3) return c3;
+
             const u = data.user || data.userDetails || data.senderDetails;
             if (u) {
-                const urls = u.avatarLarge?.urlList || u.avatarLarge?.url_list ||
-                             u.avatarMedium?.urlList || u.avatarMedium?.url_list ||
-                             u.avatarThumb?.urlList || u.avatarThumb?.url_list ||
-                             (Array.isArray(u.avatarLarge) ? u.avatarLarge : null) ||
-                             (Array.isArray(u.avatarThumb) ? u.avatarThumb : null);
-                if (Array.isArray(urls) && urls.length > 0) {
-                    return urls.find(x => typeof x === 'string' && x.includes('100x100')) ||
-                           urls.find(x => typeof x === 'string' && x.includes('.webp')) ||
-                           urls[0];
-                }
+                const urls = u.avatarLarge?.urlList || u.avatarLarge?.url_list || u.avatarLarge ||
+                             u.avatarMedium?.urlList || u.avatarMedium?.url_list || u.avatarMedium ||
+                             u.avatarThumb?.urlList || u.avatarThumb?.url_list || u.avatarThumb;
+                const c4 = extraerUrl(urls);
+                if (c4) return c4;
             }
             return '';
         }
 
         connection.on('gift', (data) => {
-            // Garantizar la extracción del avatar en la app enviada a producción (Cloud Run)
-            if (!data.profilePictureUrl) {
-                data.profilePictureUrl = resolverAvatarUsuario(data);
-            }
+            // Garantizar que data.profilePictureUrl sea SIEMPRE un string URL válido
+            data.profilePictureUrl = resolverAvatarUsuario(data);
 
             // Resolver giftName desde giftId si la librería no lo envía
             if (!data.giftName && data.giftId) {
