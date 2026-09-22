@@ -217,7 +217,33 @@ function createTikTokService(app, io, requireSession, activeSessions, procesarRe
             session.tiktokConnection = null;
         });
 
+        function resolverAvatarUsuario(data) {
+            if (data.profilePictureUrl) return data.profilePictureUrl;
+            if (data.userDetails?.profilePictureUrl) return data.userDetails.profilePictureUrl;
+            if (data.senderDetails?.profilePictureUrl) return data.senderDetails.profilePictureUrl;
+            
+            const u = data.user || data.userDetails || data.senderDetails;
+            if (u) {
+                const urls = u.avatarLarge?.urlList || u.avatarLarge?.url_list ||
+                             u.avatarMedium?.urlList || u.avatarMedium?.url_list ||
+                             u.avatarThumb?.urlList || u.avatarThumb?.url_list ||
+                             (Array.isArray(u.avatarLarge) ? u.avatarLarge : null) ||
+                             (Array.isArray(u.avatarThumb) ? u.avatarThumb : null);
+                if (Array.isArray(urls) && urls.length > 0) {
+                    return urls.find(x => typeof x === 'string' && x.includes('100x100')) ||
+                           urls.find(x => typeof x === 'string' && x.includes('.webp')) ||
+                           urls[0];
+                }
+            }
+            return '';
+        }
+
         connection.on('gift', (data) => {
+            // Garantizar la extracción del avatar en la app enviada a producción (Cloud Run)
+            if (!data.profilePictureUrl) {
+                data.profilePictureUrl = resolverAvatarUsuario(data);
+            }
+
             // Resolver giftName desde giftId si la librería no lo envía
             if (!data.giftName && data.giftId) {
                 const gid = parseInt(data.giftId);
@@ -244,8 +270,7 @@ function createTikTokService(app, io, requireSession, activeSessions, procesarRe
                     if (!data.giftPictureUrl && found.imageUrl) data.giftPictureUrl = found.imageUrl;
                 }
                 console.log(`🎁 [Gift Resolved] ID:${data.giftId} → "${data.giftName || '???'}" (${data.diamondCount || '?'}💎)`);
-                // 🔍 DEBUG - Ver dónde está la info del usuario
-                console.log(`🔍 [USER INFO] uniqueId:${data.uniqueId || 'NONE'} | profilePic:${data.profilePictureUrl ? 'YES' : 'NONE'} | user:${data.user ? JSON.stringify(data.user).substring(0,200) : 'NONE'} | userId:${data.userId || 'NONE'} | nickname:${data.nickname || 'NONE'} | keys:[${Object.keys(data).join(',')}]`);
+                console.log(`🔍 [USER INFO] uniqueId:${data.uniqueId || 'NONE'} | profilePic:${data.profilePictureUrl ? 'YES' : 'NONE'} (${(data.profilePictureUrl || '').substring(0,60)}...)`);
             }
             if (typeof procesarRegaloTikTokFn === 'function') {
                 procesarRegaloTikTokFn(username, data);
@@ -253,20 +278,24 @@ function createTikTokService(app, io, requireSession, activeSessions, procesarRe
         });
 
         connection.on('chat', (data) => {
-            io.to(username).emit('tiktokLiveEvent', { tipo: 'chat', usuario: data.uniqueId, comentario: data.comment, avatar: data.profilePictureUrl });
+            const av = resolverAvatarUsuario(data);
+            io.to(username).emit('tiktokLiveEvent', { tipo: 'chat', usuario: data.uniqueId, comentario: data.comment, avatar: av });
         });
 
         connection.on('like', (data) => {
-            io.to(username).emit('tiktokLiveEvent', { tipo: 'like', usuario: data.uniqueId, cantidad: data.likeCount, avatar: data.profilePictureUrl });
+            const av = resolverAvatarUsuario(data);
+            io.to(username).emit('tiktokLiveEvent', { tipo: 'like', usuario: data.uniqueId, cantidad: data.likeCount, avatar: av });
         });
 
         connection.on('social', (data) => {
+            const av = resolverAvatarUsuario(data);
             const subtipo = (data.displayType && data.displayType.includes('follow')) ? 'follow' : 'share';
-            io.to(username).emit('tiktokLiveEvent', { tipo: subtipo, usuario: data.uniqueId, descripcion: data.label, avatar: data.profilePictureUrl });
+            io.to(username).emit('tiktokLiveEvent', { tipo: subtipo, usuario: data.uniqueId, descripcion: data.label, avatar: av });
         });
 
         connection.on('member', (data) => {
-            io.to(username).emit('tiktokLiveEvent', { tipo: 'join', usuario: data.uniqueId, avatar: data.profilePictureUrl });
+            const av = resolverAvatarUsuario(data);
+            io.to(username).emit('tiktokLiveEvent', { tipo: 'join', usuario: data.uniqueId, avatar: av });
         });
 
         connection.on('roomUser', (data) => {
