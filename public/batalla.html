@@ -380,67 +380,7 @@
             letter-spacing: 0.3px;
         }
 
-        /* ── BANNER GANADOR PREMIUM CON CONFETI ── */
-        #anuncio-fin {
-            display: none;
-            position: fixed;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            font-family: 'Bangers', cursive;
-            font-size: 80px;
-            color: #FFD700;
-            text-shadow: 0 0 30px rgba(255, 215, 0, 0.9), 5px 5px 0 #000;
-            letter-spacing: 4px;
-            text-align: center;
-            background: rgba(0, 0, 0, 0.94);
-            backdrop-filter: blur(15px);
-            -webkit-backdrop-filter: blur(15px);
-            padding: 35px 70px;
-            border-radius: 30px;
-            border: 4px solid #FFD700;
-            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.95),
-                0 0 40px rgba(255, 215, 0, 0.35);
-            z-index: 9999;
-            white-space: nowrap;
-            animation: zoom-in-bounce 0.65s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-            overflow: hidden;
-        }
 
-        #anuncio-fin::before {
-            content: '';
-            position: absolute;
-            top: -50%;
-            left: -60%;
-            width: 30%;
-            height: 200%;
-            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.25), transparent);
-            transform: rotate(30deg);
-            animation: sweep-banner 4s infinite linear;
-            z-index: 5;
-        }
-
-        @keyframes sweep-banner {
-            0% {
-                left: -60%;
-            }
-
-            100% {
-                left: 160%;
-            }
-        }
-
-        @keyframes zoom-in-bounce {
-            from {
-                transform: translate(-50%, -50%) scale(0.3);
-                opacity: 0;
-            }
-
-            to {
-                transform: translate(-50%, -50%) scale(1);
-                opacity: 1;
-            }
-        }
 
         /* Contenedor de confeti */
         .confetti-container {
@@ -491,7 +431,7 @@
 
     </div>
 
-    <div id="anuncio-fin"></div>
+    <div class="confetti-container"></div>
 
     <script src="/js/iframe-bridge.js"></script>
     <script src="/socket.io/socket.io.js"></script>
@@ -507,7 +447,6 @@
         let feedViewers = {}; // { [chica]: [{nick, avatar, giftImg, coins}] }
 
         const timerEl = document.getElementById('timer');
-        const anuncio = document.getElementById('anuncio-fin');
         const giftRow = document.getElementById('gift-row');
         const barOuter = document.getElementById('bar-outer');
         const namesRow = document.getElementById('names-row');
@@ -682,7 +621,8 @@
 
         // ── SOCKET EVENTS ──
         socket.on('batallaInicio', (data) => {
-            anuncio.style.display = 'none';
+            const confettiContainer = document.querySelector('.confetti-container');
+            if (confettiContainer) confettiContainer.innerHTML = '';
             timerEl.classList.remove('urgente');
             timerEl.style.color = '#FFD700';
             feedViewers = {};
@@ -711,14 +651,8 @@
             const nombreDisplay = esEmpate ? data.ganadora : (APODOS[data.ganadora] || data.ganadora);
             const texto = esEmpate ? nombreDisplay : '🏆 ¡GANÓ ' + nombreDisplay + '!';
             timerEl.textContent = texto;
+            timerEl.style.color = esEmpate ? '#fff' : '#FFD700';
             timerEl.classList.remove('urgente');
-
-            // Inyectar contenedor de confeti y texto con z-index
-            anuncio.innerHTML = `<div class="confetti-container"></div><div style="position:relative; z-index: 10;">${texto}</div>`;
-
-            anuncio.style.color = esEmpate ? '#fff' : '#FFD700';
-            anuncio.style.borderColor = esEmpate ? '#fff' : '#FFD700';
-            anuncio.style.display = 'block';
 
             crearConfeti();
 
@@ -726,13 +660,14 @@
                 const vicEl = document.getElementById('vic-' + data.ganadora);
                 if (vicEl) vicEl.textContent = '👑 X' + data.victorias[data.ganadora];
             }
-            setTimeout(() => { anuncio.style.display = 'none'; }, 6000);
         });
 
         socket.on('batallaCancelada', () => {
+            const confettiContainer = document.querySelector('.confetti-container');
+            if (confettiContainer) confettiContainer.innerHTML = '';
             timerEl.textContent = 'ESPERANDO BATALLA...';
+            timerEl.style.color = '#FFD700';
             timerEl.classList.remove('urgente');
-            anuncio.style.display = 'none';
         });
 
         socket.on('queensActualizadas', (data) => {

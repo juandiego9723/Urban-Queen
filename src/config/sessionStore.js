@@ -51,6 +51,7 @@ async function getUserSessionAsync(username, io, procesarPuntosFn) {
 
         const session = {
             db: dbInstance,
+            agencySlug: (username && username.toLowerCase().includes('cosmic')) ? 'cosmic' : 'urbanqueens',
             QUEENS: initialQueens,
             equipos: initialEquipos,
             rachasPerdidas: {},

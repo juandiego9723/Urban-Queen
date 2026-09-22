@@ -72,8 +72,21 @@ function createTikTokService(app, io, requireSession, activeSessions, procesarRe
         session.tiktokMensajeError = '';
         io.to(username).emit('tiktokEstado', { estado: 'conectando', usuario: usuarioTikTok });
 
+        let signApiKey = process.env.SIGN_API_KEY;
+        const isCosmic = (session.agencySlug === 'cosmic') ||
+                         (username && username.toLowerCase().includes('cosmic')) ||
+                         (usuarioTikTok && usuarioTikTok.toLowerCase().includes('cosmic'));
+
+        if (isCosmic && process.env.COSMIC_SIGN_API_KEY) {
+            signApiKey = process.env.COSMIC_SIGN_API_KEY;
+            console.log(`🔑 [TikTok Service] Conectando @${usuarioTikTok} usando API Key dedicada para COSMIC (${signApiKey.substring(0, 15)}...)`);
+        } else if (signApiKey) {
+            console.log(`🔑 [TikTok Service] Conectando @${usuarioTikTok} usando API Key por defecto TIKDANCE (${signApiKey.substring(0, 15)}...)`);
+        }
+
         const connection = new WebcastPushConnection(usuarioTikTok, {
             enableExtendedGiftInfo: true,
+            signApiKey: signApiKey,
             requestOptions: {
                 timeout: 15000
             },

@@ -1123,7 +1123,7 @@
                 <div class="menu-item tab" id="menu-item-agencia" onclick="cambiarTab('agencia',this)"
                     style="display:none">Consola Agencia</div>
                 <div class="divider"></div>
-                <div class="menu-item" onclick="window.location.href='/logout'"
+                <div class="menu-item" onclick="window.location.href=(window.CURRENT_AGENCY_SLUG ? '/' + window.CURRENT_AGENCY_SLUG + '/logout' : '/logout')"
                     style="color:var(--red);margin-top:auto;border-left-color:transparent">Cerrar Sesión</div>
             </div>
         </div>
@@ -4061,11 +4061,19 @@
                 } catch (e) { }
             }
 
+            function getAgencySlug() {
+                const parts = window.location.pathname.split('/').filter(Boolean);
+                const reserved = ['login', 'control', 'api'];
+                return (parts.length > 0 && !reserved.includes(parts[0])) ? parts[0] : (window.CURRENT_AGENCY_SLUG || '');
+            }
+
             function renderPantallas() {
+                const slug = getAgencySlug();
+                const agencyPrefix = slug ? `/${slug}` : '';
                 const userParam = currentUsername ? `?user=${encodeURIComponent(currentUsername)}` : '';
 
-                const urlUniversal = `${window.location.origin}/overlay-universal${userParam}`;
-                const urlAcumulados = `${window.location.origin}/overlay-acumulados${userParam}`;
+                const urlUniversal = `${window.location.origin}${agencyPrefix}/overlay-universal${userParam}`;
+                const urlAcumulados = `${window.location.origin}${agencyPrefix}/overlay-acumulados${userParam}`;
 
                 const elUniversal = document.getElementById('url-overlay-universal');
                 const elAcumulados = document.getElementById('url-overlay-acumulados');
@@ -4115,8 +4123,10 @@
             }
 
             function obtenerUrlOverlay(tipo) {
+                const slug = getAgencySlug();
+                const agencyPrefix = slug ? `/${slug}` : '';
                 const userParam = currentUsername ? `?user=${encodeURIComponent(currentUsername)}` : '';
-                const path = tipo === 'universal' ? '/overlay-universal' : '/overlay-acumulados';
+                const path = tipo === 'universal' ? `${agencyPrefix}/overlay-universal` : `${agencyPrefix}/overlay-acumulados`;
                 return `${window.location.origin}${path}${userParam}`;
             }
 

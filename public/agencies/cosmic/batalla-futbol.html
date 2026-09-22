@@ -50,7 +50,7 @@
         body { 
             font-family: 'Bangers', cursive; 
             text-align: center; 
-            background: #00FF00; 
+            background: transparent; 
             color: white; 
             margin: 0; 
             overflow: hidden; 
@@ -423,14 +423,15 @@
             left: 0; 
             width: 100vw; 
             height: 100vh; 
-            background: rgba(0,0,0,0.96);
-            backdrop-filter: blur(15px);
-            -webkit-backdrop-filter: blur(15px);
+            background: transparent;
+            backdrop-filter: none;
+            -webkit-backdrop-filter: none;
             display: none; 
             flex-direction: column; 
             align-items: center; 
             justify-content: center; 
             z-index: 100000;
+            pointer-events: none;
             animation: fadeInOverlay 0.5s ease-in-out;
         }
         
@@ -517,7 +518,7 @@
     <div class="final-overlay" id="pantalla-final">
         <div class="confetti-container"></div>
         <div style="position:relative; z-index: 10; display: flex; flex-direction: column; align-items: center; justify-content: center;">
-            <h2 style="font-size: 40px; margin: 0; font-family: 'Bangers', cursive; letter-spacing: 2px;">¡FIN DEL ENCUENTRO!</h2>
+            <h2 style="font-size: 44px; margin: 0; font-family: 'Bangers', cursive; letter-spacing: 2px; text-shadow: 0 0 15px rgba(0, 0, 0, 0.9), 3px 3px 0 #000; color: #fff;">¡FIN DEL ENCUENTRO!</h2>
             <div style="font-size: 100px; margin: 10px 0; filter: drop-shadow(0 0 15px rgba(255, 215, 0, 0.5));">🏆</div>
             <h1 class="ganador-nombre" id="ganador-texto">¡EQUIPO 1!</h1>
         </div>
@@ -653,6 +654,8 @@
         socket.on('batallaInicio', (data) => {
             document.getElementById('pantalla-final').style.display = 'none';
             document.getElementById('pantalla-tarjeta').style.display = 'none';
+            const confettiContainer = document.querySelector('.confetti-container');
+            if (confettiContainer) confettiContainer.innerHTML = '';
             reloj.classList.remove('snipe-mode');
             calcularPuntos(data.puntos || {});
         });
@@ -687,8 +690,6 @@
             if (data.reporteTarjetas && data.reporteTarjetas.length > 0) {
                 setTimeout(() => { mostrarTarjetasGigantes(data.reporteTarjetas); }, 2500);
             }
-            
-            setTimeout(() => overlay.style.display = 'none', 10000);
         });
 
         // Generar confeti dinámicamente en el overlay final
@@ -741,6 +742,8 @@
 
         socket.on('batallaCancelada', () => { 
             document.getElementById('pantalla-final').style.display = 'none';
+            const confettiContainer = document.querySelector('.confetti-container');
+            if (confettiContainer) confettiContainer.innerHTML = '';
             reloj.innerText = "00:00";
         });
 

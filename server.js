@@ -141,19 +141,35 @@ const pub = (f) => path.join(__dirname, 'public', f);
 
 app.get('/login', (req, res) => res.sendFile(pub('login.html')));
 app.post('/login', async (req, res) => {
-    const { username, password } = req.body;
+    const { username, password, agency } = req.body;
     if (!username || !password) return res.status(400).send('Faltan datos');
     const user = await MasterDB.verificarCredenciales(username, password);
     if (!user) return res.status(401).send('Usuario o contraseña incorrectos');
     
-    let agencySlug = 'urbanqueens';
+    let userAgencySlug = 'urbanqueens';
+    let userAgencyName = 'Urban Queens';
     if (user.agency_id) {
-        const agency = await MasterDB.getAgencyById(user.agency_id);
-        if (agency) agencySlug = agency.slug;
+        const agencyObj = await MasterDB.getAgencyById(user.agency_id);
+        if (agencyObj) {
+            userAgencySlug = agencyObj.slug;
+            userAgencyName = agencyObj.name;
+        }
+    }
+
+    const targetAgencySlug = agency || req.agencySlug || (req.agency ? req.agency.slug : null);
+    const isSuperUser = (user.username.toLowerCase() === 'admin' || user.username.toLowerCase() === 'master');
+
+    if (targetAgencySlug && !isSuperUser) {
+        if (userAgencySlug.toLowerCase() !== targetAgencySlug.toLowerCase()) {
+            return res.status(403).send(`Este usuario pertenece a la agencia '${userAgencyName}' y no tiene acceso a esta plataforma`);
+        }
     }
     
-    res.setSession(user.username, { name: user.name, agencySlug });
-    res.json({ status: 'OK', agencySlug, username: user.username });
+    res.setSession(user.username, { name: user.name, agencySlug: userAgencySlug });
+    if (activeSessions[user.username]) {
+        activeSessions[user.username].agencySlug = userAgencySlug;
+    }
+    res.json({ status: 'OK', agencySlug: userAgencySlug, username: user.username });
 });
 
 app.get('/register', (req, res) => res.sendFile(pub('register.html')));
@@ -170,18 +186,30 @@ app.post('/register', async (req, res) => {
     }
 });
 
-app.all('/logout', (req, res) => {
+function handleLogout(req, res) {
+    let agencySlug = 'urbanqueens';
     const sessionToken = req.cookies['session_token'];
     if (sessionToken && sessions[sessionToken]) {
+        if (sessions[sessionToken].agencySlug) {
+            agencySlug = sessions[sessionToken].agencySlug;
+        }
         const username = sessions[sessionToken].user;
         if (username && activeSessions[username]) {
             cleanupUserSession(activeSessions[username]);
             delete activeSessions[username];
         }
     }
+    if (req.params && req.params.agencySlug) {
+        agencySlug = req.params.agencySlug;
+    } else if (req.agencySlug) {
+        agencySlug = req.agencySlug;
+    }
     res.clearSession();
-    res.redirect('/login');
-});
+    res.redirect(`/${agencySlug}/login`);
+}
+
+app.all('/logout', handleLogout);
+app.all('/:agencySlug/logout', handleLogout);
 
 // Rutas recuperación de contraseña
 app.post('/api/forgot-password', (req, res) => {

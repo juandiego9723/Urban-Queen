@@ -276,11 +276,15 @@
             const password = document.getElementById('password').value;
             const errBox = document.getElementById('error-message');
 
+            const pathParts = window.location.pathname.split('/').filter(Boolean);
+            const pathSlug = (pathParts.length > 0 && pathParts[0] !== 'login') ? pathParts[0] : null;
+            const targetAgency = window.CURRENT_AGENCY_SLUG || pathSlug || '';
+
             try {
                 const res = await fetch('/login', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ username, password })
+                    body: JSON.stringify({ username, password, agency: targetAgency })
                 });
 
                 if (res.ok) {

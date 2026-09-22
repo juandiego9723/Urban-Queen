@@ -1044,7 +1044,7 @@
                 <div class="menu-item tab" onclick="cambiarTab('sistema',this)">Sistema</div>
                 <div class="menu-item tab" id="menu-item-agencia" onclick="cambiarTab('agencia',this)" style="display:none">Consola Agencia</div>
                 <div class="divider"></div>
-                <div class="menu-item" onclick="window.location.href='/logout'"
+                <div class="menu-item" onclick="window.location.href='/cosmic/logout'"
                     style="color:var(--red);margin-top:auto;border-left-color:transparent">Cerrar Sesión</div>
             </div>
         </div>
@@ -1139,7 +1139,7 @@
                         <div style="display: grid; grid-template-columns: 1.2fr 1fr; gap: 20px; width: 100%; align-items: start;">
                             <!-- Gráficas -->
                             <div class="card">
-                                <div class="card-title">📈 <span class="card-title-accent">Tendencia e Ingresos por Queen</span></div>
+                                <div class="card-title">📈 <span class="card-title-accent">Tendencia e Ingresos por Bailarina</span></div>
                                 <div class="col" style="gap: 24px;">
                                     <div>
                                         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
@@ -1156,7 +1156,7 @@
                                     <div class="divider"></div>
                                     <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; align-items: center;">
                                         <div>
-                                            <div class="label" style="margin-bottom: 10px;">Distribución por Queen</div>
+                                            <div class="label" style="margin-bottom: 10px;">Distribución por Bailarina</div>
                                             <div style="height: 140px; position: relative;">
                                                 <canvas id="chart-queens"></canvas>
                                             </div>
@@ -1171,11 +1171,11 @@
                             <!-- Desglose Tablas -->
                             <div class="col" style="gap: 20px;">
                                 <div class="card">
-                                    <div class="card-title">👑 <span class="card-title-accent">Rendimiento por Queen</span></div>
+                                    <div class="card-title">👑 <span class="card-title-accent">Rendimiento por Bailarina</span></div>
                                     <table style="width: 100%; border-collapse: collapse; font-size: 13px; text-align: left;">
                                         <thead>
                                             <tr style="border-bottom: 1px solid var(--border); color: var(--muted); font-size: 10px; text-transform: uppercase;">
-                                                <th style="padding: 8px 4px;">Queen</th>
+                                                <th style="padding: 8px 4px;">Bailarina</th>
                                                 <th style="padding: 8px 4px; text-align: right;">Regalos</th>
                                                 <th style="padding: 8px 4px; text-align: right;">Diamantes</th>
                                             </tr>
@@ -1537,7 +1537,7 @@
                     <!-- CARD DE REVIVIR QUEEN (SALVACIÓN) -->
                     <div class="card" style="margin-top: 15px;">
                         <div class="card-title">
-                            ❤️ <span class="card-title-accent">Revivir Queen (Salvación)</span>
+                            ❤️ <span class="card-title-accent">Dinámica Revivir (Salvación)</span>
                         </div>
                         <div class="col" style="gap: 10px;">
                             <div class="row" style="gap:10px; align-items: center;">
@@ -1620,12 +1620,11 @@
                             </p>
                             <div style="display: flex; flex-direction: column; gap: 8px; margin-top: 10px;" id="universal-overlay-controls">
                                 <button class="btn btn-primary" onclick="cambiarVistaUniversal('/batalla')" id="btn-view-batalla" style="transition: all 0.3s ease; text-align: left; padding: 12px 16px;">⚔️ Batalla Normal</button>
-                                <button class="btn btn-primary" onclick="cambiarVistaUniversal('/batalla-pk')" id="btn-view-batalla-pk" style="transition: all 0.3s ease; text-align: left; padding: 12px 16px;">⚡ Batalla PK</button>
+                                <button class="btn btn-primary" onclick="cambiarVistaUniversal('/revivir')" id="btn-view-revivir" style="transition: all 0.3s ease; text-align: left; padding: 12px 16px;">🔥 Dinámica Revivir</button>
                                 <button class="btn btn-primary" onclick="cambiarVistaUniversal('/batalla-futbol')" id="btn-view-batalla-futbol" style="transition: all 0.3s ease; text-align: left; padding: 12px 16px;">⚽ El Clásico (Fútbol)</button>
                                 <button class="btn btn-primary" onclick="cambiarVistaUniversal('/timer')" id="btn-view-timer" style="transition: all 0.3s ease; text-align: left; padding: 12px 16px;">💃 Timer de Baile</button>
-                                <button class="btn btn-primary" onclick="cambiarVistaUniversal('/conociendo')" id="btn-view-conociendo" style="transition: all 0.3s ease; text-align: left; padding: 12px 16px;">👑 Conociendo a mi Queen</button>
+                                <button class="btn btn-primary" onclick="cambiarVistaUniversal('/conociendo')" id="btn-view-conociendo" style="transition: all 0.3s ease; text-align: left; padding: 12px 16px;">👑 Conociendo a mi Bailarina</button>
                                 <button class="btn btn-primary" onclick="cambiarVistaUniversal('/lista-regalos')" id="btn-view-lista-regalos" style="transition: all 0.3s ease; text-align: left; padding: 12px 16px;">🎁 Lista Regalos</button>
-                                <button class="btn btn-primary" onclick="cambiarVistaUniversal('/multicam')" id="btn-view-multicam" style="transition: all 0.3s ease; text-align: left; padding: 12px 16px;">📺 Grid Multicámara</button>
                                 <button class="btn btn-primary" onclick="cambiarVistaUniversal('/dinamica')" id="btn-view-dinamica" style="transition: all 0.3s ease; text-align: left; padding: 12px 16px;">⚡ Dinámica Personalizada</button>
                                 <button class="btn btn-primary" onclick="cambiarVistaUniversal('/gestor-regalos')" id="btn-view-gestor-regalos" style="transition: all 0.3s ease; text-align: left; padding: 12px 16px;">🎁 Overlay Custom (Gestor de Regalos)</button>
                             </div>
@@ -1642,6 +1641,7 @@
                             <div style="display: flex; flex-direction: column; gap: 8px; margin-top: 10px;" id="acumulados-overlay-controls">
                                 <button class="btn btn-primary" onclick="cambiarVistaAcumulados('/')" id="btn-view-ranking" style="transition: all 0.3s ease; text-align: left; padding: 12px 16px;">🏆 Ranking General</button>
                                 <button class="btn btn-primary" onclick="cambiarVistaAcumulados('/copa')" id="btn-view-copa" style="transition: all 0.3s ease; text-align: left; padding: 12px 16px;">🥇 Copa del Día</button>
+                                <button class="btn btn-primary" onclick="cambiarVistaAcumulados('/revivir-ranking')" id="btn-view-revivir-ranking" style="transition: all 0.3s ease; text-align: left; padding: 12px 16px;">👑 Ranking de Revivir</button>
                             </div>
                         </div>
                     </div>
@@ -1807,7 +1807,7 @@
                             <div class="card-title" style="margin-bottom:4px">🎁 Regalos detectados en vivo</div>
                             <div class="info-box" style="font-size:11px;margin-bottom:8px">
                                 Cuando alguien mande un regalo durante el live, aparecerá aquí automáticamente.
-                                Selecciona la queen que corresponde y guarda.
+                                Selecciona la bailarina que corresponde y guarda.
                             </div>
                             <div id="regalos-detectados-lista"
                                 style="display:flex;flex-direction:column;gap:6px;min-height:32px">
@@ -2250,7 +2250,7 @@
                 { emoji: '⚽', nombre: 'El Clásico', url: '/batalla-futbol', desc: 'Modo fútbol con equipos, tarjetas amarilla/roja y goles.' },
                 { emoji: '⚡', nombre: 'Batalla PK', url: '/batalla-pk', desc: 'Modo Batalla 1vs1 (o Team A vs Team B) con barra PK, rayo divisor neón y efecto de congelación Icy Clash.' },
                 { emoji: '💃', nombre: 'Timer de Baile', url: '/timer', desc: 'Turno automático entre bailarinas. Cada regalo extiende el tiempo.' },
-                { emoji: '👑', nombre: 'Conociendo a mi Queen', url: '/conociendo', desc: 'Meta de puntos por bailarina con barra de progreso.' },
+                { emoji: '👑', nombre: 'Conociendo a mi Bailarina', url: '/conociendo', desc: 'Meta de puntos por bailarina con barra de progreso.' },
                 { emoji: '🥇', nombre: 'Copa del Día', url: '/copa', desc: 'Acumulado del día en El Clásico. Muestra el equipo líder.' },
                 { emoji: '🎁', nombre: 'Lista de Regalos', url: '/lista-regalos', desc: 'Overlay que muestra qué regalo corresponde a cada bailarina y cuántos puntos vale.' },
                 { emoji: '⚡', nombre: 'Dinámica', url: '/dinamica', desc: 'Overlay genérico para dinámicas personalizadas creadas desde el Constructor.' },
@@ -3546,10 +3546,12 @@
             }
 
             function renderPantallas() {
+                const slug = getAgencySlug();
+                const agencyPrefix = slug ? `/${slug}` : '/cosmic';
                 const userParam = currentUsername ? `?user=${encodeURIComponent(currentUsername)}` : '';
                 
-                const urlUniversal = `${window.location.origin}/overlay-universal${userParam}`;
-                const urlAcumulados = `${window.location.origin}/overlay-acumulados${userParam}`;
+                const urlUniversal = `${window.location.origin}${agencyPrefix}/overlay-universal${userParam}`;
+                const urlAcumulados = `${window.location.origin}${agencyPrefix}/overlay-acumulados${userParam}`;
                 
                 const elUniversal = document.getElementById('url-overlay-universal');
                 const elAcumulados = document.getElementById('url-overlay-acumulados');
