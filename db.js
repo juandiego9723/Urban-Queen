@@ -46,13 +46,14 @@ class DBInstance {
         const uId = await this.ensureUserId();
         if (!uId) return;
         try {
-            const [qRes, aRes, gRes, cRes, sRes, rcRes] = await Promise.all([
+            const [qRes, aRes, gRes, cRes, sRes, rcRes, rlRes] = await Promise.all([
                 query('SELECT * FROM queens WHERE user_id = $1 ORDER BY activo DESC, name', [uId]),
                 query('SELECT a.alias_name, q.name as queen_name FROM aliases a JOIN queens q ON a.queen_id = q.id WHERE q.user_id = $1', [uId]),
                 query('SELECT * FROM grupos WHERE user_id = $1 ORDER BY nombre', [uId]),
-                query('SELECT clave, valor FROM config WHERE user_id = $1', [uId]),
+                query('SELECT * FROM config WHERE user_id = $1', [uId]),
                 query('SELECT evento, url FROM sonidos WHERE user_id = $1', [uId]),
-                query('SELECT * FROM regalos_custom WHERE user_id = $1 ORDER BY id DESC', [uId])
+                query('SELECT * FROM regalos_custom WHERE user_id = $1 ORDER BY id DESC', [uId]),
+                query('SELECT * FROM regalos_listas WHERE user_id = $1 ORDER BY id ASC', [uId]).catch(() => ({ rows: [] }))
             ]);
 
             this.cacheQueens = qRes.rows;
@@ -63,6 +64,7 @@ class DBInstance {
             this.cacheSonidos = {};
             sRes.rows.forEach(r => { this.cacheSonidos[r.evento] = r.url; });
             this.cacheRegalosCustom = rcRes.rows;
+            this.cacheRegalosListas = (rlRes && rlRes.rows && rlRes.rows.length > 0) ? rlRes.rows : [{ id: 1, nombre: 'Lista Principal', activa: 1 }];
         } catch (e) {
             console.error(`⚠️ Error cargando cache desde Supabase para ${this.username}:`, e.message);
         }
@@ -507,6 +509,41 @@ class DBInstance {
         if (!uId) return;
         await query('DELETE FROM regalos_custom WHERE user_id=$1 AND id=$2', [uId, id]);
         this.cacheRegalosCustom = this.cacheRegalosCustom.filter(r => r.id !== id);
+    }
+
+    // Regalos Listas
+    getRegalosListas() {
+        return (this.cacheRegalosListas && this.cacheRegalosListas.length > 0) 
+            ? this.cacheRegalosListas 
+            : [{ id: 1, nombre: 'Lista Principal', activa: 1 }];
+    }
+
+    async crearRegaloLista(nombre) {
+        const uId = await this.ensureUserId();
+        if (!uId) return;
+        try {
+            await query('INSERT INTO regalos_listas (user_id, nombre, activa) VALUES ($1, $2, 0)', [uId, nombre]);
+            await this.cargarCache();
+        } catch (e) { console.error('Error en crearRegaloLista:', e.message); }
+    }
+
+    async eliminarRegaloLista(id) {
+        const uId = await this.ensureUserId();
+        if (!uId || id === 1) return;
+        try {
+            await query('DELETE FROM regalos_listas WHERE user_id = $1 AND id = $2', [uId, id]);
+            await this.cargarCache();
+        } catch (e) { console.error('Error en eliminarRegaloLista:', e.message); }
+    }
+
+    async activarRegaloLista(id) {
+        const uId = await this.ensureUserId();
+        if (!uId) return;
+        try {
+            await query('UPDATE regalos_listas SET activa = 0 WHERE user_id = $1', [uId]);
+            await query('UPDATE regalos_listas SET activa = 1 WHERE user_id = $1 AND id = $2', [uId, id]);
+            await this.cargarCache();
+        } catch (e) { console.error('Error en activarRegaloLista:', e.message); }
     }
 
     // Config

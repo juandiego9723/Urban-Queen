@@ -1,5 +1,50 @@
 function createPointsProcessor(io, activeSessions, resolverNombreFn, timerHandlers, conociendoHandlers, revivirHandlers) {
 
+    function buscarEnMapa(mapaObj, nombreRegalo) {
+        if (!mapaObj || !nombreRegalo) return null;
+        if (mapaObj[nombreRegalo]) return mapaObj[nombreRegalo];
+        
+        const target = nombreRegalo.trim().toLowerCase();
+        
+        // 1. Coincidencia exacta sin distinguir mayúsculas/minúsculas o espacios
+        for (const key of Object.keys(mapaObj)) {
+            if (key.trim().toLowerCase() === target) {
+                return mapaObj[key];
+            }
+        }
+        
+        // 2. Mapeo de traducciones y equivalencias de nombres comunes (Español <-> Inglés)
+        const ALIAS_TRADUCCION = {
+            'rosa': 'rose',
+            'rose': 'rosa',
+            'white rose': 'rosa blanca',
+            'rosa blanca': 'white rose',
+            'corazón': 'heart',
+            'corazon': 'heart',
+            'heart': 'corazon',
+            'gafas': 'sunglasses',
+            'gafas verdes': 'sunglasses',
+            'sunglasses': 'gafas verdes',
+            'gorra': 'cap',
+            'cap': 'gorra',
+            'corona': 'crown',
+            'crown': 'corona',
+            'helado': 'ice cream cone',
+            'ice cream cone': 'helado'
+        };
+        
+        const aliasTarget = ALIAS_TRADUCCION[target];
+        if (aliasTarget) {
+            for (const key of Object.keys(mapaObj)) {
+                if (key.trim().toLowerCase() === aliasTarget) {
+                    return mapaObj[key];
+                }
+            }
+        }
+        
+        return null;
+    }
+
     function procesarRegaloTikTok(username, data) {
         const session = activeSessions[username];
         if (!session) return;
@@ -10,9 +55,35 @@ function createPointsProcessor(io, activeSessions, resolverNombreFn, timerHandle
             }, 300);
         }
         
-        const viewer = (data.uniqueId || '').trim();
-        const avatar = data.profilePictureUrl || '';
-        const giftName = (data.giftName || '').trim();
+        const viewer = (
+            data.uniqueId ||
+            data.user?.uniqueId ||
+            data.user?.displayId ||
+            data.senderDetails?.uniqueId ||
+            data.userDetails?.uniqueId ||
+            (data.user && data.user.unique_id) ||
+            ''
+        ).trim();
+
+        const avatar = (
+            data.profilePictureUrl ||
+            data.user?.profilePictureUrl ||
+            data.userDetails?.profilePictureUrl ||
+            data.senderDetails?.profilePictureUrl ||
+            data.avatar ||
+            data.profilePictureUrls ||
+            (data.user?.avatarLarge?.urlList?.[0] || data.user?.avatarLarge?.url_list?.[0]) ||
+            (data.user?.avatarThumb?.urlList?.[0] || data.user?.avatarThumb?.url_list?.[0]) ||
+            ''
+        );
+        const giftName = (
+            data.giftName || 
+            data.name || 
+            (data.gift && (data.gift.gift_name || data.gift.name)) || 
+            (data.extendedGiftInfo && data.extendedGiftInfo.name) || 
+            (data.giftDetails && data.giftDetails.giftName) || 
+            ''
+        ).trim();
         const repeat = parseInt(data.repeatCount) || 1;
         const giftImgSrc = data.giftPictureUrl || '';
         const now = Date.now();
@@ -100,8 +171,8 @@ function createPointsProcessor(io, activeSessions, resolverNombreFn, timerHandle
         let rawTimerMapa = session.db.getConfigVal('tiktok_timer_mapa');
         let timerMapa = rawTimerMapa ? JSON.parse(rawTimerMapa) : {};
         
-        let queenActivadora = mapa[giftName] || null;
-        let queenSalto = timerMapa[giftName] || null;
+        let queenActivadora = buscarEnMapa(mapa, giftName);
+        let queenSalto = buscarEnMapa(timerMapa, giftName);
         
         // Prioridad 1: Destinatario directo por uniqueId
         if (data.toUser && data.toUser.uniqueId) {

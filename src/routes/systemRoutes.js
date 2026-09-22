@@ -104,6 +104,27 @@ function setupSystemRoutes(app, io, requireSession, activeSessions) {
         res.send('OK');
     });
 
+    // Regalos Listas
+    app.get('/api/regalos-listas', requireSession, (req, res) => res.json(req.userSession.db.getRegalosListas()));
+    app.all('/api/regalos-listas/crear', requireSession, async (req, res) => {
+        const s = req.userSession;
+        const nombre = (req.body && req.body.nombre) || req.query.nombre || 'Nueva Lista';
+        await s.db.crearRegaloLista(nombre);
+        res.json(s.db.getRegalosListas());
+    });
+    app.all('/api/regalos-listas/eliminar', requireSession, async (req, res) => {
+        const s = req.userSession;
+        const id = parseInt(req.query.id || (req.body && req.body.id));
+        if (id) await s.db.eliminarRegaloLista(id);
+        res.json(s.db.getRegalosListas());
+    });
+    app.all('/api/regalos-listas/activar', requireSession, async (req, res) => {
+        const s = req.userSession;
+        const id = parseInt(req.query.id || (req.body && req.body.id));
+        if (id) await s.db.activarRegaloLista(id);
+        res.json(s.db.getRegalosListas());
+    });
+
     // Marca
     app.get('/api/marca', requireSession, (req, res) => {
         const s = req.userSession;

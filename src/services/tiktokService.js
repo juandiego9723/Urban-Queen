@@ -24,11 +24,11 @@ try {
     if (!IsLiveRouteConfig) IsLiveRouteConfig = tlc.IsLiveRouteConfig;
 }
 
-// Desactivar completamente los fallbacks externos a EulerStream (evita Rate Limits anónimos y peticiones de planes de pago)
+// Desactivar rutas secundarias de EulerStream que requieren Plan Business
 if (RoomIdRouteConfig) RoomIdRouteConfig.skipFetchRoomIdFromEulerRoute = true;
 if (IsLiveRouteConfig) IsLiveRouteConfig.skipFetchRoomIdFromEulerRoute = true;
 
-// Parche de respaldo: Si EulerStream rechaza la firma por requerir plan pago Business, continuar con la URL directa
+// Respaldo de firmas: Si EulerStream rechaza por requerir Plan Business o por Rate Limit, continuar con conexión directa
 if (RouteConfig && RouteConfig.fetchWebcastSignatureFromProvider) {
     const originalFetchSignature = RouteConfig.fetchWebcastSignatureFromProvider;
     RouteConfig.fetchWebcastSignatureFromProvider = async (args) => {
@@ -36,8 +36,9 @@ if (RouteConfig && RouteConfig.fetchWebcastSignatureFromProvider) {
             return await originalFetchSignature(args);
         } catch (err) {
             const errStr = (err && err.message) ? err.message : String(err);
-            if (errStr.includes('Business plan') || errStr.includes('Euler') || errStr.includes('rate_limit') || errStr.includes('pricing')) {
-                console.warn('⚠️ [TikTok Connector] Omitiendo firmas de EulerStream (Rate Limit / Business Plan). Continuando con conexión directa.');
+            const requiereFallback = errStr.includes('Business plan') || errStr.includes('pricing') || errStr.includes('429') || errStr.includes('rate_limit') || errStr.includes('quota');
+            if (requiereFallback) {
+                console.warn('⚠️ [TikTok Connector] Omitiendo firmas de EulerStream (Endpoint requiere Plan Business o Rate Limit). Continuando con conexión directa.');
                 return { response: { signedUrl: args.url, userAgent: args.userAgent } };
             }
             throw err;
@@ -182,10 +183,25 @@ function createTikTokService(app, io, requireSession, activeSessions, procesarRe
                 console.error('Error cargando catálogo de regalos de TikTok:', err);
             });
         }).catch(err => {
+            const rawErrMsg = (err && err.message) ? err.message : (err ? err.toString() : 'Error desconocido');
+            
+            // Auto-retry para el bug intermitente de legacy.js (getTopViewerAttributes .map)
+            const esErrorLegacy = rawErrMsg.includes("reading 'map'") || rawErrMsg.includes("reading 'includes'");
+            if (!session._retryCount) session._retryCount = 0;
+            
+            if (esErrorLegacy && session._retryCount < 3) {
+                session._retryCount++;
+                console.log(`🔄 [TikTok] Error intermitente de legacy.js (intento ${session._retryCount}/3). Reintentando en 2s...`);
+                session.tiktokConnection = null;
+                setTimeout(() => conectarTikTok(username, usuarioTikTok, req), 2000);
+                return;
+            }
+            session._retryCount = 0;
+            
             console.error('Error al conectar TikTok:', err);
             session.tiktokEstado = 'error';
             
-            let rawErr = (err && err.message) ? err.message : (err ? err.toString() : 'Error desconocido');
+            let rawErr = rawErrMsg;
             const errDetails = JSON.stringify(err || {});
             
             if (rawErr.includes('user_not_found') || errDetails.includes('19881007') || rawErr.includes('FetchIsLiveError')) {
@@ -202,6 +218,35 @@ function createTikTokService(app, io, requireSession, activeSessions, procesarRe
         });
 
         connection.on('gift', (data) => {
+            // Resolver giftName desde giftId si la librería no lo envía
+            if (!data.giftName && data.giftId) {
+                const gid = parseInt(data.giftId);
+                // 1. Buscar en catálogo dinámico descargado al conectar
+                let found = (session.catalogoRegalos || []).find(g => parseInt(g.id) === gid);
+                // 2. Mapa de respaldo hardcoded (IDs más comunes)
+                if (!found) {
+                    const GIFT_ID_MAP = {
+                        5655:'Rose', 6948:'TikTok', 7493:'GG', 6551:'Heart', 6104:'Finger Heart',
+                        6683:'Like', 7494:'Super GG', 6435:'Mic', 5652:'Sunglasses', 7305:'Hand Heart',
+                        6812:'Soccer Ball', 8525:'Cap', 6056:'Lucky Cat', 7394:'Ice Cream Cone',
+                        7560:'Cake', 8121:'Crown', 7572:'Yacht', 8744:'Airplane', 8913:'Galaxy',
+                        7028:'Concert', 6557:'Lion', 7071:'TikTok Universe', 8604:'Island',
+                        6468:'Drama Queen', 7400:'Sports Car', 7399:'Bus', 8614:'Diamond Gun',
+                        6648:'Perfume', 7100:'Power Pump', 8215:'Little Ghost', 7781:'Star',
+                        8700:'Boxing Gloves', 8701:'Corgi', 9002:'Doughnut', 9003:'Headphones'
+                    };
+                    if (GIFT_ID_MAP[gid]) {
+                        data.giftName = GIFT_ID_MAP[gid];
+                    }
+                } else {
+                    data.giftName = found.name;
+                    if (!data.diamondCount && found.diamondCount) data.diamondCount = found.diamondCount;
+                    if (!data.giftPictureUrl && found.imageUrl) data.giftPictureUrl = found.imageUrl;
+                }
+                console.log(`🎁 [Gift Resolved] ID:${data.giftId} → "${data.giftName || '???'}" (${data.diamondCount || '?'}💎)`);
+                // 🔍 DEBUG - Ver dónde está la info del usuario
+                console.log(`🔍 [USER INFO] uniqueId:${data.uniqueId || 'NONE'} | profilePic:${data.profilePictureUrl ? 'YES' : 'NONE'} | user:${data.user ? JSON.stringify(data.user).substring(0,200) : 'NONE'} | userId:${data.userId || 'NONE'} | nickname:${data.nickname || 'NONE'} | keys:[${Object.keys(data).join(',')}]`);
+            }
             if (typeof procesarRegaloTikTokFn === 'function') {
                 procesarRegaloTikTokFn(username, data);
             }
@@ -216,7 +261,7 @@ function createTikTokService(app, io, requireSession, activeSessions, procesarRe
         });
 
         connection.on('social', (data) => {
-            const subtipo = data.displayType.includes('follow') ? 'follow' : 'share';
+            const subtipo = (data.displayType && data.displayType.includes('follow')) ? 'follow' : 'share';
             io.to(username).emit('tiktokLiveEvent', { tipo: subtipo, usuario: data.uniqueId, descripcion: data.label, avatar: data.profilePictureUrl });
         });
 
