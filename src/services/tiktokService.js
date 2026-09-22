@@ -47,7 +47,7 @@ if (RouteConfig && RouteConfig.fetchWebcastSignatureFromProvider) {
 
 function createTikTokService(app, io, requireSession, activeSessions, procesarRegaloTikTokFn) {
 
-    function conectarTikTok(username, usuarioTikTok) {
+    function conectarTikTok(username, usuarioTikTok, req) {
         const session = activeSessions[username];
         if (!session) return;
 
@@ -72,13 +72,20 @@ function createTikTokService(app, io, requireSession, activeSessions, procesarRe
         session.tiktokMensajeError = '';
         io.to(username).emit('tiktokEstado', { estado: 'conectando', usuario: usuarioTikTok });
 
+        const referer = (req && req.headers && req.headers.referer) ? req.headers.referer.toLowerCase() : '';
+        const reqAgency = (req && (req.agencySlug || (req.agency && req.agency.slug) || (req.session && req.session.agencySlug))) || '';
+
         let signApiKey = process.env.SIGN_API_KEY;
-        const isCosmic = (session.agencySlug === 'cosmic') ||
+        const isCosmic = (reqAgency.toLowerCase() === 'cosmic') ||
+                         (session.agencySlug === 'cosmic') ||
+                         referer.includes('/cosmic') ||
+                         referer.includes('agency=cosmic') ||
                          (username && username.toLowerCase().includes('cosmic')) ||
                          (usuarioTikTok && usuarioTikTok.toLowerCase().includes('cosmic'));
 
         if (isCosmic && process.env.COSMIC_SIGN_API_KEY) {
             signApiKey = process.env.COSMIC_SIGN_API_KEY;
+            session.agencySlug = 'cosmic';
             console.log(`🔑 [TikTok Service] Conectando @${usuarioTikTok} usando API Key dedicada para COSMIC (${signApiKey.substring(0, 15)}...)`);
         } else if (signApiKey) {
             console.log(`🔑 [TikTok Service] Conectando @${usuarioTikTok} usando API Key por defecto TIKDANCE (${signApiKey.substring(0, 15)}...)`);
@@ -239,7 +246,7 @@ function createTikTokService(app, io, requireSession, activeSessions, procesarRe
     app.all('/tiktok/conectar', requireSession, (req, res) => {
         const usuario = (req.query.usuario || (req.body && req.body.usuario) || '').replace('@', '').trim();
         if (!usuario) return res.status(400).send('Falta usuario de TikTok');
-        conectarTikTok(req.username, usuario);
+        conectarTikTok(req.username, usuario, req);
         res.send('Conectando...');
     });
 

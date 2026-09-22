@@ -423,13 +423,21 @@ io.on('connection', (socket) => {
 
 // ── Seguridad: escudo de excepciones ────────────────────────────
 process.on('uncaughtException', (err) => {
-    console.error('🚨 ESCUDO ACTIVADO:', err.message);
-    if (err.code === 'EADDRINUSE' || (err.message && err.message.includes('EADDRINUSE'))) {
+    const msg = (err && err.message) ? err.message : String(err);
+    if (msg.includes("reading 'map'") || msg.includes("getTopViewerAttributes")) {
+        return; // Omitir aviso inofensivo del decodificador de tiktok-live-connector
+    }
+    console.error('🚨 ESCUDO ACTIVADO:', msg);
+    if (err.code === 'EADDRINUSE' || msg.includes('EADDRINUSE')) {
         console.error('⚠️ Proceso duplicado detectado en puerto 3000. Cerrando esta instancia.');
         process.exit(0);
     }
 });
-process.on('unhandledRejection', (reason) => { console.error('🚨 ESCUDO ACTIVADO:', reason); });
+process.on('unhandledRejection', (reason) => {
+    const msg = (reason && reason.message) ? reason.message : String(reason);
+    if (msg.includes("reading 'map'") || msg.includes("getTopViewerAttributes")) return;
+    console.error('🚨 ESCUDO ACTIVADO:', reason);
+});
 
 server.on('error', (err) => {
     if (err.code === 'EADDRINUSE') {
