@@ -122,7 +122,8 @@ function setupQueensRoutes(app, io, requireSession) {
         const semanal = (req.query.semanal || titulos.semanal || '').trim();
         const mensual = (req.query.mensual || titulos.mensual || '').trim();
         const diario  = (req.query.diario  || titulos.diario  || '').trim();
-        s.db.setRankingTitulos({ semanal, mensual, diario });
+        const color   = (req.query.color   || titulos.color   || '').trim();
+        s.db.setRankingTitulos({ semanal, mensual, diario, color });
         const nuevosTitulos = s.db.getRankingTitulos();
         io.to(req.username).emit('rankingTitulosActualizados', nuevosTitulos);
         res.json({ status: 'OK', titulos: nuevosTitulos });

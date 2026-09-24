@@ -667,7 +667,8 @@ class DBInstance {
         return {
             semanal: this.getConfigVal('ranking_titulo_semanal') || 'RANKING SEMANAL',
             mensual: this.getConfigVal('ranking_titulo_mensual') || 'RANKING MENSUAL',
-            diario:  this.getConfigVal('ranking_titulo_diario')  || 'RANKING DEL DÍA'
+            diario:  this.getConfigVal('ranking_titulo_diario')  || 'RANKING DEL DÍA',
+            color:   this.getConfigVal('ranking_titulo_color')   || '#ffee00'
         };
     }
 
@@ -675,6 +676,7 @@ class DBInstance {
         if (titulos.semanal !== undefined) this.setConfigVal('ranking_titulo_semanal', String(titulos.semanal).trim());
         if (titulos.mensual !== undefined) this.setConfigVal('ranking_titulo_mensual', String(titulos.mensual).trim());
         if (titulos.diario  !== undefined) this.setConfigVal('ranking_titulo_diario',  String(titulos.diario).trim());
+        if (titulos.color   !== undefined) this.setConfigVal('ranking_titulo_color',   String(titulos.color).trim());
     }
 
     migrarDesdeJSON(filePath) {

@@ -89,6 +89,19 @@ function setupConociendoDynamics(app, io, requireSession, activeSessions) {
         res.send("OK");
     });
 
+    app.all('/conociendo/status', requireSession, (req, res) => {
+        const s = req.userSession;
+        res.json({
+            activo: !!(s.conociendo && s.conociendo.activo),
+            chica: s.conociendo ? s.conociendo.chicaActual : '',
+            tiempo: s.conociendo ? s.conociendo.tiempo : 300,
+            meta: s.conociendo ? s.conociendo.meta : 2000,
+            puntos: s.conociendo ? s.conociendo.puntos : 0,
+            titulo: (s.conociendo && s.conociendo.titulo) || 'CONOCIENDO A:',
+            estado: s.conociendo ? s.conociendo.estado : 'inactivo'
+        });
+    });
+
     return { saltarConociendo };
 }
 

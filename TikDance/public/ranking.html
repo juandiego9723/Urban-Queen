@@ -225,11 +225,22 @@
         let AVATAR_IMGS_MAP = {};
 
         let TITULOS = { semanal: 'RANKING SEMANAL', mensual: 'RANKING MENSUAL', diario: 'RANKING DEL DÍA' };
+        let TITULO_COLOR = '#ffee00';
         const CICLO = { semanal: 'mensual', mensual: 'diario', diario: 'semanal' };
+
+        function applyTitleColor(color) {
+            TITULO_COLOR = color || '#ffee00';
+            const el = document.getElementById('titulo-ranking');
+            if (el) {
+                el.style.color = TITULO_COLOR;
+                el.style.textShadow = `2.5px 2.5px 0px #000, 0 0 10px ${TITULO_COLOR}99`;
+            }
+        }
 
         function toggleModo() {
             modo = CICLO[modo];
             document.getElementById('titulo-ranking').innerText = TITULOS[modo] || 'RANKING';
+            applyTitleColor(TITULO_COLOR);
             reordenarTabla();
         }
 
@@ -365,6 +376,7 @@
                         if (titulosData.semanal) TITULOS.semanal = titulosData.semanal;
                         if (titulosData.mensual) TITULOS.mensual = titulosData.mensual;
                         if (titulosData.diario)  TITULOS.diario  = titulosData.diario;
+                        if (titulosData.color)   applyTitleColor(titulosData.color);
                     }
                 }
                 
@@ -383,6 +395,7 @@
                 if (titulosData.semanal) TITULOS.semanal = titulosData.semanal;
                 if (titulosData.mensual) TITULOS.mensual = titulosData.mensual;
                 if (titulosData.diario)  TITULOS.diario  = titulosData.diario;
+                if (titulosData.color)   applyTitleColor(titulosData.color);
                 const el = document.getElementById('titulo-ranking');
                 if (el) el.innerText = TITULOS[modo] || 'RANKING';
             }

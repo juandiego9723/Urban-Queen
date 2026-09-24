@@ -144,6 +144,19 @@
         });
         fetch('/api/apodos').then(r => r.json()).then(map => { APODOS = map; });
 
+        fetch('/conociendo/status').then(r => r.json()).then(data => {
+            if (data && data.activo) {
+                const txtTitulo = document.getElementById('texto-titulo-dinamica');
+                if (txtTitulo && data.titulo) txtTitulo.innerText = data.titulo;
+                aplicarColoresChica(data.chica);
+                displayReloj.innerText = formatearTiempo(data.tiempo);
+                txtMeta.innerText = data.meta;
+                actualizarBarra(data.puntos, data.meta);
+                contenedor.classList.add('timer-activo');
+                cajaReloj.style.display = 'flex';
+            }
+        }).catch(e => console.error('Error cargando estado conociendo:', e));
+
         socket.on('queensActualizadas', (data) => {
             if (data.equipos) Object.keys(data.equipos).forEach(n => { QUEEN_COLORS[n] = data.equipos[n].color; });
             if (data.apodos) APODOS = data.apodos;
