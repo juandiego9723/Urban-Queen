@@ -50,7 +50,7 @@
         body { 
             font-family: 'Bangers', cursive; 
             text-align: center; 
-            background: #00FF00; 
+            background: transparent; 
             color: white; 
             margin: 0; 
             overflow: hidden; 
@@ -423,15 +423,13 @@
             left: 0; 
             width: 100vw; 
             height: 100vh; 
-            background: rgba(0,0,0,0.96);
-            backdrop-filter: blur(15px);
-            -webkit-backdrop-filter: blur(15px);
+            background: transparent;
+            pointer-events: none;
             display: none; 
             flex-direction: column; 
             align-items: center; 
             justify-content: center; 
             z-index: 100000;
-            animation: fadeInOverlay 0.5s ease-in-out;
         }
         
         .ganador-nombre { 
@@ -516,11 +514,6 @@
 
     <div class="final-overlay" id="pantalla-final">
         <div class="confetti-container"></div>
-        <div style="position:relative; z-index: 10; display: flex; flex-direction: column; align-items: center; justify-content: center;">
-            <h2 style="font-size: 40px; margin: 0; font-family: 'Bangers', cursive; letter-spacing: 2px;">¡FIN DEL ENCUENTRO!</h2>
-            <div style="font-size: 100px; margin: 10px 0; filter: drop-shadow(0 0 15px rgba(255, 215, 0, 0.5));">🏆</div>
-            <h1 class="ganador-nombre" id="ganador-texto">¡EQUIPO 1!</h1>
-        </div>
     </div>
 
     <script src="/socket.io/socket.io.js"></script>
@@ -668,17 +661,15 @@
         socket.on('batallaPuntos', calcularPuntos);
 
         socket.on('batallaFin', (data) => {
-            reloj.innerText = "00:00";
             reloj.classList.remove('snipe-mode');
             
             const overlay = document.getElementById('pantalla-final');
-            const texto = document.getElementById('ganador-texto');
             
             let ganador = "EMPATE";
-            if (lastPoints.eq1 > lastPoints.eq2) ganador = "¡" + futbolConfig.equipo1.nombre + "!";
-            else if (lastPoints.eq2 > lastPoints.eq1) ganador = "¡" + futbolConfig.equipo2.nombre + "!";
+            if (lastPoints.eq1 > lastPoints.eq2) ganador = "🏆 ¡" + futbolConfig.equipo1.nombre + "!";
+            else if (lastPoints.eq2 > lastPoints.eq1) ganador = "🏆 ¡" + futbolConfig.equipo2.nombre + "!";
             
-            texto.innerText = ganador;
+            reloj.innerText = ganador;
             overlay.style.display = 'flex';
             
             crearConfeti();
@@ -686,8 +677,6 @@
             if (data.reporteTarjetas && data.reporteTarjetas.length > 0) {
                 setTimeout(() => { mostrarTarjetasGigantes(data.reporteTarjetas); }, 2500);
             }
-            
-            setTimeout(() => overlay.style.display = 'none', 10000);
         });
 
         // Generar confeti dinámicamente en el overlay final
