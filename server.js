@@ -12,7 +12,6 @@ const { initSQL, DBInstance } = require('./db');
 const MasterDB = require('./masterDb');
 
 // ── Módulos propios ──────────────────────────────────────────────
-try { require('./scripts/cleanupProject'); } catch(e) {}
 
 
 

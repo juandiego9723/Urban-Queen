@@ -1,33 +1,34 @@
 const fs = require('fs');
 const path = require('path');
 
-const targetPath = path.join(__dirname, '..', 'node_modules', 'tiktok-live-connector', 'dist', 'legacy.js');
+function applyPatch() {
+    const targetPath = path.join(__dirname, '..', 'node_modules', 'tiktok-live-connector', 'dist', 'legacy.js');
 
-if (!fs.existsSync(targetPath)) {
-    console.log('[Patch] tiktok-live-connector no está instalado aún. Omitiendo parche.');
-    process.exit(0);
-}
-
-try {
-    let code = fs.readFileSync(targetPath, 'utf8');
-    let modified = false;
-
-    // 1. Parche getTopViewerAttributes
-    if (!code.includes('if (!Array.isArray(topViewers)) return [];')) {
-        code = code.replace(
-            'function getTopViewerAttributes(topViewers) {',
-            'function getTopViewerAttributes(topViewers) {\n\tif (!Array.isArray(topViewers)) return [];'
-        );
-        modified = true;
+    if (!fs.existsSync(targetPath)) {
+        console.log('[Patch] tiktok-live-connector no está instalado aún. Omitiendo parche.');
+        return;
     }
 
-    // 2. Parche getUserAttributes
-    if (!code.includes('const avatarUrls = webcastUser.avatarLarge')) {
-        const targetPattern = /function getUserAttributes\(webcastUser\) \{[\s\S]*?const userAttributes = \{[\s\S]*?profilePictureUrl: getPreferredPictureFormat\(webcastUser\.avatarLarge\),/;
-        if (targetPattern.test(code)) {
+    try {
+        let code = fs.readFileSync(targetPath, 'utf8');
+        let modified = false;
+
+        // 1. Parche getTopViewerAttributes
+        if (!code.includes('if (!Array.isArray(topViewers)) return [];')) {
             code = code.replace(
-                targetPattern,
-                `function getUserAttributes(webcastUser) {
+                'function getTopViewerAttributes(topViewers) {',
+                'function getTopViewerAttributes(topViewers) {\n\tif (!Array.isArray(topViewers)) return [];'
+            );
+            modified = true;
+        }
+
+        // 2. Parche getUserAttributes
+        if (!code.includes('const avatarUrls = webcastUser.avatarLarge')) {
+            const targetPattern = /function getUserAttributes\(webcastUser\) \{[\s\S]*?const userAttributes = \{[\s\S]*?profilePictureUrl: getPreferredPictureFormat\(webcastUser\.avatarLarge\),/;
+            if (targetPattern.test(code)) {
+                code = code.replace(
+                    targetPattern,
+                    `function getUserAttributes(webcastUser) {
 \twebcastUser ||= {};
 \tconst avatarUrls = webcastUser.avatarLarge?.urlList || webcastUser.avatarLarge?.url_list ||
 \t                   webcastUser.avatarMedium?.urlList || webcastUser.avatarMedium?.url_list ||
@@ -63,6 +64,10 @@ try {
     } else {
         console.log('ℹ️ [Patch] tiktok-live-connector/dist/legacy.js ya cuenta con las correcciones necesarias.');
     }
-} catch (err) {
-    console.error('⚠️ [Patch] Error aplicando parche a tiktok-live-connector:', err.message);
+    } catch (err) {
+        console.error('⚠️ [Patch] Error aplicando parche a tiktok-live-connector:', err.message);
+    }
 }
+
+applyPatch();
+module.exports = applyPatch;
