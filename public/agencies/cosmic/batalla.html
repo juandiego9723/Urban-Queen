@@ -93,11 +93,12 @@
 
         /* ── TIMER HUD NEÓN ── */
         #timer {
-            font-family: 'Bangers', cursive;
+            font-family: emoji;
             font-size: 64px;
-            color: #FFD700;
+            font-weight: 900;
+            color: #FFFFFF;
             text-shadow: 0 0 10px rgba(0, 0, 0, 0.9),
-                         0 0 20px rgba(255, 215, 0, 0.4),
+                         0 0 20px rgba(255, 255, 255, 0.6),
                          3px 3px 0px #000;
             letter-spacing: 4px;
             text-align: center;
@@ -193,7 +194,7 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            font-family: 'Inter', sans-serif;
+            font-family: emoji;
             font-weight: 900;
             font-size: 30px;
             letter-spacing: 0.5px;
@@ -670,7 +671,7 @@
             const confettiContainer = document.querySelector('.confetti-container');
             if (confettiContainer) confettiContainer.innerHTML = '';
             timerEl.classList.remove('urgente');
-            timerEl.style.color = '#FFD700';
+            timerEl.style.color = '#FFFFFF';
             donorStats = {};
             renderBatalla(data.participantes, data.equipos || equiposInfo, data.victorias || {}, data.puntos || {});
         });
@@ -697,7 +698,7 @@
             const nombreDisplay = esEmpate ? data.ganadora : (APODOS[data.ganadora] || data.ganadora);
             const texto = esEmpate ? nombreDisplay : '🏆 ¡GANÓ ' + nombreDisplay + '!';
             timerEl.textContent = texto;
-            timerEl.style.color = esEmpate ? '#fff' : '#FFD700';
+            timerEl.style.color = '#FFFFFF';
             timerEl.classList.remove('urgente');
             crearConfeti();
         });
@@ -706,7 +707,7 @@
             const confettiContainer = document.querySelector('.confetti-container');
             if (confettiContainer) confettiContainer.innerHTML = '';
             timerEl.textContent = 'ESPERANDO BATALLA...';
-            timerEl.style.color = '#FFD700';
+            timerEl.style.color = '#FFFFFF';
             timerEl.classList.remove('urgente');
         });
 
