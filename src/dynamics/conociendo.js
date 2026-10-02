@@ -20,8 +20,9 @@ function setupConociendoDynamics(app, io, requireSession, activeSessions) {
         s.conociendo.orden = [...s.QUEENS];
         s.conociendo.activo = true;
         s.conociendo.meta = parseInt(req.query.meta) || 2000;
-        s.conociendo.titulo = req.query.titulo || s.conociendo.titulo || 'CONOCIENDO A:';
-        s.conociendo.tiempo = 300;
+        s.conociendo.titulo = req.query.titulo !== undefined ? req.query.titulo : 'CONOCIENDO A:';
+        s.conociendo.tiempoInicial = parseInt(req.query.tiempo) > 0 ? parseInt(req.query.tiempo) : 300;
+        s.conociendo.tiempo = s.conociendo.tiempoInicial;
         s.conociendo.puntos = 0;
         s.conociendo.chicaActual = s.QUEENS[0] || '';
         s.conociendo.estado = 'activo';
@@ -37,7 +38,7 @@ function setupConociendoDynamics(app, io, requireSession, activeSessions) {
                 io.to(user).emit('conociendoTransicionTick', s.conociendo.tiempoTransicion);
                 if (s.conociendo.tiempoTransicion <= 0) {
                     s.conociendo.estado = 'activo';
-                    s.conociendo.tiempo = 300;
+                    s.conociendo.tiempo = s.conociendo.tiempoInicial || 300;
                     snipeConociendo = 3;
                     subTickConociendo = 0;
                     io.to(user).emit('conociendoInicio', { chica: s.conociendo.chicaActual, tiempo: s.conociendo.tiempo, meta: s.conociendo.meta, puntos: s.conociendo.puntos, titulo: s.conociendo.titulo });
@@ -58,7 +59,7 @@ function setupConociendoDynamics(app, io, requireSession, activeSessions) {
                     snipeConociendo--;
                     if (snipeConociendo <= 0) {
                         if (s.conociendo.puntos >= s.conociendo.meta) {
-                            s.conociendo.tiempo = 300;
+                            s.conociendo.tiempo = s.conociendo.tiempoInicial || 300;
                             s.conociendo.puntos = 0;
                             io.to(user).emit('conociendoInicio', { chica: s.conociendo.chicaActual, tiempo: s.conociendo.tiempo, meta: s.conociendo.meta, puntos: s.conociendo.puntos, titulo: s.conociendo.titulo });
                         } else {

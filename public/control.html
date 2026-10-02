@@ -1607,6 +1607,11 @@
                                 <input type="text" id="tituloConociendoInput" value="CONOCIENDO A:" class="input"
                                     style="width:160px;" placeholder="ej. CONOCIENDO A:">
                             </div>
+                            <div class="row" style="gap:10px; margin-bottom: 8px; align-items: center;">
+                                <span class="label" style="flex:1">Tiempo (segundos):</span>
+                                <input type="number" id="tiempoConociendoInput" value="300" class="input input-num"
+                                    style="width:110px;" placeholder="300">
+                            </div>
                             <div class="row" style="gap:10px; margin-bottom: 12px; align-items: center;">
                                 <span class="label" style="flex:1">Meta (Diamantes):</span>
                                 <input type="number" id="metaConociendoInput" value="2000" class="input input-num"
@@ -4314,8 +4319,9 @@
             // ── Conociendo ──
             function iniciarConociendo() {
                 const meta = document.getElementById('metaConociendoInput').value || 2000;
-                const titulo = document.getElementById('tituloConociendoInput').value || 'CONOCIENDO A:';
-                hacerFetch(`/conociendo/start?meta=${meta}&titulo=${encodeURIComponent(titulo)}`);
+                const titulo = document.getElementById('tituloConociendoInput').value;
+                const tiempo = document.getElementById('tiempoConociendoInput').value || 300;
+                hacerFetch(`/conociendo/start?meta=${meta}&titulo=${encodeURIComponent(titulo)}&tiempo=${tiempo}`);
             }
             function iniciarRevivir() {
                 const chica = document.getElementById('revivirChicaSelect').value;
