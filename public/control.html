@@ -1902,6 +1902,15 @@
                                     id="btn-view-copa"
                                     style="transition: all 0.3s ease; text-align: left; padding: 12px 16px;">🥇 Copa del
                                     Día</button>
+
+                                <div style="margin-top: 8px; padding-top: 10px; border-top: 1px solid rgba(255,255,255,0.1);">
+                                    <p class="helper-text" style="margin-bottom: 6px;">📅 Período del Ranking:</p>
+                                    <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 6px;">
+                                        <button class="btn btn-ghost btn-sm" onclick="cambiarModoRankingControl('diario')">☀️ Diario</button>
+                                        <button class="btn btn-ghost btn-sm" onclick="cambiarModoRankingControl('semanal')">📅 Semanal</button>
+                                        <button class="btn btn-ghost btn-sm" onclick="cambiarModoRankingControl('mensual')">🗓️ Mensual</button>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -4206,6 +4215,12 @@
                         actualizarBotonVistaAcumuladosActiva(vista);
                     }
                 } catch (e) { console.error('Error al cambiar vista de acumulados:', e); }
+            }
+
+            function cambiarModoRankingControl(modo) {
+                if (socket) {
+                    socket.emit('cambiarModoRanking', modo);
+                }
             }
 
             function actualizarBotonVistaAcumuladosActiva(vista) {

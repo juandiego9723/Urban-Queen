@@ -3653,14 +3653,20 @@
             }
 
             function actualizarBotonVistaAcumuladosActiva(vista) {
+                const slug = getAgencySlug();
+                let clean = vista;
+                if (slug && clean.startsWith(`/${slug}`)) {
+                    clean = clean.replace(`/${slug}`, '') || '/';
+                }
                 const ids = {
                     '/': 'btn-view-ranking',
-                    '/copa': 'btn-view-copa'
+                    '/copa': 'btn-view-copa',
+                    '/revivir-ranking': 'btn-view-revivir-ranking'
                 };
                 Object.keys(ids).forEach(key => {
                     const btn = document.getElementById(ids[key]);
                     if (btn) {
-                        if (key === vista) {
+                        if (key === clean) {
                             btn.style.background = 'linear-gradient(135deg, #6366f1, #a855f7)';
                             btn.style.borderColor = '#818cf8';
                             btn.style.color = '#ffffff';

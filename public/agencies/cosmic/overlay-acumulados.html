@@ -39,70 +39,116 @@
 
         // Guardar la última vista cargada para evitar recargas redundantes del iframe
         let ultimaVista = '';
+        // Cola de eventos pendientes mientras el iframe carga
+        let eventQueue = [];
+        let iframeReady = false;
 
-        // Reenviar TODOS los eventos del socket al iframe hijo vía postMessage
-        const originalOnevent = socket.onevent;
-        socket.onevent = function (packet) {
-            const args = packet.data || [];
-            const eventName = args[0];
-            const eventData = args[1];
-
-            if (eventName && frame && frame.contentWindow) {
+        // ── Función para reenviar un evento al iframe vía postMessage ──
+        function forwardToIframe(event, data) {
+            const msg = { type: 'SOCKET_IO_EVENT', event: event, data: data };
+            if (iframeReady && frame.contentWindow) {
                 try {
-                    frame.contentWindow.postMessage({
-                        type: 'SOCKET_IO_EVENT',
-                        event: eventName,
-                        data: eventData
-                    }, '*');
-                } catch (err) {
-                    console.error('[Cosmic Leaderboard Bridge] Error reenviando evento:', err);
+                    frame.contentWindow.postMessage(msg, '*');
+                    frame.contentWindow.postMessage({ type: 'socket-event', event: event, data: data }, '*');
+                } catch(e) {}
+            } else {
+                eventQueue.push(msg);
+            }
+        }
+
+        // Cuando el iframe termine de cargar, enviar los eventos pendientes
+        frame.addEventListener('load', function() {
+            iframeReady = true;
+            setTimeout(function() {
+                eventQueue.forEach(function(msg) {
+                    try {
+                        frame.contentWindow.postMessage(msg, '*');
+                        frame.contentWindow.postMessage({ type: 'socket-event', event: msg.event, data: msg.data }, '*');
+                    } catch(e) {}
+                });
+                eventQueue = [];
+            }, 150);
+        });
+
+        // ── Escuchar mensajes desde el iframe (puente bidireccional) ──
+        window.addEventListener('message', function(e) {
+            if (!e.data || !e.data.type) return;
+            if (e.data.type === 'IFRAME_BRIDGE_READY') {
+                iframeReady = true;
+                forwardToIframe('connect', { connected: socket.connected });
+            } else if (e.data.type === 'SOCKET_IO_EMIT' || e.data.type === 'iframe-socket-emit') {
+                if (socket && e.data.event) {
+                    socket.emit(e.data.event, e.data.data);
                 }
             }
-
-            if (originalOnevent) {
-                originalOnevent.call(this, packet);
-            }
-        };
-
-        window.addEventListener('message', (e) => {
-            if (e.data && e.data.type === 'IFRAME_BRIDGE_READY') {
-                if (frame && frame.contentWindow) {
-                    frame.contentWindow.postMessage({
-                        type: 'SOCKET_IO_CONNECT',
-                        connected: socket.connected
-                    }, '*');
-                }
-            }
         });
 
-        socket.on('connect', () => {
+        // ══════════════════════════════════════════════════════════════
+        //  LISTA COMPLETA DE EVENTOS DE ACUMULADOS / RANKING Y MARCA
+        // ══════════════════════════════════════════════════════════════
+        socket.on('modoRankingCambiado', function(d) { forwardToIframe('modoRankingCambiado', d); });
+        socket.on('rankingActualizado', function(d) { forwardToIframe('rankingActualizado', d); });
+        socket.on('actualizarRanking', function(d) { forwardToIframe('actualizarRanking', d); });
+        socket.on('rankingTitulosActualizados', function(d) { forwardToIframe('rankingTitulosActualizados', d); });
+        socket.on('resetRanking', function(d) { forwardToIframe('resetRanking', d); });
+        socket.on('resetMensual', function(d) { forwardToIframe('resetMensual', d); });
+        socket.on('resetDiario', function(d) { forwardToIframe('resetDiario', d); });
+
+        // ── Copa ──
+        socket.on('actualizarCopa', function(d) { forwardToIframe('actualizarCopa', d); });
+        socket.on('futbolConfigActualizada', function(d) { forwardToIframe('futbolConfigActualizada', d); });
+
+        // ── Revivir ──
+        socket.on('revivirInicio', function(d) { forwardToIframe('revivirInicio', d); });
+        socket.on('revivirTick', function(d) { forwardToIframe('revivirTick', d); });
+        socket.on('revivirPuntos', function(d) { forwardToIframe('revivirPuntos', d); });
+        socket.on('revivirFin', function(d) { forwardToIframe('revivirFin', d); });
+        socket.on('revivirFalloTiempoOut', function(d) { forwardToIframe('revivirFalloTiempoOut', d); });
+        socket.on('revivirCancelado', function(d) { forwardToIframe('revivirCancelado', d); });
+        socket.on('torneoFinRondaEsperandoDecision', function(d) { forwardToIframe('torneoFinRondaEsperandoDecision', d); });
+        socket.on('torneoTurnoTerminado', function(d) { forwardToIframe('torneoTurnoTerminado', d); });
+        socket.on('torneoCampeonaPantalla', function(d) { forwardToIframe('torneoCampeonaPantalla', d); });
+        socket.on('torneoPuntosActualizados', function(d) { forwardToIframe('torneoPuntosActualizados', d); });
+
+        // ── Marca y Config ──
+        socket.on('marcaCambiado', function(d) { forwardToIframe('marcaCambiado', d); });
+        socket.on('queensActualizadas', function(d) { forwardToIframe('queensActualizadas', d); });
+        socket.on('tiktokEstado', function(d) { forwardToIframe('tiktokEstado', d); });
+
+        socket.on('connect', function() {
             if (frame && frame.contentWindow) {
-                frame.contentWindow.postMessage({
-                    type: 'SOCKET_IO_CONNECT',
-                    connected: true
-                }, '*');
+                try {
+                    frame.contentWindow.postMessage({ type: 'SOCKET_IO_CONNECT', connected: true }, '*');
+                } catch(e) {}
             }
+            forwardToIframe('connect', { connected: true });
         });
-
-        socket.on('disconnect', () => {
+        socket.on('disconnect', function() {
             if (frame && frame.contentWindow) {
-                frame.contentWindow.postMessage({
-                    type: 'SOCKET_IO_CONNECT',
-                    connected: false
-                }, '*');
+                try {
+                    frame.contentWindow.postMessage({ type: 'SOCKET_IO_CONNECT', connected: false }, '*');
+                } catch(e) {}
             }
+            forwardToIframe('disconnect', { connected: false });
         });
 
+        // ══════════════════════════════════════════════════════════════
+        //  CAMBIO DE VISTA DE ACUMULADOS (Ranking / Copa / Revivir Ranking)
+        // ══════════════════════════════════════════════════════════════
         socket.on('cambioVistaAcumulados', (vista) => {
             if (!vista) return;
             if (vista === ultimaVista) return;
             ultimaVista = vista;
 
+            // Resetear estado del iframe
+            iframeReady = false;
+            eventQueue = [];
+
             const pathParts = window.location.pathname.split('/').filter(Boolean);
             const agencySlug = (pathParts.length > 0 && !pathParts[0].includes('.')) ? pathParts[0] : null;
 
             let targetUrl = vista;
-            if (agencySlug && !targetUrl.startsWith(`/${agencySlug}`)) {
+            if (agencySlug && agencySlug !== 'overlay-acumulados' && !targetUrl.startsWith(`/${agencySlug}`)) {
                 targetUrl = targetUrl === '/' ? `/${agencySlug}` : `/${agencySlug}${targetUrl}`;
             }
 
