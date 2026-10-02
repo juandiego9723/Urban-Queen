@@ -113,6 +113,13 @@
         socket.on('revivirFalloTiempoOut', function(d) { forwardToIframe('revivirFalloTiempoOut', d); });
         socket.on('revivirCancelado', function(d) { forwardToIframe('revivirCancelado', d); });
 
+        socket.on('torneoPuntosActualizados', function(d) { forwardToIframe('torneoPuntosActualizados', d); });
+        socket.on('torneoTurnoTerminado', function(d) { forwardToIframe('torneoTurnoTerminado', d); });
+        socket.on('torneoFinRondaEsperandoDecision', function(d) { forwardToIframe('torneoFinRondaEsperandoDecision', d); });
+        socket.on('torneoSalvacionConcluida', function(d) { forwardToIframe('torneoSalvacionConcluida', d); });
+        socket.on('torneoRondaDecidida', function(d) { forwardToIframe('torneoRondaDecidida', d); });
+        socket.on('torneoGanadoraAnunciada', function(d) { forwardToIframe('torneoGanadoraAnunciada', d); });
+
         socket.on('dinamicaInicio', function(d) { forwardToIframe('dinamicaInicio', d); });
         socket.on('dinamicaTick', function(d) { forwardToIframe('dinamicaTick', d); });
         socket.on('dinamicaPuntos', function(d) { forwardToIframe('dinamicaPuntos', d); });
