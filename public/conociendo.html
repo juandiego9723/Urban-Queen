@@ -72,35 +72,75 @@
         }
         .timer-activo { display: flex; }
 
-        /* Contenedor principal de la caja con fondo oscuro neón */
+        /* Contenedor principal — fondo oscuro con sparkles */
         .caja-central { 
             position: relative;
-            background: rgba(0, 0, 0, 0.88); 
-            border: 4px solid #00FFFF; 
-            border-radius: 24px; 
-            padding: 16px 25px 16px 145px; 
+            background:
+                radial-gradient(ellipse 70% 70% at 50% 50%, rgba(30,0,50,0.6) 0%, transparent 100%),
+                #0a0a12;
+            border: 2.5px solid rgba(200,0,255,0.6); 
+            border-radius: 28px; 
+            padding: 16px 25px 16px 18px; 
             display: flex;
             align-items: center;
-            box-shadow: 0 0 35px #00FFFF, inset 0 0 15px rgba(0, 255, 255, 0.15); 
+            box-shadow:
+                0 8px 40px rgba(0,0,0,0.9),
+                0 0 22px rgba(180,0,255,0.25),
+                inset 0 0 20px rgba(0,0,0,0.5); 
             box-sizing: border-box;
-            width: 96%;
-            max-width: 1250px;
-            transition: all 0.3s ease;
+            width: fit-content;
+            max-width: 95vw;
+            transition: all 0.4s ease;
             margin: 0 auto;
+            overflow: visible;
         }
+        /* Dot grid texture */
+        .caja-central::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            border-radius: 28px;
+            background: radial-gradient(rgba(255,255,255,0.055) 1px, transparent 1px) 0 0 / 18px 18px;
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        /* Sparkles distribuidas por todo el interior del card */
+        .sparkles-bg {
+            position: absolute;
+            inset: 0;
+            border-radius: 28px;
+            overflow: hidden;
+            pointer-events: none;
+            z-index: 1;
+        }
+        .sparkles-bg .sparkle-star { position: absolute; opacity: 0; }
+        .sb1  { top:  8%; left:  12%; animation: sparkFade 2.2s 0.0s infinite; }
+        .sb2  { top: 15%; left:  38%; animation: sparkFade 1.7s 0.5s infinite; }
+        .sb3  { top: 10%; left:  62%; animation: sparkFade 2.5s 1.1s infinite; }
+        .sb4  { top: 12%; left:  82%; animation: sparkFade 1.9s 1.8s infinite; }
+        .sb5  { top: 45%; left:   5%; animation: sparkFade 2.0s 0.7s infinite; }
+        .sb6  { top: 50%; left:  28%; animation: sparkFade 1.6s 1.4s infinite; }
+        .sb7  { top: 48%; left:  55%; animation: sparkFade 2.3s 0.2s infinite; }
+        .sb8  { top: 52%; left:  78%; animation: sparkFade 1.8s 2.0s infinite; }
+        .sb9  { top: 80%; left:  15%; animation: sparkFade 2.1s 0.9s infinite; }
+        .sb10 { top: 78%; left:  45%; animation: sparkFade 1.5s 1.6s infinite; }
+        .sb11 { top: 82%; left:  70%; animation: sparkFade 2.4s 0.4s infinite; }
+        .sb12 { top: 75%; left:  90%; animation: sparkFade 1.9s 1.2s infinite; }
 
         /* Wrapper del Marco Halloween + Foto Avatar */
         .avatar-frame-wrapper {
             position: relative;
-            width: 170px;
-            height: 170px;
+            width: 145px;
+            height: 145px;
             flex-shrink: 0;
             display: flex;
             align-items: center;
             justify-content: center;
+            z-index: 2;
         }
 
-        /* Foto recortada redonda grande detrás del orificio del marco */
+        /* Foto recortada redonda — borde neón morado como el timer */
         .avatar-foto-crop {
             position: absolute;
             width: 142px;
@@ -110,12 +150,18 @@
             transform: translate(-50%, -50%);
             border-radius: 50%;
             overflow: hidden;
-            background: #111;
+            background: #1a0030;
             display: flex;
             align-items: center;
             justify-content: center;
-            z-index: 0;
-            box-shadow: inset 0 0 15px rgba(0,0,0,0.9);
+            z-index: 2;
+            border: 3px solid #c800ff;
+            box-shadow:
+                0 0 8px #FF00D4,
+                0 0 20px #FF00D4,
+                0 0 38px #9000FF,
+                0 0 55px rgba(144,0,255,0.5),
+                inset 0 0 12px rgba(180,0,255,0.3);
         }
 
         .avatar-foto-crop img {
@@ -137,16 +183,9 @@
             height: 100%;
         }
 
-        /* Imagen del Marco de Halloween exacto suministrado por el usuario */
+        /* Marco Halloween — oculto */
         .marco-purple-img {
-            position: absolute;
-            top: -46px;
-            left: -154px;
-            width: 485px;
-            height: 272px;
-            z-index: 1;
-            filter: drop-shadow(0 0 12px currentColor);
-            pointer-events: none;
+            display: none;
         }
 
         /* Contenido derecho */
@@ -155,11 +194,37 @@
             flex-direction: column;
             flex-grow: 1;
             flex-shrink: 1;
-            min-width: 0;
+            min-width: 320px;
             gap: 10px;
             z-index: 2;
-            margin-left: 90px;
+            margin-left: 18px;
         }
+
+        /* ═══ SPARKLES LATERALES ═══ */
+        .sparkles-left, .sparkles-right {
+            position: absolute;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 60px;
+            height: 130px;
+            pointer-events: none;
+            z-index: 5;
+        }
+        .sparkles-left  { left:  -8px; }
+        .sparkles-right { right: -8px; transform: translateY(-50%) scaleX(-1); }
+        .sparkle-star { position: absolute; opacity: 0; }
+        .sparkle-star svg { display: block; }
+        @keyframes sparkFade {
+            0%   { opacity: 0;   transform: scale(0.4) rotate(0deg); }
+            30%  { opacity: 1;   transform: scale(1)   rotate(15deg); }
+            70%  { opacity: 0.8; transform: scale(0.9) rotate(30deg); }
+            100% { opacity: 0;   transform: scale(0.3) rotate(45deg); }
+        }
+        .s1 { top:  8%; left: 20%; animation: sparkFade 2.1s 1.0s infinite; }
+        .s2 { top: 35%; left: 55%; animation: sparkFade 1.8s 0.3s  infinite; }
+        .s3 { top: 62%; left: 10%; animation: sparkFade 2.4s 1.5s  infinite; }
+        .s4 { top: 80%; left: 45%; animation: sparkFade 1.6s 0.8s  infinite; }
+        .s5 { top: 20%; left: 72%; animation: sparkFade 2.0s 2.1s  infinite; }
 
         .fila-principal { 
             display: flex; 
@@ -212,10 +277,11 @@
             width: 100%; 
             height: 34px; 
             border-radius: 17px; 
-            border: 2px solid #FFF; 
+            border: 2px solid rgba(200,100,255,0.7); 
             position: relative; 
             overflow: hidden; 
-            box-shadow: inset 0 0 10px #000;
+            background: rgba(8,2,18,0.75);
+            box-shadow: 0 0 10px rgba(180,0,255,0.4), inset 0 0 8px rgba(0,0,0,0.6);
             z-index: 1;
             box-sizing: border-box;
         }
@@ -224,7 +290,7 @@
             height: 100%; 
             width: 0%; 
             transition: width 0.5s ease; 
-            background: #00FFFF; 
+            background: linear-gradient(90deg, #c800ff, #ff40f0, #ff00aa); 
         }
 
         .bar-text { 
@@ -266,12 +332,7 @@
             .avatar-fallback-initial {
                 font-size: 44px;
             }
-            .marco-purple-img {
-                top: -35px;
-                left: -118px;
-                width: 370px;
-                height: 208px;
-            }
+            .marco-purple-img { display: none; }
             .contenido-derecho {
                 margin-left: 0;
                 width: 100%;
@@ -310,8 +371,39 @@
     </head>
     <body>
         <div class="timer-container" id="contenedor-principal">
+            <!-- Sparkles izquierda -->
+            <div class="sparkles-left" aria-hidden="true">
+                <div class="sparkle-star s1"><svg width="18" height="18" viewBox="0 0 24 24"><path fill="#e0aaff" d="M12 2l1.8 5.5H20l-4.9 3.6 1.9 5.6L12 13l-4.9 3.6 1.9-5.6L4 7.5h6.2z"/></svg></div>
+                <div class="sparkle-star s2"><svg width="12" height="12" viewBox="0 0 24 24"><path fill="#fff" d="M12 2l1.8 5.5H20l-4.9 3.6 1.9 5.6L12 13l-4.9 3.6 1.9-5.6L4 7.5h6.2z"/></svg></div>
+                <div class="sparkle-star s3"><svg width="22" height="22" viewBox="0 0 24 24"><path fill="#d8b4fe" d="M12 2l1.8 5.5H20l-4.9 3.6 1.9 5.6L12 13l-4.9 3.6 1.9-5.6L4 7.5h6.2z"/></svg></div>
+                <div class="sparkle-star s4"><svg width="10" height="10" viewBox="0 0 24 24"><path fill="#f0c0ff" d="M12 2l1.8 5.5H20l-4.9 3.6 1.9 5.6L12 13l-4.9 3.6 1.9-5.6L4 7.5h6.2z"/></svg></div>
+                <div class="sparkle-star s5"><svg width="16" height="16" viewBox="0 0 24 24"><path fill="#ff80ff" d="M12 2l1.8 5.5H20l-4.9 3.6 1.9 5.6L12 13l-4.9 3.6 1.9-5.6L4 7.5h6.2z"/></svg></div>
+            </div>
+            <!-- Sparkles derecha -->
+            <div class="sparkles-right" aria-hidden="true">
+                <div class="sparkle-star s1"><svg width="18" height="18" viewBox="0 0 24 24"><path fill="#e0aaff" d="M12 2l1.8 5.5H20l-4.9 3.6 1.9 5.6L12 13l-4.9 3.6 1.9-5.6L4 7.5h6.2z"/></svg></div>
+                <div class="sparkle-star s2"><svg width="12" height="12" viewBox="0 0 24 24"><path fill="#fff" d="M12 2l1.8 5.5H20l-4.9 3.6 1.9 5.6L12 13l-4.9 3.6 1.9-5.6L4 7.5h6.2z"/></svg></div>
+                <div class="sparkle-star s3"><svg width="22" height="22" viewBox="0 0 24 24"><path fill="#d8b4fe" d="M12 2l1.8 5.5H20l-4.9 3.6 1.9 5.6L12 13l-4.9 3.6 1.9-5.6L4 7.5h6.2z"/></svg></div>
+                <div class="sparkle-star s4"><svg width="10" height="10" viewBox="0 0 24 24"><path fill="#f0c0ff" d="M12 2l1.8 5.5H20l-4.9 3.6 1.9 5.6L12 13l-4.9 3.6 1.9-5.6L4 7.5h6.2z"/></svg></div>
+                <div class="sparkle-star s5"><svg width="16" height="16" viewBox="0 0 24 24"><path fill="#ff80ff" d="M12 2l1.8 5.5H20l-4.9 3.6 1.9 5.6L12 13l-4.9 3.6 1.9-5.6L4 7.5h6.2z"/></svg></div>
+            </div>
             <!-- CAJA PRINCIPAL CONOCIENDO -->
             <div class="caja-central" id="caja-reloj">
+                <!-- Sparkles fondo interior -->
+                <div class="sparkles-bg" aria-hidden="true">
+                    <div class="sparkle-star sb1"><svg width="14" height="14" viewBox="0 0 24 24"><path fill="#e0aaff" d="M12 2l1.8 5.5H20l-4.9 3.6 1.9 5.6L12 13l-4.9 3.6 1.9-5.6L4 7.5h6.2z"/></svg></div>
+                    <div class="sparkle-star sb2"><svg width="9" height="9" viewBox="0 0 24 24"><path fill="#ffffff" d="M12 2l1.8 5.5H20l-4.9 3.6 1.9 5.6L12 13l-4.9 3.6 1.9-5.6L4 7.5h6.2z"/></svg></div>
+                    <div class="sparkle-star sb3"><svg width="11" height="11" viewBox="0 0 24 24"><path fill="#d8b4fe" d="M12 2l1.8 5.5H20l-4.9 3.6 1.9 5.6L12 13l-4.9 3.6 1.9-5.6L4 7.5h6.2z"/></svg></div>
+                    <div class="sparkle-star sb4"><svg width="8" height="8" viewBox="0 0 24 24"><path fill="#ff80ff" d="M12 2l1.8 5.5H20l-4.9 3.6 1.9 5.6L12 13l-4.9 3.6 1.9-5.6L4 7.5h6.2z"/></svg></div>
+                    <div class="sparkle-star sb5"><svg width="13" height="13" viewBox="0 0 24 24"><path fill="#c084fc" d="M12 2l1.8 5.5H20l-4.9 3.6 1.9 5.6L12 13l-4.9 3.6 1.9-5.6L4 7.5h6.2z"/></svg></div>
+                    <div class="sparkle-star sb6"><svg width="7" height="7" viewBox="0 0 24 24"><path fill="#ffffff" d="M12 2l1.8 5.5H20l-4.9 3.6 1.9 5.6L12 13l-4.9 3.6 1.9-5.6L4 7.5h6.2z"/></svg></div>
+                    <div class="sparkle-star sb7"><svg width="10" height="10" viewBox="0 0 24 24"><path fill="#f0c0ff" d="M12 2l1.8 5.5H20l-4.9 3.6 1.9 5.6L12 13l-4.9 3.6 1.9-5.6L4 7.5h6.2z"/></svg></div>
+                    <div class="sparkle-star sb8"><svg width="12" height="12" viewBox="0 0 24 24"><path fill="#e0aaff" d="M12 2l1.8 5.5H20l-4.9 3.6 1.9 5.6L12 13l-4.9 3.6 1.9-5.6L4 7.5h6.2z"/></svg></div>
+                    <div class="sparkle-star sb9"><svg width="9" height="9" viewBox="0 0 24 24"><path fill="#ffffff" d="M12 2l1.8 5.5H20l-4.9 3.6 1.9 5.6L12 13l-4.9 3.6 1.9-5.6L4 7.5h6.2z"/></svg></div>
+                    <div class="sparkle-star sb10"><svg width="14" height="14" viewBox="0 0 24 24"><path fill="#d8b4fe" d="M12 2l1.8 5.5H20l-4.9 3.6 1.9 5.6L12 13l-4.9 3.6 1.9-5.6L4 7.5h6.2z"/></svg></div>
+                    <div class="sparkle-star sb11"><svg width="8" height="8" viewBox="0 0 24 24"><path fill="#ff80ff" d="M12 2l1.8 5.5H20l-4.9 3.6 1.9 5.6L12 13l-4.9 3.6 1.9-5.6L4 7.5h6.2z"/></svg></div>
+                    <div class="sparkle-star sb12"><svg width="11" height="11" viewBox="0 0 24 24"><path fill="#c084fc" d="M12 2l1.8 5.5H20l-4.9 3.6 1.9 5.6L12 13l-4.9 3.6 1.9-5.6L4 7.5h6.2z"/></svg></div>
+                </div>
                 <div class="avatar-frame-wrapper">
                     <div class="avatar-foto-crop">
                         <img id="avatar-img-reloj" src="" alt="Avatar" onload="this.style.display='block'; this.nextElementSibling.style.display='none';" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
@@ -337,6 +429,21 @@
 
             <!-- CAJA TRANSICIÓN -->
             <div class="caja-central" id="caja-transicion" style="display: none;">
+                <!-- Sparkles fondo interior -->
+                <div class="sparkles-bg" aria-hidden="true">
+                    <div class="sparkle-star sb1"><svg width="14" height="14" viewBox="0 0 24 24"><path fill="#e0aaff" d="M12 2l1.8 5.5H20l-4.9 3.6 1.9 5.6L12 13l-4.9 3.6 1.9-5.6L4 7.5h6.2z"/></svg></div>
+                    <div class="sparkle-star sb2"><svg width="9" height="9" viewBox="0 0 24 24"><path fill="#ffffff" d="M12 2l1.8 5.5H20l-4.9 3.6 1.9 5.6L12 13l-4.9 3.6 1.9-5.6L4 7.5h6.2z"/></svg></div>
+                    <div class="sparkle-star sb3"><svg width="11" height="11" viewBox="0 0 24 24"><path fill="#d8b4fe" d="M12 2l1.8 5.5H20l-4.9 3.6 1.9 5.6L12 13l-4.9 3.6 1.9-5.6L4 7.5h6.2z"/></svg></div>
+                    <div class="sparkle-star sb4"><svg width="8" height="8" viewBox="0 0 24 24"><path fill="#ff80ff" d="M12 2l1.8 5.5H20l-4.9 3.6 1.9 5.6L12 13l-4.9 3.6 1.9-5.6L4 7.5h6.2z"/></svg></div>
+                    <div class="sparkle-star sb5"><svg width="13" height="13" viewBox="0 0 24 24"><path fill="#c084fc" d="M12 2l1.8 5.5H20l-4.9 3.6 1.9 5.6L12 13l-4.9 3.6 1.9-5.6L4 7.5h6.2z"/></svg></div>
+                    <div class="sparkle-star sb6"><svg width="7" height="7" viewBox="0 0 24 24"><path fill="#ffffff" d="M12 2l1.8 5.5H20l-4.9 3.6 1.9 5.6L12 13l-4.9 3.6 1.9-5.6L4 7.5h6.2z"/></svg></div>
+                    <div class="sparkle-star sb7"><svg width="10" height="10" viewBox="0 0 24 24"><path fill="#f0c0ff" d="M12 2l1.8 5.5H20l-4.9 3.6 1.9 5.6L12 13l-4.9 3.6 1.9-5.6L4 7.5h6.2z"/></svg></div>
+                    <div class="sparkle-star sb8"><svg width="12" height="12" viewBox="0 0 24 24"><path fill="#e0aaff" d="M12 2l1.8 5.5H20l-4.9 3.6 1.9 5.6L12 13l-4.9 3.6 1.9-5.6L4 7.5h6.2z"/></svg></div>
+                    <div class="sparkle-star sb9"><svg width="9" height="9" viewBox="0 0 24 24"><path fill="#ffffff" d="M12 2l1.8 5.5H20l-4.9 3.6 1.9 5.6L12 13l-4.9 3.6 1.9-5.6L4 7.5h6.2z"/></svg></div>
+                    <div class="sparkle-star sb10"><svg width="14" height="14" viewBox="0 0 24 24"><path fill="#d8b4fe" d="M12 2l1.8 5.5H20l-4.9 3.6 1.9 5.6L12 13l-4.9 3.6 1.9-5.6L4 7.5h6.2z"/></svg></div>
+                    <div class="sparkle-star sb11"><svg width="8" height="8" viewBox="0 0 24 24"><path fill="#ff80ff" d="M12 2l1.8 5.5H20l-4.9 3.6 1.9 5.6L12 13l-4.9 3.6 1.9-5.6L4 7.5h6.2z"/></svg></div>
+                    <div class="sparkle-star sb12"><svg width="11" height="11" viewBox="0 0 24 24"><path fill="#c084fc" d="M12 2l1.8 5.5H20l-4.9 3.6 1.9 5.6L12 13l-4.9 3.6 1.9-5.6L4 7.5h6.2z"/></svg></div>
+                </div>
                 <div class="avatar-frame-wrapper">
                     <div class="avatar-foto-crop">
                         <img id="avatar-img-transicion" src="" alt="Avatar" onload="this.style.display='block'; this.nextElementSibling.style.display='none';" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
