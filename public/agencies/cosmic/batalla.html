@@ -175,18 +175,11 @@
         /* ── BARRA DE PUNTOS GLASSMORPHISM ── */
         #bar-outer {
             height: 56px;
-            overflow: hidden;
             display: flex;
-            background: rgba(0, 0, 0, 0.75);
-            backdrop-filter: blur(10px);
-            -webkit-backdrop-filter: blur(10px);
-            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.7),
-                        inset 0 4px 12px rgba(0, 0, 0, 0.6),
-                        0 0 0 1px rgba(255, 255, 255, 0.08);
-            border: 3px solid rgba(255, 255, 255, 0.05);
-            padding: 3px;
+            align-items: center;
+            gap: 8px;
+            background: transparent;
             position: relative;
-            transition: border-color 0.5s ease, box-shadow 0.5s ease;
         }
 
         .queen-bar {
@@ -200,9 +193,12 @@
             letter-spacing: 0.5px;
             color: #fff;
             text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.9), 0 0 10px rgba(255,255,255,0.3);
-            transition: width 0.8s cubic-bezier(0.25, 1, 0.5, 1);
+            transition: width 0.8s cubic-bezier(0.25, 1, 0.5, 1), box-shadow 0.5s ease;
             position: relative;
             overflow: hidden;
+            border-radius: 28px;
+            border: 3.5px solid #ffffff;
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.6), inset 0 2px 8px rgba(255, 255, 255, 0.35);
         }
 
         /* Efecto Glossy Superior */
@@ -283,7 +279,7 @@
 
         .queen-label {
             font-family: 'Bangers', cursive;
-            font-size: 34px;
+            font-size: 40px;
             letter-spacing: 1px;
             text-shadow: 2px 2px 0px #000, 0 0 10px rgba(0, 0, 0, 0.9);
             line-height: 1;
@@ -294,47 +290,47 @@
         }
 
         .queen-name-img {
-            height: 38px;
-            max-width: 130px;
+            height: 48px;
+            max-width: 160px;
             object-fit: contain;
             filter: drop-shadow(0 0 8px rgba(0, 0, 0, 0.9));
         }
 
         .gift-img {
-            width: 36px;
-            height: 36px;
+            width: 72px;
+            height: 72px;
             object-fit: contain;
             flex-shrink: 0;
             filter: drop-shadow(0 0 8px rgba(255, 255, 255, 0.8));
         }
 
         /* ESCALADO DINÁMICO SEGÚN CANTIDAD DE INTEGRANTES */
-        #names-row.count-3 .queen-label { font-size: 26px; }
-        #names-row.count-3 .queen-name-img { height: 32px; max-width: 100px; }
-        #names-row.count-3 .gift-img { width: 30px; height: 30px; }
-        #names-row.count-3 .donor-seat-circle { width: 34px; height: 34px; }
-        #names-row.count-3 .donor-seats-pill { padding: 4px 8px; gap: 5px; }
+        #names-row.count-3 .queen-label { font-size: 32px; }
+        #names-row.count-3 .queen-name-img { height: 40px; max-width: 120px; }
+        #names-row.count-3 .gift-img { width: 60px; height: 60px; }
+        #names-row.count-3 .donor-seat-circle { width: 44px; height: 44px; }
+        #names-row.count-3 .donor-seats-pill { padding: 6px 12px; gap: 6px; }
 
-        #names-row.count-4 .queen-label { font-size: 21px; }
-        #names-row.count-4 .queen-name-img { height: 26px; max-width: 80px; }
-        #names-row.count-4 .gift-img { width: 24px; height: 24px; }
-        #names-row.count-4 .donor-seat-circle { width: 28px; height: 28px; }
-        #names-row.count-4 .donor-seats-pill { padding: 3px 6px; gap: 4px; }
+        #names-row.count-4 .queen-label { font-size: 26px; }
+        #names-row.count-4 .queen-name-img { height: 32px; max-width: 95px; }
+        #names-row.count-4 .gift-img { width: 48px; height: 48px; }
+        #names-row.count-4 .donor-seat-circle { width: 38px; height: 38px; }
+        #names-row.count-4 .donor-seats-pill { padding: 5px 8px; gap: 5px; }
 
-        #names-row.count-5 .queen-label { font-size: 17px; }
-        #names-row.count-5 .queen-name-img { height: 22px; max-width: 65px; }
-        #names-row.count-5 .gift-img { width: 20px; height: 20px; }
-        #names-row.count-5 .donor-seat-circle { width: 24px; height: 24px; }
-        #names-row.count-5 .donor-seats-pill { padding: 2px 5px; gap: 3px; }
+        #names-row.count-5 .queen-label { font-size: 22px; }
+        #names-row.count-5 .queen-name-img { height: 26px; max-width: 75px; }
+        #names-row.count-5 .gift-img { width: 40px; height: 40px; }
+        #names-row.count-5 .donor-seat-circle { width: 32px; height: 32px; }
+        #names-row.count-5 .donor-seats-pill { padding: 4px 6px; gap: 4px; }
 
         /* ── SILLAS / TOP DONADORES DE CADA BAILARINA ── */
         .donor-seats-pill {
             display: flex;
             align-items: center;
             justify-content: center;
-            gap: 8px;
-            padding: 6px 14px;
-            border-radius: 24px;
+            gap: 10px;
+            padding: 8px 16px;
+            border-radius: 28px;
             background: rgba(0, 0, 0, 0.45);
             backdrop-filter: blur(10px);
             -webkit-backdrop-filter: blur(10px);
@@ -345,8 +341,8 @@
         }
 
         .donor-seat-circle {
-            width: 42px;
-            height: 42px;
+            width: 48px;
+            height: 48px;
             border-radius: 50%;
             border: 2px solid rgba(255, 255, 255, 0.4);
             background: rgba(0, 0, 0, 0.6);
@@ -367,8 +363,8 @@
         }
 
         .donor-seat-circle .empty-seat-icon {
-            width: 22px;
-            height: 22px;
+            width: 26px;
+            height: 26px;
             opacity: 0.35;
             fill: currentColor;
         }
@@ -542,6 +538,8 @@
             
             let lider = null;
             let maxPts = -1;
+            const gapPx = 8;
+            const totalGapsPx = (count - 1) * gapPx;
             
             participantesActivos.forEach(chica => {
                 const barEl = document.getElementById('bar-' + chica);
@@ -552,9 +550,12 @@
                     lider = chica;
                 }
                 const p = pcts[chica] || (100 / count);
+                const gapDeduction = (totalGapsPx * (p / 100)).toFixed(2);
                 if (barEl) {
-                    barEl.style.width = p + '%';
+                    barEl.style.width = `calc(${p}% - ${gapDeduction}px)`;
                     barEl.textContent = pts;
+                    barEl.style.boxShadow = '0 6px 20px rgba(0, 0, 0, 0.6), inset 0 2px 8px rgba(255, 255, 255, 0.35)';
+                    barEl.style.borderColor = '#ffffff';
                 }
                 if (slotEl) {
                     slotEl.style.width = p + '%';
@@ -563,14 +564,14 @@
                 renderFeed(chica);
             });
 
-            // Hacer brillar el marco de la barra con el color del líder activo
+            // Hacer brillar la barra individual de la líder activa
             if (lider && equiposInfo[lider] && maxPts > 0) {
+                const liderBar = document.getElementById('bar-' + lider);
                 const liderColor = equiposInfo[lider].color;
-                barOuter.style.boxShadow = `0 8px 32px rgba(0, 0, 0, 0.7), 0 0 25px ${liderColor}66`;
-                barOuter.style.borderColor = `${liderColor}80`;
-            } else {
-                barOuter.style.boxShadow = '';
-                barOuter.style.borderColor = '';
+                if (liderBar) {
+                    liderBar.style.boxShadow = `0 0 25px ${liderColor}, 0 6px 20px rgba(0, 0, 0, 0.6), inset 0 2px 8px rgba(255, 255, 255, 0.5)`;
+                    liderBar.style.borderColor = '#ffffff';
+                }
             }
         }
 
@@ -631,7 +632,7 @@
                 } else if (donor) {
                     const initial = donor.nick.slice(0, 1).toUpperCase();
                     html += `
-                    <div class="donor-seat-circle filled" style="border-color: ${eq.color}; color: #fff; font-weight: 900; font-size: 16px; box-shadow: 0 0 10px ${eq.color}aa;">
+                    <div class="donor-seat-circle filled" style="border-color: ${eq.color}; color: #fff; font-weight: 900; font-size: 20px; box-shadow: 0 0 10px ${eq.color}aa;">
                         ${initial}
                     </div>`;
                 } else {
