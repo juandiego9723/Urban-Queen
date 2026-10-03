@@ -247,6 +247,38 @@
                 2px 3px 6px rgba(0,0,0,0.85);
             line-height: 1;
             letter-spacing: 2px;
+            transition: all 0.3s ease;
+        }
+
+        .reloj-gracias {
+            font-size: 28px !important;
+            font-weight: 900 !important;
+            letter-spacing: 1px !important;
+            color: #ffffff !important;
+            text-align: center;
+            white-space: nowrap;
+            display: inline-block;
+            animation: pulseGracias 2s ease-in-out infinite !important;
+        }
+
+        @keyframes pulseGracias {
+            0%, 100% {
+                transform: scale(1);
+                text-shadow:
+                    0 0 10px #ffffff,
+                    0 0 22px var(--color-reloj-gracias, #a855f7),
+                    0 0 35px var(--color-reloj-gracias, #a855f7),
+                    2px 3px 6px rgba(0,0,0,0.9);
+            }
+            50% {
+                transform: scale(1.05);
+                text-shadow:
+                    0 0 16px #ffffff,
+                    0 0 32px var(--color-reloj-gracias, #a855f7),
+                    0 0 50px var(--color-reloj-gracias, #a855f7),
+                    0 0 65px #ffffff,
+                    2px 3px 6px rgba(0,0,0,0.9);
+            }
         }
 
         /* ═══ CONTENT ROW ═══ */
@@ -476,6 +508,7 @@
         function aplicarColoresChica(chica) {
             const color = QUEEN_COLORS[chica] || '#a855f7';
             const light = lighten(color);
+            document.documentElement.style.setProperty('--color-reloj-gracias', color);
             nombreBailando.innerText = (APODOS[chica] || chica).toUpperCase();
             cajaReloj.style.borderColor = color + '80';
             cajaReloj.style.boxShadow = `0 15px 45px rgba(0, 0, 0, 0.8), 0 0 35px ${color}66`;
@@ -484,17 +517,27 @@
             barraMeta.style.background = `linear-gradient(90deg, ${color}, ${light})`;
         }
 
+        function actualizarRelojDisplay(segundos) {
+            if (segundos <= 0) {
+                displayReloj.innerText = '¡GRACIAS!';
+                displayReloj.classList.add('reloj-gracias');
+            } else {
+                displayReloj.innerText = formatearTiempo(segundos);
+                displayReloj.classList.remove('reloj-gracias');
+            }
+        }
+
         socket.on('conociendoInicio', (data) => {
             cajaTransicion.style.display = 'none';
             cajaReloj.style.display = 'flex';
             contenedor.classList.add('timer-activo');
             aplicarColoresChica(data.chica);
-            displayReloj.innerText = formatearTiempo(data.tiempo);
+            actualizarRelojDisplay(data.tiempo);
             txtMeta.innerText = data.meta.toLocaleString();
             actualizarBarra(data.puntos, data.meta);
         });
 
-        socket.on('conociendoTick', (tiempo) => { displayReloj.innerText = formatearTiempo(tiempo); });
+        socket.on('conociendoTick', (tiempo) => { actualizarRelojDisplay(tiempo); });
 
         socket.on('conociendoPuntos', (data) => { actualizarBarra(data.puntos, data.meta); });
 

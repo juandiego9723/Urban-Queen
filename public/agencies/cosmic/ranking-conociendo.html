@@ -1,0 +1,415 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <!-- Inyección de multi-cuenta -->
+    <script>
+        (function() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const user = urlParams.get('user');
+            if (user) {
+                const originalFetch = window.fetch;
+                window.fetch = function(url, options) {
+                    if (typeof url === 'string' && !url.includes('user=')) {
+                        const sep = url.includes('?') ? '&' : '?';
+                        url = url + sep + 'user=' + encodeURIComponent(user);
+                    }
+                    return originalFetch(url, options);
+                };
+                const originalIo = window.io;
+                if (originalIo) {
+                    window.io = function(opts) {
+                        opts = opts || {};
+                        opts.query = opts.query || {};
+                        opts.query.user = user;
+                        return originalIo(opts);
+                    };
+                } else {
+                    let _io = undefined;
+                    Object.defineProperty(window, 'io', {
+                        get: function() { return _io; },
+                        set: function(val) {
+                            _io = function(opts) {
+                                opts = opts || {};
+                                opts.query = opts.query || {};
+                                opts.query.user = user;
+                                return val(opts);
+                            };
+                        },
+                        configurable: true
+                    });
+                }
+            }
+        })();
+    </script>
+    <meta charset="UTF-8">
+    <title>Ranking Conociendo — Cosmic HUD</title>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:ital,wght@0,400;0,700;0,800;0,900;1,400;1,700;1,800;1,900&family=Inter:ital,wght@0,400;0,600;0,700;0,800;1,400;1,600;1,700&display=swap" rel="stylesheet">
+    <style>
+        body { 
+            background-color: transparent; 
+            font-family: 'Inter', sans-serif; 
+            color: white; 
+            margin: 0; 
+            padding: 15px;
+            display: flex;
+            justify-content: flex-start;
+            align-items: flex-start;
+        }
+        
+        .container { 
+            width: 320px; 
+            background: rgba(22, 38, 26, 0.65);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1.5px solid rgba(255, 255, 255, 0.08);
+            border-radius: 24px;
+            padding: 20px;
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.45);
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        
+        .row { 
+            display: flex; 
+            justify-content: space-between; 
+            align-items: center;
+            padding: 8px 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+            transition: all 0.3s ease;
+        }
+        .row:last-child {
+            border-bottom: none;
+        }
+        
+        .row.is-out {
+            background: rgba(0, 0, 0, 0.25);
+            border-radius: 14px;
+            padding: 8px 12px;
+            margin-top: 4px;
+            border-bottom: none;
+        }
+        
+        .row-left {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            flex-grow: 1;
+        }
+        
+        .rank-num {
+            font-family: 'Montserrat', sans-serif;
+            font-size: 1.55rem;
+            font-weight: 800;
+            font-style: italic;
+            width: 28px;
+            text-align: center;
+            flex-shrink: 0;
+        }
+        .rank-1 { color: #ffee00; text-shadow: 0 0 8px rgba(255, 238, 0, 0.3); }
+        .rank-2 { color: #00f2fe; text-shadow: 0 0 8px rgba(0, 242, 254, 0.3); }
+        .rank-3 { color: #ff8c00; text-shadow: 0 0 8px rgba(255, 140, 0, 0.3); }
+        .rank-other { color: #ffffff; }
+        .rank-out { color: rgba(255, 255, 255, 0.3); text-decoration: line-through; }
+        
+        .out-badge {
+            border: 1.5px solid #ff3b30;
+            color: #ff3b30;
+            background: rgba(255, 59, 48, 0.15);
+            font-size: 0.65rem;
+            font-family: 'Inter', sans-serif;
+            font-weight: 900;
+            padding: 1px 5px;
+            border-radius: 6px;
+            margin-left: 6px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            display: inline-block;
+            vertical-align: middle;
+            flex-shrink: 0;
+        }
+        
+        .avatar-wrapper {
+            position: relative;
+            width: 40px;
+            height: 40px;
+            margin-left: 10px;
+            margin-right: 12px;
+            flex-shrink: 0;
+        }
+        
+        .queen-avatar {
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            object-fit: cover;
+            border: 1.5px solid rgba(255, 255, 255, 0.6);
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+            display: none;
+        }
+        
+        .queen-avatar-fallback {
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: 'Montserrat', sans-serif;
+            font-size: 1.15rem;
+            font-weight: 800;
+            color: white;
+            text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.4);
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+        }
+        
+        .name { 
+            font-family: 'Inter', sans-serif;
+            font-size: 1.1rem; 
+            font-weight: 700;
+            color: #ffffff;
+            letter-spacing: 0.5px; 
+            transition: color 0.3s;
+        }
+        .name-out {
+            color: rgba(255, 255, 255, 0.3);
+        }
+        
+        .puntos { 
+            font-family: 'Inter', sans-serif;
+            font-size: 1.15rem; 
+            font-weight: 700;
+            color: #ffffff;
+            text-align: right;
+            min-width: 60px;
+            transition: all 0.3s;
+        }
+        .puntos-out {
+            color: rgba(255, 255, 255, 0.3);
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.12); color: #ffee00; text-shadow: 0 0 10px rgba(255, 238, 0, 0.5); }
+            100% { transform: scale(1); }
+        }
+        .update-anim { display: inline-block; animation: pulse 0.4s ease-out; }
+    </style>
+</head>
+<body>
+    <div class="container" id="ranking-container">
+        <!-- Sin bloque de título superior por requerimiento -->
+    </div>
+    <script src="/js/iframe-bridge.js"></script>
+    <script src="/socket.io/socket.io.js"></script>
+    <script>
+        const urlParams = new URLSearchParams(window.location.search);
+        const userParam = urlParams.get('user') || '';
+        const socket = window.__iframeBridgeSocket || io({ query: userParam ? { user: userParam } : {} });
+
+        let QUEENS = [];
+        let COLORES = {};
+        let APODOS = {};
+        let REGALOS_IMGS_MAP = {};
+        let AVATAR_IMGS_MAP = {};
+        let puntosConociendo = {};
+        let eliminadasConociendo = [];
+
+        function crearFilas() {
+            const container = document.getElementById('ranking-container');
+            container.querySelectorAll('.row').forEach(r => r.remove());
+
+            QUEENS.forEach(q => {
+                const row = document.createElement('div');
+                row.className = 'row';
+                row.id = 'row-' + q;
+                
+                const nombreDisplay = APODOS[q] || q;
+                const colorBase = COLORES[q] || '#00f2fe';
+                
+                row.innerHTML = `
+                    <div class="row-left">
+                        <span class="rank-num"></span>
+                        <span class="out-badge" style="display: none;">OUT</span>
+                        <div class="avatar-wrapper">
+                            <img class="queen-avatar" src="" onload="this.style.display='block'; this.nextElementSibling.style.display='none';" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                            <div class="queen-avatar-fallback" style="background: linear-gradient(135deg, ${colorBase}88, ${colorBase}); border: 2px solid ${colorBase};">
+                                ${nombreDisplay.trim().charAt(0).toUpperCase()}
+                            </div>
+                        </div>
+                        <span class="name"></span>
+                    </div>
+                    <span class="puntos" id="pts-${q}">0</span>
+                `;
+                container.appendChild(row);
+            });
+        }
+
+        function reordenarTabla() {
+            const filas = QUEENS.map(q => ({
+                name: q,
+                pts: puntosConociendo[q] || 0,
+                isOut: eliminadasConociendo.includes(q)
+            }));
+
+            filas.sort((a, b) => {
+                if (a.isOut !== b.isOut) return a.isOut ? 1 : -1;
+                return b.pts - a.pts;
+            });
+
+            filas.forEach((fila, index) => {
+                const rowEl = document.getElementById('row-' + fila.name);
+                const ptsEl = document.getElementById('pts-' + fila.name);
+                if (!rowEl || !ptsEl) return;
+
+                const nameEl = rowEl.querySelector('.name');
+                const rankEl = rowEl.querySelector('.rank-num');
+                const outEl = rowEl.querySelector('.out-badge');
+                const imgEl = rowEl.querySelector('.queen-avatar');
+                const fallbackEl = rowEl.querySelector('.queen-avatar-fallback');
+
+                rowEl.style.order = index;
+                ptsEl.innerText = fila.pts.toLocaleString('es-ES');
+
+                const nombreDisplay = APODOS[fila.name] || fila.name;
+
+                if (fila.isOut) {
+                    rowEl.classList.add('is-out');
+                    rankEl.className = 'rank-num rank-out';
+                    rankEl.innerText = index + 1;
+                    outEl.style.display = 'inline-block';
+                    nameEl.className = 'name name-out';
+                    nameEl.style.color = '';
+                    nameEl.innerText = nombreDisplay;
+                    ptsEl.className = 'puntos puntos-out';
+                } else {
+                    rowEl.classList.remove('is-out');
+                    outEl.style.display = 'none';
+                    ptsEl.className = 'puntos';
+
+                    let rankClass = 'rank-other';
+                    if (index === 0) rankClass = 'rank-1';
+                    else if (index === 1) rankClass = 'rank-2';
+                    else if (index === 2) rankClass = 'rank-3';
+
+                    rankEl.className = 'rank-num ' + rankClass;
+                    rankEl.innerText = index + 1;
+
+                    if (index === 0) {
+                        nameEl.innerHTML = '<span style="font-size:1.15rem; margin-right:4px;">👑</span>' + nombreDisplay;
+                        nameEl.className = 'name name-leader';
+                        nameEl.style.color = '#ffee00';
+                    } else {
+                        nameEl.innerText = nombreDisplay;
+                        nameEl.className = 'name';
+                        nameEl.style.color = '#ffffff';
+                    }
+                }
+
+                const customAvatar = AVATAR_IMGS_MAP[fila.name] || '';
+                const giftImg = REGALOS_IMGS_MAP[fila.name] || '';
+                const avatarSrc = customAvatar || (giftImg ? `/regalos/${encodeURIComponent(giftImg)}` : '');
+                
+                if (avatarSrc) {
+                    imgEl.src = avatarSrc;
+                } else {
+                    imgEl.removeAttribute('src');
+                    imgEl.style.display = 'none';
+                    fallbackEl.style.display = 'flex';
+                }
+            });
+        }
+
+        async function init() {
+            try {
+                const [resQ, resAll, resAp, resRank] = await Promise.all([
+                    fetch('/api/queens'),
+                    fetch('/api/queens/all'),
+                    fetch('/api/apodos'),
+                    fetch('/api/conociendo-ranking')
+                ]);
+
+                QUEENS = await resQ.json();
+                const allQueens = await resAll.json();
+                APODOS = await resAp.json();
+                const rankData = await resRank.json();
+
+                if (rankData) {
+                    puntosConociendo = rankData.puntosRanking || {};
+                    eliminadasConociendo = rankData.eliminadas || [];
+                    localStorage.setItem('cosmic_conociendo_ranking', JSON.stringify({
+                        puntosRanking: puntosConociendo,
+                        eliminadas: eliminadasConociendo
+                    }));
+                }
+
+                COLORES = {};
+                REGALOS_IMGS_MAP = {};
+                AVATAR_IMGS_MAP = {};
+                allQueens.forEach(q => { 
+                    COLORES[q.name] = q.color; 
+                    REGALOS_IMGS_MAP[q.name] = q.regalo_img;
+                    AVATAR_IMGS_MAP[q.name] = q.avatar_img || '';
+                });
+
+                crearFilas();
+                reordenarTabla();
+            } catch(e) {
+                console.log("Error cargando ranking de conociendo", e);
+            }
+        }
+
+        init();
+
+        try {
+            const bc = new BroadcastChannel('cosmic_conociendo_channel');
+            bc.onmessage = (event) => {
+                if (event.data && event.data.action === 'RESET_RANKING_CONOCIENDO') {
+                    puntosConociendo = {};
+                    eliminadasConociendo = [];
+                    localStorage.setItem('cosmic_conociendo_ranking', JSON.stringify({ puntosRanking: {}, eliminadas: [] }));
+                    reordenarTabla();
+                }
+            };
+        } catch(e) {}
+
+        socket.on('conociendoRankingActualizado', (data) => {
+            if (data) {
+                if (data.puntosRanking !== undefined) puntosConociendo = data.puntosRanking;
+                if (data.eliminadas !== undefined) eliminadasConociendo = data.eliminadas;
+                localStorage.setItem('cosmic_conociendo_ranking', JSON.stringify({
+                    puntosRanking: puntosConociendo,
+                    eliminadas: eliminadasConociendo
+                }));
+                reordenarTabla();
+            }
+        });
+
+        socket.on('queensActualizadas', () => {
+            init();
+        });
+
+        // Branding / Marca
+        function loadGoogleFont(fontName) {
+            const fontId = 'dynamic-google-font';
+            let link = document.getElementById(fontId);
+            if (!link) {
+                link = document.createElement('link');
+                link.id = fontId;
+                link.rel = 'stylesheet';
+                document.head.appendChild(link);
+            }
+            link.href = `https://fonts.googleapis.com/css2?family=${encodeURIComponent(fontName)}:wght@400;700;800;900&display=swap`;
+            document.body.style.fontFamily = `'${fontName}', sans-serif`;
+        }
+
+        function aplicarMarca(config) {
+            if (!config) return;
+            if (config.fontFamily) {
+                loadGoogleFont(config.fontFamily);
+            }
+        }
+        socket.on('marcaCambiado', aplicarMarca);
+    </script>
+</body>
+</html>

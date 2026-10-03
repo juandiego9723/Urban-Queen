@@ -471,7 +471,13 @@ function createPointsProcessor(io, activeSessions, resolverNombreFn, timerHandle
             });
             if (nuevosPuntos > 0) {
                 session.conociendo.puntos += nuevosPuntos;
+                if (!session.conociendo.puntosRanking) session.conociendo.puntosRanking = {};
+                session.conociendo.puntosRanking[chicaActual] = (session.conociendo.puntosRanking[chicaActual] || 0) + nuevosPuntos;
                 io.to(username).emit('conociendoPuntos', { puntos: session.conociendo.puntos, meta: session.conociendo.meta });
+                io.to(username).emit('conociendoRankingActualizado', {
+                    puntosRanking: session.conociendo.puntosRanking,
+                    eliminadas: session.conociendo.eliminadas || []
+                });
             }
         }
 

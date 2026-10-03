@@ -95,6 +95,51 @@ function setupConociendoDynamics(app, io, requireSession, activeSessions) {
         res.send("OK");
     });
 
+    app.all('/conociendo/toggle-out', requireSession, (req, res) => {
+        const s = req.userSession;
+        const chica = req.query.c;
+        if (!chica) return res.send("ERR");
+        if (!s.conociendo.eliminadas) s.conociendo.eliminadas = [];
+        if (!s.conociendo.puntosRanking) s.conociendo.puntosRanking = {};
+
+        const idx = s.conociendo.eliminadas.indexOf(chica);
+        if (idx > -1) {
+            s.conociendo.eliminadas.splice(idx, 1);
+        } else {
+            s.conociendo.eliminadas.push(chica);
+        }
+
+        io.to(req.username).emit('conociendoRankingActualizado', {
+            puntosRanking: s.conociendo.puntosRanking,
+            eliminadas: s.conociendo.eliminadas
+        });
+        res.send("OK");
+    });
+
+    app.all('/conociendo/reset-ranking', requireSession, (req, res) => {
+        const s = req.userSession;
+        s.conociendo.puntosRanking = {};
+        s.conociendo.eliminadas = [];
+        s.conociendo.puntos = 0;
+
+        io.to(req.username).emit('conociendoRankingActualizado', {
+            puntosRanking: {},
+            eliminadas: [],
+            action: 'RESET_RANKING_CONOCIENDO'
+        });
+        res.send("OK");
+    });
+
+    app.get('/api/conociendo-ranking', requireSession, (req, res) => {
+        const s = req.userSession;
+        if (!s.conociendo.eliminadas) s.conociendo.eliminadas = [];
+        if (!s.conociendo.puntosRanking) s.conociendo.puntosRanking = {};
+        res.json({
+            puntosRanking: s.conociendo.puntosRanking,
+            eliminadas: s.conociendo.eliminadas
+        });
+    });
+
     return { saltarConociendo };
 }
 

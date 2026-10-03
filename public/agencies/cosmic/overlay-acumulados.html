@@ -93,6 +93,7 @@
         socket.on('resetRanking', function(d) { forwardToIframe('resetRanking', d); });
         socket.on('resetMensual', function(d) { forwardToIframe('resetMensual', d); });
         socket.on('resetDiario', function(d) { forwardToIframe('resetDiario', d); });
+        socket.on('conociendoRankingActualizado', function(d) { forwardToIframe('conociendoRankingActualizado', d); });
 
         // ── Copa ──
         socket.on('actualizarCopa', function(d) { forwardToIframe('actualizarCopa', d); });

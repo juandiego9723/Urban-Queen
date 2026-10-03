@@ -279,6 +279,10 @@ app.get('/batalla-futbol',(req, res) => res.sendFile(pub('batalla-futbol.html'))
 app.get('/batalla-pk',    (req, res) => res.sendFile(pub('batalla-pk.html')));
 app.get('/timer',         (req, res) => res.sendFile(pub('timer.html')));
 app.get('/conociendo',    (req, res) => res.sendFile(pub('conociendo.html')));
+app.get('/ranking-conociendo', (req, res) => {
+    const slug = req.session.agencySlug || (req.agency ? req.agency.slug : 'cosmic');
+    return res.sendFile(agencyPub(slug, 'ranking-conociendo.html'));
+});
 app.get('/revivir',       (req, res) => res.sendFile(pub('revivir.html')));
 app.get('/revivir-ranking', (req, res) => res.sendFile(pub('revivir-ranking.html')));
 app.get('/copa',          (req, res) => res.sendFile(pub('copa.html')));
