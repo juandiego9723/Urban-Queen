@@ -566,9 +566,33 @@
             }
         });
 
+        let currentPuntosRevivir = 0;
+        let currentMetaRevivir = 0;
+
+        try {
+            const bc = new BroadcastChannel('cosmic_torneo_channel');
+            bc.onmessage = (event) => {
+                if (event.data && event.data.action === 'TORNEO_META_ACTUALIZADA') {
+                    if (!event.data.chica || event.data.chica === activeQueen) {
+                        currentMetaRevivir = parseInt(event.data.meta) || currentMetaRevivir;
+                        actualizarProgreso(currentPuntosRevivir, currentMetaRevivir);
+                    }
+                }
+            };
+        } catch(e) {}
+
         socket.on('revivirPuntos', (data) => {
+            currentPuntosRevivir = data.puntos;
+            if (data.meta) currentMetaRevivir = data.meta;
             actualizarProgreso(data.puntos, data.meta);
             renderRegalos(data.regalosEnviados, data.regalosImgs);
+        });
+
+        socket.on('torneoMetaActualizada', (data) => {
+            if (data && (!data.chica || data.chica === activeQueen)) {
+                currentMetaRevivir = parseInt(data.meta) || currentMetaRevivir;
+                actualizarProgreso(currentPuntosRevivir, currentMetaRevivir);
+            }
         });
 
         socket.on('revivirFin', (data) => {

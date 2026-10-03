@@ -57,6 +57,8 @@ function setupTimerDynamics(app, io, requireSession, activeSessions) {
 
         if (nextChica) {
             s.timerBaile.chicaActual = nextChica;
+            const metaEstaChica = (s.timerBaile.metasPorTurno && s.timerBaile.metasPorTurno[nextChica]) ? parseInt(s.timerBaile.metasPorTurno[nextChica]) : (s.timerBaile.metaTurno || 1000);
+            s.timerBaile.metaTurnoActual = metaEstaChica;
             s.timerBaile.tiempo = s.timerBaile.tiempoBase || 90;
             s.timerBaile.puntosTurnoActual = 0;
             s.timerBaile.estado = 'intro';
@@ -70,7 +72,7 @@ function setupTimerDynamics(app, io, requireSession, activeSessions) {
             io.to(username).emit('revivirInicio', {
                 chica: s.timerBaile.chicaActual,
                 tiempo: s.timerBaile.tiempo,
-                meta: s.timerBaile.metaTurno,
+                meta: s.timerBaile.metaTurnoActual,
                 puntos: 0,
                 modoTorneo: true,
                 rondaActual: s.timerBaile.rondaActual,
@@ -217,7 +219,17 @@ function setupTimerDynamics(app, io, requireSession, activeSessions) {
         s.timerBaile.tiempoBase = tiempoBase;
         s.timerBaile.chicaActual = participantes[0];
         s.timerBaile.estado = 'intro';
-        s.timerBaile.metaTurno = metaTurno;
+        let metasPorTurnoObj = {};
+        const metasPorTurnoRaw = req.query.metasPorTurno || (req.body && req.body.metasPorTurno) || '';
+        if (metasPorTurnoRaw) {
+            try {
+                metasPorTurnoObj = typeof metasPorTurnoRaw === 'string' ? JSON.parse(metasPorTurnoRaw) : metasPorTurnoRaw;
+            } catch(e) {}
+        }
+        s.timerBaile.metasPorTurno = metasPorTurnoObj;
+        const primeraMeta = (s.timerBaile.metasPorTurno && s.timerBaile.metasPorTurno[participantes[0]]) ? parseInt(s.timerBaile.metasPorTurno[participantes[0]]) : metaTurno;
+        s.timerBaile.metaTurnoActual = primeraMeta;
+
         s.timerBaile.puntosTorneo = {};
         s.timerBaile.puntosTurnoActual = 0;
         s.timerBaile.clasificadas = clasificadas;
@@ -243,7 +255,7 @@ function setupTimerDynamics(app, io, requireSession, activeSessions) {
         io.to(user).emit('revivirInicio', {
             chica: s.timerBaile.chicaActual,
             tiempo: s.timerBaile.tiempo,
-            meta: s.timerBaile.metaTurno,
+            meta: s.timerBaile.metaTurnoActual,
             puntos: 0,
             modoTorneo: true,
             rondaActual: s.timerBaile.rondaActual,
@@ -312,12 +324,23 @@ function setupTimerDynamics(app, io, requireSession, activeSessions) {
         const user = req.username;
         const chica = req.query.chica || (req.body && req.body.chica) || '';
         const tiempo = parseInt(req.query.tiempo || (req.body && req.body.tiempo)) || 90;
-        const meta = parseInt(req.query.meta || (req.body && req.body.meta)) || 500;
+        const metaParam = parseInt(req.query.meta || (req.body && req.body.meta)) || 0;
 
         if (!chica) return res.status(400).send('Falta especificar la bailarina');
 
+        // JERARQUÍA ESTRICTA DE METAS: La meta individual de la bailarina tiene prioridad absoluta
+        let metaFinal = 500;
+        if (s.timerBaile && s.timerBaile.metasPorTurno && parseInt(s.timerBaile.metasPorTurno[chica]) > 0) {
+            metaFinal = parseInt(s.timerBaile.metasPorTurno[chica]);
+        } else if (metaParam > 0) {
+            metaFinal = metaParam;
+        } else if (s.timerBaile && s.timerBaile.metaTurno > 0) {
+            metaFinal = s.timerBaile.metaTurno;
+        }
+
         s.revivir.chicaActual = chica;
-        s.revivir.meta = meta;
+        s.revivir.meta = metaFinal;
+        if (s.timerBaile) s.timerBaile.metaTurnoActual = metaFinal;
         s.revivir.tiempo = tiempo;
         s.revivir.puntos = 0;
         s.revivir.donantes = {};
@@ -336,8 +359,8 @@ function setupTimerDynamics(app, io, requireSession, activeSessions) {
             meta: s.revivir.meta,
             puntos: 0,
             modoTorneo: true,
-            rondaActual: s.timerBaile.rondaActual,
-            rondasTotales: s.timerBaile.rondasTotales,
+            rondaActual: s.timerBaile ? s.timerBaile.rondaActual : 1,
+            rondasTotales: s.timerBaile ? s.timerBaile.rondasTotales : 1,
             regalosEnviados: {},
             regalosImgs: {},
             topDonantes: []
@@ -510,6 +533,8 @@ function setupTimerDynamics(app, io, requireSession, activeSessions) {
         }
 
         s.timerBaile.chicaActual = s.timerBaile.orden[0];
+        const primeraMetaRonda = (s.timerBaile.metasPorTurno && s.timerBaile.metasPorTurno[s.timerBaile.chicaActual]) ? parseInt(s.timerBaile.metasPorTurno[s.timerBaile.chicaActual]) : (s.timerBaile.metaTurno || 1000);
+        s.timerBaile.metaTurnoActual = primeraMetaRonda;
         s.timerBaile.tiempo = s.timerBaile.tiempoBase || 90;
         s.timerBaile.puntosTurnoActual = 0;
         s.timerBaile.estado = 'intro';
@@ -530,7 +555,7 @@ function setupTimerDynamics(app, io, requireSession, activeSessions) {
         io.to(user).emit('revivirInicio', {
             chica: s.timerBaile.chicaActual,
             tiempo: s.timerBaile.tiempo,
-            meta: s.timerBaile.metaTurno,
+            meta: s.timerBaile.metaTurnoActual,
             puntos: 0,
             modoTorneo: true,
             rondaActual: s.timerBaile.rondaActual,
@@ -634,6 +659,32 @@ function setupTimerDynamics(app, io, requireSession, activeSessions) {
 
     app.all('/timer/status', requireSession, (req, res) => {
         res.json(req.userSession.timerBaile);
+    });
+
+    app.all('/timer/update-meta-turno', requireSession, (req, res) => {
+        const s = req.userSession;
+        const user = req.username;
+        const chica = req.query.chica || (req.body && req.body.chica);
+        const meta = parseInt(req.query.meta || (req.body && req.body.meta)) || 1000;
+
+        if (!chica) return res.status(400).send('Falta chica');
+        if (!s.timerBaile.metasPorTurno) s.timerBaile.metasPorTurno = {};
+        s.timerBaile.metasPorTurno[chica] = meta;
+
+        if (s.timerBaile.chicaActual === chica) {
+            s.timerBaile.metaTurnoActual = meta;
+            io.to(user).emit('torneoMetaActualizada', {
+                chica,
+                meta,
+                puntos: s.timerBaile.puntosTurnoActual || 0
+            });
+        }
+
+        io.to(user).emit('torneoMetasGlobalesActualizadas', {
+            metasPorTurno: s.timerBaile.metasPorTurno
+        });
+
+        res.send("OK");
     });
 
     app.all('/timer/stop', requireSession, (req, res) => {

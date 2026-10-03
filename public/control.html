@@ -4371,18 +4371,26 @@
                     selRevivir.innerHTML = todas.filter(q => q.activo).map(q => `<option value="${q.name}">${q.apodo || q.name}</option>`).join('');
                 }
 
-                // Rellenar checkboxes del Torneo
+                // Rellenar checkboxes y metas del Torneo
                 const checksContainer = document.getElementById('torneo-participantes-checks');
                 if (checksContainer) {
                     const selectedBefore = Array.from(checksContainer.querySelectorAll('input[type="checkbox"]:checked')).map(cb => cb.value);
                     const hasSelections = selectedBefore.length > 0;
+                    const metasGuardadas = JSON.parse(localStorage.getItem('urban_torneo_metas') || '{}');
                     checksContainer.innerHTML = todas.map(q => {
                         const checked = hasSelections ? (selectedBefore.includes(q.name) ? 'checked' : '') : (q.activo ? 'checked' : '');
+                        const metaVal = metasGuardadas[q.name] || 1000;
                         return `
-                            <label style="display: flex; align-items: center; gap: 4px; font-size: 12px; cursor: pointer;">
-                                <input type="checkbox" value="${q.name}" class="torneo-participante-cb" ${checked}>
-                                <span style="color: ${q.color || '#fff'}">${q.apodo || q.name}</span>
-                            </label>
+                            <div style="display: flex; align-items: center; justify-content: space-between; padding: 6px 10px; background: rgba(255,255,255,0.04); border: 1px solid var(--border); border-radius: 8px; width: 100%; gap: 8px;">
+                                <label style="display: flex; align-items: center; gap: 8px; font-size: 13px; cursor: pointer; flex: 1;">
+                                    <input type="checkbox" value="${q.name}" class="torneo-participante-cb" ${checked}>
+                                    <span style="color: ${q.color || '#fff'}; font-weight: 700;">${q.apodo || q.name}</span>
+                                </label>
+                                <div style="display: flex; align-items: center; gap: 6px;">
+                                    <span style="font-size: 11px; color: var(--muted); font-weight: 600;">Meta Turno:</span>
+                                    <input type="number" id="torneo-meta-input-${q.name}" class="input input-num meta-individual-cb-input" data-queen="${q.name}" value="${metaVal}" min="10" step="10" style="width: 85px; height: 28px; font-size: 12px; text-align: center; font-weight: 800;" onchange="guardarMetaIndividual('${q.name}', this.value)" oninput="guardarMetaIndividual('${q.name}', this.value)">
+                                </div>
+                            </div>
                         `;
                     }).join('');
                 }
@@ -4721,12 +4729,15 @@
                             <tr style="border-bottom: 2px solid var(--pink); color: var(--text-muted);">
                                 <th style="padding: 6px 8px;">Bailarina</th>
                                 <th style="padding: 6px 8px; text-align: right;">Puntos Total</th>
+                                <th style="padding: 6px 8px; text-align: center;">Meta Turno</th>
                                 <th style="padding: 6px 8px; text-align: center;">Estado</th>
                                 <th style="padding: 6px 8px; text-align: right;">Acciones Manuales</th>
                             </tr>
                         </thead>
                         <tbody>
                 `;
+
+                const metasGuardadas = JSON.parse(localStorage.getItem('urban_torneo_metas') || '{}');
 
                 todas.forEach((chica) => {
                     const apodo = APODOS[chica] || chica;
@@ -4736,6 +4747,7 @@
                     const esSalvada = salvadas.includes(chica);
                     const esEnRiesgo = enRiesgo.includes(chica) && !esEliminada && !esSalvada;
                     const esBailando = (chica === chicaActual && !esEliminada);
+                    const metaActualChica = metasGuardadas[chica] || 1000;
 
                     let badgeState = '';
                     if (esEliminada) {
@@ -4767,6 +4779,9 @@
                         <tr style="border-bottom: 1px solid rgba(255,255,255,0.08); background: ${esEliminada ? 'rgba(255,0,0,0.05)' : (esEnRiesgo ? 'rgba(234,179,8,0.08)' : (esBailando ? 'rgba(255,0,128,0.08)' : 'transparent'))};">
                             <td style="padding: 6px 8px; font-weight: 700; color: ${color};">${apodo} ${esBailando ? '🎤' : ''}</td>
                             <td style="padding: 6px 8px; text-align: right; font-family: monospace; font-size: 14px; font-weight: 700;">${pts}</td>
+                            <td style="padding: 6px 8px; text-align: center;">
+                                <input type="number" class="input input-num" value="${metaActualChica}" min="10" step="10" style="width: 75px; height: 26px; text-align: center; font-size: 12px; font-weight: 800;" onchange="actualizarMetaEnVivo('${chica}', this.value)" oninput="actualizarMetaEnVivo('${chica}', this.value)">
+                            </td>
                             <td style="padding: 6px 8px; text-align: center;">${badgeState}</td>
                             <td style="padding: 6px 8px; text-align: right;">${botonesAccion}</td>
                         </tr>
@@ -4945,17 +4960,73 @@
             });
 
             // ── Funciones del Torneo de Rondas ──
+            function guardarMetaIndividual(chica, valor) {
+                const meta = parseInt(valor) || 1000;
+                let metasObj = {};
+                try {
+                    metasObj = JSON.parse(localStorage.getItem('urban_torneo_metas') || '{}');
+                } catch(e) {}
+                metasObj[chica] = meta;
+                localStorage.setItem('urban_torneo_metas', JSON.stringify(metasObj));
+            }
+
+            function actualizarMetaEnVivo(chica, valor) {
+                guardarMetaIndividual(chica, valor);
+                const meta = parseInt(valor) || 1000;
+                hacerFetch(`/timer/update-meta-turno?chica=${encodeURIComponent(chica)}&meta=${meta}`);
+                try {
+                    const bc = new BroadcastChannel('cosmic_torneo_channel');
+                    bc.postMessage({ action: 'TORNEO_META_ACTUALIZADA', chica: chica, meta: meta });
+                    bc.close();
+                } catch(e) {}
+            }
+
             function iniciarTorneoRondas() {
                 const checkedCheckboxes = Array.from(document.querySelectorAll('.torneo-participante-cb:checked')).map(cb => cb.value);
                 if (checkedCheckboxes.length < 2) {
                     return alert('Por favor, selecciona al menos 2 bailarinas para el torneo.');
                 }
                 const participantes = checkedCheckboxes.join(',');
-                const tiempo = document.getElementById('torneoTiempo').value || 90;
-                const metaTurno = document.getElementById('torneoMetaTurno').value || 1000;
+                const tiempo = parseInt(document.getElementById('torneoTiempo').value) || 90;
+                const metaTurnoGeneral = parseInt(document.getElementById('torneoMetaTurno').value) || 1000;
+
+                // 1. LECTURA PRIORITARIA DEL INPUT Y CONFIRMACIÓN PREVIA
+                const metasObj = JSON.parse(localStorage.getItem('urban_torneo_metas') || '{}');
+                checkedCheckboxes.forEach(q => {
+                    const inp = document.getElementById(`torneo-meta-input-${q}`);
+                    if (inp && inp.value && parseInt(inp.value) > 0) {
+                        metasObj[q] = parseInt(inp.value);
+                    } else if (!metasObj[q] || parseInt(metasObj[q]) <= 0) {
+                        metasObj[q] = metaTurnoGeneral;
+                    }
+                });
+
+                // Guardar confirmación en localStorage antes del inicio de la ronda
+                localStorage.setItem('urban_torneo_metas', JSON.stringify(metasObj));
+
+                // Meta de prioridad absoluta para la primera participante
+                const primeraChica = checkedCheckboxes[0];
+                const metaPrimeraChica = (metasObj[primeraChica] && parseInt(metasObj[primeraChica]) > 0)
+                    ? parseInt(metasObj[primeraChica])
+                    : metaTurnoGeneral;
+
+                // 2. DISPARO DEL EVENTO CON PAYLOAD COMPLETO
+                try {
+                    const bc = new BroadcastChannel('cosmic_torneo_channel');
+                    bc.postMessage({
+                        action: 'TORNEO_INICIO',
+                        chica: primeraChica,
+                        meta: metaPrimeraChica,
+                        tiempo: tiempo,
+                        puntos: 0,
+                        modoTorneo: true,
+                        metasPorTurno: metasObj
+                    });
+                    bc.close();
+                } catch(e) {}
 
                 setDisplay('btn-next-round-wrap', 'none');
-                hacerFetch(`/timer/start-tournament?participantes=${encodeURIComponent(participantes)}&tiempoBase=${tiempo}&metaTurno=${metaTurno}`);
+                hacerFetch(`/timer/start-tournament?participantes=${encodeURIComponent(participantes)}&tiempoBase=${tiempo}&metaTurno=${metaPrimeraChica}&metasPorTurno=${encodeURIComponent(JSON.stringify(metasObj))}`);
             }
 
             function cancelarTorneoRondas() {
@@ -4963,14 +5034,17 @@
             }
 
             async function lanzarRetoSalvacion(chica, apodo) {
+                const metasObj = JSON.parse(localStorage.getItem('urban_torneo_metas') || '{}');
+                const metaIndividual = (metasObj[chica] && parseInt(metasObj[chica]) > 0) ? parseInt(metasObj[chica]) : 500;
+
                 const { value: formValues } = await Swal.fire({
                     title: `💖 Reto de Salvación para ${apodo}`,
                     html: `
                         <div style="text-align: left; font-size: 14px;">
                             <label style="display:block; margin-bottom: 4px;">Tiempo del Reto (segundos):</label>
                             <input id="swal-salv-tiempo" class="swal2-input" style="width: 100%; margin-bottom: 12px;" type="number" value="90">
-                            <label style="display:block; margin-bottom: 4px;">Meta de Diamantes para Salvarse:</label>
-                            <input id="swal-salv-meta" class="swal2-input" style="width: 100%;" type="number" value="500">
+                            <label style="display:block; margin-bottom: 4px;">Meta de Diamantes (Individual Prioritaria):</label>
+                            <input id="swal-salv-meta" class="swal2-input" style="width: 100%;" type="number" value="${metaIndividual}">
                         </div>
                     `,
                     focusConfirm: false,
@@ -4986,6 +5060,7 @@
                 });
 
                 if (formValues) {
+                    guardarMetaIndividual(chica, formValues.meta);
                     hacerFetch(`/timer/start-salvacion?chica=${encodeURIComponent(chica)}&tiempo=${formValues.tiempo}&meta=${formValues.meta}`);
                 }
             }

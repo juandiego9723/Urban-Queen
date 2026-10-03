@@ -439,10 +439,11 @@ function createPointsProcessor(io, activeSessions, resolverNombreFn, timerHandle
                         mvpAvatar = topDonantes[0].avatar;
                     }
                     
+                    const metaActual = session.timerBaile.metaTurnoActual || (session.timerBaile.metasPorTurno && session.timerBaile.metasPorTurno[chicaActual]) || session.timerBaile.metaTurno || 1000;
                     // Emitir al overlay revivir.html (que visualiza el torneo)
                     io.to(username).emit('revivirPuntos', { 
                         puntos: session.timerBaile.puntosTurnoActual, 
-                        meta: session.timerBaile.metaTurno || 1000,
+                        meta: metaActual,
                         topDonantes: topDonantes.slice(0, 3),
                         mvpName,
                         mvpAvatar,
