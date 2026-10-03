@@ -244,8 +244,7 @@
             text-transform: uppercase; 
             margin: 0;
             white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
+            overflow: visible;
             z-index: 1;
             min-width: 0;
             flex: 1 1 auto;
@@ -309,6 +308,21 @@
             color: #FFF;
         }
 
+        .badge-logrado {
+            display: none;
+            color: #00FF88;
+            font-weight: 900;
+            font-size: 22px;
+            letter-spacing: 2px;
+            margin-left: 12px;
+            text-shadow: 0 0 8px #00FF88, 0 0 16px #00FF88, 2px 2px 4px #000;
+            animation: pulseLogrado 1.5s infinite alternate;
+        }
+        @keyframes pulseLogrado {
+            0% { transform: scale(1); filter: drop-shadow(0 0 5px #00FF88); }
+            100% { transform: scale(1.08); filter: drop-shadow(0 0 15px #00FF88); }
+        }
+
         /* ── MODO ESTRECHO (TikTok LIVE Studio / Pantalla Vertical) ── */
         @media (max-width: 750px) {
             body { padding: 5px; }
@@ -360,6 +374,25 @@
             }
             .bar-text {
                 font-size: 18px;
+            }
+        }
+
+        /* ── ESTADO ACTIVO Y DINÁMICO PARA ¡LOGRADO! ── */
+        .animacion-logrado-activa {
+            display: inline-block !important;
+            font-family: 'Nosifer', 'Bangers', cursive !important;
+            color: var(--color-logrado, #00ffff) !important;
+            animation: pulseLogradoText 1.6s ease-in-out infinite alternate !important;
+        }
+
+        @keyframes pulseLogradoText {
+            0% {
+                transform: scale(1);
+                filter: drop-shadow(0 0 6px var(--color-logrado, #00ffff)) drop-shadow(0 0 14px var(--color-logrado, #00ffff));
+            }
+            100% {
+                transform: scale(1.06);
+                filter: drop-shadow(0 0 14px var(--color-logrado, #00ffff)) drop-shadow(0 0 28px var(--color-logrado, #00ffff)) drop-shadow(0 0 40px #ffffff);
             }
         }    }
         
@@ -464,6 +497,7 @@
                 </div>
             </div>
         </div>
+        <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.2/dist/confetti.browser.min.js"></script>
         <script src="/js/iframe-bridge.js"></script>
         <script src="/socket.io/socket.io.js"></script>
         <script>
@@ -563,29 +597,166 @@
             });
         }
 
+        let currentChica = '';
+        let currentMeta = 2000;
+        let currentPuntos = 0;
+        let currentTiempo = 300;
+        let currentTituloPrefix = 'CONOCIENDO A:';
+        let confetiDisparado = false;
+
+        function lanzarConfetiLogrado() {
+            if (typeof confetti === 'function') {
+                const colorChica = QUEEN_COLORS[currentChica] || '#00ffff';
+                const caja = document.getElementById('caja-reloj');
+                
+                let originX = 0.5;
+                let originY = 0.22;
+                let leftX = 0.38;
+                let rightX = 0.62;
+
+                if (caja) {
+                    const rect = caja.getBoundingClientRect();
+                    originX = (rect.left + rect.width / 2) / window.innerWidth;
+                    originY = (rect.top + rect.height / 2) / window.innerHeight;
+                    leftX = rect.left / window.innerWidth;
+                    rightX = rect.right / window.innerWidth;
+                }
+
+                const colors = [colorChica, '#00FF88', '#FF00D4', '#9000FF', '#FFD700', '#FFFFFF'];
+
+                // 1. Explosión central sobre la caja principal
+                confetti({
+                    particleCount: 120,
+                    spread: 110,
+                    startVelocity: 45,
+                    origin: { x: originX, y: originY },
+                    colors: colors,
+                    zIndex: 99999
+                });
+
+                // 2. Cañones desde las dos esquinas superiores de la caja principal
+                confetti({
+                    particleCount: 80,
+                    angle: 60,
+                    spread: 75,
+                    startVelocity: 42,
+                    origin: { x: Math.max(0.02, leftX), y: originY },
+                    colors: colors,
+                    zIndex: 99999
+                });
+
+                confetti({
+                    particleCount: 80,
+                    angle: 120,
+                    spread: 75,
+                    startVelocity: 42,
+                    origin: { x: Math.min(0.98, rightX), y: originY },
+                    colors: colors,
+                    zIndex: 99999
+                });
+
+                // 3. Ráfaga secundaria de destellos en la caja (180ms después)
+                setTimeout(() => {
+                    confetti({
+                        particleCount: 75,
+                        spread: 130,
+                        startVelocity: 35,
+                        decay: 0.92,
+                        scalar: 1.2,
+                        origin: { x: originX, y: originY },
+                        colors: [colorChica, '#00FF88', '#FFD700', '#FFFFFF'],
+                        shapes: ['star', 'circle'],
+                        zIndex: 99999
+                    });
+                }, 180);
+            }
+        }
+
+        function actualizarEstadoVisual() {
+            const txtTitulo = document.getElementById('texto-titulo-dinamica');
+            const txtNombre = document.getElementById('nombre-bailando');
+            const colorChica = QUEEN_COLORS[currentChica] || '#00ffff';
+            const apodo = (APODOS[currentChica] || currentChica).toUpperCase();
+
+            // La verificación y cambio de texto ocurren ÚNICAMENTE cuando el temporizador llega a 00:00 (currentTiempo <= 0)
+            if (currentTiempo <= 0) {
+                if (txtTitulo) txtTitulo.style.display = 'none';
+                if (txtNombre) {
+                    if (currentMeta > 0 && currentPuntos >= currentMeta) {
+                        // Estado: META CUMPLIDA (Logrado al llegar a 00:00)
+                        txtNombre.innerText = '¡LOGRADO!';
+                        txtNombre.style.setProperty('--color-logrado', colorChica);
+                        txtNombre.classList.add('animacion-logrado-activa');
+                        
+                        // Disparar confeti en la caja principal en sincronía exacta
+                        if (!confetiDisparado) {
+                            lanzarConfetiLogrado();
+                            confetiDisparado = true;
+                        }
+                    } else {
+                        // Estado: TIEMPO AGOTADO SIN META (No logrado al llegar a 00:00)
+                        txtNombre.classList.remove('animacion-logrado-activa');
+                        txtNombre.style.webkitTextFillColor = '';
+                        txtNombre.style.background = '';
+                        txtNombre.innerText = 'GRACIAS';
+                        txtNombre.style.color = colorChica;
+                        txtNombre.style.textShadow = `0 0 10px ${colorChica}, 0 0 25px ${colorChica}, 3px 3px 6px #000`;
+                    }
+                }
+            } else {
+                // Estado: TIEMPO ACTIVO (> 0) -> Se mantiene "CONOCIENDO A: [NOMBRE]" sumando puntos normalmente
+                confetiDisparado = false;
+                if (txtNombre) {
+                    txtNombre.classList.remove('animacion-logrado-activa');
+                    txtNombre.style.webkitTextFillColor = '';
+                    txtNombre.style.background = '';
+                    txtNombre.innerText = apodo;
+                    txtNombre.style.color = colorChica;
+                    txtNombre.style.textShadow = '3px 3px 6px #000';
+                }
+                if (txtTitulo) {
+                    txtTitulo.style.display = 'inline';
+                    txtTitulo.innerText = currentTituloPrefix ? currentTituloPrefix + ' ' : '';
+                }
+            }
+        }
+
         socket.on('conociendoInicio', (data) => {
+            confetiDisparado = false;
             cajaTransicion.style.display = 'none';
             cajaReloj.style.display = 'flex';
             contenedor.classList.add('timer-activo');
-            const txtTitulo = document.getElementById('texto-titulo-dinamica');
-            if (txtTitulo) {
-                if (data.titulo !== undefined) {
-                    const t = (data.titulo || '').trim();
-                    txtTitulo.innerText = t ? t + ' ' : '';
-                }
+            
+            if (data.titulo !== undefined) {
+                currentTituloPrefix = (data.titulo || '').trim();
             }
             if (data.chica) {
+                currentChica = data.chica;
                 if (data.avatar_img) QUEEN_AVATARS[data.chica] = data.avatar_img;
                 aplicarColoresChica(data.chica);
             }
-            displayReloj.innerText = formatearTiempo(data.tiempo);
-            txtMeta.innerText = data.meta;
-            actualizarBarra(data.puntos, data.meta);
+            currentTiempo = data.tiempo !== undefined ? data.tiempo : 300;
+            currentMeta = data.meta !== undefined ? data.meta : 2000;
+            currentPuntos = data.puntos !== undefined ? data.puntos : 0;
+
+            displayReloj.innerText = formatearTiempo(currentTiempo);
+            txtMeta.innerText = currentMeta;
+            actualizarBarra(currentPuntos, currentMeta);
+            actualizarEstadoVisual();
         });
 
-        socket.on('conociendoTick', (tiempo) => { displayReloj.innerText = formatearTiempo(tiempo); });
+        socket.on('conociendoTick', (tiempo) => { 
+            currentTiempo = tiempo;
+            displayReloj.innerText = formatearTiempo(tiempo);
+            actualizarEstadoVisual();
+        });
 
-        socket.on('conociendoPuntos', (data) => { actualizarBarra(data.puntos, data.meta); });
+        socket.on('conociendoPuntos', (data) => { 
+            currentPuntos = data.puntos;
+            currentMeta = data.meta;
+            actualizarBarra(data.puntos, data.meta);
+            actualizarEstadoVisual();
+        });
 
         socket.on('conociendoTransicion', (data) => {
             cajaReloj.style.display = 'none';
