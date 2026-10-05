@@ -194,7 +194,7 @@ function handleLogout(req, res) {
         }
         const username = sessions[sessionToken].user;
         if (username && activeSessions[username]) {
-            cleanupUserSession(activeSessions[username]);
+            cleanupUserSession(activeSessions[username], io, username);
             delete activeSessions[username];
         }
     }
@@ -372,6 +372,26 @@ function getSocketUserLocal(socket) {
         const sessionToken = list['session_token'];
         if (sessionToken && sessions[sessionToken]) return sessions[sessionToken].user;
     }
+
+    // Fallback 1: Extraer usuario/agencia desde la cabecera referer
+    const referer = socket.handshake.headers.referer || socket.handshake.headers.origin || '';
+    if (referer) {
+        try {
+            const urlObj = new URL(referer);
+            const userFromQuery = urlObj.searchParams.get('user');
+            if (userFromQuery && activeSessions[userFromQuery]) {
+                return userFromQuery;
+            }
+            const pathParts = urlObj.pathname.split('/').filter(Boolean);
+            if (pathParts.length > 0) {
+                const firstPart = pathParts[0];
+                if (activeSessions[firstPart]) {
+                    return firstPart;
+                }
+            }
+        } catch (e) {}
+    }
+
     return null;
 }
 

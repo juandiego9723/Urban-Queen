@@ -30,9 +30,15 @@
     <script src="/socket.io/socket.io.js"></script>
     <script>
         const urlParams = new URLSearchParams(window.location.search);
-        const userParam = urlParams.get('user') || '';
+        let userParam = urlParams.get('user') || '';
+        if (!userParam) {
+            const pathParts = window.location.pathname.split('/').filter(Boolean);
+            if (pathParts.length > 0 && !pathParts[0].includes('overlay')) {
+                userParam = pathParts[0]; // ej: 'cosmic' o 'urbanqueens'
+            }
+        }
 
-        // Conectar a Socket.io pasando el usuario en el query param para OBS
+        // Conectar a Socket.io pasando el usuario/agencia en el query param para OBS y TikTok Studio
         const socket = io({ query: userParam ? { user: userParam } : {} });
 
         const frame = document.getElementById('content-frame');
@@ -151,6 +157,15 @@
 
         socket.on('connect', function() {
             forwardToIframe('connect', { connected: true });
+            setTimeout(function() {
+                if (!ultimaVista && (!frame.src || frame.src === 'about:blank' || frame.src.endsWith('about:blank'))) {
+                    let defaultVista = userParam ? `/${userParam}/batalla` : '/batalla';
+                    if (userParam && !defaultVista.includes('user=')) {
+                        defaultVista += `?user=${userParam}`;
+                    }
+                    frame.src = defaultVista;
+                }
+            }, 300);
         });
         socket.on('disconnect', function() {
             forwardToIframe('disconnect', { connected: false });

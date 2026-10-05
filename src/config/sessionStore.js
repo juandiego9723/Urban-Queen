@@ -237,12 +237,52 @@ function resolverNombre(session, nombre) {
     return queenDeAlias || null;
 }
 
-function cleanupUserSession(session) {
+function cleanupUserSession(session, io = null, username = null) {
     if (!session) return;
+
+    // 1. Cancelar todos los temporizadores e intervalos de la sesión
+    if (session.timerBatalla) {
+        clearInterval(session.timerBatalla);
+        session.timerBatalla = null;
+    }
+    if (session.intervaloTimerBaile) {
+        clearInterval(session.intervaloTimerBaile);
+        session.intervaloTimerBaile = null;
+    }
+    if (session.intervaloConociendo) {
+        clearInterval(session.intervaloConociendo);
+        session.intervaloConociendo = null;
+    }
+    if (session.intervaloRevivir) {
+        clearInterval(session.intervaloRevivir);
+        session.intervaloRevivir = null;
+    }
+    if (session.timerDinamica) {
+        clearInterval(session.timerDinamica);
+        session.timerDinamica = null;
+    }
     if (session.batchInterval) {
         clearInterval(session.batchInterval);
         session.batchInterval = null;
     }
+
+    // 2. Resetear estados de la sesión
+    session.estadoBatalla = 'inactiva';
+    session.tiempoBatalla = 0;
+    if (session.timerBaile) session.timerBaile.activo = false;
+    if (session.conociendo) session.conociendo.activo = false;
+    if (session.revivir) session.revivir.activo = false;
+    session.dinamicaActiva = null;
+
+    // 3. Notificar via sockets si la batalla estaba activa para limpiar overlays
+    const targetRoom = username || (session.db ? session.db.dbName : null);
+    if (io && targetRoom) {
+        try {
+            io.to(targetRoom).emit('batallaCancelada');
+        } catch (e) {}
+    }
+
+    // 4. Desconexión segura de TikTok Live
     if (session.tiktokConnection) {
         try {
             if (typeof session.tiktokConnection.removeAllListeners === 'function') {
@@ -254,6 +294,13 @@ function cleanupUserSession(session) {
     }
     session.tiktokEstado = 'desconectado';
     session.tiktokUsuario = '';
+
+    // 5. Cierre seguro de la base de datos si aplica
+    if (session.db && typeof session.db.close === 'function') {
+        try {
+            session.db.close();
+        } catch (e) {}
+    }
 }
 
 module.exports = {

@@ -313,27 +313,14 @@ function setupSystemRoutes(app, io, requireSession, activeSessions) {
     });
 }
 
-function cleanupAllSessions(activeSessions) {
+const { cleanupUserSession } = require('../config/sessionStore');
+
+function cleanupAllSessions(activeSessions, io = null) {
     console.log('🧹 Cerrando bases de datos y conexiones de todas las sesiones...');
     Object.keys(activeSessions).forEach(username => {
         const session = activeSessions[username];
         if (session) {
-            if (session.batchInterval) {
-                clearInterval(session.batchInterval);
-                session.batchInterval = null;
-            }
-            if (session.tiktokConnection) {
-                try {
-                    if (typeof session.tiktokConnection.removeAllListeners === 'function') {
-                        session.tiktokConnection.removeAllListeners();
-                    }
-                    session.tiktokConnection.disconnect();
-                } catch (e) {}
-                session.tiktokConnection = null;
-            }
-            if (session.db) {
-                session.db.close();
-            }
+            cleanupUserSession(session, io, username);
             delete activeSessions[username];
         }
     });
