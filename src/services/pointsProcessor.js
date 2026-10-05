@@ -461,12 +461,12 @@ function createPointsProcessor(io, activeSessions, resolverNombreFn, timerHandle
             }
         }
 
-        // Si la dinámica conociendo está activa y en estado activo, sumar los puntos recibidos
+        // Si la dinámica conociendo está activa y en estado activo, sumar todos los puntos recibidos a la bailarina activa
         if (session.conociendo.activo && session.conociendo.estado === 'activo') {
             const chicaActual = session.conociendo.chicaActual;
             let nuevosPuntos = 0;
             temp.forEach(item => {
-                if (item.nombre === chicaActual && item.puntos > 0) {
+                if (item.puntos > 0) {
                     nuevosPuntos += item.puntos;
                 }
             });
