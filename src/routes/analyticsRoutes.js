@@ -1,7 +1,10 @@
 function setupAnalyticsRoutes(app, requireSession) {
     app.get('/api/analytics/resumen', requireSession, async (req, res) => {
         try {
-            const data = await req.userSession.db.getResumenAnalytics();
+            const periodo = req.query.periodo || 'historico';
+            const fechaInicio = req.query.fechaInicio || req.query.desde || null;
+            const fechaFin = req.query.fechaFin || req.query.hasta || null;
+            const data = await req.userSession.db.getResumenAnalytics(periodo, fechaInicio, fechaFin);
             res.json(data);
         } catch (e) {
             res.status(500).send(e.message);
@@ -11,7 +14,10 @@ function setupAnalyticsRoutes(app, requireSession) {
     app.get('/api/analytics/historial', requireSession, async (req, res) => {
         try {
             const limite = parseInt(req.query.limite) || 50;
-            const data = await req.userSession.db.getHistorialRegalos(limite);
+            const periodo = req.query.periodo || 'historico';
+            const fechaInicio = req.query.fechaInicio || req.query.desde || null;
+            const fechaFin = req.query.fechaFin || req.query.hasta || null;
+            const data = await req.userSession.db.getHistorialRegalos(limite, periodo, fechaInicio, fechaFin);
             res.json(data);
         } catch (e) {
             res.status(500).send(e.message);
@@ -21,7 +27,10 @@ function setupAnalyticsRoutes(app, requireSession) {
     app.get('/api/analytics/top-gifters', requireSession, async (req, res) => {
         try {
             const limite = parseInt(req.query.limite) || 5;
-            const data = await req.userSession.db.getTopGifters(limite);
+            const periodo = req.query.periodo || 'historico';
+            const fechaInicio = req.query.fechaInicio || req.query.desde || null;
+            const fechaFin = req.query.fechaFin || req.query.hasta || null;
+            const data = await req.userSession.db.getTopGifters(limite, periodo, fechaInicio, fechaFin);
             res.json(data);
         } catch (e) {
             res.status(500).send(e.message);
@@ -30,7 +39,10 @@ function setupAnalyticsRoutes(app, requireSession) {
 
     app.get('/api/analytics/grafica', requireSession, async (req, res) => {
         try {
-            const data = await req.userSession.db.getRegalosPorDia();
+            const periodo = req.query.periodo || 'historico';
+            const fechaInicio = req.query.fechaInicio || req.query.desde || null;
+            const fechaFin = req.query.fechaFin || req.query.hasta || null;
+            const data = await req.userSession.db.getRegalosPorDia(periodo, fechaInicio, fechaFin);
             res.json(data);
         } catch (e) {
             res.status(500).send(e.message);
@@ -59,7 +71,9 @@ function setupAnalyticsRoutes(app, requireSession) {
     app.get('/api/analytics/queens-periodo', requireSession, async (req, res) => {
         try {
             const periodo = req.query.periodo || 'historico';
-            const data = await req.userSession.db.getQueensAnalyticsPorPeriodo(periodo);
+            const fechaInicio = req.query.fechaInicio || req.query.desde || null;
+            const fechaFin = req.query.fechaFin || req.query.hasta || null;
+            const data = await req.userSession.db.getQueensAnalyticsPorPeriodo(periodo, fechaInicio, fechaFin);
             res.json(data);
         } catch (e) {
             res.status(500).send(e.message);
@@ -70,11 +84,13 @@ function setupAnalyticsRoutes(app, requireSession) {
         try {
             const name = req.query.name || '';
             const periodo = req.query.periodo || 'historico';
+            const fechaInicio = req.query.fechaInicio || req.query.desde || null;
+            const fechaFin = req.query.fechaFin || req.query.hasta || null;
             const db = req.userSession.db;
-            const stats = await db.getDatosBailarina(name, periodo);
-            const topDonadores = await db.getTopDonadoresBailarina(name, 5, periodo);
-            const distribucionRegalos = await db.getDistribucionRegalosBailarina(name, periodo);
-            const evolucion = await db.getEvolucionBailarina(name, periodo);
+            const stats = await db.getDatosBailarina(name, periodo, fechaInicio, fechaFin);
+            const topDonadores = await db.getTopDonadoresBailarina(name, 5, periodo, fechaInicio, fechaFin);
+            const distribucionRegalos = await db.getDistribucionRegalosBailarina(name, periodo, fechaInicio, fechaFin);
+            const evolucion = await db.getEvolucionBailarina(name, periodo, fechaInicio, fechaFin);
             res.json({ stats, topDonadores, distribucionRegalos, evolucion });
         } catch (e) {
             res.status(500).send(e.message);

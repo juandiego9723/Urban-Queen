@@ -1120,6 +1120,34 @@
 
                     <!-- SECCIÓN: VISTA DE AGENCIA -->
                     <div id="analytics-section-agencia" class="col" style="gap: 16px; width: 100%;">
+                        <!-- Barra de Filtro de Agencia por Calendario -->
+                        <div class="card" style="padding: 14px 20px; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; width: 100%;">
+                            <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+                                <span style="font-size: 13px; font-weight: 700; color: #fff;">📅 Período de Agencia:</span>
+                                <select id="select-agency-date-mode" class="select" onchange="cambiarModoFechaAgencia(this.value)" style="height: 36px; font-size: 13px; font-weight: 600; padding: 4px 10px; border-radius: 8px; background: var(--surface2); color: #fff; border: 1px solid var(--border);">
+                                    <option value="historico">Histórico Completo</option>
+                                    <option value="diario">Hoy</option>
+                                    <option value="ayer">Ayer</option>
+                                    <option value="semanal">Últimos 7 Días</option>
+                                    <option value="mensual">Este Mes</option>
+                                    <option value="dia">Día Específico 📆</option>
+                                    <option value="rango">Rango de Fechas 📅</option>
+                                </select>
+                            </div>
+
+                            <div id="agency-date-inputs-container" style="display: none; align-items: center; gap: 10px; flex-wrap: wrap;">
+                                <div id="agency-container-fecha-inicio" style="display: flex; align-items: center; gap: 6px;">
+                                    <label id="agency-label-fecha-inicio" for="input-agency-fecha-inicio" style="font-size: 11px; color: var(--muted); font-weight: 600;">Fecha:</label>
+                                    <input type="date" id="input-agency-fecha-inicio" class="input" style="height: 36px; width: 140px; font-size: 12px; padding: 4px 8px; border-radius: 8px; background: var(--surface3); color: #fff; border: 1px solid var(--border);" />
+                                </div>
+                                <div id="agency-container-fecha-fin" style="display: flex; align-items: center; gap: 6px; display: none;">
+                                    <label for="input-agency-fecha-fin" style="font-size: 11px; color: var(--muted); font-weight: 600;">Hasta:</label>
+                                    <input type="date" id="input-agency-fecha-fin" class="input" style="height: 36px; width: 140px; font-size: 12px; padding: 4px 8px; border-radius: 8px; background: var(--surface3); color: #fff; border: 1px solid var(--border);" />
+                                </div>
+                                <button class="btn btn-primary" onclick="aplicarFiltroFechaAgencia()" style="padding: 6px 14px; font-size: 12px; height: 36px; border-radius: 8px;">🔍 Filtrar Agencia</button>
+                                <button class="btn" onclick="resetFiltroFechaAgencia()" style="padding: 6px 10px; font-size: 12px; height: 36px; border-radius: 8px; background: var(--surface2); color: var(--muted); border: 1px solid var(--border);">🔄 Limpiar</button>
+                            </div>
+                        </div>
                         <!-- KPIs Superiores -->
                         <div class="row-3" style="width: 100%; gap: 16px; margin-bottom: 8px;">
                             <div class="card" style="padding: 16px 20px; border-left: 4px solid var(--pink);">
@@ -1253,15 +1281,46 @@
 
                     <!-- SECCIÓN: PERFIL DE BAILARINA -->
                     <div id="analytics-section-bailarinas" class="col" style="gap: 20px; width: 100%; display: none;">
-                        <!-- Selector de Bailarina -->
-                        <div class="card" style="padding: 16px 20px; display: flex; flex-direction: row; align-items: center; justify-content: space-between; gap: 20px; width: 100%;">
-                            <div class="col" style="gap: 4px;">
-                                <div class="card-title" style="margin: 0;">💃 <span class="card-title-accent">Perfil Individual de Bailarina</span></div>
-                                <div class="label" style="font-size: 11px; margin-bottom: 0;">Selecciona una integrante para analizar su rendimiento, superfans y regalos favoritos.</div>
+                        <!-- Selector de Bailarina y Filtro por Calendario -->
+                        <div class="card" style="padding: 16px 20px; display: flex; flex-direction: column; gap: 16px; width: 100%;">
+                            <div style="display: flex; flex-direction: row; align-items: center; justify-content: space-between; gap: 20px; width: 100%; flex-wrap: wrap;">
+                                <div class="col" style="gap: 4px;">
+                                    <div class="card-title" style="margin: 0;">💃 <span class="card-title-accent">Perfil Individual de Bailarina</span></div>
+                                    <div class="label" style="font-size: 11px; margin-bottom: 0;">Selecciona una integrante para analizar su rendimiento, superfans y regalos favoritos.</div>
+                                </div>
+                                <select id="select-analytics-bailarina" class="select" onchange="cargarDetalleBailarina(this.value)" style="width: 220px; height: 38px; font-size: 14px; font-weight: 700; padding: 6px 12px; border-radius: 8px; background: var(--surface3); color: #fff; border: 1px solid var(--border);">
+                                    <option value="">-- Seleccionar --</option>
+                                </select>
                             </div>
-                            <select id="select-analytics-bailarina" class="select" onchange="cargarDetalleBailarina(this.value)" style="width: 220px; height: 38px; font-size: 14px; font-weight: 700; padding: 6px 12px; border-radius: 8px; background: var(--surface3); color: #fff; border: 1px solid var(--border);">
-                                <option value="">-- Seleccionar --</option>
-                            </select>
+
+                            <!-- Barra de Filtro por Calendario -->
+                            <div style="display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; width: 100%; padding-top: 12px; border-top: 1px solid var(--border);">
+                                <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+                                    <span style="font-size: 12px; font-weight: 700; color: #fff;">📅 Período / Calendario:</span>
+                                    <select id="select-analytics-date-mode" class="select" onchange="cambiarModoFechaAnalytics(this.value)" style="height: 36px; font-size: 13px; font-weight: 600; padding: 4px 10px; border-radius: 8px; background: var(--surface2); color: #fff; border: 1px solid var(--border);">
+                                        <option value="historico">Histórico Completo</option>
+                                        <option value="diario">Hoy</option>
+                                        <option value="ayer">Ayer</option>
+                                        <option value="semanal">Últimos 7 Días</option>
+                                        <option value="mensual">Este Mes</option>
+                                        <option value="dia">Día Específico 📆</option>
+                                        <option value="rango">Rango de Fechas 📅</option>
+                                    </select>
+                                </div>
+
+                                <div id="analytics-date-inputs-container" style="display: none; align-items: center; gap: 10px; flex-wrap: wrap;">
+                                    <div id="container-fecha-inicio" style="display: flex; align-items: center; gap: 6px;">
+                                        <label id="label-fecha-inicio" for="input-analytics-fecha-inicio" style="font-size: 11px; color: var(--muted); font-weight: 600;">Fecha:</label>
+                                        <input type="date" id="input-analytics-fecha-inicio" class="input" style="height: 36px; width: 140px; font-size: 12px; padding: 4px 8px; border-radius: 8px; background: var(--surface3); color: #fff; border: 1px solid var(--border);" />
+                                    </div>
+                                    <div id="container-fecha-fin" style="display: flex; align-items: center; gap: 6px; display: none;">
+                                        <label for="input-analytics-fecha-fin" style="font-size: 11px; color: var(--muted); font-weight: 600;">Hasta:</label>
+                                        <input type="date" id="input-analytics-fecha-fin" class="input" style="height: 36px; width: 140px; font-size: 12px; padding: 4px 8px; border-radius: 8px; background: var(--surface3); color: #fff; border: 1px solid var(--border);" />
+                                    </div>
+                                    <button class="btn btn-primary" onclick="aplicarFiltroFechaAnalytics()" style="padding: 6px 14px; font-size: 12px; height: 36px; border-radius: 8px;">🔍 Filtrar</button>
+                                    <button class="btn" onclick="resetFiltroFechaAnalytics()" style="padding: 6px 10px; font-size: 12px; height: 36px; border-radius: 8px; background: var(--surface2); color: var(--muted); border: 1px solid var(--border);">🔄 Limpiar</button>
+                                </div>
+                            </div>
                         </div>
 
                         <!-- Ficha de Rendimiento Individual -->
@@ -2337,15 +2396,104 @@
             let filtroGraficaActual = 'diario';
             let subTabAnalyticsActual = 'agencia';
 
+            let agencyFechaInicio = '';
+            let agencyFechaFin = '';
+            let agencyPeriodoActual = 'historico';
+
+            function cambiarModoFechaAgencia(modo) {
+                const inputsContainer = document.getElementById('agency-date-inputs-container');
+                const containerFin = document.getElementById('agency-container-fecha-fin');
+                const labelInicio = document.getElementById('agency-label-fecha-inicio');
+                const inputInicio = document.getElementById('input-agency-fecha-inicio');
+                const inputFin = document.getElementById('input-agency-fecha-fin');
+
+                const hoy = new Date().toISOString().split('T')[0];
+                const dAyer = new Date();
+                dAyer.setDate(dAyer.getDate() - 1);
+                const ayer = dAyer.toISOString().split('T')[0];
+
+                if (modo === 'historico') {
+                    inputsContainer.style.display = 'none';
+                    agencyFechaInicio = '';
+                    agencyFechaFin = '';
+                    agencyPeriodoActual = 'historico';
+                    cargarAnaliticas();
+                } else if (modo === 'diario') {
+                    inputsContainer.style.display = 'none';
+                    agencyFechaInicio = hoy;
+                    agencyFechaFin = hoy;
+                    agencyPeriodoActual = 'diario';
+                    cargarAnaliticas();
+                } else if (modo === 'ayer') {
+                    inputsContainer.style.display = 'none';
+                    agencyFechaInicio = ayer;
+                    agencyFechaFin = ayer;
+                    agencyPeriodoActual = 'ayer';
+                    cargarAnaliticas();
+                } else if (modo === 'semanal') {
+                    inputsContainer.style.display = 'none';
+                    agencyFechaInicio = '';
+                    agencyFechaFin = '';
+                    agencyPeriodoActual = 'semanal';
+                    cargarAnaliticas();
+                } else if (modo === 'mensual') {
+                    inputsContainer.style.display = 'none';
+                    agencyFechaInicio = '';
+                    agencyFechaFin = '';
+                    agencyPeriodoActual = 'mensual';
+                    cargarAnaliticas();
+                } else if (modo === 'dia') {
+                    inputsContainer.style.display = 'flex';
+                    containerFin.style.display = 'none';
+                    labelInicio.textContent = 'Fecha:';
+                    if (!inputInicio.value) inputInicio.value = hoy;
+                } else if (modo === 'rango') {
+                    inputsContainer.style.display = 'flex';
+                    containerFin.style.display = 'flex';
+                    labelInicio.textContent = 'Desde:';
+                    if (!inputInicio.value) inputInicio.value = hoy;
+                    if (!inputFin.value) inputFin.value = hoy;
+                }
+            }
+
+            function aplicarFiltroFechaAgencia() {
+                const modo = document.getElementById('select-agency-date-mode').value;
+                const inputInicio = document.getElementById('input-agency-fecha-inicio').value;
+                const inputFin = document.getElementById('input-agency-fecha-fin').value;
+
+                if (modo === 'dia') {
+                    if (!inputInicio) return alert('Por favor selecciona una fecha');
+                    agencyFechaInicio = inputInicio;
+                    agencyFechaFin = inputInicio;
+                } else if (modo === 'rango') {
+                    if (!inputInicio || !inputFin) return alert('Por favor selecciona fecha de inicio y fecha de fin');
+                    if (inputInicio > inputFin) return alert('La fecha de inicio no puede ser posterior a la fecha de fin');
+                    agencyFechaInicio = inputInicio;
+                    agencyFechaFin = inputFin;
+                }
+                cargarAnaliticas();
+            }
+
+            function resetFiltroFechaAgencia() {
+                document.getElementById('select-agency-date-mode').value = 'historico';
+                document.getElementById('input-agency-fecha-inicio').value = '';
+                document.getElementById('input-agency-fecha-fin').value = '';
+                cambiarModoFechaAgencia('historico');
+            }
+
             async function cargarAnaliticas() {
                 try {
+                    let dateQueryParams = `periodo=${encodeURIComponent(agencyPeriodoActual)}`;
+                    if (agencyFechaInicio) dateQueryParams += `&fechaInicio=${encodeURIComponent(agencyFechaInicio)}`;
+                    if (agencyFechaFin) dateQueryParams += `&fechaFin=${encodeURIComponent(agencyFechaFin)}`;
+
                     const [resumen, historial, topGifters, graficaDiaria, graficaMensual, horasPico, futbolConfig] = await Promise.all([
-                        fetch('/api/analytics/resumen').then(r => r.json()),
-                        fetch('/api/analytics/historial').then(r => r.json()),
-                        fetch('/api/analytics/top-gifters').then(r => r.json()),
-                        fetch('/api/analytics/grafica').then(r => r.json()),
-                        fetch('/api/analytics/grafica-mensual').then(r => r.json()),
-                        fetch('/api/analytics/horas-pico').then(r => r.json()),
+                        fetch(`/api/analytics/resumen?${dateQueryParams}`).then(r => r.json()),
+                        fetch(`/api/analytics/historial?${dateQueryParams}`).then(r => r.json()),
+                        fetch(`/api/analytics/top-gifters?${dateQueryParams}`).then(r => r.json()),
+                        fetch(`/api/analytics/grafica?${dateQueryParams}`).then(r => r.json()),
+                        fetch(`/api/analytics/grafica-mensual?${dateQueryParams}`).then(r => r.json()),
+                        fetch(`/api/analytics/horas-pico?${dateQueryParams}`).then(r => r.json()),
                         fetch('/api/futbol/config').then(r => r.json())
                     ]);
 
@@ -2707,6 +2855,97 @@
                 });
             }
 
+            let analyticsFechaInicio = '';
+            let analyticsFechaFin = '';
+
+            function cambiarModoFechaAnalytics(modo) {
+                const inputsContainer = document.getElementById('analytics-date-inputs-container');
+                const containerFin = document.getElementById('container-fecha-fin');
+                const labelInicio = document.getElementById('label-fecha-inicio');
+                const inputInicio = document.getElementById('input-analytics-fecha-inicio');
+                const inputFin = document.getElementById('input-analytics-fecha-fin');
+
+                const hoy = new Date().toISOString().split('T')[0];
+                const dAyer = new Date();
+                dAyer.setDate(dAyer.getDate() - 1);
+                const ayer = dAyer.toISOString().split('T')[0];
+
+                if (modo === 'historico') {
+                    inputsContainer.style.display = 'none';
+                    analyticsFechaInicio = '';
+                    analyticsFechaFin = '';
+                    periodoIndivActual = 'historico';
+                    recarregarAnaliticasBailarina();
+                } else if (modo === 'diario') {
+                    inputsContainer.style.display = 'none';
+                    analyticsFechaInicio = hoy;
+                    analyticsFechaFin = hoy;
+                    periodoIndivActual = 'diario';
+                    recarregarAnaliticasBailarina();
+                } else if (modo === 'ayer') {
+                    inputsContainer.style.display = 'none';
+                    analyticsFechaInicio = ayer;
+                    analyticsFechaFin = ayer;
+                    periodoIndivActual = 'ayer';
+                    recarregarAnaliticasBailarina();
+                } else if (modo === 'semanal') {
+                    inputsContainer.style.display = 'none';
+                    analyticsFechaInicio = '';
+                    analyticsFechaFin = '';
+                    periodoIndivActual = 'semanal';
+                    recarregarAnaliticasBailarina();
+                } else if (modo === 'mensual') {
+                    inputsContainer.style.display = 'none';
+                    analyticsFechaInicio = '';
+                    analyticsFechaFin = '';
+                    periodoIndivActual = 'mensual';
+                    recarregarAnaliticasBailarina();
+                } else if (modo === 'dia') {
+                    inputsContainer.style.display = 'flex';
+                    containerFin.style.display = 'none';
+                    labelInicio.textContent = 'Fecha:';
+                    if (!inputInicio.value) inputInicio.value = hoy;
+                } else if (modo === 'rango') {
+                    inputsContainer.style.display = 'flex';
+                    containerFin.style.display = 'flex';
+                    labelInicio.textContent = 'Desde:';
+                    if (!inputInicio.value) inputInicio.value = hoy;
+                    if (!inputFin.value) inputFin.value = hoy;
+                }
+            }
+
+            function aplicarFiltroFechaAnalytics() {
+                const modo = document.getElementById('select-analytics-date-mode').value;
+                const inputInicio = document.getElementById('input-analytics-fecha-inicio').value;
+                const inputFin = document.getElementById('input-analytics-fecha-fin').value;
+
+                if (modo === 'dia') {
+                    if (!inputInicio) return alert('Por favor selecciona una fecha');
+                    analyticsFechaInicio = inputInicio;
+                    analyticsFechaFin = inputInicio;
+                } else if (modo === 'rango') {
+                    if (!inputInicio || !inputFin) return alert('Por favor selecciona fecha de inicio y fecha de fin');
+                    if (inputInicio > inputFin) return alert('La fecha de inicio no puede ser posterior a la fecha de fin');
+                    analyticsFechaInicio = inputInicio;
+                    analyticsFechaFin = inputFin;
+                }
+                recarregarAnaliticasBailarina();
+            }
+
+            function resetFiltroFechaAnalytics() {
+                document.getElementById('select-analytics-date-mode').value = 'historico';
+                document.getElementById('input-analytics-fecha-inicio').value = '';
+                document.getElementById('input-analytics-fecha-fin').value = '';
+                cambiarModoFechaAnalytics('historico');
+            }
+
+            function recarregarAnaliticasBailarina() {
+                const name = document.getElementById('select-analytics-bailarina').value;
+                if (name) {
+                    cargarDetalleBailarina(name);
+                }
+            }
+
             async function cargarDetalleBailarina(name) {
                 const fichaContenido = document.getElementById('ficha-bailarina-contenido');
                 const fichaVacio = document.getElementById('ficha-bailarina-vacio');
@@ -2721,7 +2960,15 @@
                 fichaVacio.style.display = 'none';
 
                 try {
-                    const res = await fetch(`/api/analytics/bailarina?name=${encodeURIComponent(name)}`);
+                    let url = `/api/analytics/bailarina?name=${encodeURIComponent(name)}&periodo=${encodeURIComponent(periodoIndivActual || 'historico')}`;
+                    if (analyticsFechaInicio) {
+                        url += `&fechaInicio=${encodeURIComponent(analyticsFechaInicio)}`;
+                    }
+                    if (analyticsFechaFin) {
+                        url += `&fechaFin=${encodeURIComponent(analyticsFechaFin)}`;
+                    }
+
+                    const res = await fetch(url);
                     const data = await res.json();
 
                     document.getElementById('kpi-indiv-total').textContent = (data.stats.total || 0).toLocaleString() + ' 💎';
