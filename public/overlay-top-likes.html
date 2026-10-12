@@ -1,0 +1,549 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <!-- Inyección de multi-cuenta para TikDance -->
+    <script>
+        (function() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const user = urlParams.get('user');
+            if (user) {
+                const originalFetch = window.fetch;
+                window.fetch = function(url, options) {
+                    if (typeof url === 'string' && !url.includes('user=')) {
+                        const sep = url.includes('?') ? '&' : '?';
+                        url = url + sep + 'user=' + encodeURIComponent(user);
+                    }
+                    return originalFetch(url, options);
+                };
+                const originalIo = window.io;
+                if (originalIo) {
+                    window.io = function(opts) {
+                        opts = opts || {};
+                        opts.query = opts.query || {};
+                        opts.query.user = user;
+                        return originalIo(opts);
+                    };
+                } else {
+                    let _io = undefined;
+                    Object.defineProperty(window, 'io', {
+                        get: function() { return _io; },
+                        set: function(val) {
+                            _io = function(opts) {
+                                opts = opts || {};
+                                opts.query = opts.query || {};
+                                opts.query.user = user;
+                                return val(opts);
+                            };
+                        },
+                        configurable: true
+                    });
+                }
+            }
+        })();
+    </script>
+    <meta charset="UTF-8">
+    <title>Top Tappers — Ranking Me Gusta TikTok</title>
+    <!-- Fuentes exactas de ranking.html: Montserrat e Inter -->
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:ital,wght@0,400;0,700;0,800;0,900;1,400;1,700;1,800;1,900&family=Inter:ital,wght@0,400;0,600;0,700;0,800;0,900;1,400;1,600;1,700;1,800;1,900&display=swap" rel="stylesheet">
+    
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            user-select: none;
+        }
+
+        body { 
+            background-color: transparent; 
+            font-family: 'Inter', sans-serif; 
+            color: white; 
+            margin: 0; 
+            padding: 15px;
+            display: flex;
+            justify-content: flex-start;
+            align-items: flex-start;
+            overflow: hidden;
+        }
+
+        /* ══════════════════════════════════════════════════════════════
+           CONTENEDOR IDÉNTICO A ranking.html
+           ══════════════════════════════════════════════════════════════ */
+        .container { 
+            width: 330px; 
+            background: rgba(22, 38, 26, 0.7);
+            backdrop-filter: blur(14px);
+            -webkit-backdrop-filter: blur(14px);
+            border: 1.5px solid rgba(255, 255, 255, 0.1);
+            border-radius: 24px;
+            padding: 20px 18px;
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.55);
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        /* ENCABEZADO DE RANKING */
+        .header-box {
+            text-align: center;
+            user-select: none;
+            padding-bottom: 10px;
+            border-bottom: 1.5px solid rgba(255, 255, 255, 0.08);
+            margin-bottom: 4px;
+        }
+
+        .header-titulo { 
+            font-family: 'Montserrat', sans-serif;
+            font-size: 1.8rem; 
+            font-style: italic;
+            font-weight: 900;
+            margin: 0; 
+            color: #ffee00; 
+            letter-spacing: 1.5px;
+            text-transform: uppercase;
+            text-shadow: 2.5px 2.5px 0px #000, 0 0 10px rgba(255, 238, 0, 0.7);
+        }
+
+        .modo-label {
+            font-family: 'Inter', sans-serif;
+            font-size: 0.75rem;
+            font-style: italic;
+            font-weight: 800;
+            color: #00e676;
+            text-align: center;
+            margin-top: 4px;
+            letter-spacing: 2.5px;
+            text-transform: uppercase;
+            text-shadow: 1px 1px 0px #000;
+        }
+
+        /* ══════════════════════════════════════════════════════════════
+           FILAS / TARJETAS AL ESTILO DE ranking.html (.row)
+           ══════════════════════════════════════════════════════════════ */
+        .ranking-list {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            min-height: 140px;
+        }
+
+        .empty-ranking {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 25px 10px;
+            color: rgba(255, 255, 255, 0.6);
+            font-size: 0.88rem;
+            font-style: italic;
+            font-weight: 600;
+            text-align: center;
+            gap: 6px;
+        }
+
+        .row { 
+            display: flex; 
+            justify-content: space-between; 
+            align-items: center;
+            padding: 8px 14px; 
+            border-radius: 18px;
+            border: 1px solid rgba(168, 85, 247, 0.45);
+            border-left: 6px solid #a855f7;
+            background: linear-gradient(135deg, rgba(168, 85, 247, 0.25) 0%, rgba(15, 12, 28, 0.94) 100%);
+            box-shadow: 0 4px 14px rgba(0, 0, 0, 0.4), inset 0 0 12px rgba(168, 85, 247, 0.25);
+            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            position: relative;
+        }
+
+        .row-left {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            flex-grow: 1;
+            min-width: 0;
+        }
+
+        .rank-pos {
+            font-family: 'Montserrat', sans-serif;
+            font-size: 0.95rem;
+            font-style: italic;
+            font-weight: 900;
+            color: rgba(255, 255, 255, 0.7);
+            margin-right: 4px;
+            min-width: 20px;
+            text-shadow: 1px 1px 0px #000;
+        }
+
+        .avatar-wrapper {
+            position: relative;
+            width: 38px;
+            height: 38px;
+            margin-left: 4px;
+            margin-right: 10px;
+            flex-shrink: 0;
+        }
+
+        .tapper-avatar {
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            object-fit: cover;
+            border: 1.5px solid rgba(255, 255, 255, 0.6);
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+        }
+
+        .tapper-avatar-fallback {
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: 'Montserrat', sans-serif;
+            font-size: 1.05rem;
+            font-weight: 800;
+            color: white;
+            text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.5);
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+            background: linear-gradient(135deg, #a855f7, #6b21a8);
+            border: 1.5px solid #c084fc;
+        }
+
+        .user-names {
+            display: flex;
+            flex-direction: column;
+            min-width: 0;
+        }
+
+        .name { 
+            font-family: 'Inter', sans-serif;
+            font-size: 1.15rem; 
+            font-style: italic;
+            font-weight: 700;
+            color: #ffffff;
+            letter-spacing: 0.5px; 
+            text-shadow: 2px 2px 0px #000;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            max-width: 115px;
+        }
+
+        .username-sub {
+            font-size: 0.68rem;
+            color: rgba(255, 255, 255, 0.5);
+            font-style: italic;
+            font-weight: 600;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            max-width: 115px;
+        }
+
+        .puntos { 
+            font-family: 'Inter', sans-serif;
+            font-size: 1.45rem; 
+            font-style: italic;
+            font-weight: 900;
+            color: #d8b4fe;
+            text-align: right;
+            min-width: 65px;
+            text-shadow: 2px 2px 0px #000, 0 0 10px #a855f7;
+            flex-shrink: 0;
+            letter-spacing: 0.5px;
+        }
+
+        /* ══════════════════════════════════════════════════════════════
+           ESTILOS DESTACADOS DEL PUESTO #1 (LÍDER DORADO 👑)
+           ══════════════════════════════════════════════════════════════ */
+        .row.rank-1 {
+            background: linear-gradient(135deg, rgba(255, 215, 0, 0.45) 0%, rgba(15, 12, 4, 0.95) 100%);
+            border-color: #ffee00;
+            border-left-color: #ffee00;
+            box-shadow: 0 0 22px rgba(255, 238, 0, 0.8), inset 0 0 14px rgba(255, 215, 0, 0.35);
+            transform: scale(1.02);
+        }
+
+        .row.rank-1 .rank-pos {
+            color: #ffee00;
+        }
+
+        .row.rank-1 .name {
+            color: #ffee00;
+            text-shadow: 2px 2px 0px #000, 0 0 8px rgba(255, 238, 0, 0.5);
+        }
+
+        .row.rank-1 .puntos {
+            color: #ffee00;
+            text-shadow: 2px 2px 0px #000, 0 0 10px #ffee00;
+            font-size: 1.6rem;
+        }
+
+        .row.rank-1 .tapper-avatar-fallback {
+            background: linear-gradient(135deg, #FFD700, #FF8C00);
+            border-color: #ffee00;
+            color: #3D2B00;
+        }
+
+        /* PUESTO #2 Y #3 */
+        .row.rank-2 {
+            border-left-color: #e0e0e0;
+            border-color: rgba(224, 224, 224, 0.5);
+        }
+        .row.rank-2 .rank-pos { color: #e0e0e0; }
+
+        .row.rank-3 {
+            border-left-color: #e59866;
+            border-color: rgba(229, 152, 102, 0.5);
+        }
+        .row.rank-3 .rank-pos { color: #e59866; }
+
+        /* ANIMACIÓN DE ACTUALIZACIÓN DE PUNTOS / PULSE DE ranking.html */
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.15); color: #ffee00; text-shadow: 0 0 10px rgba(255, 238, 0, 0.7); }
+            100% { transform: scale(1); }
+        }
+        .update-anim { display: inline-block; animation: pulse 0.4s ease-out; }
+
+        /* PIE DE ESTADO EN VIVO */
+        .footer-status {
+            font-family: 'Inter', sans-serif;
+            font-size: 0.72rem;
+            font-style: italic;
+            font-weight: 700;
+            color: #00e676;
+            text-align: center;
+            margin-top: 4px;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            text-shadow: 1px 1px 0px #000;
+        }
+    </style>
+</head>
+<body>
+    <div class="container" id="ranking-container">
+        <!-- ENCABEZADO IDÉNTICO A ranking.html -->
+        <div class="header-box">
+            <div class="header-titulo">TOP TAPPERS</div>
+            <div class="modo-label">ME GUSTA EN VIVO</div>
+        </div>
+
+        <!-- LISTA DE FILAS -->
+        <div class="ranking-list" id="rankingList"></div>
+
+        <div class="footer-status" id="footerStatus">
+            🟢 CONECTADO A TIKTOK LIVE
+        </div>
+    </div>
+
+    <!-- PUENTE IFRAME Y SOCKET.IO DE TIKDANCE -->
+    <script src="/js/iframe-bridge.js"></script>
+    <script src="/socket.io/socket.io.js"></script>
+    <script>
+        // Formateador TikFiniti (1.5k, 10k, 1.2M)
+        function formatLikes(num) {
+            if (num >= 1000000) return (num / 1000000).toFixed(1).replace(/\.0$/, '') + 'M';
+            if (num >= 1000) return (num / 1000).toFixed(1).replace(/\.0$/, '') + 'k';
+            return num.toString();
+        }
+
+        const urlParams = new URLSearchParams(window.location.search);
+        const userParam = urlParams.get('user') || '';
+        const isTestMode = urlParams.get('test') === 'true';
+
+        let isUsingDemoData = !isTestMode;
+        let tappersData = [];
+
+        const demoData = [
+            { uniqueId: 'queendancer', nickname: 'Sofia Queen 👑', profilePictureUrl: '', likes: 14500 },
+            { uniqueId: 'alex_tapper', nickname: 'Alex VIP ✨', profilePictureUrl: '', likes: 9800 },
+            { uniqueId: 'carlos_live', nickname: 'Carlos R.', profilePictureUrl: '', likes: 6200 },
+            { uniqueId: 'mariana_fans', nickname: 'Mariana G.', profilePictureUrl: '', likes: 3400 }
+        ];
+
+        if (isUsingDemoData) {
+            tappersData = [...demoData];
+        }
+
+        const rankingListEl = document.getElementById('rankingList');
+        const footerStatusEl = document.getElementById('footerStatus');
+
+        function renderRanking() {
+            tappersData.sort((a, b) => b.likes - a.likes);
+            const topTappers = tappersData.slice(0, 5);
+            rankingListEl.innerHTML = '';
+
+            if (topTappers.length === 0) {
+                rankingListEl.innerHTML = `
+                    <div class="empty-ranking">
+                        <div>👆❤️ SÉ EL PRIMERO EN DAR ME GUSTA PARA APARECER AQUÍ</div>
+                    </div>
+                `;
+                return;
+            }
+
+            topTappers.forEach((user, index) => {
+                const rank = index + 1;
+                const isRank1 = rank === 1;
+                const rankClass = rank <= 3 ? `rank-${rank}` : '';
+                
+                const row = document.createElement('div');
+                row.className = `row ${rankClass}`;
+                row.id = `row-${user.uniqueId}`;
+
+                const displayName = isRank1 ? `👑 ${user.nickname || user.uniqueId}` : (user.nickname || user.uniqueId);
+                const initial = (user.nickname || user.uniqueId || '?').trim().charAt(0).toUpperCase();
+
+                const avatarHTML = user.profilePictureUrl ?
+                    `<img src="${user.profilePictureUrl}" class="tapper-avatar" alt="${user.uniqueId}" onerror="this.onerror=null; this.parentElement.innerHTML='<div class=\\'tapper-avatar-fallback\\'>${initial}</div>';">` :
+                    `<div class="tapper-avatar-fallback">${initial}</div>`;
+
+                row.innerHTML = `
+                    <div class="row-left">
+                        <span class="rank-pos">#${rank}</span>
+                        <div class="avatar-wrapper">
+                            ${avatarHTML}
+                        </div>
+                        <div class="user-names">
+                            <span class="name">${displayName}</span>
+                            <span class="username-sub">@${user.uniqueId}</span>
+                        </div>
+                    </div>
+                    <span class="puntos" id="pts-${user.uniqueId}">${formatLikes(user.likes)}</span>
+                `;
+
+                rankingListEl.appendChild(row);
+            });
+        }
+
+        function processLiveLike(uniqueId, nickname, profilePictureUrl, totalLikesSent, increment = 1) {
+            if (!uniqueId) return;
+
+            if (isUsingDemoData) {
+                isUsingDemoData = false;
+                tappersData = [];
+                footerStatusEl.innerHTML = '🟢 RECIBIENDO TAPS EN VIVO';
+            }
+
+            let user = tappersData.find(u => u.uniqueId === uniqueId);
+            const likesAmount = typeof increment === 'number' && increment > 0 ? increment : 1;
+
+            if (user) {
+                if (totalLikesSent && totalLikesSent > user.likes) {
+                    user.likes = totalLikesSent;
+                } else {
+                    user.likes += likesAmount;
+                }
+                if (nickname) user.nickname = nickname;
+                if (profilePictureUrl) user.profilePictureUrl = profilePictureUrl;
+            } else {
+                tappersData.push({
+                    uniqueId: uniqueId,
+                    nickname: nickname || uniqueId,
+                    profilePictureUrl: profilePictureUrl || '',
+                    likes: totalLikesSent || likesAmount
+                });
+            }
+
+            renderRanking();
+
+            // Animación pulse de ranking.html
+            const ptsEl = document.getElementById(`pts-${uniqueId}`);
+            if (ptsEl) {
+                ptsEl.classList.remove('update-anim');
+                void ptsEl.offsetWidth;
+                ptsEl.classList.add('update-anim');
+            }
+        }
+
+        renderRanking();
+
+        // ══════════════════════════════════════════════════════════════
+        // CONEXIÓN SOCKET.IO (CON PUENTE IFRAME DE TIKDANCE)
+        // ══════════════════════════════════════════════════════════════
+        const socket = window.__iframeBridgeSocket || (typeof io !== 'undefined' ? io({ query: userParam ? { user: userParam } : {} }) : null);
+
+        if (socket) {
+            socket.on('tiktokLiveEvent', (event) => {
+                if (!event) return;
+                if (event.tipo === 'like') {
+                    processLiveLike(
+                        event.usuario || event.uniqueId,
+                        event.nickname || event.name,
+                        event.avatar || event.profilePictureUrl,
+                        event.totalLikeCount || event.totalLikes,
+                        event.cantidad || event.likeCount || 1
+                    );
+                }
+            });
+
+            socket.on('like', (data) => {
+                if (!data) return;
+                processLiveLike(
+                    data.uniqueId || data.usuario,
+                    data.nickname || data.name,
+                    data.profilePictureUrl || data.avatar,
+                    data.totalLikeCount,
+                    data.likeCount || data.cantidad || 1
+                );
+            });
+
+            socket.on('tiktokEstado', (data) => {
+                if (!data) return;
+                if (data.estado === 'conectado') {
+                    footerStatusEl.innerHTML = `🟢 CONECTADO A LIVE DE @${(data.usuario || '').toUpperCase()}`;
+                    footerStatusEl.style.color = '#00e676';
+                } else if (data.estado === 'conectando') {
+                    footerStatusEl.innerHTML = `🟡 CONECTANDO A TIKTOK LIVE...`;
+                    footerStatusEl.style.color = '#ffee00';
+                } else if (data.estado === 'error') {
+                    footerStatusEl.innerHTML = `⚠️ ERROR DE CONEXIÓN`;
+                    footerStatusEl.style.color = '#ff5252';
+                } else if (data.estado === 'desconectado') {
+                    footerStatusEl.innerHTML = `🔴 ESPERANDO CONEXIÓN A LIVE`;
+                    footerStatusEl.style.color = '#ff5252';
+                }
+            });
+        }
+
+        window.addEventListener('message', (event) => {
+            if (!event.data) return;
+            const d = event.data;
+            if (d.event === 'tiktokLiveEvent' || d.type === 'tiktokLiveEvent') {
+                const payload = d.data || d;
+                if (payload.tipo === 'like') {
+                    processLiveLike(
+                        payload.usuario || payload.uniqueId,
+                        payload.nickname || payload.name,
+                        payload.avatar || payload.profilePictureUrl,
+                        payload.totalLikeCount,
+                        payload.cantidad || payload.likeCount || 1
+                    );
+                }
+            }
+        });
+
+        if (isTestMode) {
+            isUsingDemoData = false;
+            tappersData = [...demoData];
+            footerStatusEl.innerHTML = '⚠️ MODO PRUEBA ACTIVO (SIMULANDO TAPS)';
+            renderRanking();
+        }
+
+        window.addEventListener('keydown', (e) => {
+            if (e.key === 't' || e.key === 'T') {
+                isUsingDemoData = false;
+                const testUsers = [
+                    { id: 'user_live1', name: 'Carlos Live ⚡' },
+                    { id: 'queendancer', name: 'Sofia Queen 👑' },
+                    { id: 'user_live2', name: 'Laura_Taps 🔥' },
+                    { id: 'new_tapper', name: 'Fan Número 1' }
+                ];
+                const selected = testUsers[Math.floor(Math.random() * testUsers.length)];
+                processLiveLike(selected.id, selected.name, '', 0, Math.floor(Math.random() * 80) + 10);
+            }
+        });
+    </script>
+</body>
+</html>

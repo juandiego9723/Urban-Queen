@@ -300,6 +300,10 @@ app.get('/gestor-regalos',(req, res) => res.sendFile(pub('gestor-regalos.html'))
 app.get('/multicam',      (req, res) => res.sendFile(pub('multicam.html')));
 app.get('/overlay-universal', (req, res) => res.sendFile(pub('overlay-universal.html')));
 app.get('/overlay-acumulados', (req, res) => res.sendFile(pub('overlay-acumulados.html')));
+app.get('/overlay-top-likes', (req, res) => res.sendFile(pub('overlay-top-likes.html')));
+app.get('/top-likes',         (req, res) => res.sendFile(pub('overlay-top-likes.html')));
+app.get('/overlay-goal',      (req, res) => res.sendFile(pub('overlay-goal.html')));
+app.get('/goal',              (req, res) => res.sendFile(pub('overlay-goal.html')));
 
 const agencyPub = (slug, file) => {
     const customAgencyFile = path.join(__dirname, 'public', 'agencies', slug, file);
@@ -434,12 +438,49 @@ io.on('connection', (socket) => {
                 tiempo: session.tiempoDinamica
             });
         }
+
+        if (!session.goalConfig) {
+            session.goalConfig = { title: '¡NUEVA QUEEN!', target: 10000, current: 0 };
+        }
+        socket.emit('metaConfigActualizada', session.goalConfig);
     }
 
     socket.on('cambiarModoRanking', (modo) => {
         if (session) {
             session.modoRanking = modo;
             io.to(username).emit('modoRankingCambiado', modo);
+        }
+    });
+
+    socket.on('actualizarMeta', (data) => {
+        if (session && data) {
+            session.goalConfig = {
+                title: (data.title || '¡NUEVA QUEEN!').trim(),
+                target: Math.max(1, parseInt(data.target) || 10000),
+                current: Math.max(0, parseInt(data.current) || 0)
+            };
+            io.to(username).emit('metaConfigActualizada', session.goalConfig);
+        }
+    });
+
+    socket.on('sumarPuntosGoal', (data) => {
+        if (session && data && typeof data.puntos === 'number') {
+            if (!session.goalConfig) {
+                session.goalConfig = { title: '¡NUEVA QUEEN!', target: 10000, current: 0 };
+            }
+            session.goalConfig.current += data.puntos;
+            io.to(username).emit('metaConfigActualizada', session.goalConfig);
+        }
+    });
+
+    socket.on('resetearMetaGoal', () => {
+        if (session) {
+            if (!session.goalConfig) {
+                session.goalConfig = { title: '¡NUEVA QUEEN!', target: 10000, current: 0 };
+            } else {
+                session.goalConfig.current = 0;
+            }
+            io.to(username).emit('metaConfigActualizada', session.goalConfig);
         }
     });
 });

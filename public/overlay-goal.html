@@ -1,0 +1,478 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <!-- Inyección de multi-cuenta para TikDance -->
+    <script>
+        (function() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const user = urlParams.get('user');
+            if (user) {
+                const originalFetch = window.fetch;
+                window.fetch = function(url, options) {
+                    if (typeof url === 'string' && !url.includes('user=')) {
+                        const sep = url.includes('?') ? '&' : '?';
+                        url = url + sep + 'user=' + encodeURIComponent(user);
+                    }
+                    return originalFetch(url, options);
+                };
+                const originalIo = window.io;
+                if (originalIo) {
+                    window.io = function(opts) {
+                        opts = opts || {};
+                        opts.query = opts.query || {};
+                        opts.query.user = user;
+                        return originalIo(opts);
+                    };
+                } else {
+                    let _io = undefined;
+                    Object.defineProperty(window, 'io', {
+                        get: function() { return _io; },
+                        set: function(val) {
+                            _io = function(opts) {
+                                opts = opts || {};
+                                opts.query = opts.query || {};
+                                opts.query.user = user;
+                                return val(opts);
+                            };
+                        },
+                        configurable: true
+                    });
+                }
+            }
+        })();
+    </script>
+    <meta charset="UTF-8">
+    <title>Goal Meter Overlay — Meta de Puntos TikTok Live</title>
+    <!-- Tipografías de TikDance (Montserrat & Inter) -->
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:ital,wght@0,800;0,900;1,800;1,900&family=Inter:ital,wght@0,600;0,700;0,800;0,900;1,700;1,800;1,900&display=swap" rel="stylesheet">
+    
+    <style>
+        :root {
+            --bg-glass: rgba(22, 16, 45, 0.78);
+            --border-purple: rgba(168, 85, 247, 0.45);
+            --cyan-glow: #00f2fe;
+            --cyan-dark: #00b4d8;
+            --pink-accent: #ff2d55;
+            
+            --font-header: 'Montserrat', sans-serif;
+            --font-main: 'Inter', sans-serif;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            user-select: none;
+        }
+
+        body, html {
+            width: 100%;
+            height: 100%;
+            background: transparent;
+            font-family: var(--font-main);
+            color: #FFFFFF;
+            overflow: hidden;
+            display: flex;
+            justify-content: flex-start;
+            align-items: flex-start;
+            padding: 15px;
+        }
+
+        /* ══════════════════════════════════════════════════════════════
+           CONTENEDOR DE META DE PUNTOS (ESTILO GLASSMORPHIC URBAN QUEENS)
+           ══════════════════════════════════════════════════════════════ */
+        .goal-card {
+            width: 330px;
+            background: var(--bg-glass);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1.5px solid var(--border-purple);
+            border-radius: 24px;
+            padding: 22px 20px 18px 20px;
+            box-shadow: 
+                0 15px 40px rgba(0, 0, 0, 0.6),
+                0 0 25px rgba(168, 85, 247, 0.25),
+                inset 0 0 15px rgba(168, 85, 247, 0.15);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            position: relative;
+            overflow: hidden;
+        }
+
+        /* Borde sci-fi recortado en esquinas superiores */
+        .goal-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 4px;
+            background: linear-gradient(90deg, transparent, var(--cyan-glow), #a855f7, transparent);
+        }
+
+        /* ══════════════════════════════════════════════════════════════
+           GRÁFICO DE PROGRESO SEMICIRCULAR (GAUGE METER SVG)
+           ══════════════════════════════════════════════════════════════ */
+        .gauge-wrapper {
+            position: relative;
+            width: 230px;
+            height: 125px;
+            display: flex;
+            justify-content: center;
+            align-items: flex-end;
+            margin-top: 5px;
+        }
+
+        .gauge-svg {
+            width: 100%;
+            height: 100%;
+            overflow: visible;
+        }
+
+        .gauge-bg {
+            fill: none;
+            stroke: rgba(255, 255, 255, 0.1);
+            stroke-width: 16;
+            stroke-linecap: round;
+        }
+
+        .gauge-fill {
+            fill: none;
+            stroke: url(#cyan-gradient);
+            stroke-width: 16;
+            stroke-linecap: round;
+            stroke-dasharray: 267;
+            stroke-dashoffset: 267;
+            transition: stroke-dashoffset 0.8s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            filter: drop-shadow(0 0 10px rgba(0, 242, 254, 0.8));
+        }
+
+        /* TEXTO DEL PORCENTAJE EN EL CENTRO DEL SEMICÍRCULO */
+        .percent-box {
+            position: absolute;
+            bottom: 10px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .percent-text {
+            font-family: var(--font-header);
+            font-size: 2.3rem;
+            font-style: italic;
+            font-weight: 900;
+            color: #00f2fe;
+            text-shadow: 2.5px 2.5px 0px #000, 0 0 15px rgba(0, 242, 254, 0.8);
+            letter-spacing: -1px;
+            line-height: 1;
+        }
+
+        /* ══════════════════════════════════════════════════════════════
+           CONTEO NUMÉRICO Y META
+           ══════════════════════════════════════════════════════════════ */
+        .count-container {
+            margin-top: 14px;
+            display: flex;
+            align-items: baseline;
+            justify-content: center;
+            gap: 6px;
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 14px;
+            padding: 8px 18px;
+            width: 100%;
+            box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.4);
+        }
+
+        .current-num {
+            font-family: var(--font-main);
+            font-size: 1.55rem;
+            font-style: italic;
+            font-weight: 900;
+            color: #FFFFFF;
+            text-shadow: 2px 2px 0px #000;
+        }
+
+        .separator {
+            font-family: var(--font-main);
+            font-size: 1.2rem;
+            font-style: italic;
+            font-weight: 800;
+            color: rgba(255, 255, 255, 0.4);
+        }
+
+        .target-num {
+            font-family: var(--font-main);
+            font-size: 1.2rem;
+            font-style: italic;
+            font-weight: 800;
+            color: rgba(255, 255, 255, 0.65);
+            text-shadow: 1.5px 1.5px 0px #000;
+        }
+
+        .diamond-icon {
+            font-size: 1.1rem;
+            margin-left: 2px;
+            filter: drop-shadow(0 0 6px rgba(0, 242, 254, 0.8));
+        }
+
+        /* ══════════════════════════════════════════════════════════════
+           TEXTO DE DESCRIPCIÓN DE LA META (INFERIOR)
+           ══════════════════════════════════════════════════════════════ */
+        .goal-title-box {
+            margin-top: 12px;
+            text-align: center;
+            width: 100%;
+        }
+
+        .goal-title {
+            font-family: var(--font-header);
+            font-size: 1.2rem;
+            font-style: italic;
+            font-weight: 900;
+            color: #ffee00;
+            letter-spacing: 1.2px;
+            text-transform: uppercase;
+            text-shadow: 2px 2px 0px #000, 0 0 10px rgba(255, 238, 0, 0.6);
+            word-wrap: break-word;
+        }
+
+        .goal-footer-status {
+            margin-top: 8px;
+            font-size: 0.68rem;
+            font-style: italic;
+            font-weight: 700;
+            color: #00e676;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            text-shadow: 1px 1px 0px #000;
+        }
+
+        /* ANIMACIÓN DE IMPULSO / BUMP CUANDO SUMA PUNTOS */
+        .pulse-bump {
+            animation: bump 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        @keyframes bump {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.12); color: #ffee00; text-shadow: 0 0 15px rgba(255, 238, 0, 0.9); }
+            100% { transform: scale(1); }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="goal-card">
+        <!-- MEDIDOR SEMICIRCULAR GAUGE SVG -->
+        <div class="gauge-wrapper">
+            <svg class="gauge-svg" viewBox="0 0 210 115">
+                <defs>
+                    <!-- Degradado cian/turquesa vibrante neón -->
+                    <linearGradient id="cyan-gradient" x1="0%" y1="0%" x2="100%" y2="0%">
+                        <stop offset="0%" stop-color="#00f2fe" />
+                        <stop offset="50%" stop-color="#4facfe" />
+                        <stop offset="100%" stop-color="#00e676" />
+                    </linearGradient>
+                </defs>
+                <!-- Pista de fondo semitransparente -->
+                <path class="gauge-bg" d="M 20,100 A 85,85 0 0,1 190,100" />
+                <!-- Barra de llenado dinámica -->
+                <path class="gauge-fill" id="gaugeFill" d="M 20,100 A 85,85 0 0,1 190,100" />
+            </svg>
+
+            <!-- Porcentaje en el centro -->
+            <div class="percent-box">
+                <span class="percent-text" id="percentText">0%</span>
+            </div>
+        </div>
+
+        <!-- CONTEO NUMÉRICO Y META -->
+        <div class="count-container">
+            <span class="current-num" id="currentNum">0</span>
+            <span class="separator">/</span>
+            <span class="target-num" id="targetNum">10.000</span>
+            <span class="diamond-icon">💎</span>
+        </div>
+
+        <!-- DESCRIPCIÓN DE LA META (TEXTO EN MAYÚSCULAS) -->
+        <div class="goal-title-box">
+            <div class="goal-title" id="goalTitle">¡NUEVA QUEEN!</div>
+            <div class="goal-footer-status" id="footerStatus">🟢 EN VIVO &bull; TIKDANCE GOAL</div>
+        </div>
+    </div>
+
+    <!-- PUENTE DE IFRAME Y SOCKET.IO DE TIKDANCE -->
+    <script src="/js/iframe-bridge.js"></script>
+    <script src="/socket.io/socket.io.js"></script>
+    <script>
+        /* ══════════════════════════════════════════════════════════════
+           VARIABLES EDITABLES Y CONFIGURACIÓN INICIAL DE LA META
+           ══════════════════════════════════════════════════════════════ */
+        const urlParams = new URLSearchParams(window.location.search);
+        
+        // Configuración desde URL Params o valores por defecto
+        let goalTitle = urlParams.get('title') || '¡NUEVA QUEEN!';
+        let targetPoints = parseInt(urlParams.get('goal')) || 10000;
+        let currentPoints = urlParams.has('current') ? parseInt(urlParams.get('current')) : 0; // Puntos iniciales
+        const isTestMode = urlParams.get('test') === 'true';
+        const userParam = urlParams.get('user') || '';
+
+        // Circunferencia del semicírculo de radio 85 (C = PI * R ≈ 267)
+        const MAX_DASH_OFFSET = 267;
+
+        // Elementos DOM
+        const gaugeFillEl = document.getElementById('gaugeFill');
+        const percentTextEl = document.getElementById('percentText');
+        const currentNumEl = document.getElementById('currentNum');
+        const targetNumEl = document.getElementById('targetNum');
+        const goalTitleEl = document.getElementById('goalTitle');
+        const footerStatusEl = document.getElementById('footerStatus');
+
+        // Aplicar título inicial
+        goalTitleEl.innerText = goalTitle.toUpperCase();
+
+        /* ══════════════════════════════════════════════════════════════
+           FUNCIÓN PRINCIPAL DE ACTUALIZACIÓN DEL MEDIDOR
+           ══════════════════════════════════════════════════════════════ */
+        function updateGoalDisplay(animate = true) {
+            // Asegurar límites entre 0 y el objetivo
+            const current = Math.max(0, currentPoints);
+            const target = Math.max(1, targetPoints);
+            
+            // Calcular porcentaje exacto
+            const rawPercent = (current / target) * 100;
+            const displayPercent = Math.min(100, Math.floor(rawPercent));
+
+            // Actualizar número actual y meta formateados (ej: 7.637 / 10.000)
+            currentNumEl.innerText = current.toLocaleString('es-ES');
+            targetNumEl.innerText = target.toLocaleString('es-ES');
+            percentTextEl.innerText = `${displayPercent}%`;
+
+            // Calcular desplazamiento del stroke-dashoffset (de 267 a 0)
+            const fillRatio = Math.min(1, current / target);
+            const dashOffset = MAX_DASH_OFFSET * (1 - fillRatio);
+            gaugeFillEl.style.strokeDashoffset = dashOffset;
+
+            // Animación de pulso si se suma puntaje
+            if (animate) {
+                percentTextEl.classList.remove('pulse-bump');
+                currentNumEl.classList.remove('pulse-bump');
+                void percentTextEl.offsetWidth; // Force reflow
+                percentTextEl.classList.add('pulse-bump');
+                currentNumEl.classList.add('pulse-bump');
+            }
+        }
+
+        /* ══════════════════════════════════════════════════════════════
+           FUNCIONES PÚBLICAS PARA SUMAR PUNTOS Y CAMBIAR METAS EN TIEMPO REAL
+           ══════════════════════════════════════════════════════════════ */
+        function addPoints(amount) {
+            if (typeof amount === 'number' && !isNaN(amount)) {
+                currentPoints += amount;
+                updateGoalDisplay(true);
+            }
+        }
+
+        function setGoal(newCurrent, newTarget, newTitle) {
+            if (typeof newCurrent === 'number') currentPoints = newCurrent;
+            if (typeof newTarget === 'number') targetPoints = newTarget;
+            if (newTitle) {
+                goalTitle = newTitle;
+                goalTitleEl.innerText = goalTitle.toUpperCase();
+            }
+            updateGoalDisplay(true);
+        }
+
+        // Renderizado inicial
+        updateGoalDisplay(false);
+
+        /* ══════════════════════════════════════════════════════════════
+           INTEGRACIÓN EN TIEMPO REAL VÍA SOCKET.IO Y TIKDANCE EVENTS
+           ══════════════════════════════════════════════════════════════ */
+        const socket = window.__iframeBridgeSocket || (typeof io !== 'undefined' ? io({ query: userParam ? { user: userParam } : {} }) : null);
+
+        if (socket) {
+            // Escuchar eventos de TikTok Live (Regalos / Likes)
+            socket.on('tiktokLiveEvent', (event) => {
+                if (!event) return;
+                // Si entra un regalo de TikTok Live
+                if (event.tipo === 'gift' || event.tipo === 'regalo') {
+                    const diamonds = event.diamondCount || event.diamantes || event.puntos || 1;
+                    const combo = event.repeatCount || event.combo || 1;
+                    addPoints(diamonds * combo);
+                } else if (event.tipo === 'like') {
+                    // Opcional: Sumar 1 punto por paquete de likes
+                    const count = event.cantidad || event.likeCount || 1;
+                    addPoints(count);
+                }
+            });
+
+            // Escuchar eventos directos de puntos o actualización de meta
+            socket.on('actualizarMeta', (data) => {
+                if (!data) return;
+                setGoal(data.current, data.target, data.title);
+            });
+
+            socket.on('metaConfigActualizada', (data) => {
+                if (!data) return;
+                setGoal(data.current, data.target, data.title);
+            });
+
+            socket.on('sumarPuntosGoal', (data) => {
+                if (data && data.puntos) {
+                    addPoints(data.puntos);
+                }
+            });
+
+            socket.on('tiktokEstado', (data) => {
+                if (!data) return;
+                if (data.estado === 'conectado') {
+                    footerStatusEl.innerHTML = `🟢 EN VIVO &bull; @${(data.usuario || '').toUpperCase()}`;
+                } else if (data.estado === 'conectando') {
+                    footerStatusEl.innerHTML = `🟡 CONECTANDO A TIKTOK...`;
+                } else if (data.estado === 'desconectado') {
+                    footerStatusEl.innerHTML = `🔴 DESCONECTADO DE LIVE`;
+                }
+            });
+        }
+
+        // Mensajes vía postMessage para compatibilidad con OBS Iframe Bridge
+        window.addEventListener('message', (event) => {
+            if (!event.data) return;
+            const d = event.data;
+            if (d.type === 'addPoints' || d.event === 'addPoints') {
+                addPoints(d.points || d.amount || 1);
+            } else if (d.type === 'setGoal' || d.event === 'setGoal') {
+                setGoal(d.current, d.target, d.title);
+            } else if (d.event === 'tiktokLiveEvent' || d.type === 'tiktokLiveEvent') {
+                const payload = d.data || d;
+                if (payload.tipo === 'gift' || payload.tipo === 'regalo') {
+                    const diamonds = payload.diamondCount || payload.diamantes || 1;
+                    addPoints(diamonds);
+                }
+            }
+        });
+
+        /* ══════════════════════════════════════════════════════════════
+           MODO TEST DE PRUEBA (Presiona 'T' para simular regalos)
+           ══════════════════════════════════════════════════════════════ */
+        if (isTestMode) {
+            footerStatusEl.innerHTML = '⚠️ MODO PRUEBA ACTIVO (SIMULANDO PUNTOS)';
+            setInterval(() => {
+                const randomPts = Math.floor(Math.random() * 150) + 20;
+                addPoints(randomPts);
+            }, 3000);
+        }
+
+        window.addEventListener('keydown', (e) => {
+            if (e.key === 't' || e.key === 'T') {
+                const randomPts = Math.floor(Math.random() * 200) + 50;
+                addPoints(randomPts);
+            }
+        });
+    </script>
+</body>
+</html>

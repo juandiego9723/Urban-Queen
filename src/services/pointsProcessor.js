@@ -183,6 +183,12 @@ function createPointsProcessor(io, activeSessions, resolverNombreFn, timerHandle
         const diamondUnit = parseInt(data.diamondCount || data.coins) || 1;
         const coins = diamondUnit * deltaRepeat;
         
+        if (!session.goalConfig) {
+            session.goalConfig = { title: '¡NUEVA QUEEN!', target: 10000, current: 0 };
+        }
+        session.goalConfig.current += coins;
+        io.to(username).emit('metaConfigActualizada', session.goalConfig);
+        
         let rawMapa = session.db.getConfigVal('tiktok_regalo_mapa');
         let mapa = rawMapa ? JSON.parse(rawMapa) : {};
         

@@ -1652,7 +1652,7 @@
                             Agrega estas URL como **Fuentes de Navegador (Browser Sources)** en OBS. El sistema se encarga de cambiar el contenido visual de forma automatizada.
                         </p>
                         
-                        <div class="page-grid" style="grid-template-columns: 1fr 1fr; margin-top: 15px; gap: 16px;">
+                        <div class="page-grid" style="grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); margin-top: 15px; gap: 16px;">
                             <div class="page-card" style="margin: 0;">
                                 <div style="display:flex;align-items:center;gap:8px">
                                     <span style="font-size:1.4rem">🔮</span>
@@ -1676,6 +1676,32 @@
                                 <div style="display: flex; gap: 8px; margin-top: 10px;">
                                     <button class="btn btn-ghost btn-sm" onclick="copiarUrl('acumulados')">&#128203; Copiar</button>
                                     <button class="btn btn-ghost btn-sm" onclick="abrirUrl('acumulados')">&#128279; Probar</button>
+                                </div>
+                            </div>
+
+                            <div class="page-card" style="margin: 0;">
+                                <div style="display:flex;align-items:center;gap:8px">
+                                    <span style="font-size:1.4rem">❤️</span>
+                                    <span class="page-card-name">Overlay Top Likes (Top Tappers)</span>
+                                </div>
+                                <div class="page-card-desc">Proyecta el ranking en tiempo real del Principal Dador de Me Gusta (taps) de TikTok en vivo.</div>
+                                <div class="page-card-url" id="url-overlay-top-likes" style="word-break:break-all; font-family: monospace; font-size: 0.85rem; color: var(--text-muted); margin-top: 6px;">Cargando...</div>
+                                <div style="display: flex; gap: 8px; margin-top: 10px;">
+                                    <button class="btn btn-ghost btn-sm" onclick="copiarUrl('top-likes')">&#128203; Copiar</button>
+                                    <button class="btn btn-ghost btn-sm" onclick="abrirUrl('top-likes')">&#128279; Probar</button>
+                                </div>
+                            </div>
+
+                            <div class="page-card" style="margin: 0;">
+                                <div style="display:flex;align-items:center;gap:8px">
+                                    <span style="font-size:1.4rem">🎯</span>
+                                    <span class="page-card-name">Overlay Goal Meter (Meta de Puntos)</span>
+                                </div>
+                                <div class="page-card-desc">Proyecta el medidor semicircular de meta en tiempo real con porcentaje y avance numérico.</div>
+                                <div class="page-card-url" id="url-overlay-goal" style="word-break:break-all; font-family: monospace; font-size: 0.85rem; color: var(--text-muted); margin-top: 6px;">Cargando...</div>
+                                <div style="display: flex; gap: 8px; margin-top: 10px;">
+                                    <button class="btn btn-ghost btn-sm" onclick="copiarUrl('goal')">&#128203; Copiar</button>
+                                    <button class="btn btn-ghost btn-sm" onclick="abrirUrl('goal')">&#128279; Probar</button>
                                 </div>
                             </div>
                         </div>
@@ -1713,10 +1739,55 @@
                             </p>
                             <div style="display: flex; flex-direction: column; gap: 8px; margin-top: 10px;" id="acumulados-overlay-controls">
                                 <button class="btn btn-primary" onclick="cambiarVistaAcumulados('/')" id="btn-view-ranking" style="transition: all 0.3s ease; text-align: left; padding: 12px 16px;">🏆 Ranking General</button>
+                                <button class="btn btn-primary" onclick="cambiarVistaAcumulados('/overlay-top-likes')" id="btn-view-top-likes" style="transition: all 0.3s ease; text-align: left; padding: 12px 16px;">❤️ Top Likes / Tappers</button>
                                 <button class="btn btn-primary" onclick="cambiarVistaAcumulados('/copa')" id="btn-view-copa" style="transition: all 0.3s ease; text-align: left; padding: 12px 16px;">🥇 Copa del Día</button>
                                 <button class="btn btn-primary" onclick="cambiarVistaAcumulados('/revivir-ranking')" id="btn-view-revivir-ranking" style="transition: all 0.3s ease; text-align: left; padding: 12px 16px;">👑 Ranking de Revivir</button>
                                 <button class="btn btn-primary" onclick="cambiarVistaAcumulados('/ranking-conociendo')" id="btn-view-ranking-conociendo" style="transition: all 0.3s ease; text-align: left; padding: 12px 16px;">📊 Ranking Conociendo</button>
                             </div>
+                        </div>
+                    </div>
+
+                    <!-- CONTROL DE META DE PUNTOS (GOAL METER OVERLAY) -->
+                    <div class="card" style="margin-top: 20px; width: 100%;">
+                        <div class="card-title">
+                            🎯 <span class="card-title-accent">Control de Meta de Puntos (Goal Meter Overlay)</span>
+                        </div>
+                        <p class="helper-text" style="margin-bottom: 15px;">
+                            Edita el título de la meta (para qué es la meta), ajusta la cifra objetivo de diamantes y gestiona el puntaje acumulado en tiempo real en la pantalla de OBS.
+                        </p>
+                        
+                        <div style="display: grid; grid-template-columns: 2fr 1fr 1fr; gap: 14px; align-items: flex-end; margin-bottom: 15px;">
+                            <div>
+                                <label class="label" style="margin-bottom: 6px;">🎯 Título / Descripción de la Meta:</label>
+                                <input type="text" id="goalTitleInput" class="input" value="¡NUEVA QUEEN!" placeholder="Ej: ¡NUEVA QUEEN!, META DE REGALOS, META VIAJE...">
+                            </div>
+                            <div>
+                                <label class="label" style="margin-bottom: 6px;">💎 Puntos Meta Objetivo:</label>
+                                <input type="number" id="goalTargetInput" class="input input-num" value="10000" min="1" step="100" style="width: 100%; text-align: center; font-weight: 800;">
+                            </div>
+                            <div>
+                                <label class="label" style="margin-bottom: 6px;">📊 Puntos Actuales:</label>
+                                <input type="number" id="goalCurrentInput" class="input input-num" value="0" min="0" step="50" style="width: 100%; text-align: center; font-weight: 800; color: var(--cyan);">
+                            </div>
+                        </div>
+
+                        <div style="display: flex; gap: 10px; flex-wrap: wrap; align-items: center; justify-content: space-between; background: rgba(0,0,0,0.25); padding: 14px 18px; border-radius: 12px; border: 1px solid var(--border);">
+                            <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+                                <button class="btn btn-primary" onclick="guardarMetaGoal()">💾 Guardar Meta</button>
+                                <button class="btn btn-danger" onclick="resetearMetaGoal()">🔄 Reiniciar Puntos a 0</button>
+                            </div>
+
+                            <div style="display: flex; gap: 6px; align-items: center; flex-wrap: wrap;">
+                                <span class="label" style="margin-bottom: 0; margin-right: 4px;">Sumar Rápido:</span>
+                                <button class="btn btn-ghost btn-sm" onclick="sumarMonedasMetaGoal(100)">+100 💎</button>
+                                <button class="btn btn-ghost btn-sm" onclick="sumarMonedasMetaGoal(500)">+500 💎</button>
+                                <button class="btn btn-ghost btn-sm" onclick="sumarMonedasMetaGoal(1000)">+1.000 💎</button>
+                                <button class="btn btn-ghost btn-sm" onclick="sumarMonedasMetaGoal(5000)">+5.000 💎</button>
+                            </div>
+                        </div>
+
+                        <div id="goalLivePreviewBox" style="margin-top: 12px; font-size: 12px; color: var(--muted); text-align: center; background: rgba(0,242,254,0.06); padding: 10px 14px; border-radius: 8px; border: 1px solid rgba(0,242,254,0.2);">
+                            <span id="goalLivePreviewText">🎯 Meta Activa: <strong>¡NUEVA QUEEN!</strong> (0 / 10.000 💎 — 0%)</span>
                         </div>
                     </div>
                 </div>
@@ -3815,12 +3886,18 @@
                 
                 const urlUniversal = `${window.location.origin}${agencyPrefix}/overlay-universal${userParam}`;
                 const urlAcumulados = `${window.location.origin}${agencyPrefix}/overlay-acumulados${userParam}`;
+                const urlTopLikes = `${window.location.origin}${agencyPrefix}/overlay-top-likes${userParam}`;
+                const urlGoal = `${window.location.origin}${agencyPrefix}/overlay-goal${userParam}`;
                 
                 const elUniversal = document.getElementById('url-overlay-universal');
                 const elAcumulados = document.getElementById('url-overlay-acumulados');
+                const elTopLikes = document.getElementById('url-overlay-top-likes');
+                const elGoal = document.getElementById('url-overlay-goal');
                 
                 if (elUniversal) elUniversal.textContent = urlUniversal;
                 if (elAcumulados) elAcumulados.textContent = urlAcumulados;
+                if (elTopLikes) elTopLikes.textContent = urlTopLikes;
+                if (elGoal) elGoal.textContent = urlGoal;
 
                 cargarVistaUniversalActiva();
                 cargarVistaAcumuladosActiva();
@@ -3834,13 +3911,74 @@
             function obtenerUrlOverlay(tipo) {
                 const slug = getAgencySlug();
                 const userParam = currentUsername ? `?user=${encodeURIComponent(currentUsername)}` : '';
-                const path = tipo === 'universal' ? `/${slug}/overlay-universal` : `/${slug}/overlay-acumulados`;
+                let path = `/${slug}/overlay-universal`;
+                if (tipo === 'acumulados') path = `/${slug}/overlay-acumulados`;
+                if (tipo === 'top-likes') path = `/${slug}/overlay-top-likes`;
+                if (tipo === 'goal') path = `/${slug}/overlay-goal`;
                 return `${window.location.origin}${path}${userParam}`;
             }
 
             function abrirUrl(tipo) {
                 window.open(obtenerUrlOverlay(tipo), '_blank');
             }
+
+            function copiarUrl(tipo) {
+                const url = obtenerUrlOverlay(tipo);
+                navigator.clipboard.writeText(url).then(() => {
+                    alert('¡Enlace copiado al portapapeles!');
+                }).catch(err => {
+                    console.error('Error al copiar:', err);
+                });
+            }
+
+            function guardarMetaGoal() {
+                const title = (document.getElementById('goalTitleInput').value || '').trim() || '¡NUEVA QUEEN!';
+                const target = parseInt(document.getElementById('goalTargetInput').value) || 10000;
+                const current = parseInt(document.getElementById('goalCurrentInput').value) || 0;
+                if (socket) {
+                    socket.emit('actualizarMeta', { title, target, current });
+                    showToast('✅ Meta de puntos actualizada en vivo', 'success');
+                }
+            }
+
+            function resetearMetaGoal() {
+                uiConfirm('¿Reiniciar los puntos acumulados de la meta a 0?', () => {
+                    const currentInput = document.getElementById('goalCurrentInput');
+                    if (currentInput) currentInput.value = 0;
+                    if (socket) {
+                        socket.emit('resetearMetaGoal');
+                        showToast('🔄 Puntos de la meta reiniciados a 0', 'info');
+                    }
+                });
+            }
+
+            function sumarMonedasMetaGoal(pts) {
+                const currentInput = document.getElementById('goalCurrentInput');
+                let currentVal = parseInt(currentInput.value) || 0;
+                currentVal += pts;
+                currentInput.value = currentVal;
+                if (socket) {
+                    socket.emit('sumarPuntosGoal', { puntos: pts });
+                    showToast(`💎 +${pts.toLocaleString()} diamantes añadidos a la meta`, 'success');
+                }
+            }
+
+            socket.on('metaConfigActualizada', (config) => {
+                if (!config) return;
+                const titleInput = document.getElementById('goalTitleInput');
+                const targetInput = document.getElementById('goalTargetInput');
+                const currentInput = document.getElementById('goalCurrentInput');
+                if (titleInput && document.activeElement !== titleInput) titleInput.value = config.title || '¡NUEVA QUEEN!';
+                if (targetInput && document.activeElement !== targetInput) targetInput.value = config.target || 10000;
+                if (currentInput && document.activeElement !== currentInput) currentInput.value = config.current || 0;
+                const elStatus = document.getElementById('goalLivePreviewText');
+                if (elStatus) {
+                    const cur = config.current || 0;
+                    const tar = config.target || 10000;
+                    const pct = Math.min(100, Math.floor((cur / Math.max(1, tar)) * 100));
+                    elStatus.innerHTML = `🎯 Meta Activa: <strong>${(config.title || '').toUpperCase()}</strong> (${cur.toLocaleString()} / ${tar.toLocaleString()} 💎 — ${pct}%)`;
+                }
+            });
 
             function copiarUrl(tipo) {
                 const url = obtenerUrlOverlay(tipo);
