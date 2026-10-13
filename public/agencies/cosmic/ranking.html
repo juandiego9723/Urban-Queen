@@ -45,6 +45,8 @@
         <title>Ranking</title>
         <link href="https://fonts.googleapis.com/css2?family=Montserrat:ital,wght@0,400;0,700;0,800;0,900;1,400;1,700;1,800;1,900&family=Inter:ital,wght@0,400;0,600;0,700;0,800;1,400;1,600;1,700&display=swap"
               rel="stylesheet">
+        
+        <style>
         :root {
             --orange-neon: #ff8c00;
             --orange-bright: #ffa200;
@@ -53,6 +55,13 @@
             --purple-neon: #a855f7;
             --purple-deep: #25094d;
             --purple-glow: rgba(168, 85, 247, 0.65);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            user-select: none;
         }
 
         body { 
@@ -64,6 +73,7 @@
             display: flex;
             justify-content: flex-start;
             align-items: flex-start;
+            overflow: hidden;
         }
         
         .container { 
