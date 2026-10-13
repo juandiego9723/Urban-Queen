@@ -274,6 +274,8 @@ app.use(express.static(path.join(__dirname, 'public')));
 
 // Rutas de pantallas
 app.get('/',              (req, res) => res.sendFile(pub('ranking.html')));
+app.get('/ranking',       (req, res) => res.sendFile(pub('ranking.html')));
+app.get('/ranking-clasico',(req, res) => res.sendFile(pub('ranking-clasico.html')));
 app.get('/batalla',       (req, res) => res.sendFile(pub('batalla.html')));
 app.get('/batalla-futbol',(req, res) => res.sendFile(pub('batalla-futbol.html')));
 app.get('/batalla-pk',    (req, res) => res.sendFile(pub('batalla-pk.html')));

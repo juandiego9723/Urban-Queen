@@ -48,7 +48,7 @@
     <title>Modo Batalla TikDance</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Bangers&family=Inter:wght@700;800;900&display=swap"
+    <link href="https://fonts.googleapis.com/css2?family=Bangers&family=Nosifer&family=Inter:wght@700;800;900&display=swap"
         rel="stylesheet">
     <style>
         * {
@@ -94,13 +94,13 @@
 
         /* ── TIMER HUD NEÓN ── */
         #timer {
-            font-family: 'Bangers', cursive;
-            font-size: 64px;
+            font-family: 'Nosifer', 'Bangers', cursive;
+            font-size: 54px;
             color: #FFD700;
             text-shadow: 0 0 10px rgba(0, 0, 0, 0.9),
                 0 0 20px rgba(255, 215, 0, 0.4),
                 3px 3px 0px #000;
-            letter-spacing: 4px;
+            letter-spacing: 3px;
             text-align: center;
             transition: all 0.3s ease;
             line-height: 1;
@@ -175,6 +175,13 @@
             }
         }
 
+        :root {
+            --orange-neon: #ff8c00;
+            --orange-bright: #ffa200;
+            --orange-glow: rgba(255, 140, 0, 0.75);
+            --purple-neon: #a855f7;
+        }
+
         /* ── BARRA DE PUNTOS GLASSMORPHISM ── */
         #bar-outer {
             height: 56px;
@@ -193,13 +200,23 @@
             transition: border-color 0.5s ease, box-shadow 0.5s ease;
         }
 
+        /* Borde Naranja Neón de Halloween */
+        body.theme-halloween #bar-outer {
+            border: 3.5px solid var(--orange-bright);
+            box-shadow: 
+                0 8px 32px rgba(0, 0, 0, 0.75),
+                0 0 18px var(--orange-glow),
+                0 0 35px rgba(255, 140, 0, 0.35),
+                inset 0 4px 12px rgba(0, 0, 0, 0.6);
+        }
+
         .queen-bar {
             height: 100%;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-family: 'Bangers', cursive;
-            font-size: 30px;
+            font-family: 'Nosifer', 'Bangers', cursive;
+            font-size: 26px;
             letter-spacing: 1.5px;
             color: #fff;
             text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.9), 0 0 10px rgba(255, 255, 255, 0.3);
@@ -273,8 +290,8 @@
         }
 
         .queen-label {
-            font-family: 'Bangers', cursive;
-            font-size: 38px;
+            font-family: 'Nosifer', 'Bangers', cursive;
+            font-size: 30px;
             letter-spacing: 1.5px;
             text-shadow: 2px 2px 0px #000,
                 0 0 15px rgba(0, 0, 0, 0.8);
@@ -283,16 +300,41 @@
 
         /* Medallas Doradas de Victorias */
         .queen-vics {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 4px;
             font-size: 21px;
             font-weight: 900;
             color: #FFD700;
+            letter-spacing: 0.5px;
+            animation: latido-suave 2.5s infinite ease-in-out;
+        }
+
+        .queen-vics .vic-icon {
+            font-size: 20px;
+            filter: drop-shadow(0 2px 3px rgba(0, 0, 0, 0.7));
+            transition: transform 0.3s ease;
+        }
+
+        .queen-vics .vic-count {
             background: linear-gradient(135deg, #FFE066 0%, #F5B041 100%);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
             text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.8);
             filter: drop-shadow(0 2px 3px rgba(0, 0, 0, 0.6));
-            letter-spacing: 0.5px;
-            animation: latido-suave 2.5s infinite ease-in-out;
+        }
+
+        /* Estilo de Calabazas de Halloween */
+        body.theme-halloween .queen-vics .vic-icon {
+            filter: drop-shadow(0 0 8px rgba(255, 140, 0, 0.95)) drop-shadow(0 2px 3px rgba(0, 0, 0, 0.8));
+        }
+
+        body.theme-halloween .queen-vics .vic-count {
+            background: linear-gradient(135deg, #ffd166 0%, #ff8c00 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            filter: drop-shadow(0 0 6px rgba(255, 140, 0, 0.7));
         }
 
         @keyframes latido-suave {
@@ -437,7 +479,46 @@
     <script src="/js/iframe-bridge.js"></script>
     <script src="/socket.io/socket.io.js"></script>
     <script>
-        const socket = window.__iframeBridgeSocket || io();
+        const urlParams = new URLSearchParams(window.location.search);
+        const userParam = urlParams.get('user') || '';
+        const themeParam = (urlParams.get('theme') || 'halloween').toLowerCase();
+        let isHalloweenTheme = (themeParam !== 'clasico' && themeParam !== 'default');
+
+        function getVicHtml(count) {
+            const vicIcon = isHalloweenTheme ? '🎃' : '👑';
+            return `<span class="vic-icon">${vicIcon}</span> <span class="vic-count">X${count}</span>`;
+        }
+
+        function aplicarTemaBatalla() {
+            if (isHalloweenTheme) {
+                document.body.classList.add('theme-halloween');
+                document.body.classList.remove('theme-clasico');
+            } else {
+                document.body.classList.remove('theme-halloween');
+                document.body.classList.add('theme-clasico');
+            }
+        }
+        aplicarTemaBatalla();
+
+        window.addEventListener('keydown', (e) => {
+            if (e.key === 'h' || e.key === 'H') {
+                isHalloweenTheme = !isHalloweenTheme;
+                aplicarTemaBatalla();
+                if (participantesActivos && participantesActivos.length) {
+                    participantesActivos.forEach(chica => {
+                        const vicEl = document.getElementById('vic-' + chica);
+                        if (vicEl) {
+                            const countMatch = vicEl.textContent.match(/\d+/);
+                            const count = countMatch ? countMatch[0] : '0';
+                            vicEl.innerHTML = getVicHtml(count);
+                        }
+                    });
+                    actualizarBarras(puntosActuales);
+                }
+            }
+        });
+
+        const socket = window.__iframeBridgeSocket || io({ query: userParam ? { user: userParam } : {} });
         let participantesActivos = [];
         let equiposInfo = {};
         let APODOS = {};
@@ -511,14 +592,13 @@
                 const eq = equipos[chica] || { nombre: chica, color: '#fff' };
                 const label = APODOS[chica] || eq.nombre || chica.toUpperCase();
                 const nombreImgSrc = eq.nombre_img ? (eq.nombre_img.startsWith('/') || eq.nombre_img.startsWith('http') ? eq.nombre_img : '/regalos/' + eq.nombre_img) : '';
-
                 namesRow.innerHTML += `
                 <div class="queen-name-slot">
                     ${nombreImgSrc
                         ? `<img class="queen-name-img" src="${nombreImgSrc}" alt="${label}" style="height:48px;max-width:160px;object-fit:contain;filter:drop-shadow(0 0 8px rgba(0,0,0,0.9));">`
                         : `<span class="queen-label" style="color:${eq.color}">${label}</span>`
                     }
-                    <span class="queen-vics" id="vic-${chica}">👑 X${victorias[chica] || 0}</span>
+                    <span class="queen-vics" id="vic-${chica}">${getVicHtml(victorias[chica] || 0)}</span>
                     <div class="feed-debajo" id="feed-${chica}"></div>
                 </div>`;
             });
@@ -552,8 +632,13 @@
             // Hacer brillar el marco de la barra con el color del líder activo
             if (lider && equiposInfo[lider] && maxPts > 0) {
                 const liderColor = equiposInfo[lider].color;
-                barOuter.style.boxShadow = `0 8px 32px rgba(0, 0, 0, 0.7), 0 0 25px ${liderColor}66`;
-                barOuter.style.borderColor = `${liderColor}80`;
+                if (isHalloweenTheme) {
+                    barOuter.style.boxShadow = `0 8px 32px rgba(0, 0, 0, 0.75), 0 0 20px var(--orange-glow), 0 0 32px ${liderColor}99`;
+                    barOuter.style.borderColor = 'var(--orange-bright)';
+                } else {
+                    barOuter.style.boxShadow = `0 8px 32px rgba(0, 0, 0, 0.7), 0 0 25px ${liderColor}66`;
+                    barOuter.style.borderColor = `${liderColor}80`;
+                }
             } else {
                 barOuter.style.boxShadow = '';
                 barOuter.style.borderColor = '';
@@ -659,7 +744,7 @@
 
             if (!esEmpate && data.victorias) {
                 const vicEl = document.getElementById('vic-' + data.ganadora);
-                if (vicEl) vicEl.textContent = '👑 X' + data.victorias[data.ganadora];
+                if (vicEl) vicEl.innerHTML = getVicHtml(data.victorias[data.ganadora]);
             }
         });
 
@@ -691,6 +776,24 @@
             });
             const apodosMap = await (await fetch('/api/apodos')).json();
             APODOS = apodosMap;
+
+            if (urlParams.has('demo')) {
+                const demoQueens = Object.keys(equiposInfo).slice(0, 3);
+                if (demoQueens.length >= 2) {
+                    timerEl.textContent = '01:45';
+                    const sampleVics = {};
+                    sampleVics[demoQueens[0]] = 3;
+                    sampleVics[demoQueens[1]] = 2;
+                    if (demoQueens[2]) sampleVics[demoQueens[2]] = 1;
+                    const samplePts = {};
+                    samplePts[demoQueens[0]] = 1450;
+                    samplePts[demoQueens[1]] = 820;
+                    if (demoQueens[2]) samplePts[demoQueens[2]] = 390;
+
+                    renderBatalla(demoQueens, equiposInfo, sampleVics, samplePts);
+                    actualizarBarras(samplePts);
+                }
+            }
         }
         init();
 
