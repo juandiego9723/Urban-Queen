@@ -5448,7 +5448,7 @@
 
                     const btnEliminar = document.getElementById('btnEliminarLista');
                     if (btnEliminar) {
-                        btnEliminar.disabled = (gestorListaSeleccionadaId === 1);
+                        btnEliminar.disabled = (gestorListas.length <= 1);
                     }
 
                     cargarGestorRegalos();
@@ -5476,7 +5476,7 @@
 
                     const btnEliminar = document.getElementById('btnEliminarLista');
                     if (btnEliminar) {
-                        btnEliminar.disabled = (gestorListaSeleccionadaId === 1);
+                        btnEliminar.disabled = (gestorListas.length <= 1);
                     }
 
                     cargarGestorRegalos();
@@ -5508,8 +5508,11 @@
                             method: 'POST',
                             headers: { 'Content-Type': 'application/json' },
                             body: JSON.stringify({ nombre })
-                        }).then(res => {
+                        }).then(async res => {
                             if (res.ok) {
+                                const listas = await res.json();
+                                const creada = listas[listas.length - 1];
+                                if (creada) gestorListaSeleccionadaId = creada.id;
                                 cargarGestorListas();
                             } else {
                                 uiAlert('Error', 'Hubo un error al crear la lista.', 'error');
@@ -5522,8 +5525,8 @@
             }
 
             function eliminarListaActual() {
-                if (gestorListaSeleccionadaId === 1) {
-                    uiAlert('Acción Denegada', 'No se puede eliminar la lista General.', 'warning');
+                if (gestorListas.length <= 1) {
+                    uiAlert('Acción Denegada', 'No puedes eliminar la única lista existente.', 'warning');
                     return;
                 }
                 const listName = gestorListas.find(l => l.id === gestorListaSeleccionadaId)?.nombre || '';
@@ -5533,7 +5536,8 @@
                             method: 'POST'
                         });
                         if (res.ok) {
-                            gestorListaSeleccionadaId = 1;
+                            const remaining = gestorListas.find(l => l.id !== gestorListaSeleccionadaId);
+                            gestorListaSeleccionadaId = remaining ? remaining.id : 1;
                             cargarGestorListas();
                         } else {
                             uiAlert('Error', 'Error al eliminar la lista.', 'error');
@@ -5580,6 +5584,7 @@
 
                 btn.disabled = false;
                 btn.textContent = '+ Agregar';
+                await cargarGestorRegalos();
             }
 
             async function cargarGestorRegalos() {

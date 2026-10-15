@@ -52,7 +52,7 @@ class DBInstance {
                 query('SELECT * FROM grupos WHERE user_id = $1 ORDER BY nombre', [uId]),
                 query('SELECT * FROM config WHERE user_id = $1', [uId]),
                 query('SELECT evento, url FROM sonidos WHERE user_id = $1', [uId]),
-                query('SELECT * FROM regalos_custom WHERE user_id = $1 ORDER BY id DESC', [uId]),
+                query('SELECT * FROM regalos_custom WHERE user_id = $1 ORDER BY COALESCE(orden, 0) ASC, id DESC', [uId]),
                 query('SELECT * FROM regalos_listas WHERE user_id = $1 ORDER BY id ASC', [uId]).catch(() => ({ rows: [] }))
             ]);
 
@@ -63,8 +63,43 @@ class DBInstance {
             cRes.rows.forEach(r => { this.cacheConfig[r.clave] = r.valor; });
             this.cacheSonidos = {};
             sRes.rows.forEach(r => { this.cacheSonidos[r.evento] = r.url; });
+
+            // Manejo de listas de regalos en DB
+            let listas = (rlRes && rlRes.rows) || [];
+            if (listas.length === 0) {
+                try {
+                    const checkExisting = await query('SELECT * FROM regalos_listas WHERE user_id = $1 ORDER BY id ASC', [uId]);
+                    if (checkExisting.rows && checkExisting.rows.length > 0) {
+                        listas = checkExisting.rows;
+                    } else {
+                        const insL = await query('INSERT INTO regalos_listas (user_id, nombre, activa) VALUES ($1, $2, 1) RETURNING *', [uId, 'Lista Principal']);
+                        if (insL.rows && insL.rows.length > 0) {
+                            listas = insL.rows;
+                        }
+                    }
+                } catch (e) {
+                    console.error('Error creando lista inicial en DB:', e.message);
+                }
+            }
+
+            // Asegurar que al menos una lista esté activa
+            if (listas.length > 0 && !listas.some(l => l.activa === 1)) {
+                listas[0].activa = 1;
+                await query('UPDATE regalos_listas SET activa = 1 WHERE user_id = $1 AND id = $2', [uId, listas[0].id]).catch(() => {});
+            }
+            this.cacheRegalosListas = listas;
+
+            // Si hay regalos antiguos con lista_id NULL, asociarlos a la lista activa
+            const activeList = listas.find(l => l.activa === 1) || listas[0];
+            if (activeList) {
+                const nullGifts = rcRes.rows.filter(r => r.lista_id === null || r.lista_id === undefined);
+                if (nullGifts.length > 0) {
+                    await query('UPDATE regalos_custom SET lista_id = $1 WHERE user_id = $2 AND lista_id IS NULL', [activeList.id, uId]).catch(() => {});
+                    nullGifts.forEach(r => { r.lista_id = activeList.id; });
+                }
+            }
+
             this.cacheRegalosCustom = rcRes.rows;
-            this.cacheRegalosListas = (rlRes && rlRes.rows && rlRes.rows.length > 0) ? rlRes.rows : [{ id: 1, nombre: 'Lista Principal', activa: 1 }];
         } catch (e) {
             console.error(`⚠️ Error cargando cache desde Supabase para ${this.username}:`, e.message);
         }
@@ -477,16 +512,47 @@ class DBInstance {
     }
 
     // Regalos Custom
-    getRegalosCustom() {
-        return this.cacheRegalosCustom;
+    getRegalosCustom(lista_id = null) {
+        if (lista_id === 'all') {
+            return this.cacheRegalosCustom;
+        }
+
+        let targetId = (lista_id !== null && lista_id !== undefined && lista_id !== '') 
+            ? parseInt(lista_id) 
+            : null;
+
+        if (!targetId) {
+            const activeList = (this.cacheRegalosListas || []).find(l => l.activa === 1) || (this.cacheRegalosListas || [])[0];
+            targetId = activeList ? activeList.id : null;
+        }
+
+        if (!targetId) return this.cacheRegalosCustom;
+
+        return this.cacheRegalosCustom.filter(r => r.lista_id === targetId);
     }
 
     async crearRegaloCustom(data) {
         const uId = await this.ensureUserId();
         if (!uId) return;
-        const res = await query('INSERT INTO regalos_custom (user_id, nombre, accion, imagen) VALUES ($1, $2, $3, $4) RETURNING *', [uId, data.nombre, data.accion || '', data.imagen || '']);
+
+        let listaId = (data.lista_id !== null && data.lista_id !== undefined && data.lista_id !== '') 
+            ? parseInt(data.lista_id) 
+            : null;
+
+        if (!listaId) {
+            const activeList = (this.cacheRegalosListas || []).find(l => l.activa === 1) || (this.cacheRegalosListas || [])[0];
+            if (activeList) listaId = activeList.id;
+        }
+
+        const currentCount = this.cacheRegalosCustom.filter(r => r.lista_id === listaId).length;
+        const res = await query(
+            'INSERT INTO regalos_custom (user_id, nombre, accion, imagen, lista_id, orden) VALUES ($1, $2, $3, $4, $5, $6) RETURNING *',
+            [uId, data.nombre, data.accion || '', data.imagen || '', listaId, currentCount]
+        );
+
         if (res.rows && res.rows.length > 0) {
-            this.cacheRegalosCustom.unshift(res.rows[0]);
+            this.cacheRegalosCustom.push(res.rows[0]);
+            return res.rows[0];
         } else {
             await this.cargarCache();
         }
@@ -511,6 +577,24 @@ class DBInstance {
         this.cacheRegalosCustom = this.cacheRegalosCustom.filter(r => r.id !== id);
     }
 
+    async reordenarRegalosCustom(ids) {
+        const uId = await this.ensureUserId();
+        if (!uId || !Array.isArray(ids) || ids.length === 0) return;
+        try {
+            const queries = ids.map((id, index) => {
+                return query('UPDATE regalos_custom SET orden = $1 WHERE user_id = $2 AND id = $3', [index, uId, parseInt(id)]);
+            });
+            await Promise.all(queries);
+            ids.forEach((id, index) => {
+                const item = this.cacheRegalosCustom.find(r => r.id === parseInt(id));
+                if (item) item.orden = index;
+            });
+            this.cacheRegalosCustom.sort((a, b) => (a.orden || 0) - (b.orden || 0));
+        } catch (e) {
+            console.error('Error en reordenarRegalosCustom:', e.message);
+        }
+    }
+
     // Regalos Listas
     getRegalosListas() {
         return (this.cacheRegalosListas && this.cacheRegalosListas.length > 0) 
@@ -522,16 +606,31 @@ class DBInstance {
         const uId = await this.ensureUserId();
         if (!uId) return;
         try {
-            await query('INSERT INTO regalos_listas (user_id, nombre, activa) VALUES ($1, $2, 0)', [uId, nombre]);
+            const hasActive = (this.cacheRegalosListas || []).some(l => l.activa === 1);
+            const activaVal = hasActive ? 0 : 1;
+            const res = await query('INSERT INTO regalos_listas (user_id, nombre, activa) VALUES ($1, $2, $3) RETURNING *', [uId, nombre, activaVal]);
             await this.cargarCache();
+            return res.rows[0];
         } catch (e) { console.error('Error en crearRegaloLista:', e.message); }
     }
 
     async eliminarRegaloLista(id) {
         const uId = await this.ensureUserId();
-        if (!uId || id === 1) return;
+        if (!uId) return;
         try {
+            // Eliminar regalos asociados a esa lista
+            await query('DELETE FROM regalos_custom WHERE user_id = $1 AND lista_id = $2', [uId, id]);
+            // Eliminar la lista
             await query('DELETE FROM regalos_listas WHERE user_id = $1 AND id = $2', [uId, id]);
+            
+            // Verificar si quedó alguna lista activa
+            const remaining = await query('SELECT id FROM regalos_listas WHERE user_id = $1 ORDER BY id ASC', [uId]);
+            if (remaining.rows.length > 0) {
+                const activeCheck = await query('SELECT id FROM regalos_listas WHERE user_id = $1 AND activa = 1', [uId]);
+                if (activeCheck.rows.length === 0) {
+                    await query('UPDATE regalos_listas SET activa = 1 WHERE user_id = $1 AND id = $2', [uId, remaining.rows[0].id]);
+                }
+            }
             await this.cargarCache();
         } catch (e) { console.error('Error en eliminarRegaloLista:', e.message); }
     }

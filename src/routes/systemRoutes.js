@@ -54,7 +54,9 @@ function setupSystemRoutes(app, io, requireSession, activeSessions) {
         });
     });
 
-    app.get('/api/regalos-custom', requireSession, (req, res) => res.json(req.userSession.db.getRegalosCustom()));
+    app.get('/api/regalos-custom', requireSession, (req, res) => {
+        res.json(req.userSession.db.getRegalosCustom(req.query.lista_id));
+    });
 
     function procesarImagenBase64(base64Str) {
         if (!base64Str || !base64Str.startsWith('data:image')) return base64Str;
@@ -79,9 +81,9 @@ function setupSystemRoutes(app, io, requireSession, activeSessions) {
         const data = req.body || {};
         if (!data.nombre) return res.status(400).send('Falta nombre');
         data.imagen = procesarImagenBase64(data.imagen);
-        await s.db.crearRegaloCustom(data);
+        const nuevo = await s.db.crearRegaloCustom(data);
         io.to(req.username).emit('regalosCustomActualizados', s.db.getRegalosCustom());
-        res.send('OK');
+        res.json({ status: 'OK', regalo: nuevo });
     });
 
     app.all('/api/regalos-custom/editar', requireSession, async (req, res) => {
@@ -91,6 +93,14 @@ function setupSystemRoutes(app, io, requireSession, activeSessions) {
         if (!id || !data.nombre) return res.status(400).send('Datos incompletos');
         data.imagen = procesarImagenBase64(data.imagen);
         await s.db.editarRegaloCustom(id, data);
+        io.to(req.username).emit('regalosCustomActualizados', s.db.getRegalosCustom());
+        res.send('OK');
+    });
+
+    app.all('/api/regalos-custom/reordenar', requireSession, async (req, res) => {
+        const s = req.userSession;
+        const ids = (req.body && req.body.ids) || [];
+        await s.db.reordenarRegalosCustom(ids);
         io.to(req.username).emit('regalosCustomActualizados', s.db.getRegalosCustom());
         res.send('OK');
     });
@@ -116,12 +126,14 @@ function setupSystemRoutes(app, io, requireSession, activeSessions) {
         const s = req.userSession;
         const id = parseInt(req.query.id || (req.body && req.body.id));
         if (id) await s.db.eliminarRegaloLista(id);
+        io.to(req.username).emit('regalosCustomActualizados', s.db.getRegalosCustom());
         res.json(s.db.getRegalosListas());
     });
     app.all('/api/regalos-listas/activar', requireSession, async (req, res) => {
         const s = req.userSession;
         const id = parseInt(req.query.id || (req.body && req.body.id));
         if (id) await s.db.activarRegaloLista(id);
+        io.to(req.username).emit('regalosCustomActualizados', s.db.getRegalosCustom());
         res.json(s.db.getRegalosListas());
     });
 

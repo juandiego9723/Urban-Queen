@@ -409,10 +409,15 @@
     <script>
         const socket = io();
         let base64Image = '';
+        const urlParams = new URLSearchParams(window.location.search);
+        const listaIdParam = urlParams.get('lista_id');
 
         async function cargarRegalos() {
             try {
-                const res = await fetch('/api/regalos-custom');
+                const url = listaIdParam 
+                    ? `/api/regalos-custom?lista_id=${encodeURIComponent(listaIdParam)}` 
+                    : '/api/regalos-custom';
+                const res = await fetch(url);
                 const regalos = await res.json();
                 renderGrid(regalos);
             } catch (e) {
@@ -492,7 +497,12 @@
                 await fetch('/api/regalos-custom/crear', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ nombre, accion, imagen: base64Image })
+                    body: JSON.stringify({ 
+                        nombre, 
+                        accion, 
+                        imagen: base64Image,
+                        lista_id: listaIdParam || undefined
+                    })
                 });
                 cerrarModal();
                 cargarRegalos();
@@ -523,7 +533,13 @@
 
         // Actualización en tiempo real
         socket.on('regalosCustomActualizados', (regalos) => {
-            renderGrid(regalos);
+            if (listaIdParam) {
+                cargarRegalos();
+            } else if (Array.isArray(regalos)) {
+                renderGrid(regalos);
+            } else {
+                cargarRegalos();
+            }
         });
 
         // Cargar al inicio
