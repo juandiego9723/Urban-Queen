@@ -2478,10 +2478,17 @@
                 const inputInicio = document.getElementById('input-agency-fecha-inicio');
                 const inputFin = document.getElementById('input-agency-fecha-fin');
 
-                const hoy = new Date().toISOString().split('T')[0];
+                const getLocalDateString = (d = new Date()) => {
+                    const year = d.getFullYear();
+                    const month = String(d.getMonth() + 1).padStart(2, '0');
+                    const day = String(d.getDate()).padStart(2, '0');
+                    return `${year}-${month}-${day}`;
+                };
+
+                const hoy = getLocalDateString(new Date());
                 const dAyer = new Date();
                 dAyer.setDate(dAyer.getDate() - 1);
-                const ayer = dAyer.toISOString().split('T')[0];
+                const ayer = getLocalDateString(dAyer);
 
                 if (modo === 'historico') {
                     inputsContainer.style.display = 'none';
@@ -2536,11 +2543,13 @@
                     if (!inputInicio) return alert('Por favor selecciona una fecha');
                     agencyFechaInicio = inputInicio;
                     agencyFechaFin = inputInicio;
+                    agencyPeriodoActual = inputInicio;
                 } else if (modo === 'rango') {
                     if (!inputInicio || !inputFin) return alert('Por favor selecciona fecha de inicio y fecha de fin');
                     if (inputInicio > inputFin) return alert('La fecha de inicio no puede ser posterior a la fecha de fin');
                     agencyFechaInicio = inputInicio;
                     agencyFechaFin = inputFin;
+                    agencyPeriodoActual = 'rango';
                 }
                 cargarAnaliticas();
             }
@@ -2549,6 +2558,9 @@
                 document.getElementById('select-agency-date-mode').value = 'historico';
                 document.getElementById('input-agency-fecha-inicio').value = '';
                 document.getElementById('input-agency-fecha-fin').value = '';
+                agencyFechaInicio = '';
+                agencyFechaFin = '';
+                agencyPeriodoActual = 'historico';
                 cambiarModoFechaAgencia('historico');
             }
 
@@ -2677,7 +2689,10 @@
                     for (let i = 6; i >= 0; i--) {
                         const d = new Date();
                         d.setDate(d.getDate() - i);
-                        const dateStr = d.toISOString().split('T')[0];
+                        const year = d.getFullYear();
+                        const month = String(d.getMonth() + 1).padStart(2, '0');
+                        const day = String(d.getDate()).padStart(2, '0');
+                        const dateStr = `${year}-${month}-${day}`;
 
                         const record = cacheGraficaDiaria.find(g => g.dia === dateStr);
                         const total = record ? record.total_diamantes : 0;
@@ -3469,6 +3484,7 @@
                 const giftName = giftData.giftName;
                 const viewer = giftData.viewer || 'Desconocido';
                 const coins = giftData.coins || 1;
+                const repeat = giftData.repeat || 1;
                 const giftImgSrc = giftData.giftImgSrc || '';
 
                 // Evitar duplicados
@@ -3484,11 +3500,12 @@
                 
                 // Mostrar imagen del regalo si existe, si no un emoji de regalo
                 const imgTag = giftImgSrc ? `<img src="${giftImgSrc}" style="width:24px;height:24px;object-fit:contain;border-radius:4px;background:rgba(255,255,255,0.05);flex-shrink:0;">` : '<span style="font-size:1.2rem;flex-shrink:0;">🎁</span>';
+                const repeatBadge = repeat > 1 ? ` <span style="background:#00f2fe;color:#000;font-size:11px;padding:1px 6px;border-radius:4px;font-weight:800;">x${repeat}</span>` : '';
                 
                 fila.innerHTML = `
                     ${imgTag}
                     <div style="flex:2;min-width:0;display:flex;flex-direction:column;gap:2px;">
-                        <span style="font-size:13px;font-weight:700;color:#fff;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${giftName} (${coins} 💎)</span>
+                        <span style="font-size:13px;font-weight:700;color:#fff;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${giftName}${repeatBadge} (${coins} 💎)</span>
                         <span style="font-size:10px;color:var(--text-muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">Enviado por: <strong>@${viewer}</strong></span>
                     </div>
                     <select class="select" style="flex:1.5;font-size:12px;padding:4px 8px;min-width:120px;" onchange="asignarRegaloUnico('${giftId}', this.value)">

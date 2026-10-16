@@ -687,15 +687,22 @@ class DBInstance {
         }
     }
 
+    getTimezone() {
+        return process.env.TIMEZONE || 'America/Bogota';
+    }
+
     // CONSULTAS DE ANALÍTICAS
     async getResumenAnalytics(periodo = 'historico', fechaInicio = null, fechaFin = null) {
         const uId = await this.ensureUserId();
         if (!uId) return { totalHistorico: 0, totalHoy: 0, totalMes: 0, totalFiltrado: 0, porQueen: [] };
+        const tz = this.getTimezone();
+        const tzCol = `(timestamp AT TIME ZONE '${tz}')`;
+        const hoyLocal = `(CURRENT_TIMESTAMP AT TIME ZONE '${tz}')::date`;
         const filter = this.getDateFilterSQL(periodo, fechaInicio, fechaFin);
         try {
             const hist = await query("SELECT COALESCE(SUM(diamonds), 0) as total FROM historial_regalos WHERE user_id = $1", [uId]);
-            const hoy = await query("SELECT COALESCE(SUM(diamonds), 0) as total FROM historial_regalos WHERE user_id = $1 AND timestamp::date = CURRENT_DATE", [uId]);
-            const mes = await query("SELECT COALESCE(SUM(diamonds), 0) as total FROM historial_regalos WHERE user_id = $1 AND DATE_TRUNC('month', timestamp) = DATE_TRUNC('month', CURRENT_DATE)", [uId]);
+            const hoy = await query(`SELECT COALESCE(SUM(diamonds), 0) as total FROM historial_regalos WHERE user_id = $1 AND ${tzCol}::date = ${hoyLocal}`, [uId]);
+            const mes = await query(`SELECT COALESCE(SUM(diamonds), 0) as total FROM historial_regalos WHERE user_id = $1 AND DATE_TRUNC('month', ${tzCol}) = DATE_TRUNC('month', CURRENT_TIMESTAMP AT TIME ZONE '${tz}')`, [uId]);
             const filtrado = await query(`SELECT COALESCE(SUM(diamonds), 0) as total FROM historial_regalos WHERE user_id = $1 AND ${filter}`, [uId]);
 
             const pq = await query(`
@@ -761,10 +768,11 @@ class DBInstance {
     async getRegalosPorDia(periodo = 'historico', fechaInicio = null, fechaFin = null) {
         const uId = await this.ensureUserId();
         if (!uId) return [];
-        const filter = (fechaInicio || fechaFin) ? this.getDateFilterSQL(periodo, fechaInicio, fechaFin) : "timestamp >= NOW() - INTERVAL '7 days'";
+        const tz = this.getTimezone();
+        const filter = (fechaInicio || fechaFin) ? this.getDateFilterSQL(periodo, fechaInicio, fechaFin) : `(timestamp AT TIME ZONE '${tz}') >= (CURRENT_TIMESTAMP AT TIME ZONE '${tz}') - INTERVAL '7 days'`;
         try {
             const res = await query(`
-                SELECT TO_CHAR(timestamp, 'YYYY-MM-DD') as dia, COALESCE(SUM(diamonds), 0) as total_diamantes
+                SELECT TO_CHAR(timestamp AT TIME ZONE '${tz}', 'YYYY-MM-DD') as dia, COALESCE(SUM(diamonds), 0) as total_diamantes
                 FROM historial_regalos
                 WHERE user_id = $1 AND ${filter}
                 GROUP BY dia
@@ -780,11 +788,12 @@ class DBInstance {
     async getRegalosPorMes() {
         const uId = await this.ensureUserId();
         if (!uId) return [];
+        const tz = this.getTimezone();
         try {
             const res = await query(`
-                SELECT TO_CHAR(timestamp, 'YYYY-MM') as mes, COALESCE(SUM(diamonds), 0) as total_diamantes
+                SELECT TO_CHAR(timestamp AT TIME ZONE '${tz}', 'YYYY-MM') as mes, COALESCE(SUM(diamonds), 0) as total_diamantes
                 FROM historial_regalos
-                WHERE user_id = $1 AND timestamp >= NOW() - INTERVAL '6 months'
+                WHERE user_id = $1 AND (timestamp AT TIME ZONE '${tz}') >= (CURRENT_TIMESTAMP AT TIME ZONE '${tz}') - INTERVAL '6 months'
                 GROUP BY mes
                 ORDER BY mes ASC
             `, [uId]);
@@ -798,9 +807,10 @@ class DBInstance {
     async getMesesConHistorial() {
         const uId = await this.ensureUserId();
         if (!uId) return [];
+        const tz = this.getTimezone();
         try {
             const res = await query(`
-                SELECT DISTINCT TO_CHAR(timestamp, 'YYYY-MM') as mes
+                SELECT DISTINCT TO_CHAR(timestamp AT TIME ZONE '${tz}', 'YYYY-MM') as mes
                 FROM historial_regalos
                 WHERE user_id = $1 AND timestamp IS NOT NULL
                 ORDER BY mes DESC
@@ -813,30 +823,35 @@ class DBInstance {
     }
 
     getDateFilterSQL(periodo, fechaInicio, fechaFin) {
+        const tz = this.getTimezone();
+        const tzCol = `(timestamp AT TIME ZONE '${tz}')`;
+        const hoyLocal = `(CURRENT_TIMESTAMP AT TIME ZONE '${tz}')::date`;
+
         if (fechaInicio && fechaFin) {
             const fi = String(fechaInicio).trim();
             const ff = String(fechaFin).trim();
             if (/^\d{4}-\d{2}-\d{2}$/.test(fi) && /^\d{4}-\d{2}-\d{2}$/.test(ff)) {
                 if (fi === ff) {
-                    return `timestamp::date = '${fi}'`;
+                    return `${tzCol}::date = '${fi}'`;
                 } else {
-                    return `timestamp::date >= '${fi}' AND timestamp::date <= '${ff}'`;
+                    return `${tzCol}::date >= '${fi}' AND ${tzCol}::date <= '${ff}'`;
                 }
             }
         } else if (fechaInicio) {
             const fi = String(fechaInicio).trim();
             if (/^\d{4}-\d{2}-\d{2}$/.test(fi)) {
-                return `timestamp::date = '${fi}'`;
+                return `${tzCol}::date = '${fi}'`;
             }
         }
 
         if (!periodo || periodo === 'historico') return "1=1";
         const p = String(periodo).trim();
-        if (p === 'diario')  return "timestamp::date = CURRENT_DATE";
-        if (p === 'semanal') return "timestamp >= NOW() - INTERVAL '7 days'";
-        if (p === 'mensual') return "DATE_TRUNC('month', timestamp) = DATE_TRUNC('month', CURRENT_DATE)";
-        if (/^\d{4}-\d{2}-\d{2}$/.test(p)) return `timestamp::date = '${p}'`;
-        if (/^\d{4}-\d{2}$/.test(p)) return `TO_CHAR(timestamp, 'YYYY-MM') = '${p}'`;
+        if (p === 'diario')  return `${tzCol}::date = ${hoyLocal}`;
+        if (p === 'ayer')    return `${tzCol}::date = (${hoyLocal} - INTERVAL '1 day')::date`;
+        if (p === 'semanal') return `${tzCol} >= (CURRENT_TIMESTAMP AT TIME ZONE '${tz}') - INTERVAL '7 days'`;
+        if (p === 'mensual') return `DATE_TRUNC('month', ${tzCol}) = DATE_TRUNC('month', CURRENT_TIMESTAMP AT TIME ZONE '${tz}')`;
+        if (/^\d{4}-\d{2}-\d{2}$/.test(p)) return `${tzCol}::date = '${p}'`;
+        if (/^\d{4}-\d{2}$/.test(p)) return `TO_CHAR(${tzCol}, 'YYYY-MM') = '${p}'`;
         return "1=1";
     }
 
@@ -926,10 +941,11 @@ class DBInstance {
     async getEvolucionBailarina(name, periodo = 'historico', fechaInicio = null, fechaFin = null) {
         const uId = await this.ensureUserId();
         if (!uId) return [];
+        const tz = this.getTimezone();
         const filter = this.getDateFilterSQL(periodo, fechaInicio, fechaFin);
         try {
             const res = await query(`
-                SELECT TO_CHAR(h.timestamp, 'YYYY-MM-DD') as dia, COALESCE(SUM(h.diamonds), 0) as total_diamantes
+                SELECT TO_CHAR(h.timestamp AT TIME ZONE '${tz}', 'YYYY-MM-DD') as dia, COALESCE(SUM(h.diamonds), 0) as total_diamantes
                 FROM historial_regalos h
                 JOIN queens q ON h.queen_id = q.id
                 WHERE h.user_id = $1 AND LOWER(q.name) = LOWER($2) AND ${filter}
@@ -946,9 +962,10 @@ class DBInstance {
     async getDonacionesPorHora() {
         const uId = await this.ensureUserId();
         if (!uId) return [];
+        const tz = this.getTimezone();
         try {
             const res = await query(`
-                SELECT EXTRACT(HOUR FROM timestamp) as hora, COALESCE(SUM(diamonds), 0) as total_diamantes, COUNT(id) as cantidad_regalos
+                SELECT EXTRACT(HOUR FROM timestamp AT TIME ZONE '${tz}') as hora, COALESCE(SUM(diamonds), 0) as total_diamantes, COUNT(id) as cantidad_regalos
                 FROM historial_regalos
                 WHERE user_id = $1
                 GROUP BY hora

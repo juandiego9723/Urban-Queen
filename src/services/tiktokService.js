@@ -265,34 +265,59 @@ function createTikTokService(app, io, requireSession, activeSessions, procesarRe
             // Garantizar que data.profilePictureUrl sea SIEMPRE un string URL válido
             data.profilePictureUrl = resolverAvatarUsuario(data);
 
-            // Resolver giftName desde giftId si la librería no lo envía
-            if (!data.giftName && data.giftId) {
-                const gid = parseInt(data.giftId);
-                // 1. Buscar en catálogo dinámico descargado al conectar
-                let found = (session.catalogoRegalos || []).find(g => parseInt(g.id) === gid);
-                // 2. Mapa de respaldo hardcoded (IDs más comunes)
-                if (!found) {
-                    const GIFT_ID_MAP = {
-                        5655:'Rose', 6948:'TikTok', 7493:'GG', 6551:'Heart', 6104:'Finger Heart',
-                        6683:'Like', 7494:'Super GG', 6435:'Mic', 5652:'Sunglasses', 7305:'Hand Heart',
-                        6812:'Soccer Ball', 8525:'Cap', 6056:'Lucky Cat', 7394:'Ice Cream Cone',
-                        7560:'Cake', 8121:'Crown', 7572:'Yacht', 8744:'Airplane', 8913:'Galaxy',
-                        7028:'Concert', 6557:'Lion', 7071:'TikTok Universe', 8604:'Island',
-                        6468:'Drama Queen', 7400:'Sports Car', 7399:'Bus', 8614:'Diamond Gun',
-                        6648:'Perfume', 7100:'Power Pump', 8215:'Little Ghost', 7781:'Star',
-                        8700:'Boxing Gloves', 8701:'Corgi', 9002:'Doughnut', 9003:'Headphones'
-                    };
-                    if (GIFT_ID_MAP[gid]) {
-                        data.giftName = GIFT_ID_MAP[gid];
-                    }
-                } else {
-                    data.giftName = found.name;
-                    if (!data.diamondCount && found.diamondCount) data.diamondCount = found.diamondCount;
-                    if (!data.giftPictureUrl && found.imageUrl) data.giftPictureUrl = found.imageUrl;
-                }
-                console.log(`🎁 [Gift Resolved] ID:${data.giftId} → "${data.giftName || '???'}" (${data.diamondCount || '?'}💎)`);
-                console.log(`🔍 [USER INFO] uniqueId:${data.uniqueId || 'NONE'} | profilePic:${data.profilePictureUrl ? 'YES' : 'NONE'} (${(data.profilePictureUrl || '').substring(0,60)}...)`);
+            const gid = data.giftId ? parseInt(data.giftId) : null;
+            let found = null;
+            if (gid && session.catalogoRegalos && session.catalogoRegalos.length > 0) {
+                found = session.catalogoRegalos.find(g => parseInt(g.id) === gid);
             }
+
+            const GIFT_ID_MAP = {
+                5655: { name: 'Rose', diamonds: 1 }, 6948: { name: 'TikTok', diamonds: 1 },
+                7493: { name: 'GG', diamonds: 1 }, 6551: { name: 'Heart', diamonds: 1 },
+                6104: { name: 'Finger Heart', diamonds: 5 }, 6683: { name: 'Like', diamonds: 1 },
+                7494: { name: 'Super GG', diamonds: 20 }, 6435: { name: 'Mic', diamonds: 5 },
+                5652: { name: 'Sunglasses', diamonds: 199 }, 7305: { name: 'Hand Heart', diamonds: 100 },
+                6812: { name: 'Soccer Ball', diamonds: 1 }, 8525: { name: 'Cap', diamonds: 99 },
+                6056: { name: 'Lucky Cat', diamonds: 10 }, 7394: { name: 'Ice Cream Cone', diamonds: 1 },
+                7560: { name: 'Cake', diamonds: 100 }, 8121: { name: 'Crown', diamonds: 99 },
+                7572: { name: 'Yacht', diamonds: 9888 }, 8744: { name: 'Airplane', diamonds: 20000 },
+                8913: { name: 'Galaxy', diamonds: 1000 }, 7028: { name: 'Concert', diamonds: 500 },
+                6557: { name: 'Lion', diamonds: 29999 }, 7071: { name: 'TikTok Universe', diamonds: 34999 },
+                8604: { name: 'Island', diamonds: 7999 }, 6468: { name: 'Drama Queen', diamonds: 5000 },
+                7400: { name: 'Sports Car', diamonds: 7000 }, 7399: { name: 'Bus', diamonds: 500 },
+                8614: { name: 'Diamond Gun', diamonds: 1000 }, 6648: { name: 'Perfume', diamonds: 20 },
+                7100: { name: 'Power Pump', diamonds: 99 }, 8215: { name: 'Little Ghost', diamonds: 99 },
+                7781: { name: 'Star', diamonds: 99 }, 8700: { name: 'Boxing Gloves', diamonds: 299 },
+                8701: { name: 'Corgi', diamonds: 299 }, 9002: { name: 'Doughnut', diamonds: 30 },
+                9003: { name: 'Headphones', diamonds: 199 }
+            };
+
+            // Resolver nombre si falta
+            if (!data.giftName && gid) {
+                if (found) {
+                    data.giftName = found.name;
+                } else if (GIFT_ID_MAP[gid]) {
+                    data.giftName = GIFT_ID_MAP[gid].name;
+                }
+            }
+
+            // Resolver diamantes si falta
+            if (!data.diamondCount && !data.coins) {
+                if (found && found.diamondCount) {
+                    data.diamondCount = found.diamondCount;
+                } else if (gid && GIFT_ID_MAP[gid]) {
+                    data.diamondCount = GIFT_ID_MAP[gid].diamonds;
+                }
+            }
+
+            // Resolver imagen si falta
+            if (!data.giftPictureUrl && found && found.imageUrl) {
+                data.giftPictureUrl = found.imageUrl;
+            }
+
+            const giftLogDiamonds = data.diamondCount || (gid && GIFT_ID_MAP[gid] ? GIFT_ID_MAP[gid].diamonds : 1);
+            console.log(`🎁 [Gift Received] ${data.uniqueId || 'Anónimo'} -> "${data.giftName || 'Regalo'}" (💎${giftLogDiamonds} | groupCount:${data.groupCount || 1} | repeat:${data.repeatCount || 1} | end:${!!data.repeatEnd})`);
+
             if (typeof procesarRegaloTikTokFn === 'function') {
                 procesarRegaloTikTokFn(username, data);
             }
@@ -368,13 +393,16 @@ function createTikTokService(app, io, requireSession, activeSessions, procesarRe
         const destName = req.query.to || req.query.toUser || '';
         const viewer = req.query.viewer || req.query.uniqueId || 'TesterUnique';
         const diamonds = parseInt(req.query.diamonds || req.query.coins || req.query.diamondCount || '10');
-        const giftPic = req.query.giftPictureUrl || req.query.giftPic || 'https://p19-webcast.tiktokcdn.com/img/webcast/5f8efc0f4f9f6e72c84285fbfe4e2b00.png~tplv-obj.image';
+        const group = parseInt(req.query.groupCount || req.query.group || req.query.combo || req.query.comboCount || '1') || 1;
         const fakeData = {
+            msgId: 'test-' + Date.now() + '-' + Math.floor(Math.random() * 100000),
             uniqueId: viewer,
             profilePictureUrl: 'https://p16-sign-va.tiktokcdn.com/tos-maliva-avt-0068/7311145620163350534~tplv-tiktok-shrink:100:100.webp',
             giftName: giftName,
             diamondCount: diamonds,
             repeatCount: repeat,
+            groupCount: group,
+            giftType: (diamonds <= 1 && giftName.toLowerCase().includes('rose')) ? 1 : 0,
             giftPictureUrl: giftPic
         };
         if (destName) {

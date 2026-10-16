@@ -102,45 +102,92 @@ function createPointsProcessor(io, activeSessions, resolverNombreFn, timerHandle
             (data.giftDetails && data.giftDetails.giftName) || 
             ''
         ).trim();
-        const repeat = parseInt(data.repeatCount) || 1;
+        const repeatCountRaw = parseInt(data.repeatCount) || 0;
+        const groupCountRaw = parseInt(data.groupCount) || 0;
+        const comboCountRaw = parseInt(data.comboCount) || 0;
         const giftImgSrc = data.giftPictureUrl || '';
         const now = Date.now();
 
-        // 1. Desduplicación por msgId / giftId / evento único de TikTok
+        // Resolución robusta de diamantes unitarios del regalo
+        let diamondUnit = parseInt(
+            data.diamondCount || 
+            data.diamond_count || 
+            data.coins || 
+            (data.extendedGiftInfo && (data.extendedGiftInfo.diamond_count || data.extendedGiftInfo.diamondCount || data.extendedGiftInfo.cost)) || 
+            (data.giftDetails && (data.giftDetails.diamondCount || data.giftDetails.diamond_count)) || 
+            0
+        );
+
+        if ((!diamondUnit || diamondUnit <= 0) && session.catalogoRegalos && session.catalogoRegalos.length > 0) {
+            const matchInCat = session.catalogoRegalos.find(g => 
+                (data.giftId && parseInt(g.id) === parseInt(data.giftId)) ||
+                (g.name && giftName && g.name.toLowerCase() === giftName.toLowerCase())
+            );
+            if (matchInCat && matchInCat.diamondCount > 0) {
+                diamondUnit = matchInCat.diamondCount;
+            }
+        }
+        if (!diamondUnit || diamondUnit <= 0) {
+            diamondUnit = 1;
+        }
+
+        // Determinar si es un regalo de ráfaga (streak continuo):
+        // En TikTok, SOLO los regalos de 1 diamante (ej. Rosas, GG, TikTok) con giftType === 1 son ráfagas incrementales.
+        // Los regalos caros (como los de 100 puntos / diamantes) NUNCA son de ráfaga.
+        const isStreakGift = (data.giftType === 1 || (data.gift && data.gift.gift_type === 1)) && diamondUnit <= 1;
+
+        const repeat = Math.max(1, repeatCountRaw, groupCountRaw);
+        let deltaRepeat = 1;
+
+        if (isStreakGift) {
+            // Manejo de ráfaga incremental para regalos de 1 diamante (Rosas):
+            if (!session.giftStreaks) session.giftStreaks = {};
+            const streakKey = `${viewer}_${giftName}`;
+            const previousStreak = session.giftStreaks[streakKey];
+
+            deltaRepeat = repeat;
+            if (previousStreak && (now - previousStreak.lastTime < 6000)) {
+                if (repeat > previousStreak.count) {
+                    deltaRepeat = repeat - previousStreak.count;
+                } else {
+                    deltaRepeat = 0;
+                }
+            }
+
+            if (data.repeatEnd) {
+                delete session.giftStreaks[streakKey];
+            } else {
+                session.giftStreaks[streakKey] = { count: repeat, lastTime: now };
+            }
+
+            if (deltaRepeat <= 0) return;
+        } else {
+            // Para regalos caros o unitarios (ej. 100 puntos / diamantes):
+            // Cada evento representa un regalo individual o un lote/combo con multiplicador (groupCount / comboCount).
+            // NO se suprimen como ráfagas y NO se bloquean entre sí si se envían rápidamente.
+            const cantidad = Math.max(1, groupCountRaw, comboCountRaw, repeatCountRaw);
+            deltaRepeat = cantidad;
+        }
+
+        // 1. Desduplicación por identificador único de mensaje (solo contra retransmisiones duplicadas de red)
         if (!session.processedGiftIds) session.processedGiftIds = new Map();
         for (const [id, ts] of session.processedGiftIds.entries()) {
             if (now - ts > 30000) session.processedGiftIds.delete(id);
         }
-        const msgId = data.msgId || data.giftId;
+
+        const rawMsgId = data.msgId || data.id || data.orderId;
+        const msgId = rawMsgId ? (typeof rawMsgId === 'object' && rawMsgId.toString ? rawMsgId.toString() : String(rawMsgId)) : null;
+
         if (msgId) {
-            const uniqueEventKey = `${msgId}_${repeat}`;
+            const uniqueEventKey = isStreakGift 
+                ? `${msgId}_${repeat}_${data.repeatEnd ? 'end' : 'mid'}`
+                : `${msgId}`;
+            
             if (session.processedGiftIds.has(uniqueEventKey)) {
-                return; // Evento duplicado ignorado
+                return; // Evento duplicado ignorado (retransmisión de red)
             }
             session.processedGiftIds.set(uniqueEventKey, now);
         }
-
-        // 2. Control de Ráfagas (Algoritmo de Delta Incremental)
-        if (!session.giftStreaks) session.giftStreaks = {};
-        const streakKey = `${viewer}_${giftName}`;
-        const previousStreak = session.giftStreaks[streakKey];
-
-        let deltaRepeat = repeat;
-        if (previousStreak && (now - previousStreak.lastTime < 6000)) {
-            if (repeat > previousStreak.count) {
-                deltaRepeat = repeat - previousStreak.count;
-            } else {
-                deltaRepeat = 0;
-            }
-        }
-
-        if (data.repeatEnd) {
-            delete session.giftStreaks[streakKey];
-        } else {
-            session.giftStreaks[streakKey] = { count: repeat, lastTime: now };
-        }
-
-        if (deltaRepeat <= 0) return;
 
         const MAPA_REGALOS_RESPALDO = {
             'rose': '/regalos/Rosa.png',
@@ -180,7 +227,6 @@ function createPointsProcessor(io, activeSessions, resolverNombreFn, timerHandle
             return img;
         }
 
-        const diamondUnit = parseInt(data.diamondCount || data.coins) || 1;
         const coins = diamondUnit * deltaRepeat;
         
         if (!session.goalConfig) {
@@ -252,7 +298,8 @@ function createPointsProcessor(io, activeSessions, resolverNombreFn, timerHandle
                     giftImg: giftImgFinal,
                     queenColor: eq.color || '#fff',
                     coins: pts,
-                    giftName
+                    giftName,
+                    repeat: deltaRepeat
                 });
             } else {
                 const queenAsignada = session.lealtadUsuarios[viewer] || null;
@@ -271,7 +318,8 @@ function createPointsProcessor(io, activeSessions, resolverNombreFn, timerHandle
                         giftImg: giftImgFinal,
                         queenColor: eq.color || '#fff',
                         coins,
-                        giftName
+                        giftName,
+                        repeat: deltaRepeat
                     });
                 } else if (queenSalto && session.QUEENS.includes(queenSalto)) {
                     destinatarioFinal = queenSalto;
@@ -288,7 +336,8 @@ function createPointsProcessor(io, activeSessions, resolverNombreFn, timerHandle
                         giftImg: giftImgFinal,
                         queenColor: eq.color || '#fff',
                         coins,
-                        giftName
+                        giftName,
+                        repeat: deltaRepeat
                     });
                 } else {
                     const giftImgFinal = resolverImagenRegalo(giftImgSrc, giftName, '');
@@ -301,6 +350,7 @@ function createPointsProcessor(io, activeSessions, resolverNombreFn, timerHandle
                         viewer,
                         coins,
                         giftImgSrc,
+                        repeat: deltaRepeat,
                         timestamp: new Date().toISOString()
                     };
                     session.regalosDetectados[giftId] = giftInstance;
@@ -315,7 +365,9 @@ function createPointsProcessor(io, activeSessions, resolverNombreFn, timerHandle
                 giftName,
                 coins,
                 destinatario: destinatarioFinal,
-                giftImg: giftImgSrc
+                giftImg: giftImgSrc,
+                repeatCount: deltaRepeat,
+                diamondCount: diamondUnit
             });
         } catch(e) {
             console.error('Error procesando regalo de TikTok:', e);
