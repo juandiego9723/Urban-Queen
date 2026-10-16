@@ -115,6 +115,23 @@ function createTikTokService(app, io, requireSession, activeSessions, procesarRe
             session.tiktokMensajeError = '';
             io.to(username).emit('tiktokEstado', { estado: 'conectado', usuario: usuarioTikTok });
 
+            // Reiniciar contador de la meta a 0 para el nuevo live (conservando título y objetivo)
+            if (!session.goalConfig) {
+                try {
+                    const rawGoal = session.db.getConfigVal('goal_config');
+                    if (rawGoal) session.goalConfig = JSON.parse(rawGoal);
+                } catch (e) {}
+            }
+            if (!session.goalConfig) {
+                session.goalConfig = { title: '¡NUEVA QUEEN!', target: 10000, current: 0 };
+            } else {
+                session.goalConfig.current = 0;
+            }
+            if (session.db && typeof session.db.setConfigVal === 'function') {
+                try { session.db.setConfigVal('goal_config', JSON.stringify(session.goalConfig)); } catch (e) {}
+            }
+            io.to(username).emit('metaConfigActualizada', session.goalConfig);
+
             // Auto-reset de rankings diario, semanal y mensual
             try {
                 const now = new Date();

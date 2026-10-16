@@ -104,7 +104,14 @@ async function getUserSessionAsync(username, io, procesarPuntosFn) {
             queueUpdate: [],
             giftStreaks: {},
             vistaActiva: '/batalla',
-            vistaAcumuladosActiva: '/'
+            vistaAcumuladosActiva: '/',
+            goalConfig: (() => {
+                try {
+                    const raw = dbInstance.getConfigVal('goal_config');
+                    if (raw) return JSON.parse(raw);
+                } catch (e) {}
+                return { title: '¡NUEVA QUEEN!', target: 10000, current: 0 };
+            })()
         };
         
         initialQueens.forEach(q => {
@@ -171,10 +178,15 @@ function getUserSession(username, io, procesarPuntosFn) {
             queueUpdate: [],
             giftStreaks: {},
             vistaActiva: '/batalla',
-            vistaAcumuladosActiva: '/'
+            vistaAcumuladosActiva: '/',
+            goalConfig: { title: '¡NUEVA QUEEN!', target: 10000, current: 0 }
         };
 
         dbInstance.init().then(() => {
+            try {
+                const rawGoal = session.db.getConfigVal('goal_config');
+                if (rawGoal) session.goalConfig = JSON.parse(rawGoal);
+            } catch (e) {}
             reconstruirQueens(session);
             session.participantesActuales = [...session.QUEENS];
             session.timerBaile.orden = [...session.QUEENS];

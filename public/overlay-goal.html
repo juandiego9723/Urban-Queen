@@ -599,28 +599,14 @@
         const socket = window.__iframeBridgeSocket || (typeof io !== 'undefined' ? io({ query: userParam ? { user: userParam } : {} }) : null);
 
         if (socket) {
-            // Escuchar eventos de TikTok Live (Regalos / Likes)
-            socket.on('tiktokLiveEvent', (event) => {
-                if (!event) return;
-                // Si entra un regalo de TikTok Live
-                if (event.tipo === 'gift' || event.tipo === 'regalo') {
-                    const diamonds = event.diamondCount || event.diamantes || event.puntos || 1;
-                    const combo = event.repeatCount || event.combo || 1;
-                    addPoints(diamonds * combo);
-                } else if (event.tipo === 'like') {
-                    // Opcional: Sumar 1 punto por paquete de likes
-                    const count = event.cantidad || event.likeCount || 1;
-                    addPoints(count);
-                }
-            });
-
-            // Escuchar eventos directos de puntos o actualización de meta
-            socket.on('actualizarMeta', (data) => {
+            // Sincronización oficial de meta de puntos desde el backend (Fuente única de la verdad)
+            // Solo contabiliza regalos enviados durante el live, IGNORANDO por completo likes / tap-taps.
+            socket.on('metaConfigActualizada', (data) => {
                 if (!data) return;
                 setGoal(data.current, data.target, data.title);
             });
 
-            socket.on('metaConfigActualizada', (data) => {
+            socket.on('actualizarMeta', (data) => {
                 if (!data) return;
                 setGoal(data.current, data.target, data.title);
             });
@@ -629,6 +615,20 @@
                 if (data && data.puntos) {
                     addPoints(data.puntos);
                 }
+            });
+
+            // Animación visual al recibir un regalo de TikTok Live
+            // La suma de puntos la realiza el backend para evitar duplicidad; aquí solo disparamos el pulso visual.
+            socket.on('tiktokLiveEvent', (event) => {
+                if (!event) return;
+                if (event.tipo === 'gift' || event.tipo === 'regalo') {
+                    percentTextEl.classList.remove('pulse-bump');
+                    currentNumEl.classList.remove('pulse-bump');
+                    void percentTextEl.offsetWidth; // Force reflow
+                    percentTextEl.classList.add('pulse-bump');
+                    currentNumEl.classList.add('pulse-bump');
+                }
+                // NOTA: Los eventos de tipo 'like' (tap-tap en pantalla) se ignoran intencionalmente
             });
 
             socket.on('tiktokEstado', (data) => {
@@ -647,16 +647,13 @@
         window.addEventListener('message', (event) => {
             if (!event.data) return;
             const d = event.data;
-            if (d.type === 'addPoints' || d.event === 'addPoints') {
-                addPoints(d.points || d.amount || 1);
+            if (d.type === 'metaConfigActualizada' || d.event === 'metaConfigActualizada') {
+                const cfg = d.data || d;
+                setGoal(cfg.current, cfg.target, cfg.title);
             } else if (d.type === 'setGoal' || d.event === 'setGoal') {
                 setGoal(d.current, d.target, d.title);
-            } else if (d.event === 'tiktokLiveEvent' || d.type === 'tiktokLiveEvent') {
-                const payload = d.data || d;
-                if (payload.tipo === 'gift' || payload.tipo === 'regalo') {
-                    const diamonds = payload.diamondCount || payload.diamantes || 1;
-                    addPoints(diamonds);
-                }
+            } else if (d.type === 'addPoints' || d.event === 'addPoints') {
+                addPoints(d.points || d.amount || 1);
             }
         });
 

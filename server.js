@@ -442,7 +442,13 @@ io.on('connection', (socket) => {
         }
 
         if (!session.goalConfig) {
-            session.goalConfig = { title: '¡NUEVA QUEEN!', target: 10000, current: 0 };
+            try {
+                const rawGoal = session.db.getConfigVal('goal_config');
+                if (rawGoal) session.goalConfig = JSON.parse(rawGoal);
+            } catch (e) {}
+            if (!session.goalConfig) {
+                session.goalConfig = { title: '¡NUEVA QUEEN!', target: 10000, current: 0 };
+            }
         }
         socket.emit('metaConfigActualizada', session.goalConfig);
     }
@@ -461,6 +467,9 @@ io.on('connection', (socket) => {
                 target: Math.max(1, parseInt(data.target) || 10000),
                 current: Math.max(0, parseInt(data.current) || 0)
             };
+            if (session.db && typeof session.db.setConfigVal === 'function') {
+                try { session.db.setConfigVal('goal_config', JSON.stringify(session.goalConfig)); } catch (e) {}
+            }
             io.to(username).emit('metaConfigActualizada', session.goalConfig);
         }
     });
@@ -471,6 +480,9 @@ io.on('connection', (socket) => {
                 session.goalConfig = { title: '¡NUEVA QUEEN!', target: 10000, current: 0 };
             }
             session.goalConfig.current += data.puntos;
+            if (session.db && typeof session.db.setConfigVal === 'function') {
+                try { session.db.setConfigVal('goal_config', JSON.stringify(session.goalConfig)); } catch (e) {}
+            }
             io.to(username).emit('metaConfigActualizada', session.goalConfig);
         }
     });
@@ -481,6 +493,9 @@ io.on('connection', (socket) => {
                 session.goalConfig = { title: '¡NUEVA QUEEN!', target: 10000, current: 0 };
             } else {
                 session.goalConfig.current = 0;
+            }
+            if (session.db && typeof session.db.setConfigVal === 'function') {
+                try { session.db.setConfigVal('goal_config', JSON.stringify(session.goalConfig)); } catch (e) {}
             }
             io.to(username).emit('metaConfigActualizada', session.goalConfig);
         }

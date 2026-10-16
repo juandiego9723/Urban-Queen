@@ -233,6 +233,11 @@ function createPointsProcessor(io, activeSessions, resolverNombreFn, timerHandle
             session.goalConfig = { title: '¡NUEVA QUEEN!', target: 10000, current: 0 };
         }
         session.goalConfig.current += coins;
+        if (session.db && typeof session.db.setConfigVal === 'function') {
+            try {
+                session.db.setConfigVal('goal_config', JSON.stringify(session.goalConfig));
+            } catch (e) {}
+        }
         io.to(username).emit('metaConfigActualizada', session.goalConfig);
         
         let rawMapa = session.db.getConfigVal('tiktok_regalo_mapa');
