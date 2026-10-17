@@ -715,11 +715,15 @@ class DBInstance {
             `, [uId]);
 
             return {
-                totalHistorico: parseInt(hist.rows[0].total),
-                totalHoy: parseInt(hoy.rows[0].total),
-                totalMes: parseInt(mes.rows[0].total),
-                totalFiltrado: parseInt(filtrado.rows[0].total),
-                porQueen: pq.rows
+                totalHistorico: parseInt(hist.rows[0].total, 10) || 0,
+                totalHoy: parseInt(hoy.rows[0].total, 10) || 0,
+                totalMes: parseInt(mes.rows[0].total, 10) || 0,
+                totalFiltrado: parseInt(filtrado.rows[0].total, 10) || 0,
+                porQueen: (pq.rows || []).map(r => ({
+                    queen_name: r.queen_name,
+                    total_diamantes: parseInt(r.total_diamantes, 10) || 0,
+                    cantidad_regalos: parseInt(r.cantidad_regalos, 10) || 0
+                }))
             };
         } catch (e) {
             console.error('Error en getResumenAnalytics:', e.message);
@@ -739,7 +743,10 @@ class DBInstance {
                 WHERE h.user_id = $1 AND ${filter}
                 ORDER BY h.id DESC LIMIT $2
             `, [uId, limite]);
-            return res.rows;
+            return (res.rows || []).map(r => ({
+                ...r,
+                diamonds: parseInt(r.diamonds, 10) || 0
+            }));
         } catch (e) {
             console.error('Error en getHistorialRegalos:', e.message);
             return [];
@@ -758,7 +765,11 @@ class DBInstance {
                 GROUP BY viewer_name
                 ORDER BY total_donado DESC LIMIT $2
             `, [uId, limite]);
-            return res.rows;
+            return (res.rows || []).map(r => ({
+                viewer_name: r.viewer_name,
+                total_donado: parseInt(r.total_donado, 10) || 0,
+                cantidad_regalos: parseInt(r.cantidad_regalos, 10) || 0
+            }));
         } catch (e) {
             console.error('Error en getTopGifters:', e.message);
             return [];
@@ -778,7 +789,10 @@ class DBInstance {
                 GROUP BY dia
                 ORDER BY dia ASC
             `, [uId]);
-            return res.rows;
+            return (res.rows || []).map(r => ({
+                dia: r.dia,
+                total_diamantes: parseInt(r.total_diamantes, 10) || 0
+            }));
         } catch (e) {
             console.error('Error en getRegalosPorDia:', e.message);
             return [];
@@ -797,7 +811,10 @@ class DBInstance {
                 GROUP BY mes
                 ORDER BY mes ASC
             `, [uId]);
-            return res.rows;
+            return (res.rows || []).map(r => ({
+                mes: r.mes,
+                total_diamantes: parseInt(r.total_diamantes, 10) || 0
+            }));
         } catch (e) {
             console.error('Error en getRegalosPorMes:', e.message);
             return [];
@@ -845,7 +862,8 @@ class DBInstance {
         }
 
         if (!periodo || periodo === 'historico') return "1=1";
-        const p = String(periodo).trim();
+        let p = String(periodo).trim();
+        if (p.startsWith('mes:')) p = p.slice(4).trim();
         if (p === 'diario')  return `${tzCol}::date = ${hoyLocal}`;
         if (p === 'ayer')    return `${tzCol}::date = (${hoyLocal} - INTERVAL '1 day')::date`;
         if (p === 'semanal') return `${tzCol} >= (CURRENT_TIMESTAMP AT TIME ZONE '${tz}') - INTERVAL '7 days'`;
@@ -871,7 +889,12 @@ class DBInstance {
                 GROUP BY q.name 
                 ORDER BY total_diamantes DESC
             `, [uId]);
-            return res.rows;
+            return (res.rows || []).map(r => ({
+                queen_name: r.queen_name,
+                total_diamantes: parseInt(r.total_diamantes, 10) || 0,
+                cantidad_regalos: parseInt(r.cantidad_regalos, 10) || 0,
+                promedio: parseFloat(r.promedio) || 0
+            }));
         } catch (e) {
             console.error('Error en getQueensAnalyticsPorPeriodo:', e.message);
             return [];
@@ -880,7 +903,8 @@ class DBInstance {
 
     async getDatosBailarina(name, periodo = 'historico', fechaInicio = null, fechaFin = null) {
         const uId = await this.ensureUserId();
-        if (!uId) return { total: 0, total_regalos: 0, promedio: 0 };
+        if (!uId) return { total: 0, total_regalos: 0, promedio: 0, hora_pico: 'N/A' };
+        const tz = this.getTimezone();
         const filter = this.getDateFilterSQL(periodo, fechaInicio, fechaFin);
         try {
             const res = await query(`
@@ -891,10 +915,31 @@ class DBInstance {
                 JOIN queens q ON h.queen_id = q.id
                 WHERE h.user_id = $1 AND LOWER(q.name) = LOWER($2) AND ${filter}
             `, [uId, name]);
-            return res.rows[0] || { total: 0, total_regalos: 0, promedio: 0 };
+
+            const peakRes = await query(`
+                SELECT LPAD(EXTRACT(HOUR FROM h.timestamp AT TIME ZONE '${tz}')::text, 2, '0') as hora,
+                       COALESCE(SUM(h.diamonds), 0) as total
+                FROM historial_regalos h
+                JOIN queens q ON h.queen_id = q.id
+                WHERE h.user_id = $1 AND LOWER(q.name) = LOWER($2) AND ${filter}
+                GROUP BY hora
+                ORDER BY total DESC LIMIT 1
+            `, [uId, name]);
+
+            const horaPicoStr = (peakRes.rows.length > 0 && peakRes.rows[0].hora)
+                ? `${peakRes.rows[0].hora}:00`
+                : 'N/A';
+
+            const row = (res.rows && res.rows[0]) || {};
+            return {
+                total: parseInt(row.total, 10) || 0,
+                total_regalos: parseInt(row.total_regalos, 10) || 0,
+                promedio: parseFloat(row.promedio) || 0,
+                hora_pico: horaPicoStr
+            };
         } catch (e) {
             console.error('Error en getDatosBailarina:', e.message);
-            return { total: 0, total_regalos: 0, promedio: 0 };
+            return { total: 0, total_regalos: 0, promedio: 0, hora_pico: 'N/A' };
         }
     }
 
@@ -911,7 +956,11 @@ class DBInstance {
                 GROUP BY h.viewer_name
                 ORDER BY total_donado DESC LIMIT $3
             `, [uId, name, limite]);
-            return res.rows;
+            return (res.rows || []).map(r => ({
+                viewer_name: r.viewer_name,
+                total_donado: parseInt(r.total_donado, 10) || 0,
+                cantidad_regalos: parseInt(r.cantidad_regalos, 10) || 0
+            }));
         } catch (e) {
             console.error('Error en getTopDonadoresBailarina:', e.message);
             return [];
@@ -931,7 +980,11 @@ class DBInstance {
                 GROUP BY h.gift_name
                 ORDER BY total_diamantes DESC
             `, [uId, name]);
-            return res.rows;
+            return (res.rows || []).map(r => ({
+                gift_name: r.gift_name,
+                total_diamantes: parseInt(r.total_diamantes, 10) || 0,
+                cantidad: parseInt(r.cantidad, 10) || 0
+            }));
         } catch (e) {
             console.error('Error en getDistribucionRegalosBailarina:', e.message);
             return [];
@@ -952,26 +1005,41 @@ class DBInstance {
                 GROUP BY dia
                 ORDER BY dia ASC
             `, [uId, name]);
-            return res.rows;
+            return (res.rows || []).map(r => {
+                const totalVal = parseInt(r.total_diamantes, 10) || 0;
+                return {
+                    dia: r.dia,
+                    label: r.dia,
+                    total_diamantes: totalVal,
+                    total: totalVal
+                };
+            });
         } catch (e) {
             console.error('Error en getEvolucionBailarina:', e.message);
             return [];
         }
     }
 
-    async getDonacionesPorHora() {
+    async getDonacionesPorHora(periodo = 'historico', fechaInicio = null, fechaFin = null) {
         const uId = await this.ensureUserId();
         if (!uId) return [];
         const tz = this.getTimezone();
+        const filter = this.getDateFilterSQL(periodo, fechaInicio, fechaFin);
         try {
             const res = await query(`
-                SELECT EXTRACT(HOUR FROM timestamp AT TIME ZONE '${tz}') as hora, COALESCE(SUM(diamonds), 0) as total_diamantes, COUNT(id) as cantidad_regalos
+                SELECT LPAD(EXTRACT(HOUR FROM timestamp AT TIME ZONE '${tz}')::text, 2, '0') as hora,
+                       COALESCE(SUM(diamonds), 0) as total_diamantes,
+                       COUNT(id) as cantidad_regalos
                 FROM historial_regalos
-                WHERE user_id = $1
+                WHERE user_id = $1 AND ${filter}
                 GROUP BY hora
                 ORDER BY hora ASC
             `, [uId]);
-            return res.rows;
+            return (res.rows || []).map(r => ({
+                hora: String(r.hora).padStart(2, '0'),
+                total_diamantes: parseInt(r.total_diamantes, 10) || 0,
+                cantidad_regalos: parseInt(r.cantidad_regalos, 10) || 0
+            }));
         } catch (e) {
             console.error('Error en getDonacionesPorHora:', e.message);
             return [];

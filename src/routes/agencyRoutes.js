@@ -19,12 +19,35 @@ function setupAgencyRoutes(app, requireSession) {
         res.json(agencies);
     });
 
+    app.get('/api/agency/streamers', async (req, res) => {
+        try {
+            const agencySlug = req.query.agency || (req.agency ? req.agency.slug : null) || 'urbanqueens';
+            const agency = await MasterDB.getAgencyBySlug(agencySlug);
+            if (!agency) {
+                return res.status(404).json({ error: 'Agencia no encontrada' });
+            }
+            const users = await MasterDB.getUsersByAgency(agency.id);
+            const streamers = (users || []).filter(u => u.username !== 'admin' && u.username !== 'master' && u.role !== 'superadmin');
+            res.json(streamers);
+        } catch (e) {
+            console.error('Error en /api/agency/streamers:', e.message);
+            res.status(500).json({ error: 'Error obteniendo streamers' });
+        }
+    });
+
     app.get('/api/agency/overview', requireSession, async (req, res) => {
         if (req.username !== 'admin' && req.username !== 'master') {
             return res.status(403).json({ error: 'No autorizado' });
         }
         try {
-            const allUsers = await MasterDB.getAllUsers();
+            const agencySlug = req.query.agency || (req.agency ? req.agency.slug : null);
+            let allUsers = [];
+            if (agencySlug) {
+                const agencyObj = await MasterDB.getAgencyBySlug(agencySlug);
+                allUsers = agencyObj ? await MasterDB.getUsersByAgency(agencyObj.id) : await MasterDB.getAllUsers();
+            } else {
+                allUsers = await MasterDB.getAllUsers();
+            }
             let totalHoyAgencia = 0;
             let totalMesAgencia = 0;
             let totalHistoricoAgencia = 0;

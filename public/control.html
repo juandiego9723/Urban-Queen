@@ -1189,12 +1189,30 @@
                 </div>
                 <!-- ══ ANALÍTICAS ══ -->
                 <div id="tab-analytics" class="tab-content" style="grid-template-columns: 1fr;">
+                    <!-- Selector de Streamer para Analíticas (Solo visible para Admin) -->
+                    <div id="card-selector-streamer-analytics" class="card" style="padding: 14px 20px; margin-bottom: 16px; display: none; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 14px; background: linear-gradient(135deg, rgba(99, 102, 241, 0.12) 0%, rgba(236, 72, 153, 0.08) 100%); border: 1px solid rgba(99, 102, 241, 0.3); border-radius: 12px; width: 100%;">
+                        <div style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
+                            <span style="font-size: 14px; font-weight: 800; color: #fff; display: flex; align-items: center; gap: 6px;">
+                                📡 Streamer / Cuenta:
+                            </span>
+                            <select id="select-analytics-streamer" class="select" onchange="cambiarStreamerAnalytics(this.value)" style="height: 38px; font-size: 13px; font-weight: 700; padding: 4px 12px; border-radius: 8px; background: var(--surface2); color: #fff; border: 1.5px solid var(--indigo); min-width: 200px;">
+                                <option value="downtown" selected>downtown (Activa)</option>
+                                <option value="urban">urban</option>
+                                <option value="urbanqueen">urbanqueen</option>
+                                <option value="urbanqueens_1">urbanqueens_1</option>
+                            </select>
+                        </div>
+                        <div id="analytics-streamer-info" style="font-size: 12px; color: var(--muted); font-weight: 600;">
+                            Inspeccionando analíticas de: <strong id="analytics-current-streamer-label" style="color: var(--pink); font-size: 13px;">downtown</strong>
+                        </div>
+                    </div>
+
                     <!-- Sub-pestañas de Analíticas -->
                     <div style="display: flex; gap: 10px; margin-bottom: 16px;">
                         <button id="btn-subtab-agencia" class="btn btn-primary"
                             onclick="cambiarSubTabAnalytics('agencia')"
                             style="padding: 10px 20px; font-weight: 700; border-radius: 8px;">🏢 Vista de
-                            Agencia</button>
+                            Streamer</button>
                         <button id="btn-subtab-bailarinas" class="btn" onclick="cambiarSubTabAnalytics('bailarinas')"
                             style="padding: 10px 20px; font-weight: 700; border-radius: 8px; background: var(--surface2); color: var(--muted); border: 1px solid var(--border);">💃
                             Perfil de Bailarina</button>
@@ -1233,17 +1251,17 @@
                         <!-- KPIs Superiores -->
                         <div class="row-3" style="width: 100%; gap: 16px; margin-bottom: 8px;">
                             <div class="card" style="padding: 16px 20px; border-left: 4px solid var(--pink);">
-                                <div class="label" style="font-size: 9px;">Diamantes Recibidos Hoy</div>
+                                <div class="label" style="font-size: 9px;" id="label-kpi-hoy">Diamantes Recibidos Hoy</div>
                                 <div style="font-size: 28px; font-weight: 800; color: #fff; margin-top: 4px;"
                                     id="kpi-hoy">0 💎</div>
                             </div>
                             <div class="card" style="padding: 16px 20px; border-left: 4px solid var(--indigo);">
-                                <div class="label" style="font-size: 9px;">Diamantes de este Mes</div>
+                                <div class="label" style="font-size: 9px;" id="label-kpi-mes">Diamantes de este Mes</div>
                                 <div style="font-size: 28px; font-weight: 800; color: #fff; margin-top: 4px;"
                                     id="kpi-mes">0 💎</div>
                             </div>
                             <div class="card" style="padding: 16px 20px; border-left: 4px solid var(--green);">
-                                <div class="label" style="font-size: 9px;">Acumulado Histórico</div>
+                                <div class="label" style="font-size: 9px;" id="label-kpi-historico">Acumulado Histórico</div>
                                 <div style="font-size: 28px; font-weight: 800; color: #fff; margin-top: 4px;"
                                     id="kpi-historico">0 💎</div>
                             </div>
@@ -1391,42 +1409,53 @@
                     <div id="analytics-section-bailarinas" class="col" style="gap: 20px; width: 100%; display: none;">
                         <!-- Selector de Bailarina y Período -->
                         <div class="card"
-                            style="padding: 16px 20px; display: flex; flex-direction: row; align-items: center; justify-content: space-between; gap: 20px; width: 100%; flex-wrap: wrap;">
-                            <div class="col" style="gap: 4px;">
-                                <div class="card-title" style="margin: 0;">💃 <span class="card-title-accent">Perfil
-                                        Individual de Bailarina</span></div>
-                                <div class="label" style="font-size: 11px; margin-bottom: 0;">Selecciona una integrante
-                                    y un período para analizar su rendimiento, evolución y superfans.</div>
+                            style="padding: 16px 20px; display: flex; flex-direction: column; gap: 14px; width: 100%;">
+                            <!-- Fila 1: Título y Selector de Bailarina -->
+                            <div style="display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 14px; width: 100%;">
+                                <div class="col" style="gap: 4px;">
+                                    <div class="card-title" style="margin: 0;">💃 <span class="card-title-accent">Perfil Individual de Bailarina</span></div>
+                                    <div class="label" style="font-size: 11px; margin-bottom: 0;">Selecciona una integrante y un período para analizar su rendimiento, evolución y superfans.</div>
+                                </div>
+                                <div style="display: flex; align-items: center; gap: 10px;">
+                                    <span style="font-size: 13px; font-weight: 700; color: #fff;">Bailarina:</span>
+                                    <select id="select-analytics-bailarina" class="select"
+                                        onchange="cargarDetalleBailarina(this.value)"
+                                        style="min-width: 200px; height: 38px; font-size: 14px; font-weight: 700; padding: 6px 12px; border-radius: 8px; background: var(--surface3); color: #fff; border: 1.5px solid var(--pink);">
+                                        <option value="">-- Seleccionar --</option>
+                                    </select>
+                                </div>
                             </div>
-                            <div style="display: flex; gap: 12px; align-items: center; flex-wrap: wrap;">
-                                <!-- Selector de Período Bailarina -->
-                                <div
-                                    style="display: flex; gap: 4px; align-items: center; background: var(--surface3); padding: 4px; border-radius: 8px; border: 1px solid var(--border);">
-                                    <button id="btn-indiv-diario" class="btn btn-sm"
-                                        onclick="cambiarPeriodoIndiv('diario')"
-                                        style="padding: 5px 8px; font-size: 11px; border-radius: 6px; background: transparent; border: none; color: var(--muted);">Hoy</button>
-                                    <button id="btn-indiv-semanal" class="btn btn-sm"
-                                        onclick="cambiarPeriodoIndiv('semanal')"
-                                        style="padding: 5px 8px; font-size: 11px; border-radius: 6px; background: transparent; border: none; color: var(--muted);">Semanal</button>
-                                    <button id="btn-indiv-mensual" class="btn btn-sm"
-                                        onclick="cambiarPeriodoIndiv('mensual')"
-                                        style="padding: 5px 8px; font-size: 11px; border-radius: 6px; background: transparent; border: none; color: var(--muted);">Este
-                                        Mes</button>
-                                    <button id="btn-indiv-historico" class="btn btn-sm btn-primary"
-                                        onclick="cambiarPeriodoIndiv('historico')"
-                                        style="padding: 5px 8px; font-size: 11px; border-radius: 6px;">Histórico</button>
-                                    <select id="select-mes-indiv" class="select"
-                                        onchange="if(this.value) cambiarPeriodoIndiv(this.value)"
-                                        style="height: 26px; font-size: 10px; padding: 2px 6px; border-radius: 6px; background: var(--surface2); color: #fff; border: 1px solid var(--border); margin-left: 4px;">
+
+                            <!-- Fila 2: Filtro por Período / Calendario para la Bailarina -->
+                            <div style="display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; width: 100%; padding-top: 12px; border-top: 1px solid var(--border);">
+                                <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+                                    <span style="font-size: 13px; font-weight: 700; color: #fff;">📅 Período de Bailarina:</span>
+                                    <select id="select-bailarina-date-mode" class="select" onchange="cambiarModoFechaBailarina(this.value)" style="height: 36px; font-size: 13px; font-weight: 600; padding: 4px 10px; border-radius: 8px; background: var(--surface2); color: #fff; border: 1px solid var(--border);">
+                                        <option value="historico">Histórico Completo</option>
+                                        <option value="diario">Hoy</option>
+                                        <option value="ayer">Ayer</option>
+                                        <option value="semanal">Últimos 7 Días</option>
+                                        <option value="mensual">Este Mes</option>
+                                        <option value="dia">Día Específico 📆</option>
+                                        <option value="rango">Rango de Fechas 📅</option>
+                                    </select>
+                                    <select id="select-mes-indiv" class="select" onchange="if(this.value) cambiarMesEspecificoBailarina(this.value)" style="height: 36px; font-size: 12px; padding: 4px 8px; border-radius: 8px; background: var(--surface2); color: #fff; border: 1px solid var(--border);">
                                         <option value="">🗓️ Mes específico...</option>
                                     </select>
                                 </div>
-                                <!-- Select Bailarina -->
-                                <select id="select-analytics-bailarina" class="select"
-                                    onchange="cargarDetalleBailarina(this.value)"
-                                    style="width: 200px; height: 38px; font-size: 14px; font-weight: 700; padding: 6px 12px; border-radius: 8px; background: var(--surface3); color: #fff; border: 1px solid var(--border);">
-                                    <option value="">-- Seleccionar --</option>
-                                </select>
+
+                                <div id="bailarina-date-inputs-container" style="display: none; align-items: center; gap: 10px; flex-wrap: wrap;">
+                                    <div id="bailarina-container-fecha-inicio" style="display: flex; align-items: center; gap: 6px;">
+                                        <label id="bailarina-label-fecha-inicio" for="input-bailarina-fecha-inicio" style="font-size: 11px; color: var(--muted); font-weight: 600;">Fecha:</label>
+                                        <input type="date" id="input-bailarina-fecha-inicio" class="input" style="height: 36px; width: 140px; font-size: 12px; padding: 4px 8px; border-radius: 8px; background: var(--surface3); color: #fff; border: 1px solid var(--border);" />
+                                    </div>
+                                    <div id="bailarina-container-fecha-fin" style="display: flex; align-items: center; gap: 6px; display: none;">
+                                        <label for="input-bailarina-fecha-fin" style="font-size: 11px; color: var(--muted); font-weight: 600;">Hasta:</label>
+                                        <input type="date" id="input-bailarina-fecha-fin" class="input" style="height: 36px; width: 140px; font-size: 12px; padding: 4px 8px; border-radius: 8px; background: var(--surface3); color: #fff; border: 1px solid var(--border);" />
+                                    </div>
+                                    <button class="btn btn-primary" onclick="aplicarFiltroFechaBailarina()" style="padding: 6px 14px; font-size: 12px; height: 36px; border-radius: 8px;">🔍 Filtrar</button>
+                                    <button class="btn" onclick="resetFiltroFechaBailarina()" style="padding: 6px 10px; font-size: 12px; height: 36px; border-radius: 8px; background: var(--surface2); color: var(--muted); border: 1px solid var(--border);">🔄 Limpiar</button>
+                                </div>
                             </div>
                         </div>
 
@@ -1436,7 +1465,7 @@
                             <div
                                 style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); width: 100%; gap: 16px;">
                                 <div class="card" style="padding: 16px 20px; border-left: 4px solid var(--pink);">
-                                    <div class="label" style="font-size: 9px;">Total Diamantes Recibidos</div>
+                                    <div class="label" style="font-size: 9px;" id="label-kpi-indiv-total">Total Diamantes Recibidos</div>
                                     <div style="font-size: 26px; font-weight: 800; color: #fff; margin-top: 4px;"
                                         id="kpi-indiv-total">0 💎</div>
                                 </div>
@@ -2755,10 +2784,100 @@
             let subTabAnalyticsActual = 'agencia';
             let periodoIndivActual = 'historico';
             let periodoQueensActual = 'historico';
+            let analyticsStreamerActual = 'downtown'; // Seleccionada por defecto
+            let currentUserIsAdmin = false;
+
+            async function cargarStreamersAnalytics() {
+                try {
+                    const cardSelectorStreamer = document.getElementById('card-selector-streamer-analytics');
+                    const isUserAdmin = currentUserIsAdmin || currentUsername === 'admin' || currentUsername === 'master';
+
+                    if (cardSelectorStreamer) {
+                        cardSelectorStreamer.style.display = isUserAdmin ? 'flex' : 'none';
+                    }
+
+                    if (!isUserAdmin && currentUsername) {
+                        analyticsStreamerActual = currentUsername;
+                        actualizarLabelStreamerAnalytics();
+                        return;
+                    }
+
+                    const agencySlug = getAgencySlug() || 'urbanqueens';
+                    const res = await fetch(`/api/agency/streamers?agency=${encodeURIComponent(agencySlug)}`);
+                    if (res.ok) {
+                        const streamers = await res.json();
+                        const select = document.getElementById('select-analytics-streamer');
+                        if (select && streamers && streamers.length > 0) {
+                            const curVal = analyticsStreamerActual;
+                            select.innerHTML = '';
+                            streamers.forEach(s => {
+                                const opt = document.createElement('option');
+                                opt.value = s.username;
+                                opt.textContent = `${s.name || s.username} (@${s.username})`;
+                                select.appendChild(opt);
+                            });
+                            const hasCurrent = streamers.some(s => s.username === curVal);
+                            if (hasCurrent) {
+                                select.value = curVal;
+                            } else if (streamers.some(s => s.username === 'downtown')) {
+                                select.value = 'downtown';
+                                analyticsStreamerActual = 'downtown';
+                            } else {
+                                analyticsStreamerActual = streamers[0].username;
+                                select.value = analyticsStreamerActual;
+                            }
+                        }
+                    }
+                } catch (e) {
+                    console.error('Error cargando streamers para analíticas:', e);
+                }
+                actualizarLabelStreamerAnalytics();
+            }
+
+            function cambiarStreamerAnalytics(streamer) {
+                if (!streamer) return;
+                analyticsStreamerActual = streamer;
+                actualizarLabelStreamerAnalytics();
+                cargarOpcionesBailarinas();
+                cargarAnaliticas();
+            }
+
+            function actualizarLabelStreamerAnalytics() {
+                const lbl = document.getElementById('analytics-current-streamer-label');
+                if (lbl) lbl.textContent = analyticsStreamerActual;
+            }
+
+            async function cargarOpcionesBailarinas() {
+                const selectBailarina = document.getElementById('select-analytics-bailarina');
+                if (!selectBailarina) return;
+                try {
+                    const res = await fetch(`/api/queens/all?user=${encodeURIComponent(analyticsStreamerActual)}`);
+                    if (res.ok) {
+                        const queensData = await res.json();
+                        const valorActual = selectBailarina.value;
+                        selectBailarina.innerHTML = '<option value="">-- Seleccionar --</option>';
+                        queensData.forEach(q => {
+                            const opt = document.createElement('option');
+                            opt.value = q.name;
+                            opt.textContent = (q.apodo || q.name).toUpperCase();
+                            selectBailarina.appendChild(opt);
+                        });
+                        queensData.forEach(q => {
+                            if (q.color) QUEEN_COLORS[q.name] = q.color;
+                            if (q.apodo) APODOS[q.name] = q.apodo;
+                        });
+                        if (valorActual && queensData.some(q => q.name === valorActual)) {
+                            selectBailarina.value = valorActual;
+                        }
+                    }
+                } catch(e) {
+                    console.error('Error cargando opciones de bailarinas:', e);
+                }
+            }
 
             async function cargarMesesHistorial() {
                 try {
-                    const res = await fetch('/api/analytics/meses');
+                    const res = await fetch(`/api/analytics/meses?user=${encodeURIComponent(analyticsStreamerActual)}`);
                     if (!res.ok) return;
                     const meses = await res.json();
 
@@ -2900,9 +3019,11 @@
 
             async function cargarAnaliticas() {
                 try {
+                    actualizarLabelStreamerAnalytics();
                     await cargarMesesHistorial();
+                    await cargarOpcionesBailarinas();
 
-                    let dateQueryParams = `periodo=${encodeURIComponent(agencyPeriodoActualUrban)}`;
+                    let dateQueryParams = `periodo=${encodeURIComponent(agencyPeriodoActualUrban)}&user=${encodeURIComponent(analyticsStreamerActual)}`;
                     if (agencyFechaInicioUrban) dateQueryParams += `&fechaInicio=${encodeURIComponent(agencyFechaInicioUrban)}`;
                     if (agencyFechaFinUrban) dateQueryParams += `&fechaFin=${encodeURIComponent(agencyFechaFinUrban)}`;
 
@@ -2913,36 +3034,70 @@
                         fetch(`/api/analytics/grafica?${dateQueryParams}`).then(r => r.json()),
                         fetch(`/api/analytics/grafica-mensual?${dateQueryParams}`).then(r => r.json()),
                         fetch(`/api/analytics/horas-pico?${dateQueryParams}`).then(r => r.json()),
-                        fetch('/api/futbol/config').then(r => r.json())
+                        fetch(`/api/futbol/config?user=${encodeURIComponent(analyticsStreamerActual)}`).then(r => r.json()).catch(() => ({}))
                     ]);
 
-                    cacheGraficaDiaria = graficaDiaria;
-                    cacheGraficaMensual = graficaMensual;
+                    cacheGraficaDiaria = graficaDiaria || [];
+                    cacheGraficaMensual = graficaMensual || [];
 
-                    // Llenar selector de bailarinas si está vacío
-                    const selectBailarina = document.getElementById('select-analytics-bailarina');
-                    if (selectBailarina && selectBailarina.options.length <= 1) {
-                        selectBailarina.innerHTML = '<option value="">-- Seleccionar --</option>';
-                        QUEENS.forEach(q => {
-                            const opt = document.createElement('option');
-                            opt.value = q;
-                            opt.textContent = q.toUpperCase();
-                            selectBailarina.appendChild(opt);
-                        });
+                    // KPIs Globales Dinámicos según el Filtro
+                    const lblHoy = document.getElementById('label-kpi-hoy');
+                    const elHoy = document.getElementById('kpi-hoy');
+                    const elMes = document.getElementById('kpi-mes');
+                    const elHistorico = document.getElementById('kpi-historico');
+
+                    if (agencyPeriodoActualUrban === 'semanal') {
+                        if (lblHoy) lblHoy.textContent = 'Diamantes Últimos 7 Días';
+                        if (elHoy) elHoy.textContent = (Number(resumen.totalFiltrado ?? resumen.totalHistorico)).toLocaleString() + ' 💎';
+                    } else if (agencyPeriodoActualUrban === 'ayer') {
+                        if (lblHoy) lblHoy.textContent = 'Diamantes Recibidos Ayer';
+                        if (elHoy) elHoy.textContent = (Number(resumen.totalFiltrado ?? 0)).toLocaleString() + ' 💎';
+                    } else if (agencyPeriodoActualUrban === 'diario') {
+                        if (lblHoy) lblHoy.textContent = 'Diamantes Recibidos Hoy';
+                        if (elHoy) elHoy.textContent = (Number(resumen.totalHoy || 0)).toLocaleString() + ' 💎';
+                    } else if (agencyPeriodoActualUrban === 'mensual') {
+                        if (lblHoy) lblHoy.textContent = 'Diamantes de este Mes';
+                        if (elHoy) elHoy.textContent = (Number(resumen.totalMes || 0)).toLocaleString() + ' 💎';
+                    } else if (agencyPeriodoActualUrban === 'rango') {
+                        if (lblHoy) lblHoy.textContent = `Diamantes en Rango (${agencyFechaInicioUrban} - ${agencyFechaFinUrban})`;
+                        if (elHoy) elHoy.textContent = (Number(resumen.totalFiltrado ?? 0)).toLocaleString() + ' 💎';
+                    } else if (agencyFechaInicioUrban && agencyFechaInicioUrban === agencyFechaFinUrban) {
+                        if (lblHoy) lblHoy.textContent = `Diamantes del Día (${agencyFechaInicioUrban})`;
+                        if (elHoy) elHoy.textContent = (Number(resumen.totalFiltrado ?? 0)).toLocaleString() + ' 💎';
+                    } else {
+                        if (lblHoy) lblHoy.textContent = 'Diamantes Recibidos Hoy';
+                        if (elHoy) elHoy.textContent = (Number(resumen.totalHoy || 0)).toLocaleString() + ' 💎';
                     }
 
-                    // KPIs Globales
-                    document.getElementById('kpi-hoy').textContent = resumen.totalHoy.toLocaleString() + ' 💎';
-                    document.getElementById('kpi-mes').textContent = resumen.totalMes.toLocaleString() + ' 💎';
-                    document.getElementById('kpi-historico').textContent = resumen.totalHistorico.toLocaleString() + ' 💎';
+                    if (elMes) elMes.textContent = (Number(resumen.totalMes || 0)).toLocaleString() + ' 💎';
+                    if (elHistorico) elHistorico.textContent = (Number(resumen.totalHistorico || 0)).toLocaleString() + ' 💎';
 
-                    // Cargar rendimiento Queens por período inicial
-                    cargarQueensPorPeriodo(periodoQueensActual);
+                    // Tabla Queens (Rendimiento por Queen filtrado)
+                    const tableQueensBody = document.getElementById('table-queens-body');
+                    tableQueensBody.innerHTML = '';
+                    (resumen.porQueen || []).forEach(q => {
+                        const color = QUEEN_COLORS[q.queen_name] || '#ffffff';
+                        const display = (APODOS[q.queen_name] || q.queen_name).toUpperCase();
+                        const diams = Number(q.total_diamantes || 0);
+                        tableQueensBody.innerHTML += `
+                            <tr style="border-bottom: 1px solid rgba(255,255,255,0.03);">
+                                <td style="padding: 10px 4px; display: flex; align-items: center; gap: 8px;">
+                                    <span style="width: 8px; height: 8px; border-radius: 50%; background: ${color}; display: inline-block;"></span>
+                                    <span style="font-weight: 700; color: ${color};">${display}</span>
+                                </td>
+                                <td style="padding: 10px 4px; text-align: right; color: var(--muted);">${q.cantidad_regalos}</td>
+                                <td style="padding: 10px 4px; text-align: right; font-weight: 800; color: #fff;">${diams.toLocaleString()} 💎</td>
+                            </tr>
+                        `;
+                    });
+                    if (!resumen.porQueen || resumen.porQueen.length === 0) {
+                        tableQueensBody.innerHTML = `<tr><td colspan="3" style="text-align:center; padding: 20px; color: var(--muted);">Sin donaciones en este período.</td></tr>`;
+                    }
 
                     // Tabla Donadores
                     const tableDonadoresBody = document.getElementById('table-donadores-body');
                     tableDonadoresBody.innerHTML = '';
-                    topGifters.forEach((g, idx) => {
+                    (topGifters || []).forEach((g, idx) => {
                         const medal = idx === 0 ? '🥇' : idx === 1 ? '🥈' : idx === 2 ? '🥉' : '👤';
                         tableDonadoresBody.innerHTML += `
                             <tr style="border-bottom: 1px solid rgba(255,255,255,0.03);">
@@ -2950,18 +3105,18 @@
                                     <span style="margin-right: 6px;">${medal}</span>${g.viewer_name}
                                 </td>
                                 <td style="padding: 10px 4px; text-align: right; color: var(--muted);">${g.cantidad_regalos}</td>
-                                <td style="padding: 10px 4px; text-align: right; font-weight: 800; color: var(--green);">${g.total_donado.toLocaleString()} 💎</td>
+                                <td style="padding: 10px 4px; text-align: right; font-weight: 800; color: var(--green);">${Number(g.total_donado || 0).toLocaleString()} 💎</td>
                             </tr>
                         `;
                     });
-                    if (topGifters.length === 0) {
+                    if (!topGifters || topGifters.length === 0) {
                         tableDonadoresBody.innerHTML = `<tr><td colspan="3" style="text-align:center; padding: 20px; color: var(--muted);">No hay donadores registrados.</td></tr>`;
                     }
 
                     // Tabla Historial
                     const tableHistorialBody = document.getElementById('table-historial-body');
                     tableHistorialBody.innerHTML = '';
-                    historial.forEach(h => {
+                    (historial || []).forEach(h => {
                         const color = QUEEN_COLORS[h.queen_name] || '#ffffff';
                         let fechaStr = h.timestamp;
                         try {
@@ -2973,21 +3128,21 @@
                             <tr style="border-bottom: 1px solid rgba(255,255,255,0.03);">
                                 <td style="padding: 8px 4px; color: var(--muted); font-size: 11px;">${fechaStr}</td>
                                 <td style="padding: 8px 4px; font-weight: 600;">${h.viewer_name}</td>
-                                <td style="padding: 8px 4px; font-weight: 700; color: ${color};">${h.queen_name.toUpperCase()}</td>
+                                <td style="padding: 8px 4px; font-weight: 700; color: ${color};">${(APODOS[h.queen_name] || h.queen_name).toUpperCase()}</td>
                                 <td style="padding: 8px 4px; color: var(--text);">${h.gift_name}</td>
-                                <td style="padding: 8px 4px; text-align: right; font-weight: 800; color: var(--pink);">${h.diamonds.toLocaleString()}</td>
+                                <td style="padding: 8px 4px; text-align: right; font-weight: 800; color: var(--pink);">${Number(h.diamonds || 0).toLocaleString()}</td>
                             </tr>
                         `;
                     });
-                    if (historial.length === 0) {
+                    if (!historial || historial.length === 0) {
                         tableHistorialBody.innerHTML = `<tr><td colspan="5" style="text-align:center; padding: 30px; color: var(--muted);">No hay transacciones recientes.</td></tr>`;
                     }
 
                     // Dibujar Gráficas
                     dibujarGraficaTendencia();
                     dibujarGraficaQueens(resumen);
-                    dibujarGraficaHorasPico(horasPico);
-                    dibujarGraficaEquipos(resumen, futbolConfig);
+                    dibujarGraficaHorasPico(horasPico || []);
+                    dibujarGraficaEquipos(resumen, futbolConfig || {});
 
                 } catch (e) {
                     console.error('Error cargando analíticas:', e);
@@ -3013,8 +3168,8 @@
                         const day = String(d.getDate()).padStart(2, '0');
                         const dateStr = `${year}-${month}-${day}`;
 
-                        const record = cacheGraficaDiaria.find(g => g.dia === dateStr);
-                        const total = record ? record.total_diamantes : 0;
+                        const record = (cacheGraficaDiaria || []).find(g => g.dia === dateStr);
+                        const total = record ? Number(record.total_diamantes || 0) : 0;
 
                         const labelStr = d.toLocaleDateString([], { day: 'numeric', month: 'short' });
                         labelsGrafica.push(labelStr);
@@ -3030,8 +3185,8 @@
                         const month = (d.getMonth() + 1).toString().padStart(2, '0');
                         const monthKey = `${year}-${month}`;
 
-                        const record = cacheGraficaMensual.find(g => g.mes === monthKey);
-                        const total = record ? record.total_diamantes : 0;
+                        const record = (cacheGraficaMensual || []).find(g => g.mes === monthKey);
+                        const total = record ? Number(record.total_diamantes || 0) : 0;
 
                         const labelStr = `${mesesAbreviados[d.getMonth()]} ${year}`;
                         labelsGrafica.push(labelStr);
@@ -3117,11 +3272,12 @@
                 const coloresQueens = [];
                 let totalSumadoQueens = 0;
 
-                resumen.porQueen.forEach(q => {
-                    labelsQueens.push(q.queen_name.toUpperCase());
-                    datosQueens.push(q.total_diamantes);
+                (resumen.porQueen || []).forEach(q => {
+                    const diams = Number(q.total_diamantes || 0);
+                    labelsQueens.push((APODOS[q.queen_name] || q.queen_name).toUpperCase());
+                    datosQueens.push(diams);
                     coloresQueens.push(QUEEN_COLORS[q.queen_name] || '#aaa');
-                    totalSumadoQueens += q.total_diamantes;
+                    totalSumadoQueens += diams;
                 });
 
                 chartQueens = new Chart(ctxQueens, {
@@ -3147,16 +3303,17 @@
 
                 const legendContainer = document.getElementById('legend-queens-container');
                 legendContainer.innerHTML = '';
-                resumen.porQueen.forEach((q, idx) => {
+                (resumen.porQueen || []).forEach((q, idx) => {
                     const color = coloresQueens[idx];
-                    const pct = totalSumadoQueens > 0 ? ((q.total_diamantes / totalSumadoQueens) * 100).toFixed(1) : 0;
+                    const diams = Number(q.total_diamantes || 0);
+                    const pct = totalSumadoQueens > 0 ? ((diams / totalSumadoQueens) * 100).toFixed(1) : 0;
                     legendContainer.innerHTML += `
                         <div style="display: flex; align-items: center; justify-content: space-between; font-size: 11px;">
                             <div style="display: flex; align-items: center; gap: 6px;">
                                 <span style="width: 8px; height: 8px; border-radius: 50%; background: ${color}; display: inline-block;"></span>
-                                <span style="color: ${color}; font-weight: 600;">${q.queen_name.toUpperCase()}</span>
+                                <span style="color: ${color}; font-weight: 600;">${(APODOS[q.queen_name] || q.queen_name).toUpperCase()}</span>
                             </div>
-                            <span style="color: #fff; font-weight: 700;">${pct}% <span style="font-size:9px; color:var(--muted); font-weight:normal;">(${q.total_diamantes})</span></span>
+                            <span style="color: #fff; font-weight: 700;">${pct}% <span style="font-size:9px; color:var(--muted); font-weight:normal;">(${diams.toLocaleString()})</span></span>
                         </div>
                     `;
                 });
@@ -3174,8 +3331,11 @@
                     const horaStr = i.toString().padStart(2, '0');
                     labels.push(`${horaStr}:00`);
 
-                    const record = horasPico.find(h => h.hora === horaStr);
-                    datos.push(record ? record.total_diamantes : 0);
+                    const record = (horasPico || []).find(h => {
+                        const hVal = String(h.hora).padStart(2, '0');
+                        return hVal === horaStr || parseInt(h.hora, 10) === i;
+                    });
+                    datos.push(record ? Number(record.total_diamantes || 0) : 0);
                 }
 
                 chartHorasPico = new Chart(ctxHoras, {
@@ -3225,12 +3385,13 @@
                 let team1Total = 0;
                 let team2Total = 0;
 
-                resumen.porQueen.forEach(q => {
-                    const nameLower = q.queen_name.toLowerCase();
+                (resumen.porQueen || []).forEach(q => {
+                    const nameLower = (q.queen_name || '').toLowerCase();
+                    const diams = Number(q.total_diamantes || 0);
                     if (team1Members.some(m => m.toLowerCase() === nameLower)) {
-                        team1Total += q.total_diamantes;
+                        team1Total += diams;
                     } else if (team2Members.some(m => m.toLowerCase() === nameLower)) {
-                        team2Total += q.total_diamantes;
+                        team2Total += diams;
                     }
                 });
 
@@ -3260,43 +3421,127 @@
                 });
             }
 
-            function cambiarPeriodoIndiv(periodo) {
-                periodoIndivActual = periodo;
-                const selectIndiv = document.getElementById('select-mes-indiv');
-                if (selectIndiv) {
-                    if (periodo && periodo.startsWith('mes:')) {
-                        selectIndiv.value = periodo;
-                    } else {
-                        selectIndiv.value = '';
-                    }
+            let bailarinaFechaInicio = '';
+            let bailarinaFechaFin = '';
+
+            function cambiarModoFechaBailarina(modo) {
+                const inputsContainer = document.getElementById('bailarina-date-inputs-container');
+                const containerFin = document.getElementById('bailarina-container-fecha-fin');
+                const labelInicio = document.getElementById('bailarina-label-fecha-inicio');
+                const inputInicio = document.getElementById('input-bailarina-fecha-inicio');
+                const inputFin = document.getElementById('input-bailarina-fecha-fin');
+                const selectMes = document.getElementById('select-mes-indiv');
+
+                const getLocalDateString = (d = new Date()) => {
+                    const year = d.getFullYear();
+                    const month = String(d.getMonth() + 1).padStart(2, '0');
+                    const day = String(d.getDate()).padStart(2, '0');
+                    return `${year}-${month}-${day}`;
+                };
+
+                const hoy = getLocalDateString(new Date());
+                const dAyer = new Date();
+                dAyer.setDate(dAyer.getDate() - 1);
+                const ayer = getLocalDateString(dAyer);
+
+                if (selectMes) {
+                    selectMes.value = '';
                 }
 
-                const btns = {
-                    'diario': 'btn-indiv-diario',
-                    'semanal': 'btn-indiv-semanal',
-                    'mensual': 'btn-indiv-mensual',
-                    'historico': 'btn-indiv-historico'
-                };
-                Object.keys(btns).forEach(key => {
-                    const btn = document.getElementById(btns[key]);
-                    if (btn) {
-                        if (key === periodo) {
-                            btn.className = 'btn btn-sm btn-primary';
-                            btn.style.background = '';
-                            btn.style.border = '';
-                            btn.style.color = '';
-                        } else {
-                            btn.className = 'btn btn-sm';
-                            btn.style.background = 'transparent';
-                            btn.style.border = 'none';
-                            btn.style.color = 'var(--muted)';
-                        }
-                    }
-                });
+                if (modo === 'historico') {
+                    if (inputsContainer) inputsContainer.style.display = 'none';
+                    bailarinaFechaInicio = '';
+                    bailarinaFechaFin = '';
+                    periodoIndivActual = 'historico';
+                    recarregarDetalleBailarinaActual();
+                } else if (modo === 'diario') {
+                    if (inputsContainer) inputsContainer.style.display = 'none';
+                    bailarinaFechaInicio = hoy;
+                    bailarinaFechaFin = hoy;
+                    periodoIndivActual = 'diario';
+                    recarregarDetalleBailarinaActual();
+                } else if (modo === 'ayer') {
+                    if (inputsContainer) inputsContainer.style.display = 'none';
+                    bailarinaFechaInicio = ayer;
+                    bailarinaFechaFin = ayer;
+                    periodoIndivActual = 'ayer';
+                    recarregarDetalleBailarinaActual();
+                } else if (modo === 'semanal') {
+                    if (inputsContainer) inputsContainer.style.display = 'none';
+                    bailarinaFechaInicio = '';
+                    bailarinaFechaFin = '';
+                    periodoIndivActual = 'semanal';
+                    recarregarDetalleBailarinaActual();
+                } else if (modo === 'mensual') {
+                    if (inputsContainer) inputsContainer.style.display = 'none';
+                    bailarinaFechaInicio = '';
+                    bailarinaFechaFin = '';
+                    periodoIndivActual = 'mensual';
+                    recarregarDetalleBailarinaActual();
+                } else if (modo === 'dia') {
+                    if (inputsContainer) inputsContainer.style.display = 'flex';
+                    if (containerFin) containerFin.style.display = 'none';
+                    if (labelInicio) labelInicio.textContent = 'Fecha:';
+                    if (inputInicio && !inputInicio.value) inputInicio.value = hoy;
+                } else if (modo === 'rango') {
+                    if (inputsContainer) inputsContainer.style.display = 'flex';
+                    if (containerFin) containerFin.style.display = 'flex';
+                    if (labelInicio) labelInicio.textContent = 'Desde:';
+                    if (inputInicio && !inputInicio.value) inputInicio.value = hoy;
+                    if (inputFin && !inputFin.value) inputFin.value = hoy;
+                }
+            }
 
-                const selectedName = document.getElementById('select-analytics-bailarina').value;
-                if (selectedName) {
-                    cargarDetalleBailarina(selectedName);
+            function cambiarMesEspecificoBailarina(mes) {
+                const inputsContainer = document.getElementById('bailarina-date-inputs-container');
+                const selectMode = document.getElementById('select-bailarina-date-mode');
+                if (inputsContainer) inputsContainer.style.display = 'none';
+                if (selectMode) selectMode.value = 'historico';
+                bailarinaFechaInicio = '';
+                bailarinaFechaFin = '';
+                periodoIndivActual = mes;
+                recarregarDetalleBailarinaActual();
+            }
+
+            function aplicarFiltroFechaBailarina() {
+                const modo = document.getElementById('select-bailarina-date-mode').value;
+                const inputInicio = document.getElementById('input-bailarina-fecha-inicio').value;
+                const inputFin = document.getElementById('input-bailarina-fecha-fin').value;
+
+                if (modo === 'dia') {
+                    if (!inputInicio) return alert('Por favor selecciona una fecha');
+                    bailarinaFechaInicio = inputInicio;
+                    bailarinaFechaFin = inputInicio;
+                    periodoIndivActual = inputInicio;
+                } else if (modo === 'rango') {
+                    if (!inputInicio || !inputFin) return alert('Por favor selecciona fecha de inicio y fecha de fin');
+                    if (inputInicio > inputFin) return alert('La fecha de inicio no puede ser posterior a la fecha de fin');
+                    bailarinaFechaInicio = inputInicio;
+                    bailarinaFechaFin = inputFin;
+                    periodoIndivActual = 'rango';
+                }
+                recarregarDetalleBailarinaActual();
+            }
+
+            function resetFiltroFechaBailarina() {
+                const selectMode = document.getElementById('select-bailarina-date-mode');
+                if (selectMode) selectMode.value = 'historico';
+                const selectMes = document.getElementById('select-mes-indiv');
+                if (selectMes) selectMes.value = '';
+                const inputInicio = document.getElementById('input-bailarina-fecha-inicio');
+                if (inputInicio) inputInicio.value = '';
+                const inputFin = document.getElementById('input-bailarina-fecha-fin');
+                if (inputFin) inputFin.value = '';
+                bailarinaFechaInicio = '';
+                bailarinaFechaFin = '';
+                periodoIndivActual = 'historico';
+                cambiarModoFechaBailarina('historico');
+            }
+
+            function recarregarDetalleBailarinaActual() {
+                const selectBailarina = document.getElementById('select-analytics-bailarina');
+                if (selectBailarina && selectBailarina.value) {
+                    cargarDetalleBailarina(selectBailarina.value);
                 }
             }
 
@@ -3335,16 +3580,17 @@
                 });
 
                 try {
-                    const res = await fetch(`/api/analytics/queens-periodo?periodo=${encodeURIComponent(periodo)}`);
+                    const res = await fetch(`/api/analytics/queens-periodo?periodo=${encodeURIComponent(periodo)}&user=${encodeURIComponent(analyticsStreamerActual)}`);
                     if (!res.ok) return;
                     const porQueen = await res.json();
 
                     // Render tabla Queens
                     const tableBody = document.getElementById('table-queens-body');
                     tableBody.innerHTML = '';
-                    porQueen.forEach(q => {
+                    (porQueen || []).forEach(q => {
                         const color = QUEEN_COLORS[q.queen_name] || '#fff';
                         const display = APODOS[q.queen_name] || q.queen_name;
+                        const diams = Number(q.total_diamantes || 0);
                         tableBody.innerHTML += `
                             <tr style="border-bottom: 1px solid rgba(255,255,255,0.03);">
                                 <td style="padding: 8px 4px; font-weight: 700; color: ${color};">
@@ -3352,11 +3598,11 @@
                                     ${display}
                                 </td>
                                 <td style="padding: 8px 4px; text-align: right; color: var(--muted);">${q.cantidad_regalos}</td>
-                                <td style="padding: 8px 4px; text-align: right; font-weight: 800; color: var(--green);">${q.total_diamantes.toLocaleString()} 💎</td>
+                                <td style="padding: 8px 4px; text-align: right; font-weight: 800; color: var(--green);">${diams.toLocaleString()} 💎</td>
                             </tr>
                         `;
                     });
-                    if (porQueen.length === 0) {
+                    if (!porQueen || porQueen.length === 0) {
                         tableBody.innerHTML = `<tr><td colspan="3" style="text-align:center; padding: 15px; color: var(--muted);">Sin donaciones en este período.</td></tr>`;
                     }
 
@@ -3369,11 +3615,12 @@
                     const colores = [];
                     let totalTotal = 0;
 
-                    porQueen.forEach(q => {
+                    (porQueen || []).forEach(q => {
+                        const diams = Number(q.total_diamantes || 0);
                         labels.push((APODOS[q.queen_name] || q.queen_name).toUpperCase());
-                        datos.push(q.total_diamantes);
+                        datos.push(diams);
                         colores.push(QUEEN_COLORS[q.queen_name] || '#6366f1');
-                        totalTotal += q.total_diamantes;
+                        totalTotal += diams;
                     });
 
                     chartQueens = new Chart(ctxQueens, {
@@ -3384,9 +3631,10 @@
 
                     const legendContainer = document.getElementById('legend-queens-container');
                     legendContainer.innerHTML = '';
-                    porQueen.forEach(q => {
+                    (porQueen || []).forEach(q => {
                         const color = QUEEN_COLORS[q.queen_name] || '#6366f1';
-                        const pct = totalTotal > 0 ? ((q.total_diamantes / totalTotal) * 100).toFixed(1) : 0;
+                        const diams = Number(q.total_diamantes || 0);
+                        const pct = totalTotal > 0 ? ((diams / totalTotal) * 100).toFixed(1) : 0;
                         legendContainer.innerHTML += `
                             <div style="display: flex; align-items: center; justify-content: space-between; font-size: 11px;">
                                 <div style="display: flex; align-items: center; gap: 6px;">
@@ -3398,21 +3646,6 @@
                         `;
                     });
                 } catch (e) { console.error('Error cargando analíticas por período:', e); }
-            }
-
-            let analyticsFechaInicioUrban = '';
-            let analyticsFechaFinUrban = '';
-
-            function aplicarFiltroFechaUrban() {
-                const inicio = document.getElementById('input-analytics-fecha-inicio-urban').value;
-                const fin = document.getElementById('input-analytics-fecha-fin-urban').value;
-
-                if (!inicio) return alert('Por favor selecciona una fecha de inicio o fecha única');
-                analyticsFechaInicioUrban = inicio;
-                analyticsFechaFinUrban = fin || inicio;
-
-                const name = document.getElementById('select-analytics-bailarina').value;
-                if (name) cargarDetalleBailarina(name);
             }
 
             async function cargarDetalleBailarina(name) {
@@ -3429,27 +3662,45 @@
                 fichaVacio.style.display = 'none';
 
                 try {
-                    let url = `/api/analytics/bailarina?name=${encodeURIComponent(name)}`;
-                    if (analyticsFechaInicioUrban) {
-                        url += `&fechaInicio=${encodeURIComponent(analyticsFechaInicioUrban)}`;
+                    let url = `/api/analytics/bailarina?name=${encodeURIComponent(name)}&user=${encodeURIComponent(analyticsStreamerActual)}&periodo=${encodeURIComponent(periodoIndivActual || 'historico')}`;
+                    if (bailarinaFechaInicio) {
+                        url += `&fechaInicio=${encodeURIComponent(bailarinaFechaInicio)}`;
                     }
-                    if (analyticsFechaFinUrban) {
-                        url += `&fechaFin=${encodeURIComponent(analyticsFechaFinUrban)}`;
+                    if (bailarinaFechaFin) {
+                        url += `&fechaFin=${encodeURIComponent(bailarinaFechaFin)}`;
                     }
 
                     const res = await fetch(url);
                     const data = await res.json();
 
-                    document.getElementById('kpi-indiv-total').textContent = (data.stats.total || 0).toLocaleString() + ' 💎';
-                    document.getElementById('kpi-indiv-regalos').textContent = (data.stats.total_regalos || 0).toLocaleString() + ' 🎁';
-                    document.getElementById('kpi-indiv-promedio').textContent = (data.stats.promedio || 0).toLocaleString() + ' 💎';
+                    // Actualizar etiqueta del KPI según período
+                    const lblKpi = document.getElementById('label-kpi-indiv-total');
+                    if (lblKpi) {
+                        if (periodoIndivActual === 'diario') lblKpi.textContent = 'Diamantes Recibidos Hoy';
+                        else if (periodoIndivActual === 'ayer') lblKpi.textContent = 'Diamantes Recibidos Ayer';
+                        else if (periodoIndivActual === 'semanal') lblKpi.textContent = 'Diamantes Últimos 7 Días';
+                        else if (periodoIndivActual === 'mensual') lblKpi.textContent = 'Diamantes de Este Mes';
+                        else if (periodoIndivActual && periodoIndivActual.startsWith('mes:')) {
+                            lblKpi.textContent = `Diamantes Mes (${periodoIndivActual.replace('mes:', '')})`;
+                        } else if (bailarinaFechaInicio && bailarinaFechaFin && bailarinaFechaInicio !== bailarinaFechaFin) {
+                            lblKpi.textContent = `Diamantes (${bailarinaFechaInicio} al ${bailarinaFechaFin})`;
+                        } else if (bailarinaFechaInicio) {
+                            lblKpi.textContent = `Diamantes del Día (${bailarinaFechaInicio})`;
+                        } else {
+                            lblKpi.textContent = 'Total Diamantes Recibidos';
+                        }
+                    }
+
+                    document.getElementById('kpi-indiv-total').textContent = (Number(data.stats.total || 0)).toLocaleString() + ' 💎';
+                    document.getElementById('kpi-indiv-regalos').textContent = (Number(data.stats.total_regalos || 0)).toLocaleString() + ' 🎁';
+                    document.getElementById('kpi-indiv-promedio').textContent = (Number(data.stats.promedio || 0)).toLocaleString() + ' 💎';
                     const elHoraPico = document.getElementById('kpi-indiv-horapico');
                     if (elHoraPico) elHoraPico.textContent = data.stats.hora_pico || 'N/A';
 
                     // Superfans
                     const tableBody = document.getElementById('table-indiv-superfans-body');
                     tableBody.innerHTML = '';
-                    data.topDonadores.forEach((g, idx) => {
+                    (data.topDonadores || []).forEach((g, idx) => {
                         const medal = idx === 0 ? '🥇' : idx === 1 ? '🥈' : idx === 2 ? '🥉' : '👤';
                         tableBody.innerHTML += `
                             <tr style="border-bottom: 1px solid rgba(255,255,255,0.03);">
@@ -3457,11 +3708,11 @@
                                     <span style="margin-right: 6px;">${medal}</span>${g.viewer_name}
                                 </td>
                                 <td style="padding: 10px 4px; text-align: right; color: var(--muted);">${g.cantidad_regalos}</td>
-                                <td style="padding: 10px 4px; text-align: right; font-weight: 800; color: var(--green);">${g.total_donado.toLocaleString()} 💎</td>
+                                <td style="padding: 10px 4px; text-align: right; font-weight: 800; color: var(--green);">${Number(g.total_donado || 0).toLocaleString()} 💎</td>
                             </tr>
                         `;
                     });
-                    if (data.topDonadores.length === 0) {
+                    if (!data.topDonadores || data.topDonadores.length === 0) {
                         tableBody.innerHTML = `<tr><td colspan="3" style="text-align:center; padding: 20px; color: var(--muted);">No hay donadores registrados para ella en este período.</td></tr>`;
                     }
 
@@ -3469,8 +3720,8 @@
                     const ctxEvolucion = document.getElementById('chart-indiv-evolucion').getContext('2d');
                     if (chartIndivEvolucion) chartIndivEvolucion.destroy();
 
-                    const labelsEvo = (data.evolucion || []).map(e => e.label);
-                    const datosEvo = (data.evolucion || []).map(e => e.total);
+                    const labelsEvo = (data.evolucion || []).map(e => e.dia || e.label || '');
+                    const datosEvo = (data.evolucion || []).map(e => Number(e.total_diamantes || e.total || 0));
                     const dancerColor = QUEEN_COLORS[name] || '#ec4899';
 
                     chartIndivEvolucion = new Chart(ctxEvolucion, {
@@ -3511,11 +3762,12 @@
 
                     const colorPalette = ['#ff4785', '#6366f1', '#10b981', '#f59e0b', '#ec4899', '#8b5cf6', '#3b82f6'];
 
-                    data.distribucionRegalos.forEach((r, idx) => {
+                    (data.distribucionRegalos || []).forEach((r, idx) => {
+                        const val = Number(r.total_diamantes || 0);
                         labels.push(r.gift_name.toUpperCase());
-                        datos.push(r.total_diamantes);
+                        datos.push(val);
                         colores.push(colorPalette[idx % colorPalette.length]);
-                        totalSumado += r.total_diamantes;
+                        totalSumado += val;
                     });
 
                     chartIndivRegalos = new Chart(ctxIndiv, {
@@ -3539,16 +3791,17 @@
 
                     const legendContainer = document.getElementById('legend-indiv-regalos');
                     legendContainer.innerHTML = '';
-                    data.distribucionRegalos.forEach((r, idx) => {
+                    (data.distribucionRegalos || []).forEach((r, idx) => {
                         const color = colores[idx];
-                        const pct = totalSumado > 0 ? ((r.total_diamantes / totalSumado) * 100).toFixed(1) : 0;
+                        const val = Number(r.total_diamantes || 0);
+                        const pct = totalSumado > 0 ? ((val / totalSumado) * 100).toFixed(1) : 0;
                         legendContainer.innerHTML += `
                             <div style="display: flex; align-items: center; justify-content: space-between; font-size: 11px;">
                                 <div style="display: flex; align-items: center; gap: 6px;">
                                     <span style="width: 8px; height: 8px; border-radius: 50%; background: ${color}; display: inline-block;"></span>
                                     <span style="color: ${color}; font-weight: 600;">${r.gift_name.toUpperCase()}</span>
                                 </div>
-                                <span style="color: #fff; font-weight: 700;">${pct}% <span style="font-size:9px; color:var(--muted); font-weight:normal;">(${r.total_diamantes})</span></span>
+                                <span style="color: #fff; font-weight: 700;">${pct}% <span style="font-size:9px; color:var(--muted); font-weight:normal;">(${val.toLocaleString()})</span></span>
                             </div>
                         `;
                     });
@@ -3600,7 +3853,7 @@
                 document.getElementById('tab-' + nombre).classList.add('active');
                 if (el) el.classList.add('active');
                 if (nombre === 'analytics') {
-                    cargarAnaliticas();
+                    cargarStreamersAnalytics().then(() => cargarAnaliticas());
                 } else if (nombre === 'marca') {
                     cargarMarca();
                 } else if (nombre === 'agencia') {
@@ -3811,6 +4064,7 @@
                 cargarDinamicas();
                 cargarTikTokPanel();
                 cargarMarca();
+                await cargarStreamersAnalytics();
             }
 
             function apagarServidor() {
@@ -4303,16 +4557,23 @@
                     if (res.ok) {
                         const data = await res.json();
                         currentUsername = data.username;
+                        currentUserIsAdmin = !!(data.isAdmin || currentUsername === 'admin' || currentUsername === 'master' || data.role === 'admin' || data.role === 'superadmin');
                         document.getElementById('master-control-title').textContent = `${data.name || 'Control Maestro'} (@${data.username})`;
 
                         // Mostrar pestaña de agencia solo a admin o master
                         const menuAgencia = document.getElementById('menu-item-agencia');
                         if (menuAgencia) {
-                            if (currentUsername === 'admin' || currentUsername === 'master') {
-                                menuAgencia.style.display = 'block';
-                            } else {
-                                menuAgencia.style.display = 'none';
-                            }
+                            menuAgencia.style.display = currentUserIsAdmin ? 'block' : 'none';
+                        }
+
+                        // Mostrar selector de streamer en analíticas SOLO al admin
+                        const cardSelectorStreamer = document.getElementById('card-selector-streamer-analytics');
+                        if (cardSelectorStreamer) {
+                            cardSelectorStreamer.style.display = currentUserIsAdmin ? 'flex' : 'none';
+                        }
+                        if (!currentUserIsAdmin && currentUsername) {
+                            analyticsStreamerActual = currentUsername;
+                            actualizarLabelStreamerAnalytics();
                         }
                     } else if (res.status === 401) {
                         window.location.href = '/login';

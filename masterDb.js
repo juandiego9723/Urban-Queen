@@ -152,12 +152,24 @@ async function asignarUsuarioAAgencia(username, agencySlug) {
     return true;
 }
 
+async function getUsersByAgency(agencyId) {
+    if (!agencyId) return [];
+    try {
+        const res = await query('SELECT id, username, name, role, created_at FROM users WHERE agency_id = $1 ORDER BY username', [agencyId]);
+        return res.rows;
+    } catch (e) {
+        console.error('Error al obtener usuarios por agencia:', e.message);
+        return [];
+    }
+}
+
 module.exports = {
     initMasterDB,
     registrarUsuario,
     obtenerUsuario,
     verificarCredenciales,
     getAllUsers,
+    getUsersByAgency,
     eliminarUsuario,
     crearTokenRecuperacion,
     validarTokenRecuperacion,

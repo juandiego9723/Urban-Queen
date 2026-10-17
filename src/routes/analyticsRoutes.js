@@ -99,7 +99,10 @@ function setupAnalyticsRoutes(app, requireSession) {
 
     app.get('/api/analytics/horas-pico', requireSession, async (req, res) => {
         try {
-            const data = await req.userSession.db.getDonacionesPorHora();
+            const periodo = req.query.periodo || 'historico';
+            const fechaInicio = req.query.fechaInicio || req.query.desde || null;
+            const fechaFin = req.query.fechaFin || req.query.hasta || null;
+            const data = await req.userSession.db.getDonacionesPorHora(periodo, fechaInicio, fechaFin);
             res.json(data);
         } catch (e) {
             res.status(500).send(e.message);

@@ -1112,9 +1112,23 @@
                 </div>
                 <!-- ══ ANALÍTICAS ══ -->
                 <div id="tab-analytics" class="tab-content" style="grid-template-columns: 1fr;">
+                    <!-- Selector de Streamer para Analíticas (Solo visible para Admin) -->
+                    <div id="card-selector-streamer-analytics" class="card" style="padding: 14px 20px; margin-bottom: 16px; display: none; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 14px; background: linear-gradient(135deg, rgba(99, 102, 241, 0.12) 0%, rgba(236, 72, 153, 0.08) 100%); border: 1px solid rgba(99, 102, 241, 0.3); border-radius: 12px; width: 100%;">
+                        <div style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
+                            <span style="font-size: 14px; font-weight: 800; color: #fff; display: flex; align-items: center; gap: 6px;">
+                                📡 Streamer / Cuenta:
+                            </span>
+                            <select id="select-analytics-streamer" class="select" onchange="cambiarStreamerAnalytics(this.value)" style="height: 38px; font-size: 13px; font-weight: 700; padding: 4px 12px; border-radius: 8px; background: var(--surface2); color: #fff; border: 1.5px solid var(--indigo); min-width: 200px;">
+                            </select>
+                        </div>
+                        <div id="analytics-streamer-info" style="font-size: 12px; color: var(--muted); font-weight: 600;">
+                            Inspeccionando analíticas de: <strong id="analytics-current-streamer-label" style="color: var(--pink); font-size: 13px;">-</strong>
+                        </div>
+                    </div>
+
                     <!-- Sub-pestañas de Analíticas -->
                     <div style="display: flex; gap: 10px; margin-bottom: 16px;">
-                        <button id="btn-subtab-agencia" class="btn btn-primary" onclick="cambiarSubTabAnalytics('agencia')" style="padding: 10px 20px; font-weight: 700; border-radius: 8px;">🏢 Vista de Agencia</button>
+                        <button id="btn-subtab-agencia" class="btn btn-primary" onclick="cambiarSubTabAnalytics('agencia')" style="padding: 10px 20px; font-weight: 700; border-radius: 8px;">🏢 Vista de Streamer</button>
                         <button id="btn-subtab-bailarinas" class="btn" onclick="cambiarSubTabAnalytics('bailarinas')" style="padding: 10px 20px; font-weight: 700; border-radius: 8px; background: var(--surface2); color: var(--muted); border: 1px solid var(--border);">💃 Perfil de Bailarina</button>
                     </div>
 
@@ -1151,15 +1165,15 @@
                         <!-- KPIs Superiores -->
                         <div class="row-3" style="width: 100%; gap: 16px; margin-bottom: 8px;">
                             <div class="card" style="padding: 16px 20px; border-left: 4px solid var(--pink);">
-                                <div class="label" style="font-size: 9px;">Diamantes Recibidos Hoy</div>
+                                <div class="label" style="font-size: 9px;" id="label-kpi-hoy">Diamantes Recibidos Hoy</div>
                                 <div style="font-size: 28px; font-weight: 800; color: #fff; margin-top: 4px;" id="kpi-hoy">0 💎</div>
                             </div>
                             <div class="card" style="padding: 16px 20px; border-left: 4px solid var(--indigo);">
-                                <div class="label" style="font-size: 9px;">Diamantes de este Mes</div>
+                                <div class="label" style="font-size: 9px;" id="label-kpi-mes">Diamantes de este Mes</div>
                                 <div style="font-size: 28px; font-weight: 800; color: #fff; margin-top: 4px;" id="kpi-mes">0 💎</div>
                             </div>
                             <div class="card" style="padding: 16px 20px; border-left: 4px solid var(--green);">
-                                <div class="label" style="font-size: 9px;">Acumulado Histórico</div>
+                                <div class="label" style="font-size: 9px;" id="label-kpi-historico">Acumulado Histórico</div>
                                 <div style="font-size: 28px; font-weight: 800; color: #fff; margin-top: 4px;" id="kpi-historico">0 💎</div>
                             </div>
                         </div>
@@ -1328,7 +1342,7 @@
                             <!-- KPIs Individuales -->
                             <div class="row-3" style="width: 100%; gap: 16px;">
                                 <div class="card" style="padding: 16px 20px; border-left: 4px solid var(--pink);">
-                                    <div class="label" style="font-size: 9px;">Total Diamantes Recibidos</div>
+                                    <div class="label" style="font-size: 9px;" id="label-kpi-indiv-total">Total Diamantes Recibidos</div>
                                     <div style="font-size: 28px; font-weight: 800; color: #fff; margin-top: 4px;" id="kpi-indiv-total">0 💎</div>
                                 </div>
                                 <div class="card" style="padding: 16px 20px; border-left: 4px solid var(--indigo);">
@@ -2466,6 +2480,96 @@
             let cacheGraficaMensual = [];
             let filtroGraficaActual = 'diario';
             let subTabAnalyticsActual = 'agencia';
+            let analyticsStreamerActual = 'downtown'; // Seleccionada por defecto
+            let currentUserIsAdmin = false;
+
+            async function cargarStreamersAnalytics() {
+                try {
+                    const cardSelectorStreamer = document.getElementById('card-selector-streamer-analytics');
+                    const isUserAdmin = currentUserIsAdmin || currentUsername === 'admin' || currentUsername === 'master';
+
+                    if (cardSelectorStreamer) {
+                        cardSelectorStreamer.style.display = isUserAdmin ? 'flex' : 'none';
+                    }
+
+                    if (!isUserAdmin && currentUsername) {
+                        analyticsStreamerActual = currentUsername;
+                        actualizarLabelStreamerAnalytics();
+                        return;
+                    }
+
+                    const agencySlug = getAgencySlug() || 'cosmic';
+                    const res = await fetch(`/api/agency/streamers?agency=${encodeURIComponent(agencySlug)}`);
+                    if (res.ok) {
+                        const streamers = await res.json();
+                        const select = document.getElementById('select-analytics-streamer');
+                        if (select && streamers && streamers.length > 0) {
+                            const curVal = analyticsStreamerActual;
+                            select.innerHTML = '';
+                            streamers.forEach(s => {
+                                const opt = document.createElement('option');
+                                opt.value = s.username;
+                                opt.textContent = `${s.name || s.username} (@${s.username})`;
+                                select.appendChild(opt);
+                            });
+                            const hasCurrent = streamers.some(s => s.username === curVal);
+                            if (hasCurrent) {
+                                select.value = curVal;
+                            } else if (streamers.some(s => s.username === 'downtown')) {
+                                select.value = 'downtown';
+                                analyticsStreamerActual = 'downtown';
+                            } else {
+                                analyticsStreamerActual = streamers[0].username;
+                                select.value = analyticsStreamerActual;
+                            }
+                        }
+                    }
+                } catch (e) {
+                    console.error('Error cargando streamers para analíticas:', e);
+                }
+                actualizarLabelStreamerAnalytics();
+            }
+
+            function cambiarStreamerAnalytics(streamer) {
+                if (!streamer) return;
+                analyticsStreamerActual = streamer;
+                actualizarLabelStreamerAnalytics();
+                cargarOpcionesBailarinas();
+                cargarAnaliticas();
+            }
+
+            function actualizarLabelStreamerAnalytics() {
+                const lbl = document.getElementById('analytics-current-streamer-label');
+                if (lbl) lbl.textContent = analyticsStreamerActual;
+            }
+
+            async function cargarOpcionesBailarinas() {
+                const selectBailarina = document.getElementById('select-analytics-bailarina');
+                if (!selectBailarina) return;
+                try {
+                    const res = await fetch(`/api/queens/all?user=${encodeURIComponent(analyticsStreamerActual)}`);
+                    if (res.ok) {
+                        const queensData = await res.json();
+                        const valorActual = selectBailarina.value;
+                        selectBailarina.innerHTML = '<option value="">-- Seleccionar --</option>';
+                        queensData.forEach(q => {
+                            const opt = document.createElement('option');
+                            opt.value = q.name;
+                            opt.textContent = (q.apodo || q.name).toUpperCase();
+                            selectBailarina.appendChild(opt);
+                        });
+                        queensData.forEach(q => {
+                            if (q.color) QUEEN_COLORS[q.name] = q.color;
+                            if (q.apodo) APODOS[q.name] = q.apodo;
+                        });
+                        if (valorActual && queensData.some(q => q.name === valorActual)) {
+                            selectBailarina.value = valorActual;
+                        }
+                    }
+                } catch (e) {
+                    console.error('Error cargando bailarinas:', e);
+                }
+            }
 
             let agencyFechaInicio = '';
             let agencyFechaFin = '';
@@ -2566,7 +2670,7 @@
 
             async function cargarAnaliticas() {
                 try {
-                    let dateQueryParams = `periodo=${encodeURIComponent(agencyPeriodoActual)}`;
+                    let dateQueryParams = `periodo=${encodeURIComponent(agencyPeriodoActual)}&user=${encodeURIComponent(analyticsStreamerActual)}`;
                     if (agencyFechaInicio) dateQueryParams += `&fechaInicio=${encodeURIComponent(agencyFechaInicio)}`;
                     if (agencyFechaFin) dateQueryParams += `&fechaFin=${encodeURIComponent(agencyFechaFin)}`;
 
@@ -2577,7 +2681,7 @@
                         fetch(`/api/analytics/grafica?${dateQueryParams}`).then(r => r.json()),
                         fetch(`/api/analytics/grafica-mensual?${dateQueryParams}`).then(r => r.json()),
                         fetch(`/api/analytics/horas-pico?${dateQueryParams}`).then(r => r.json()),
-                        fetch('/api/futbol/config').then(r => r.json())
+                        fetch(`/api/futbol/config?user=${encodeURIComponent(analyticsStreamerActual)}`).then(r => r.json()).catch(() => ({}))
                     ]);
 
                     cacheGraficaDiaria = graficaDiaria;
@@ -2595,10 +2699,37 @@
                         });
                     }
 
-                    // KPIs Globales
-                    document.getElementById('kpi-hoy').textContent = resumen.totalHoy.toLocaleString() + ' 💎';
-                    document.getElementById('kpi-mes').textContent = resumen.totalMes.toLocaleString() + ' 💎';
-                    document.getElementById('kpi-historico').textContent = resumen.totalHistorico.toLocaleString() + ' 💎';
+                    // KPIs Globales Dinámicos según el Filtro
+                    const lblHoy = document.getElementById('label-kpi-hoy');
+                    const elHoy = document.getElementById('kpi-hoy');
+                    const elMes = document.getElementById('kpi-mes');
+                    const elHistorico = document.getElementById('kpi-historico');
+
+                    if (agencyPeriodoActual === 'semanal') {
+                        if (lblHoy) lblHoy.textContent = 'Diamantes Últimos 7 Días';
+                        if (elHoy) elHoy.textContent = (Number(resumen.totalFiltrado ?? resumen.totalHistorico)).toLocaleString() + ' 💎';
+                    } else if (agencyPeriodoActual === 'ayer') {
+                        if (lblHoy) lblHoy.textContent = 'Diamantes Recibidos Ayer';
+                        if (elHoy) elHoy.textContent = (Number(resumen.totalFiltrado ?? 0)).toLocaleString() + ' 💎';
+                    } else if (agencyPeriodoActual === 'diario') {
+                        if (lblHoy) lblHoy.textContent = 'Diamantes Recibidos Hoy';
+                        if (elHoy) elHoy.textContent = (Number(resumen.totalHoy || 0)).toLocaleString() + ' 💎';
+                    } else if (agencyPeriodoActual === 'mensual') {
+                        if (lblHoy) lblHoy.textContent = 'Diamantes de este Mes';
+                        if (elHoy) elHoy.textContent = (Number(resumen.totalMes || 0)).toLocaleString() + ' 💎';
+                    } else if (agencyPeriodoActual === 'rango') {
+                        if (lblHoy) lblHoy.textContent = `Diamantes en Rango (${agencyFechaInicio} - ${agencyFechaFin})`;
+                        if (elHoy) elHoy.textContent = (Number(resumen.totalFiltrado ?? 0)).toLocaleString() + ' 💎';
+                    } else if (agencyFechaInicio && agencyFechaInicio === agencyFechaFin) {
+                        if (lblHoy) lblHoy.textContent = `Diamantes del Día (${agencyFechaInicio})`;
+                        if (elHoy) elHoy.textContent = (Number(resumen.totalFiltrado ?? 0)).toLocaleString() + ' 💎';
+                    } else {
+                        if (lblHoy) lblHoy.textContent = 'Diamantes Recibidos Hoy';
+                        if (elHoy) elHoy.textContent = (Number(resumen.totalHoy || 0)).toLocaleString() + ' 💎';
+                    }
+
+                    if (elMes) elMes.textContent = (Number(resumen.totalMes || 0)).toLocaleString() + ' 💎';
+                    if (elHistorico) elHistorico.textContent = (Number(resumen.totalHistorico || 0)).toLocaleString() + ' 💎';
 
                     // Tabla Queens
                     const tableQueensBody = document.getElementById('table-queens-body');
@@ -2800,9 +2931,10 @@
 
                 resumen.porQueen.forEach(q => {
                     labelsQueens.push(q.queen_name.toUpperCase());
-                    datosQueens.push(q.total_diamantes);
+                    const diam = Number(q.total_diamantes || 0);
+                    datosQueens.push(diam);
                     coloresQueens.push(QUEEN_COLORS[q.queen_name] || '#aaa');
-                    totalSumadoQueens += q.total_diamantes;
+                    totalSumadoQueens += diam;
                 });
 
                 chartQueens = new Chart(ctxQueens, {
@@ -2855,8 +2987,8 @@
                     const horaStr = i.toString().padStart(2, '0');
                     labels.push(`${horaStr}:00`);
 
-                    const record = horasPico.find(h => h.hora === horaStr);
-                    datos.push(record ? record.total_diamantes : 0);
+                    const record = horasPico.find(h => parseInt(h.hora, 10) === i || String(h.hora).padStart(2, '0') === horaStr);
+                    datos.push(record ? Number(record.total_diamantes || record.total || 0) : 0);
                 }
 
                 chartHorasPico = new Chart(ctxHoras, {
@@ -2908,10 +3040,11 @@
 
                 resumen.porQueen.forEach(q => {
                     const nameLower = q.queen_name.toLowerCase();
+                    const diam = Number(q.total_diamantes || 0);
                     if (team1Members.some(m => m.toLowerCase() === nameLower)) {
-                        team1Total += q.total_diamantes;
+                        team1Total += diam;
                     } else if (team2Members.some(m => m.toLowerCase() === nameLower)) {
-                        team2Total += q.total_diamantes;
+                        team2Total += diam;
                     }
                 });
 
@@ -3009,11 +3142,13 @@
                     if (!inputInicio) return alert('Por favor selecciona una fecha');
                     analyticsFechaInicio = inputInicio;
                     analyticsFechaFin = inputInicio;
+                    periodoIndivActual = inputInicio;
                 } else if (modo === 'rango') {
                     if (!inputInicio || !inputFin) return alert('Por favor selecciona fecha de inicio y fecha de fin');
                     if (inputInicio > inputFin) return alert('La fecha de inicio no puede ser posterior a la fecha de fin');
                     analyticsFechaInicio = inputInicio;
                     analyticsFechaFin = inputFin;
+                    periodoIndivActual = 'rango';
                 }
                 recarregarAnaliticasBailarina();
             }
@@ -3022,6 +3157,9 @@
                 document.getElementById('select-analytics-date-mode').value = 'historico';
                 document.getElementById('input-analytics-fecha-inicio').value = '';
                 document.getElementById('input-analytics-fecha-fin').value = '';
+                analyticsFechaInicio = '';
+                analyticsFechaFin = '';
+                periodoIndivActual = 'historico';
                 cambiarModoFechaAnalytics('historico');
             }
 
@@ -3046,7 +3184,7 @@
                 fichaVacio.style.display = 'none';
 
                 try {
-                    let url = `/api/analytics/bailarina?name=${encodeURIComponent(name)}&periodo=${encodeURIComponent(periodoIndivActual || 'historico')}`;
+                    let url = `/api/analytics/bailarina?name=${encodeURIComponent(name)}&user=${encodeURIComponent(analyticsStreamerActual)}&periodo=${encodeURIComponent(periodoIndivActual || 'historico')}`;
                     if (analyticsFechaInicio) {
                         url += `&fechaInicio=${encodeURIComponent(analyticsFechaInicio)}`;
                     }
@@ -3056,6 +3194,24 @@
 
                     const res = await fetch(url);
                     const data = await res.json();
+
+                    // Actualizar etiqueta del KPI según período
+                    const lblKpi = document.getElementById('label-kpi-indiv-total');
+                    if (lblKpi) {
+                        if (periodoIndivActual === 'diario') lblKpi.textContent = 'Diamantes Recibidos Hoy';
+                        else if (periodoIndivActual === 'ayer') lblKpi.textContent = 'Diamantes Recibidos Ayer';
+                        else if (periodoIndivActual === 'semanal') lblKpi.textContent = 'Diamantes Últimos 7 Días';
+                        else if (periodoIndivActual === 'mensual') lblKpi.textContent = 'Diamantes de Este Mes';
+                        else if (periodoIndivActual && periodoIndivActual.startsWith('mes:')) {
+                            lblKpi.textContent = `Diamantes Mes (${periodoIndivActual.replace('mes:', '')})`;
+                        } else if (analyticsFechaInicio && analyticsFechaFin && analyticsFechaInicio !== analyticsFechaFin) {
+                            lblKpi.textContent = `Diamantes (${analyticsFechaInicio} al ${analyticsFechaFin})`;
+                        } else if (analyticsFechaInicio) {
+                            lblKpi.textContent = `Diamantes del Día (${analyticsFechaInicio})`;
+                        } else {
+                            lblKpi.textContent = 'Total Diamantes Recibidos';
+                        }
+                    }
 
                     document.getElementById('kpi-indiv-total').textContent = (data.stats.total || 0).toLocaleString() + ' 💎';
                     document.getElementById('kpi-indiv-regalos').textContent = (data.stats.total_regalos || 0).toLocaleString() + ' 🎁';
@@ -3093,9 +3249,10 @@
 
                     data.distribucionRegalos.forEach((r, idx) => {
                         labels.push(r.gift_name.toUpperCase());
-                        datos.push(r.total_diamantes);
+                        const diam = Number(r.total_diamantes || 0);
+                        datos.push(diam);
                         colores.push(colorPalette[idx % colorPalette.length]);
-                        totalSumado += r.total_diamantes;
+                        totalSumado += diam;
                     });
 
                     chartIndivRegalos = new Chart(ctxIndiv, {
@@ -3180,6 +3337,8 @@
                 document.getElementById('tab-' + nombre).classList.add('active');
                 if (el) el.classList.add('active');
                 if (nombre === 'analytics') {
+                    cargarStreamersAnalytics();
+                    cargarOpcionesBailarinas();
                     cargarAnaliticas();
                 } else if (nombre === 'marca') {
                     cargarMarca();
@@ -3392,6 +3551,7 @@
                 cargarDinamicas();
                 cargarTikTokPanel();
                 cargarMarca();
+                cargarStreamersAnalytics();
             }
 
             function apagarServidor() {
@@ -3884,16 +4044,23 @@
                     if (res.ok) {
                         const data = await res.json();
                         currentUsername = data.username;
+                        currentUserIsAdmin = !!(data.isAdmin || currentUsername === 'admin' || currentUsername === 'master' || data.role === 'admin' || data.role === 'superadmin');
                         document.getElementById('master-control-title').textContent = `${data.name || 'Control Maestro'} (@${data.username})`;
                         
                         // Mostrar pestaña de agencia solo a admin o master
                         const menuAgencia = document.getElementById('menu-item-agencia');
                         if (menuAgencia) {
-                            if (currentUsername === 'admin' || currentUsername === 'master') {
-                                menuAgencia.style.display = 'block';
-                            } else {
-                                menuAgencia.style.display = 'none';
-                            }
+                            menuAgencia.style.display = currentUserIsAdmin ? 'block' : 'none';
+                        }
+
+                        // Mostrar selector de streamer en analíticas SOLO al admin
+                        const cardSelectorStreamer = document.getElementById('card-selector-streamer-analytics');
+                        if (cardSelectorStreamer) {
+                            cardSelectorStreamer.style.display = currentUserIsAdmin ? 'flex' : 'none';
+                        }
+                        if (!currentUserIsAdmin && currentUsername) {
+                            analyticsStreamerActual = currentUsername;
+                            actualizarLabelStreamerAnalytics();
                         }
                     }
                 } catch (e) { }

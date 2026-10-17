@@ -164,7 +164,7 @@ app.post('/login', async (req, res) => {
         }
     }
     
-    res.setSession(user.username, { name: user.name, agencySlug: userAgencySlug });
+    res.setSession(user.username, { name: user.name, agencySlug: userAgencySlug, role: user.role });
     if (activeSessions[user.username]) {
         activeSessions[user.username].agencySlug = userAgencySlug;
     }
@@ -252,7 +252,17 @@ app.get('/control', (req, res, next) => {
 });
 
 app.get('/api/me', requireSession, (req, res) => {
-    res.json({ username: req.username, name: req.session.name });
+    const isSuperUser = (
+        req.username.toLowerCase() === 'admin' || 
+        req.username.toLowerCase() === 'master' || 
+        (req.session && (req.session.role === 'superadmin' || req.session.role === 'admin'))
+    );
+    res.json({ 
+        username: req.username, 
+        name: req.session ? req.session.name : req.username, 
+        role: (req.session && req.session.role) ? req.session.role : (isSuperUser ? 'admin' : 'streamer'),
+        isAdmin: isSuperUser 
+    });
 });
 
 // Archivos estáticos
