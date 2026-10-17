@@ -467,6 +467,7 @@ function createTikTokService(app, io, requireSession, activeSessions, procesarRe
 
     const CATALOGO_RESPALDO = [
         { id:5655, name:'Rose',             diamondCount:1,     imageUrl:'/regalos/Rosa.png' },
+        { id:999910, name:'Rosa 10',        diamondCount:10,    imageUrl:'/regalos/Rosa 10.png' },
         { id:6948, name:'TikTok',           diamondCount:1,     imageUrl:'/regalos/tiktok.png' },
         { id:7493, name:'GG',               diamondCount:1,     imageUrl:'/regalos/GG.png' },
         { id:6551, name:'Heart',            diamondCount:1,     imageUrl:'/regalos/corazon.png' },

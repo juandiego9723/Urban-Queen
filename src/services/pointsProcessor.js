@@ -1,19 +1,45 @@
 function createPointsProcessor(io, activeSessions, resolverNombreFn, timerHandlers, conociendoHandlers, revivirHandlers) {
 
-    function buscarEnMapa(mapaObj, nombreRegalo) {
+    function buscarEnMapa(mapaObj, nombreRegalo, diamondUnit = 1, giftId = null) {
         if (!mapaObj || !nombreRegalo) return null;
-        if (mapaObj[nombreRegalo]) return mapaObj[nombreRegalo];
         
         const target = nombreRegalo.trim().toLowerCase();
-        
-        // 1. Coincidencia exacta sin distinguir mayúsculas/minúsculas o espacios
+        const diamonds = parseInt(diamondUnit) || 1;
+        const gid = giftId ? String(giftId).trim() : null;
+
+        // 1. Coincidencia directa por ID si se mapeó por ID (ej. "5655" o "id:5655")
+        if (gid) {
+            if (mapaObj[gid]) return mapaObj[gid];
+            if (mapaObj[`id:${gid}`]) return mapaObj[`id:${gid}`];
+        }
+
+        // 2. Coincidencia con indicación explícita de diamantes/puntos en la clave
+        // Ejemplos: "Rosa 10", "Rosa (10)", "Rosa (10 💎)", "Rosa 10💎", "Rose 1"
+        const diamondPatterns = [
+            `${target} ${diamonds}`,
+            `${target} (${diamonds})`,
+            `${target} (${diamonds} 💎)`,
+            `${target} (${diamonds}💎)`,
+            `${target} ${diamonds}💎`,
+            `${target} ${diamonds} 💎`
+        ];
+
         for (const key of Object.keys(mapaObj)) {
-            if (key.trim().toLowerCase() === target) {
+            const cleanKey = key.trim().toLowerCase();
+            if (diamondPatterns.includes(cleanKey)) {
+                return mapaObj[key];
+            }
+        }
+
+        // 3. Coincidencia exacta por nombre (case-insensitive)
+        for (const key of Object.keys(mapaObj)) {
+            const cleanKey = key.trim().toLowerCase();
+            if (cleanKey === target) {
                 return mapaObj[key];
             }
         }
         
-        // 2. Mapeo de traducciones y equivalencias de nombres comunes (Español <-> Inglés)
+        // 4. Mapeo de traducciones y equivalencias comunes (Español <-> Inglés)
         const ALIAS_TRADUCCION = {
             'rosa': 'rose',
             'rose': 'rosa',
@@ -35,9 +61,16 @@ function createPointsProcessor(io, activeSessions, resolverNombreFn, timerHandle
         
         const aliasTarget = ALIAS_TRADUCCION[target];
         if (aliasTarget) {
-            for (const key of Object.keys(mapaObj)) {
-                if (key.trim().toLowerCase() === aliasTarget) {
-                    return mapaObj[key];
+            // REGLA FUNDAMENTAL: 'rosa' <-> 'rose' SOLO se traduce cuando es de 1 diamante (diamondUnit <= 1).
+            // La Rosa de 10 diamantes es un regalo totalmente diferente a la Rose clásica de 1 diamante.
+            const esRosaOpcion = (target === 'rosa' || target === 'rose');
+            if (esRosaOpcion && diamonds > 1) {
+                // No permitir la equivalencia 'rosa' <-> 'rose' si el regalo tiene más de 1 diamante
+            } else {
+                for (const key of Object.keys(mapaObj)) {
+                    if (key.trim().toLowerCase() === aliasTarget) {
+                        return mapaObj[key];
+                    }
                 }
             }
         }
@@ -203,14 +236,17 @@ function createPointsProcessor(io, activeSessions, resolverNombreFn, timerHandle
             'tiktok universe': '/regalos/TikTok Universe.png',
             'diamond gun': '/regalos/Diamond Gun.png',
             'corgi': '/regalos/Corgi.png',
-            'doughnut': '/regalos/dona.png'
+            'doughnut': '/regalos/dona.png',
+            'rosa 10': '/regalos/Rosa 10.png'
         };
 
         function resolverImagenRegalo(rawSrc, gName, eqImg) {
             let img = (rawSrc || '').trim();
             if (!img && gName) {
                 const lowerName = gName.trim().toLowerCase();
-                if (session.catalogoRegalos && session.catalogoRegalos.length > 0) {
+                if ((lowerName === 'rosa' || lowerName === 'rose') && diamondUnit === 10) {
+                    img = '/regalos/Rosa 10.png';
+                } else if (session.catalogoRegalos && session.catalogoRegalos.length > 0) {
                     const match = session.catalogoRegalos.find(r => r.name && r.name.toLowerCase() === lowerName);
                     if (match && match.imageUrl) img = match.imageUrl;
                 }
@@ -246,8 +282,8 @@ function createPointsProcessor(io, activeSessions, resolverNombreFn, timerHandle
         let rawTimerMapa = session.db.getConfigVal('tiktok_timer_mapa');
         let timerMapa = rawTimerMapa ? JSON.parse(rawTimerMapa) : {};
         
-        let queenActivadora = buscarEnMapa(mapa, giftName);
-        let queenSalto = buscarEnMapa(timerMapa, giftName);
+        let queenActivadora = buscarEnMapa(mapa, giftName, diamondUnit, data.giftId);
+        let queenSalto = buscarEnMapa(timerMapa, giftName, diamondUnit, data.giftId);
         
         // Prioridad 1: Destinatario directo por uniqueId
         if (data.toUser && data.toUser.uniqueId) {
@@ -358,6 +394,7 @@ function createPointsProcessor(io, activeSessions, resolverNombreFn, timerHandle
                         repeat: deltaRepeat,
                         timestamp: new Date().toISOString()
                     };
+                    if (!session.regalosDetectados) session.regalosDetectados = {};
                     session.regalosDetectados[giftId] = giftInstance;
                     io.to(username).emit('regaloDetectado', giftInstance);
                 }

@@ -212,7 +212,7 @@ function reconstruirEquipos(session) {
     session.db.getAllQueensFull().forEach(q => {
         if (q.activo) {
             const display = (q.apodo && q.apodo.trim()) ? q.apodo.trim() : q.name;
-            session.equipos[q.name] = { nombre: display.toUpperCase(), color: q.color, regalo_img: q.regalo_img || '', avatar_img: q.avatar_img || '', nombre_img: q.nombre_img || '' };
+            session.equipos[q.name] = { nombre: display.toUpperCase(), color: q.color, regalo_img: q.regalo_img || '', avatar_img: q.avatar_img || '', nombre_img: q.nombre_img || '', regalo_pts: q.regalo_pts || 0 };
         }
     });
 }
