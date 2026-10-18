@@ -20,15 +20,17 @@ class DBInstance {
     async ensureUserId() {
         if (this.userId) return this.userId;
         try {
-            let res = await query('SELECT id FROM users WHERE LOWER(username) = LOWER($1)', [this.username]);
+            let res = await query('SELECT u.id, a.slug as agency_slug FROM users u LEFT JOIN agencies a ON u.agency_id = a.id WHERE LOWER(u.username) = LOWER($1)', [this.username]);
             if (res.rows.length === 0) {
                 const crypto = require('crypto');
                 const salt = crypto.randomBytes(16).toString('hex');
                 const hashed = `${salt}:${crypto.pbkdf2Sync(this.username, salt, 1000, 64, 'sha512').toString('hex')}`;
                 const instRes = await query('INSERT INTO users (username, password, name) VALUES ($1, $2, $3) RETURNING id', [this.username.toLowerCase(), hashed, this.username]);
                 if (instRes.rows.length > 0) this.userId = instRes.rows[0].id;
+                this.agencySlug = (this.username && this.username.toLowerCase().includes('cosmic')) ? 'cosmic' : 'urbanqueens';
             } else {
                 this.userId = res.rows[0].id;
+                this.agencySlug = res.rows[0].agency_slug || ((this.username && this.username.toLowerCase().includes('cosmic')) ? 'cosmic' : 'urbanqueens');
             }
         } catch (e) {
             console.error('Error en ensureUserId:', e.message);
@@ -253,17 +255,35 @@ class DBInstance {
     }
 
     getRankingTitulos() {
+        const isCosmic = (this.agencySlug === 'cosmic');
+        const defaultColor = isCosmic ? '#ffffff' : '#ffee00';
+        const parseColor = (val) => {
+            if (!val) return defaultColor;
+            if (isCosmic && val.toLowerCase() === '#ffee00') return '#ffffff';
+            return val;
+        };
+
         return {
             semanal: this.getConfigVal('titulo_semanal') || '',
             mensual: this.getConfigVal('titulo_mensual') || '',
-            diario:  this.getConfigVal('titulo_diario') || ''
+            diario:  this.getConfigVal('titulo_diario') || '',
+            revivir: this.getConfigVal('titulo_revivir') || '',
+            color_semanal: parseColor(this.getConfigVal('color_titulo_semanal')),
+            color_mensual: parseColor(this.getConfigVal('color_titulo_mensual')),
+            color_diario:  parseColor(this.getConfigVal('color_titulo_diario')),
+            color_revivir: parseColor(this.getConfigVal('color_titulo_revivir'))
         };
     }
 
-    async setRankingTitulos({ semanal, mensual, diario }) {
+    async setRankingTitulos({ semanal, mensual, diario, revivir, color_semanal, color_mensual, color_diario, color_revivir }) {
         if (semanal !== undefined) await this.setConfigVal('titulo_semanal', semanal);
         if (mensual !== undefined) await this.setConfigVal('titulo_mensual', mensual);
         if (diario  !== undefined) await this.setConfigVal('titulo_diario', diario);
+        if (revivir !== undefined) await this.setConfigVal('titulo_revivir', revivir);
+        if (color_semanal !== undefined) await this.setConfigVal('color_titulo_semanal', color_semanal);
+        if (color_mensual !== undefined) await this.setConfigVal('color_titulo_mensual', color_mensual);
+        if (color_diario  !== undefined) await this.setConfigVal('color_titulo_diario', color_diario);
+        if (color_revivir !== undefined) await this.setConfigVal('color_titulo_revivir', color_revivir);
     }
 
     // Config Futbol

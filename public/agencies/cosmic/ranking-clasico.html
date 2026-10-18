@@ -253,12 +253,39 @@
         let REGALOS_IMGS_MAP = {};
         let AVATAR_IMGS_MAP = {};
 
-        const TITULOS = { semanal: 'RANKING SEMANAL', mensual: 'RANKING MENSUAL', diario: 'RANKING DEL DÍA' };
+        function hexToRgba(hex, alpha) {
+            if (!hex) return `rgba(255, 238, 0, ${alpha})`;
+            hex = hex.replace('#', '');
+            if (hex.length === 3) {
+                hex = hex.split('').map(char => char + char).join('');
+            }
+            const r = parseInt(hex.substring(0, 2), 16) || 0;
+            const g = parseInt(hex.substring(2, 4), 16) || 0;
+            const b = parseInt(hex.substring(4, 6), 16) || 0;
+            return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+        }
+
+        let TITULOS = { semanal: 'RANKING SEMANAL', mensual: 'RANKING MENSUAL', diario: 'RANKING DEL DÍA' };
+        let COLORES_TITULO = { semanal: '#ffffff', mensual: '#ffffff', diario: '#ffffff' };
         const CICLO = { semanal: 'mensual', mensual: 'diario', diario: 'semanal' };
+
+        function parseCosmicColor(c) {
+            if (!c || c.toLowerCase() === '#ffee00') return '#ffffff';
+            return c;
+        }
+
+        function actualizarTituloUI() {
+            const el = document.getElementById('titulo-ranking');
+            if (!el) return;
+            el.innerText = TITULOS[modo] || 'RANKING';
+            const color = parseCosmicColor(COLORES_TITULO[modo]);
+            el.style.color = color;
+            el.style.textShadow = `2.5px 2.5px 0px #000, 0 0 10px ${hexToRgba(color, 0.7)}`;
+        }
 
         function toggleModo() {
             modo = CICLO[modo];
-            document.getElementById('titulo-ranking').innerText = TITULOS[modo] || 'RANKING';
+            actualizarTituloUI();
             reordenarTabla();
             socket.emit('cambiarModoRanking', modo);
         }
@@ -266,7 +293,7 @@
         socket.on('modoRankingCambiado', (nuevoModo) => {
             if (nuevoModo && TITULOS[nuevoModo]) {
                 modo = nuevoModo;
-                document.getElementById('titulo-ranking').innerText = TITULOS[modo] || 'RANKING';
+                actualizarTituloUI();
                 reordenarTabla();
             }
         });
@@ -389,13 +416,14 @@
         // Carga inicial
         async function init() {
             try {
-                const [resQ, resR, resM, resD, resAll, resAp] = await Promise.all([
+                const [resQ, resR, resM, resD, resAll, resAp, resTitulos] = await Promise.all([
                     fetch('/api/queens'),
                     fetch('/api/ranking'),
                     fetch('/api/ranking-mensual'),
                     fetch('/api/ranking-diario'),
                     fetch('/api/queens/all'),
-                    fetch('/api/apodos')
+                    fetch('/api/apodos'),
+                    fetch('/api/ranking/titulos')
                 ]);
                 QUEENS = await resQ.json();
                 dataSemanal = await resR.json();
@@ -413,6 +441,20 @@
                 });
                 
                 APODOS = await resAp.json();
+
+                if (resTitulos.ok) {
+                    const titulosData = await resTitulos.json();
+                    if (titulosData) {
+                        if (titulosData.semanal) TITULOS.semanal = titulosData.semanal;
+                        if (titulosData.mensual) TITULOS.mensual = titulosData.mensual;
+                        if (titulosData.diario)  TITULOS.diario  = titulosData.diario;
+                        if (titulosData.color_semanal) COLORES_TITULO.semanal = parseCosmicColor(titulosData.color_semanal);
+                        if (titulosData.color_mensual) COLORES_TITULO.mensual = parseCosmicColor(titulosData.color_mensual);
+                        if (titulosData.color_diario)  COLORES_TITULO.diario  = parseCosmicColor(titulosData.color_diario);
+                    }
+                }
+                
+                actualizarTituloUI();
                 crearFilas();
                 reordenarTabla();
             } catch(e) {
@@ -421,6 +463,18 @@
         }
 
         init();
+
+        socket.on('rankingTitulosActualizados', (titulosData) => {
+            if (titulosData) {
+                if (titulosData.semanal) TITULOS.semanal = titulosData.semanal;
+                if (titulosData.mensual) TITULOS.mensual = titulosData.mensual;
+                if (titulosData.diario)  TITULOS.diario  = titulosData.diario;
+                if (titulosData.color_semanal) COLORES_TITULO.semanal = parseCosmicColor(titulosData.color_semanal);
+                if (titulosData.color_mensual) COLORES_TITULO.mensual = parseCosmicColor(titulosData.color_mensual);
+                if (titulosData.color_diario)  COLORES_TITULO.diario  = parseCosmicColor(titulosData.color_diario);
+                actualizarTituloUI();
+            }
+        });
 
         socket.on('rankingActualizado', () => {
             init();

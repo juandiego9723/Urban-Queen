@@ -122,21 +122,26 @@ function setupQueensRoutes(app, io, requireSession) {
     app.get('/api/ranking-mensual', requireSession, (req, res) => res.json(req.userSession.db.getRankingMensual()));
     app.get('/api/ranking-diario', requireSession, (req, res) => res.json(req.userSession.db.getRankingDiario()));
     app.get('/api/ranking/titulos', requireSession, (req, res) => res.json(req.userSession.db.getRankingTitulos()));
-    app.all('/api/ranking/titulos/set', requireSession, (req, res) => {
+    app.all('/api/ranking/titulos/set', requireSession, async (req, res) => {
         const s = req.userSession;
         const titulos = req.body || {};
-        const semanal = (req.query.semanal || titulos.semanal || '').trim();
-        const mensual = (req.query.mensual || titulos.mensual || '').trim();
-        const diario  = (req.query.diario  || titulos.diario  || '').trim();
-        s.db.setRankingTitulos({ semanal, mensual, diario });
+        const semanal = req.query.semanal !== undefined ? req.query.semanal.trim() : (titulos.semanal !== undefined ? titulos.semanal.trim() : undefined);
+        const mensual = req.query.mensual !== undefined ? req.query.mensual.trim() : (titulos.mensual !== undefined ? titulos.mensual.trim() : undefined);
+        const diario  = req.query.diario  !== undefined ? req.query.diario.trim()  : (titulos.diario  !== undefined ? titulos.diario.trim()  : undefined);
+        const revivir = req.query.revivir !== undefined ? req.query.revivir.trim() : (titulos.revivir !== undefined ? titulos.revivir.trim() : undefined);
+        const color_semanal = req.query.color_semanal || titulos.color_semanal;
+        const color_mensual = req.query.color_mensual || titulos.color_mensual;
+        const color_diario  = req.query.color_diario  || titulos.color_diario;
+        const color_revivir = req.query.color_revivir || titulos.color_revivir;
+        await s.db.setRankingTitulos({ semanal, mensual, diario, revivir, color_semanal, color_mensual, color_diario, color_revivir });
         const nuevosTitulos = s.db.getRankingTitulos();
         io.to(req.username).emit('rankingTitulosActualizados', nuevosTitulos);
         res.json({ status: 'OK', titulos: nuevosTitulos });
     });
-    app.post('/api/ranking/titulos', requireSession, (req, res) => {
+    app.post('/api/ranking/titulos', requireSession, async (req, res) => {
         const s = req.userSession;
         const titulos = req.body || {};
-        s.db.setRankingTitulos(titulos);
+        await s.db.setRankingTitulos(titulos);
         const nuevosTitulos = s.db.getRankingTitulos();
         io.to(req.username).emit('rankingTitulosActualizados', nuevosTitulos);
         res.json({ status: 'OK', titulos: nuevosTitulos });

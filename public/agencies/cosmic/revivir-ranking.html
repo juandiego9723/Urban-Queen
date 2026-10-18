@@ -77,6 +77,46 @@
             gap: 10px;
         }
 
+        .header-box {
+            text-align: center;
+            user-select: none;
+            padding-bottom: 8px;
+            border-bottom: 1.5px solid rgba(255, 255, 255, 0.08);
+            margin-bottom: 4px;
+            z-index: 2;
+        }
+
+        .header-titulo { 
+            font-family: 'Montserrat', sans-serif;
+            font-size: 1.7rem; 
+            font-style: italic;
+            font-weight: 900;
+            margin: 0; 
+            color: #ffffff; 
+            letter-spacing: 1.5px;
+            text-transform: uppercase;
+            text-shadow: 2.5px 2.5px 0px #000, 0 0 10px rgba(255, 255, 255, 0.7);
+        }
+
+        .modo-label {
+            font-family: 'Inter', sans-serif;
+            font-size: 0.75rem;
+            font-style: italic;
+            font-weight: 800;
+            color: #00e676;
+            text-align: center;
+            margin-top: 3px;
+            letter-spacing: 2.5px;
+            text-transform: uppercase;
+            text-shadow: 1px 1px 0px #000;
+        }
+
+        .ranking-rows-container {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
         .ranking-item-row {
             display: flex;
             align-items: center;
@@ -153,8 +193,14 @@
     </head>
     <body>
         <!-- Contenedor del Ranking -->
-        <div class="ranking-panel-bottom-right" id="ranking-box">
-            <!-- Posiciones dinámicas se inyectan acá -->
+        <div class="ranking-panel-bottom-right" id="ranking-container">
+            <div class="header-box">
+                <div class="header-titulo" id="titulo-ranking">RANKING REVIVIR</div>
+                <div class="modo-label" id="modo-label">CLASIFICACIÓN</div>
+            </div>
+            <div id="ranking-box" class="ranking-rows-container">
+                <!-- Posiciones dinámicas se inyectan acá -->
+            </div>
         </div>
 
         <script src="/js/iframe-bridge.js"></script>
@@ -171,12 +217,42 @@
 
         const rankingBox = document.getElementById('ranking-box');
 
-        // Cargar detalles de las reinas
+        function hexToRgba(hex, alpha) {
+            if (!hex) return `rgba(255, 238, 0, ${alpha})`;
+            hex = hex.replace('#', '');
+            if (hex.length === 3) {
+                hex = hex.split('').map(char => char + char).join('');
+            }
+            const r = parseInt(hex.substring(0, 2), 16) || 0;
+            const g = parseInt(hex.substring(2, 4), 16) || 0;
+            const b = parseInt(hex.substring(4, 6), 16) || 0;
+            return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+        }
+
+        let tituloRevivir = 'RANKING REVIVIR';
+        let colorRevivir = '#ffffff';
+
+        function parseCosmicColor(c) {
+            if (!c || c.toLowerCase() === '#ffee00') return '#ffffff';
+            return c;
+        }
+
+        function actualizarTituloRevivirUI() {
+            const el = document.getElementById('titulo-ranking');
+            if (!el) return;
+            el.innerText = tituloRevivir || 'RANKING REVIVIR';
+            const color = parseCosmicColor(colorRevivir);
+            el.style.color = color;
+            el.style.textShadow = `2.5px 2.5px 0px #000, 0 0 10px ${hexToRgba(color, 0.7)}`;
+        }
+
+        // Cargar detalles de las reinas y títulos
         async function fetchInitialData() {
             try {
-                const [resAll, resAp] = await Promise.all([
+                const [resAll, resAp, resTitulos] = await Promise.all([
                     fetch('/api/queens/all'),
-                    fetch('/api/apodos')
+                    fetch('/api/apodos'),
+                    fetch('/api/ranking/titulos')
                 ]);
                 const all = await resAll.json();
                 all.forEach(q => {
@@ -185,12 +261,29 @@
                     QUEEN_GIFTS[q.name] = q.regalo_img || '';
                 });
                 APODOS = await resAp.json();
+
+                if (resTitulos.ok) {
+                    const titData = await resTitulos.json();
+                    if (titData) {
+                        if (titData.revivir) tituloRevivir = titData.revivir;
+                        if (titData.color_revivir) colorRevivir = parseCosmicColor(titData.color_revivir);
+                    }
+                }
+                actualizarTituloRevivirUI();
                 actualizarRankingUI();
             } catch(e) {
                 console.error("Error cargando configuración:", e);
             }
         }
         fetchInitialData();
+
+        socket.on('rankingTitulosActualizados', (titulosData) => {
+            if (titulosData) {
+                if (titulosData.revivir) tituloRevivir = titulosData.revivir;
+                if (titulosData.color_revivir) colorRevivir = parseCosmicColor(titulosData.color_revivir);
+                actualizarTituloRevivirUI();
+            }
+        });
 
         socket.on('queensActualizadas', (data) => {
             if (data.equipos) {

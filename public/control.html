@@ -2227,26 +2227,63 @@
 
                     <div class="card">
                         <div class="card-title">
-                            🏆 <span class="card-title-accent">Títulos del Ranking</span>
+                            🏆 <span class="card-title-accent">Títulos y Colores del Ranking</span>
                         </div>
                         <div class="col" style="gap:10px">
                             <div>
                                 <div class="label" style="margin-bottom:4px">Título Ranking Semanal</div>
-                                <input id="tit-ranking-semanal" class="input" placeholder="RANKING SEMANAL"
-                                    value="RANKING SEMANAL">
+                                <div style="display:flex; gap:8px; align-items:center;">
+                                    <input id="tit-ranking-semanal" class="input" placeholder="RANKING SEMANAL"
+                                        value="RANKING SEMANAL" style="flex:1;">
+                                    <div style="display:flex; align-items:center; gap:6px; background:var(--surface2); padding:3px 8px; border-radius:8px; border:1px solid var(--border);" title="Color de las letras">
+                                        <input type="color" id="col-ranking-semanal" value="#ffee00"
+                                            style="width:28px; height:28px; border:none; cursor:pointer; border-radius:6px; padding:0; background:transparent"
+                                            oninput="document.getElementById('col-val-semanal').textContent = this.value.toUpperCase()">
+                                        <span id="col-val-semanal" style="font-size:11px; font-family:monospace; color:var(--muted); min-width:54px;">#FFEE00</span>
+                                    </div>
+                                </div>
                             </div>
                             <div>
                                 <div class="label" style="margin-bottom:4px">Título Ranking Mensual</div>
-                                <input id="tit-ranking-mensual" class="input" placeholder="RANKING MENSUAL"
-                                    value="RANKING MENSUAL">
+                                <div style="display:flex; gap:8px; align-items:center;">
+                                    <input id="tit-ranking-mensual" class="input" placeholder="RANKING MENSUAL"
+                                        value="RANKING MENSUAL" style="flex:1;">
+                                    <div style="display:flex; align-items:center; gap:6px; background:var(--surface2); padding:3px 8px; border-radius:8px; border:1px solid var(--border);" title="Color de las letras">
+                                        <input type="color" id="col-ranking-mensual" value="#ffee00"
+                                            style="width:28px; height:28px; border:none; cursor:pointer; border-radius:6px; padding:0; background:transparent"
+                                            oninput="document.getElementById('col-val-mensual').textContent = this.value.toUpperCase()">
+                                        <span id="col-val-mensual" style="font-size:11px; font-family:monospace; color:var(--muted); min-width:54px;">#FFEE00</span>
+                                    </div>
+                                </div>
                             </div>
                             <div>
                                 <div class="label" style="margin-bottom:4px">Título Ranking Diario</div>
-                                <input id="tit-ranking-diario" class="input" placeholder="RANKING DEL DÍA"
-                                    value="RANKING DEL DÍA">
+                                <div style="display:flex; gap:8px; align-items:center;">
+                                    <input id="tit-ranking-diario" class="input" placeholder="RANKING DEL DÍA"
+                                        value="RANKING DEL DÍA" style="flex:1;">
+                                    <div style="display:flex; align-items:center; gap:6px; background:var(--surface2); padding:3px 8px; border-radius:8px; border:1px solid var(--border);" title="Color de las letras">
+                                        <input type="color" id="col-ranking-diario" value="#ffee00"
+                                            style="width:28px; height:28px; border:none; cursor:pointer; border-radius:6px; padding:0; background:transparent"
+                                            oninput="document.getElementById('col-val-diario').textContent = this.value.toUpperCase()">
+                                        <span id="col-val-diario" style="font-size:11px; font-family:monospace; color:var(--muted); min-width:54px;">#FFEE00</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div>
+                                <div class="label" style="margin-bottom:4px">Título Ranking Revivir</div>
+                                <div style="display:flex; gap:8px; align-items:center;">
+                                    <input id="tit-ranking-revivir" class="input" placeholder="RANKING REVIVIR"
+                                        value="RANKING REVIVIR" style="flex:1;">
+                                    <div style="display:flex; align-items:center; gap:6px; background:var(--surface2); padding:3px 8px; border-radius:8px; border:1px solid var(--border);" title="Color de las letras">
+                                        <input type="color" id="col-ranking-revivir" value="#ffee00"
+                                            style="width:28px; height:28px; border:none; cursor:pointer; border-radius:6px; padding:0; background:transparent"
+                                            oninput="document.getElementById('col-val-revivir').textContent = this.value.toUpperCase()">
+                                        <span id="col-val-revivir" style="font-size:11px; font-family:monospace; color:var(--muted); min-width:54px;">#FFEE00</span>
+                                    </div>
+                                </div>
                             </div>
                             <button class="btn btn-primary btn-full" onclick="guardarTitulosRanking()">💾 Guardar
-                                Títulos</button>
+                                Títulos y Colores</button>
                         </div>
                     </div>
 
@@ -4620,6 +4657,23 @@
                         if (data.semanal) document.getElementById('tit-ranking-semanal').value = data.semanal;
                         if (data.mensual) document.getElementById('tit-ranking-mensual').value = data.mensual;
                         if (data.diario) document.getElementById('tit-ranking-diario').value = data.diario;
+                        if (data.revivir) document.getElementById('tit-ranking-revivir').value = data.revivir;
+                        if (data.color_semanal) {
+                            document.getElementById('col-ranking-semanal').value = data.color_semanal;
+                            document.getElementById('col-val-semanal').textContent = data.color_semanal.toUpperCase();
+                        }
+                        if (data.color_mensual) {
+                            document.getElementById('col-ranking-mensual').value = data.color_mensual;
+                            document.getElementById('col-val-mensual').textContent = data.color_mensual.toUpperCase();
+                        }
+                        if (data.color_diario) {
+                            document.getElementById('col-ranking-diario').value = data.color_diario;
+                            document.getElementById('col-val-diario').textContent = data.color_diario.toUpperCase();
+                        }
+                        if (data.color_revivir) {
+                            document.getElementById('col-ranking-revivir').value = data.color_revivir;
+                            document.getElementById('col-val-revivir').textContent = data.color_revivir.toUpperCase();
+                        }
                     }
                 } catch (e) {
                     console.error('Error cargando títulos del ranking:', e);
@@ -4630,21 +4684,26 @@
                 const semanal = document.getElementById('tit-ranking-semanal').value.trim();
                 const mensual = document.getElementById('tit-ranking-mensual').value.trim();
                 const diario = document.getElementById('tit-ranking-diario').value.trim();
+                const revivir = document.getElementById('tit-ranking-revivir').value.trim();
+                const color_semanal = document.getElementById('col-ranking-semanal').value;
+                const color_mensual = document.getElementById('col-ranking-mensual').value;
+                const color_diario = document.getElementById('col-ranking-diario').value;
+                const color_revivir = document.getElementById('col-ranking-revivir').value;
 
                 try {
                     const res = await fetch('/api/ranking/titulos', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ semanal, mensual, diario })
+                        body: JSON.stringify({ semanal, mensual, diario, revivir, color_semanal, color_mensual, color_diario, color_revivir })
                     });
                     if (res.ok) {
-                        alert('✅ Títulos del ranking guardados con éxito');
+                        showToast('✅ Títulos y colores del ranking guardados con éxito', 'success');
                     } else {
-                        alert('⚠️ Error al guardar títulos');
+                        showToast('⚠️ Error al guardar títulos', 'error');
                     }
                 } catch (e) {
                     console.error('Error guardando títulos del ranking:', e);
-                    alert('⚠️ Error de conexión al guardar títulos');
+                    showToast('⚠️ Error de conexión al guardar títulos', 'error');
                 }
             }
 

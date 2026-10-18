@@ -983,6 +983,71 @@
                 border-left: 3px solid var(--muted);
                 opacity: 0.7;
             }
+        /* ── CUSTOM TOAST NOTIFICATIONS ── */
+        #toast-container {
+            position: fixed;
+            top: 24px;
+            right: 24px;
+            z-index: 999999;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            pointer-events: none;
+        }
+
+        .toast-item {
+            pointer-events: auto;
+            min-width: 280px;
+            max-width: 420px;
+            background: rgba(15, 18, 28, 0.94);
+            backdrop-filter: blur(14px);
+            -webkit-backdrop-filter: blur(14px);
+            border: 1.5px solid rgba(99, 102, 241, 0.4);
+            border-radius: 14px;
+            padding: 12px 18px;
+            color: #ffffff;
+            font-family: 'Inter', sans-serif;
+            font-size: 13.5px;
+            font-weight: 600;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5), 0 0 15px rgba(99, 102, 241, 0.2);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            animation: toastSlideIn 0.35s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            transition: all 0.3s ease;
+        }
+
+        .toast-item.toast-success {
+            border-color: rgba(16, 185, 129, 0.6);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5), 0 0 15px rgba(16, 185, 129, 0.25);
+        }
+
+        .toast-item.toast-error {
+            border-color: rgba(239, 68, 68, 0.6);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5), 0 0 15px rgba(239, 68, 68, 0.25);
+        }
+
+        .toast-item.toast-warning {
+            border-color: rgba(245, 158, 11, 0.6);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5), 0 0 15px rgba(245, 158, 11, 0.25);
+        }
+
+        .toast-item.toast-hiding {
+            opacity: 0;
+            transform: translateX(30px);
+        }
+
+        @keyframes toastSlideIn {
+            from {
+                opacity: 0;
+                transform: translateX(40px);
+            }
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
     </style>
 </head>
 
@@ -2008,6 +2073,68 @@
 
                     <div class="card">
                         <div class="card-title">
+                            🏆 <span class="card-title-accent">Títulos y Colores del Ranking</span>
+                        </div>
+                        <div class="col" style="gap:10px">
+                            <div>
+                                <div class="label" style="margin-bottom:4px">Título Ranking Semanal</div>
+                                <div style="display:flex; gap:8px; align-items:center;">
+                                    <input id="tit-ranking-semanal" class="input" placeholder="RANKING SEMANAL"
+                                        value="RANKING SEMANAL" style="flex:1;">
+                                    <div style="display:flex; align-items:center; gap:6px; background:var(--surface2); padding:3px 8px; border-radius:8px; border:1px solid var(--border);" title="Color de las letras">
+                                        <input type="color" id="col-ranking-semanal" value="#ffffff"
+                                            style="width:28px; height:28px; border:none; cursor:pointer; border-radius:6px; padding:0; background:transparent"
+                                            oninput="document.getElementById('col-val-semanal').textContent = this.value.toUpperCase()">
+                                        <span id="col-val-semanal" style="font-size:11px; font-family:monospace; color:var(--muted); min-width:54px;">#FFFFFF</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div>
+                                <div class="label" style="margin-bottom:4px">Título Ranking Mensual</div>
+                                <div style="display:flex; gap:8px; align-items:center;">
+                                    <input id="tit-ranking-mensual" class="input" placeholder="RANKING MENSUAL"
+                                        value="RANKING MENSUAL" style="flex:1;">
+                                    <div style="display:flex; align-items:center; gap:6px; background:var(--surface2); padding:3px 8px; border-radius:8px; border:1px solid var(--border);" title="Color de las letras">
+                                        <input type="color" id="col-ranking-mensual" value="#ffffff"
+                                            style="width:28px; height:28px; border:none; cursor:pointer; border-radius:6px; padding:0; background:transparent"
+                                            oninput="document.getElementById('col-val-mensual').textContent = this.value.toUpperCase()">
+                                        <span id="col-val-mensual" style="font-size:11px; font-family:monospace; color:var(--muted); min-width:54px;">#FFFFFF</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div>
+                                <div class="label" style="margin-bottom:4px">Título Ranking Diario</div>
+                                <div style="display:flex; gap:8px; align-items:center;">
+                                    <input id="tit-ranking-diario" class="input" placeholder="RANKING DEL DÍA"
+                                        value="RANKING DEL DÍA" style="flex:1;">
+                                    <div style="display:flex; align-items:center; gap:6px; background:var(--surface2); padding:3px 8px; border-radius:8px; border:1px solid var(--border);" title="Color de las letras">
+                                        <input type="color" id="col-ranking-diario" value="#ffffff"
+                                            style="width:28px; height:28px; border:none; cursor:pointer; border-radius:6px; padding:0; background:transparent"
+                                            oninput="document.getElementById('col-val-diario').textContent = this.value.toUpperCase()">
+                                        <span id="col-val-diario" style="font-size:11px; font-family:monospace; color:var(--muted); min-width:54px;">#FFFFFF</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div>
+                                <div class="label" style="margin-bottom:4px">Título Ranking Revivir</div>
+                                <div style="display:flex; gap:8px; align-items:center;">
+                                    <input id="tit-ranking-revivir" class="input" placeholder="RANKING REVIVIR"
+                                        value="RANKING REVIVIR" style="flex:1;">
+                                    <div style="display:flex; align-items:center; gap:6px; background:var(--surface2); padding:3px 8px; border-radius:8px; border:1px solid var(--border);" title="Color de las letras">
+                                        <input type="color" id="col-ranking-revivir" value="#ffffff"
+                                            style="width:28px; height:28px; border:none; cursor:pointer; border-radius:6px; padding:0; background:transparent"
+                                            oninput="document.getElementById('col-val-revivir').textContent = this.value.toUpperCase()">
+                                        <span id="col-val-revivir" style="font-size:11px; font-family:monospace; color:var(--muted); min-width:54px;">#FFFFFF</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <button class="btn btn-primary btn-full" onclick="guardarTitulosRanking()">💾 Guardar
+                                Títulos y Colores</button>
+                        </div>
+                    </div>
+
+                    <div class="card">
+                        <div class="card-title">
                             🔄 <span class="card-title-accent">Reinicios</span>
                         </div>
                         <div class="col">
@@ -2364,6 +2491,50 @@
         <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
         <script src="/socket.io/socket.io.js"></script>
         <script>
+            function showToast(message, type = 'auto') {
+                let container = document.getElementById('toast-container');
+                if (!container) {
+                    container = document.createElement('div');
+                    container.id = 'toast-container';
+                    document.body.appendChild(container);
+                }
+
+                if (type === 'auto') {
+                    const msgLower = String(message).toLowerCase();
+                    if (msgLower.includes('error') || msgLower.includes('falló') || msgLower.includes('incorrecto') || msgLower.includes('❌') || msgLower.includes('⚠️')) {
+                        type = 'error';
+                    } else if (msgLower.includes('éxito') || msgLower.includes('guardado') || msgLower.includes('correctamente') || msgLower.includes('✅') || msgLower.includes('🏆')) {
+                        type = 'success';
+                    } else {
+                        type = 'info';
+                    }
+                }
+
+                const icon = type === 'success' ? '✅' : type === 'error' ? '❌' : type === 'warning' ? '⚠️' : 'ℹ️';
+
+                const toast = document.createElement('div');
+                toast.className = `toast-item toast-${type}`;
+
+                toast.innerHTML = `
+                    <div style="display:flex;align-items:center;gap:10px;flex:1">
+                        <span style="font-size:15px;line-height:1">${icon}</span>
+                        <span>${message}</span>
+                    </div>
+                    <span onclick="this.parentElement.classList.add('toast-hiding');setTimeout(()=>this.parentElement.remove(),300)" style="cursor:pointer;opacity:0.6;font-size:16px;line-height:1;margin-left:8px">&times;</span>
+                `;
+
+                container.appendChild(toast);
+
+                setTimeout(() => {
+                    toast.classList.add('toast-hiding');
+                    setTimeout(() => toast.remove(), 300);
+                }, 3500);
+            }
+
+            // Reemplazar alerts nativos del navegador por toasts modernos
+            window.alert = function (msg) {
+                showToast(msg);
+            };
 
             window.uiConfirm = function (msg, callback) {
                 Swal.fire({
@@ -4088,6 +4259,67 @@
 
                 cargarVistaUniversalActiva();
                 cargarVistaAcumuladosActiva();
+                cargarTitulosRanking();
+            }
+
+            async function cargarTitulosRanking() {
+                try {
+                    const res = await fetch('/api/ranking/titulos');
+                    if (res.ok) {
+                        const data = await res.json();
+                        if (data.semanal) document.getElementById('tit-ranking-semanal').value = data.semanal;
+                        if (data.mensual) document.getElementById('tit-ranking-mensual').value = data.mensual;
+                        if (data.diario) document.getElementById('tit-ranking-diario').value = data.diario;
+                        if (data.revivir) document.getElementById('tit-ranking-revivir').value = data.revivir;
+                        
+                        // En Cosmic el color por defecto es blanco (#ffffff)
+                        const colSem = (!data.color_semanal || data.color_semanal.toLowerCase() === '#ffee00') ? '#ffffff' : data.color_semanal;
+                        const colMen = (!data.color_mensual || data.color_mensual.toLowerCase() === '#ffee00') ? '#ffffff' : data.color_mensual;
+                        const colDia = (!data.color_diario  || data.color_diario.toLowerCase()  === '#ffee00') ? '#ffffff' : data.color_diario;
+                        const colRev = (!data.color_revivir || data.color_revivir.toLowerCase() === '#ffee00') ? '#ffffff' : data.color_revivir;
+
+                        document.getElementById('col-ranking-semanal').value = colSem;
+                        document.getElementById('col-val-semanal').textContent = colSem.toUpperCase();
+
+                        document.getElementById('col-ranking-mensual').value = colMen;
+                        document.getElementById('col-val-mensual').textContent = colMen.toUpperCase();
+
+                        document.getElementById('col-ranking-diario').value = colDia;
+                        document.getElementById('col-val-diario').textContent = colDia.toUpperCase();
+
+                        document.getElementById('col-ranking-revivir').value = colRev;
+                        document.getElementById('col-val-revivir').textContent = colRev.toUpperCase();
+                    }
+                } catch (e) {
+                    console.error('Error cargando títulos del ranking:', e);
+                }
+            }
+
+            async function guardarTitulosRanking() {
+                const semanal = document.getElementById('tit-ranking-semanal').value.trim();
+                const mensual = document.getElementById('tit-ranking-mensual').value.trim();
+                const diario = document.getElementById('tit-ranking-diario').value.trim();
+                const revivir = document.getElementById('tit-ranking-revivir').value.trim();
+                const color_semanal = document.getElementById('col-ranking-semanal').value;
+                const color_mensual = document.getElementById('col-ranking-mensual').value;
+                const color_diario = document.getElementById('col-ranking-diario').value;
+                const color_revivir = document.getElementById('col-ranking-revivir').value;
+
+                try {
+                    const res = await fetch('/api/ranking/titulos', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ semanal, mensual, diario, revivir, color_semanal, color_mensual, color_diario, color_revivir })
+                    });
+                    if (res.ok) {
+                        showToast('✅ Títulos y colores del ranking guardados con éxito', 'success');
+                    } else {
+                        showToast('⚠️ Error al guardar títulos', 'error');
+                    }
+                } catch (e) {
+                    console.error('Error guardando títulos del ranking:', e);
+                    showToast('⚠️ Error de conexión al guardar títulos', 'error');
+                }
             }
 
             function getAgencySlug() {
