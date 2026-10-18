@@ -3,6 +3,7 @@ const path = require('path');
 const crypto = require('crypto');
 
 const { reconstruirQueens, reconstruirEquipos, resolverNombre } = require('../config/sessionStore');
+const { verificarResetParaSesion } = require('../services/rankingResetService');
 
 function procesarAvatarBase64(base64Str) {
     if (!base64Str || !base64Str.startsWith('data:image')) return base64Str;
@@ -112,15 +113,22 @@ function setupQueensRoutes(app, io, requireSession) {
         res.json({ activo: nuevoEstado });
     });
 
-    app.get('/api/ranking', requireSession, (req, res) => {
+    app.get('/api/ranking', requireSession, async (req, res) => {
         const s = req.userSession;
+        try { await verificarResetParaSesion(s, req.username, io); } catch(e) {}
         if (s.timerBaile && s.timerBaile.activo && s.timerBaile.modoTorneo) {
             return res.json(s.timerBaile.puntosTorneo);
         }
         res.json(s.db.getRanking());
     });
-    app.get('/api/ranking-mensual', requireSession, (req, res) => res.json(req.userSession.db.getRankingMensual()));
-    app.get('/api/ranking-diario', requireSession, (req, res) => res.json(req.userSession.db.getRankingDiario()));
+    app.get('/api/ranking-mensual', requireSession, async (req, res) => {
+        try { await verificarResetParaSesion(req.userSession, req.username, io); } catch(e) {}
+        res.json(req.userSession.db.getRankingMensual());
+    });
+    app.get('/api/ranking-diario', requireSession, async (req, res) => {
+        try { await verificarResetParaSesion(req.userSession, req.username, io); } catch(e) {}
+        res.json(req.userSession.db.getRankingDiario());
+    });
     app.get('/api/ranking/titulos', requireSession, (req, res) => res.json(req.userSession.db.getRankingTitulos()));
     app.all('/api/ranking/titulos/set', requireSession, async (req, res) => {
         const s = req.userSession;

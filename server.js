@@ -40,6 +40,7 @@ const setupAgencyRoutes        = require('./src/routes/agencyRoutes');
 const setupAnalyticsRoutes     = require('./src/routes/analyticsRoutes');
 const { setupSystemRoutes, cleanupAllSessions } = require('./src/routes/systemRoutes');
 const { agencyMiddleware } = require('./src/middlewares/agencyMiddleware');
+const rankingResetService      = require('./src/services/rankingResetService');
 
 // ── Express + HTTP + Socket.IO ───────────────────────────────────
 const app = express();
@@ -547,6 +548,7 @@ process.on('SIGTERM', () => { cleanupAllSessions(activeSessions); process.exit(0
 (async () => {
     try {
         await MasterDB.initMasterDB();
+        rankingResetService.iniciarScheduler(io, activeSessions);
         const PORT = process.env.PORT || 3000;
         server.listen(PORT, '0.0.0.0', () => console.log(`🚀 TikDance Server activo en puerto ${PORT}`));
     } catch (err) {

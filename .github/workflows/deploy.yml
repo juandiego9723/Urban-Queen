@@ -48,7 +48,7 @@ jobs:
             --session-affinity \
             --min-instances 0 \
             --max-instances 1 \
-            --set-env-vars DATABASE_URL="${{ secrets.DATABASE_URL }}",NODE_ENV="production",SIGN_API_KEY="${{ secrets.SIGN_API_KEY }}",COSMIC_SIGN_API_KEY="${{ secrets.COSMIC_SIGN_API_KEY }}"
+            --set-env-vars DATABASE_URL="${{ secrets.DATABASE_URL }}",NODE_ENV="production",SIGN_API_KEY="${{ secrets.SIGN_API_KEY }}",COSMIC_SIGN_API_KEY="${{ secrets.COSMIC_SIGN_API_KEY }}",TIMEZONE="America/Bogota"
 
   deploy-frontend:
     name: 🌐 Deploy Frontend to Firebase Hosting

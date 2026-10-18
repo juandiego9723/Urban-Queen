@@ -13,6 +13,7 @@ WORKDIR /app
 
 ENV NODE_ENV=production
 ENV PORT=8080
+ENV TIMEZONE=America/Bogota
 
 # Crear usuario no privilegiado para seguridad
 RUN addgroup -g 1001 -S nodejs && \

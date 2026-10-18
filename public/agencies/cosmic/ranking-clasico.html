@@ -499,6 +499,11 @@
             reordenarTabla();
         });
 
+        socket.on('resetSemanal', () => {
+            QUEENS.forEach(q => dataSemanal[q] = 0);
+            reordenarTabla();
+        });
+
         socket.on('resetMensual', () => {
             QUEENS.forEach(q => dataMensual[q] = 0);
             reordenarTabla();

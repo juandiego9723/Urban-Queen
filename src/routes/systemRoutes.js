@@ -1,6 +1,8 @@
 const path = require('path');
 const fs = require('fs');
 const crypto = require('crypto');
+const { query } = require('../config/dbPool');
+const { ejecutarResetManual, getTimezone } = require('../services/rankingResetService');
 
 function setupSystemRoutes(app, io, requireSession, activeSessions) {
     // Regalos detectados sin asignar
@@ -196,44 +198,30 @@ function setupSystemRoutes(app, io, requireSession, activeSessions) {
     });
 
     // Resets
-    app.all('/reset-semanal', requireSession, (req, res) => {
-        req.userSession.db.resetSemanal();
-        io.to(req.username).emit('resetRanking');
+    app.all('/reset-semanal', requireSession, async (req, res) => {
+        await ejecutarResetManual(req.userSession, req.username, io, 'semanal');
         res.send("OK");
     });
 
-    app.all('/reset-diario', requireSession, (req, res) => {
-        req.userSession.db.resetDiario();
-        io.to(req.username).emit('resetDiario');
+    app.all('/reset-diario', requireSession, async (req, res) => {
+        await ejecutarResetManual(req.userSession, req.username, io, 'diario');
         res.send("OK");
     });
 
-    app.all('/reset-mensual', requireSession, (req, res) => {
-        req.userSession.db.resetMensual();
-        io.to(req.username).emit('resetMensual');
+    app.all('/reset-mensual', requireSession, async (req, res) => {
+        await ejecutarResetManual(req.userSession, req.username, io, 'mensual');
         res.send("OK");
     });
 
-    app.all('/copa/reset', requireSession, (req, res) => {
+    app.all('/copa/reset', requireSession, async (req, res) => {
         const s = req.userSession;
-        s.db.resetCopa();
+        await s.db.resetCopa();
         io.to(req.username).emit('actualizarCopa', s.db.getCopa());
         res.send("OK");
     });
 
-    app.all('/reset-total', requireSession, (req, res) => {
-        const s = req.userSession;
-        const user = req.username;
-        s.db.resetSemanal();
-        s.db.resetMensual();
-        s.db.resetDiario();
-        s.db.resetCopa();
-        s.db.resetVictorias();
-        s.QUEENS.forEach(q => { s.rachasPerdidas[q] = 0; s.amarillasAcumuladas[q] = 0; });
-        io.to(user).emit('resetRanking');
-        io.to(user).emit('resetMensual');
-        io.to(user).emit('resetDiario');
-        io.to(user).emit('actualizarCopa', s.db.getCopa());
+    app.all('/reset-total', requireSession, async (req, res) => {
+        await ejecutarResetManual(req.userSession, req.username, io, 'total');
         res.send("OK");
     });
 
@@ -244,51 +232,64 @@ function setupSystemRoutes(app, io, requireSession, activeSessions) {
     });
 
     // Restaurar rankings desde el historial
-    app.get('/api/rankings/restore', requireSession, (req, res) => {
+    app.get('/api/rankings/restore', requireSession, async (req, res) => {
         try {
             const db = req.userSession.db;
-            const now = new Date();
-            const diaStr = now.toLocaleDateString('sv');
-            const mesStr = diaStr.substring(0, 7) + '-01';
+            const uId = await db.ensureUserId();
+            if (!uId) return res.status(400).send('Usuario no identificado');
 
-            const currentDay = now.getDay();
-            const distance = currentDay === 0 ? -6 : 1 - currentDay;
-            const monday = new Date(now);
-            monday.setDate(now.getDate() + distance);
-            const lunesStr = monday.toLocaleDateString('sv');
+            const tz = getTimezone();
 
-            db.runSql('UPDATE queens SET ranking_diario = 0, ranking_semanal = 0, ranking_mensual = 0');
+            // 1. Resetear contadores de ranking en DB
+            await query('UPDATE queens SET ranking_diario = 0, ranking_semanal = 0, ranking_mensual = 0 WHERE user_id = $1', [uId]);
 
-            const diarios = db.queryAll(`
-                SELECT queen_name, COALESCE(SUM(diamonds), 0) as total 
-                FROM historial_regalos 
-                WHERE date(timestamp) >= date(?)
-                GROUP BY queen_name
-            `, [diaStr]);
-            diarios.forEach(d => {
-                db.runSql('UPDATE queens SET ranking_diario = ? WHERE name = ?', [d.total, d.queen_name]);
-            });
+            // 2. Calcular acumulados diarios (hoy en zona horaria local)
+            const diariosRes = await query(`
+                SELECT q.name as queen_name, COALESCE(SUM(h.diamonds), 0)::int as total 
+                FROM historial_regalos h 
+                JOIN queens q ON h.queen_id = q.id 
+                WHERE h.user_id = $1 AND (h.timestamp AT TIME ZONE $2)::date >= (CURRENT_TIMESTAMP AT TIME ZONE $2)::date
+                GROUP BY q.name
+            `, [uId, tz]);
+            const diarios = diariosRes.rows || [];
+            for (const d of diarios) {
+                await query('UPDATE queens SET ranking_diario = $1 WHERE user_id = $2 AND LOWER(name) = LOWER($3)', [d.total, uId, d.queen_name]);
+            }
 
-            const semanales = db.queryAll(`
-                SELECT queen_name, COALESCE(SUM(diamonds), 0) as total 
-                FROM historial_regalos 
-                WHERE date(timestamp) >= date(?)
-                GROUP BY queen_name
-            `, [lunesStr]);
-            semanales.forEach(s => {
-                db.runSql('UPDATE queens SET ranking_semanal = ? WHERE name = ?', [s.total, s.queen_name]);
-            });
+            // 3. Calcular acumulados semanales (desde lunes en zona horaria local)
+            const semanalesRes = await query(`
+                SELECT q.name as queen_name, COALESCE(SUM(h.diamonds), 0)::int as total 
+                FROM historial_regalos h 
+                JOIN queens q ON h.queen_id = q.id 
+                WHERE h.user_id = $1 AND (h.timestamp AT TIME ZONE $2)::date >= DATE_TRUNC('week', CURRENT_TIMESTAMP AT TIME ZONE $2)::date
+                GROUP BY q.name
+            `, [uId, tz]);
+            const semanales = semanalesRes.rows || [];
+            for (const s of semanales) {
+                await query('UPDATE queens SET ranking_semanal = $1 WHERE user_id = $2 AND LOWER(name) = LOWER($3)', [s.total, uId, s.queen_name]);
+            }
 
-            const mensuales = db.queryAll(`
-                SELECT queen_name, COALESCE(SUM(diamonds), 0) as total 
-                FROM historial_regalos 
-                WHERE date(timestamp) >= date(?)
-                GROUP BY queen_name
-            `, [mesStr]);
-            mensuales.forEach(m => {
-                db.runSql('UPDATE queens SET ranking_mensual = ? WHERE name = ?', [m.total, m.queen_name]);
-            });
+            // 4. Calcular acumulados mensuales (desde día 1 en zona horaria local)
+            const mensualesRes = await query(`
+                SELECT q.name as queen_name, COALESCE(SUM(h.diamonds), 0)::int as total 
+                FROM historial_regalos h 
+                JOIN queens q ON h.queen_id = q.id 
+                WHERE h.user_id = $1 AND (h.timestamp AT TIME ZONE $2)::date >= DATE_TRUNC('month', CURRENT_TIMESTAMP AT TIME ZONE $2)::date
+                GROUP BY q.name
+            `, [uId, tz]);
+            const mensuales = mensualesRes.rows || [];
+            for (const m of mensuales) {
+                await query('UPDATE queens SET ranking_mensual = $1 WHERE user_id = $2 AND LOWER(name) = LOWER($3)', [m.total, uId, m.queen_name]);
+            }
 
+            // 5. Recargar la memoria cache y notificar por Socket.IO
+            await db.cargarCache();
+
+            io.to(req.username).emit('resetRanking');
+            io.to(req.username).emit('resetSemanal');
+            io.to(req.username).emit('resetMensual');
+            io.to(req.username).emit('resetDiario');
+            io.to(req.username).emit('rankingActualizado');
             io.to(req.username).emit('queensActualizadas', {
                 queens: req.userSession.QUEENS,
                 equipos: req.userSession.equipos,
@@ -299,15 +300,14 @@ function setupSystemRoutes(app, io, requireSession, activeSessions) {
                 status: 'OK',
                 mensaje: 'Rankings restaurados con éxito a partir del historial de regalos.',
                 detalles: {
-                    diaInicio: diaStr,
-                    semanaInicio: lunesStr,
-                    mesInicio: mesStr,
+                    timezone: tz,
                     diariosRestaurados: diarios,
                     semanalesRestaurados: semanales,
                     mensualesRestaurados: mensuales
                 }
             });
         } catch (e) {
+            console.error('Error en /api/rankings/restore:', e);
             res.status(500).send(e.message);
         }
     });
