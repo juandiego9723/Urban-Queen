@@ -88,6 +88,8 @@
         // ══════════════════════════════════════════════════════════════
         socket.on('batallaInicio', function(d) { forwardToIframe('batallaInicio', d); });
         socket.on('batallaTick', function(d) { forwardToIframe('batallaTick', d); });
+        socket.on('batalla2XTick', function(d) { forwardToIframe('batalla2XTick', d); });
+        socket.on('batalla2XFin', function(d) { forwardToIframe('batalla2XFin', d); });
         socket.on('batallaPuntos', function(d) { forwardToIframe('batallaPuntos', d); });
         socket.on('batallaFin', function(d) { forwardToIframe('batallaFin', d); });
         socket.on('batallaCancelada', function(d) { forwardToIframe('batallaCancelada', d); });
