@@ -61,6 +61,8 @@ async function getUserSessionAsync(username, io, procesarPuntosFn) {
             tiempoBatalla: 0,
             puntosBatalla: {},
             participantesActuales: [...initialQueens],
+            batalla2X: false,
+            batalla2XTiempo: 0,
             timerBatalla: null,
             timerBaile: { 
                 activo: false, 
@@ -148,6 +150,8 @@ function getUserSession(username, io, procesarPuntosFn) {
             tiempoBatalla: 0,
             puntosBatalla: {},
             participantesActuales: [],
+            batalla2X: false,
+            batalla2XTiempo: 0,
             timerBatalla: null,
             timerBaile: { 
                 activo: false, tiempo: 0, chicaActual: '', orden: [], 

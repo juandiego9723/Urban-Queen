@@ -1134,6 +1134,7 @@
             <div class="topbar-links">
                 <a class="topbar-link" href="/" target="_blank">🏆 Ranking</a>
                 <a class="topbar-link" href="/batalla" target="_blank">⚔️ Batalla</a>
+                <a class="topbar-link" href="/batalla-vs" target="_blank">⚔️ Batalla VS</a>
                 <a class="topbar-link" href="/batalla-futbol" target="_blank">⚽ Clásico</a>
                 <a class="topbar-link" href="/revivir" target="_blank">❤️ Revivir</a>
                 <a class="topbar-link" href="/timer" target="_blank">💃 Timer & Regalos</a>
@@ -1147,6 +1148,44 @@
             <div class="main">
                 <!-- ══ BATALLAS ══ -->
                 <div id="tab-batallas" class="tab-content active">
+                    <!-- ══ BATALLA VS (1 VS 1) ══ -->
+                    <div class="card">
+                        <div class="card-title">
+                            ⚔️ <span class="card-title-accent">Batalla VS (1 vs 1)</span>
+                        </div>
+                        <div class="col">
+                            <div class="row-2">
+                                <div>
+                                    <div class="label" style="margin-bottom:6px">Bailarina 1 (Izquierda)</div>
+                                    <select id="vsBailarina1" class="select"></select>
+                                </div>
+                                <div>
+                                    <div class="label" style="margin-bottom:6px">Bailarina 2 (Derecha)</div>
+                                    <select id="vsBailarina2" class="select"></select>
+                                </div>
+                            </div>
+                            <div class="row-2">
+                                <div>
+                                    <div class="label" style="margin-bottom:6px">Duración</div>
+                                    <select id="tiempoBatallaVS" class="select">
+                                        <option value="1">1 minuto</option>
+                                        <option value="2">2 minutos</option>
+                                        <option value="3" selected>3 minutos</option>
+                                        <option value="5">5 minutos</option>
+                                    </select>
+                                </div>
+                                <div style="display:flex;align-items:flex-end">
+                                    <button class="btn btn-warning btn-full" onclick="iniciarBatallaVS()">▶ Iniciar</button>
+                                </div>
+                            </div>
+                            <div class="row-2">
+                                <button class="btn btn-danger" onclick="hacerFetch('/batalla/stop')">⏹ Cancelar</button>
+                                <button class="btn btn-ghost" onclick="hacerFetch('/batalla/reset-wins')">👑 Reset victorias</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- ══ MODO BATALLA GENERAL ══ -->
                     <div class="card">
                         <div class="card-title">
                             ⚔️ <span class="card-title-accent">Modo Batalla</span>
@@ -1167,14 +1206,12 @@
                                     </select>
                                 </div>
                                 <div style="display:flex;align-items:flex-end">
-                                    <button class="btn btn-warning btn-full" onclick="iniciarBatalla()">▶
-                                        Iniciar</button>
+                                    <button class="btn btn-warning btn-full" onclick="iniciarBatalla()">▶ Iniciar</button>
                                 </div>
                             </div>
                             <div class="row-2">
                                 <button class="btn btn-danger" onclick="hacerFetch('/batalla/stop')">⏹ Cancelar</button>
-                                <button class="btn btn-ghost" onclick="hacerFetch('/batalla/reset-wins')">👑 Reset
-                                    victorias</button>
+                                <button class="btn btn-ghost" onclick="hacerFetch('/batalla/reset-wins')">👑 Reset victorias</button>
                             </div>
                         </div>
                     </div>
@@ -1950,6 +1987,10 @@
                                     id="btn-view-batalla"
                                     style="transition: all 0.3s ease; text-align: left; padding: 12px 16px;">⚔️ Batalla
                                     Normal</button>
+                                <button class="btn btn-primary" onclick="cambiarVistaUniversal('/batalla-vs')"
+                                    id="btn-view-batalla-vs"
+                                    style="transition: all 0.3s ease; text-align: left; padding: 12px 16px;">⚔️ Batalla
+                                    VS (TikTok LIVE)</button>
                                 <button class="btn btn-primary" onclick="cambiarVistaUniversal('/revivir')"
                                     id="btn-view-revivir"
                                     style="transition: all 0.3s ease; text-align: left; padding: 12px 16px;">❤️ Dinámica
@@ -2730,6 +2771,7 @@
             const PAGES = [
                 { emoji: '🏆', nombre: 'Ranking', url: '/', desc: 'Clasificación semanal y mensual. Pón esto en OBS como fuente de navegador.' },
                 { emoji: '⚔️', nombre: 'Batalla Normal', url: '/batalla', desc: 'Modo batalla con barra de puntos, timer y ganadora. Hasta 4 bailarinas.' },
+                { emoji: '⚔️', nombre: 'Batalla VS (TikTok LIVE)', url: '/batalla-vs', desc: 'Modo Batalla 1vs1 estilo oficial de TikTok con avatares circulares, activadores, 2X puntos, victorias y top 3 donadores.' },
                 { emoji: '⚽', nombre: 'El Clásico', url: '/batalla-futbol', desc: 'Modo fútbol con equipos, tarjetas amarilla/roja y goles.' },
                 { emoji: '❤️', nombre: 'Dinámica Revivir', url: '/revivir', desc: 'Dinámica de eliminación y revivir por meta de puntos.' },
                 { emoji: '💃', nombre: 'Timer & Salta Turno', url: '/timer', desc: 'Overlay unificado: Turno automático entre bailarinas con lista de regalos para saltar turno y extensión de tiempo.' },
@@ -4812,6 +4854,7 @@
             function actualizarBotonVistaActiva(vista) {
                 const ids = {
                     '/batalla': 'btn-view-batalla',
+                    '/batalla-vs': 'btn-view-batalla-vs',
                     '/batalla-pk': 'btn-view-batalla-pk',
                     '/batalla-futbol': 'btn-view-batalla-futbol',
                     '/timer': 'btn-view-timer',
@@ -4937,7 +4980,59 @@
             }
 
             // ── Batalla ──
+            function renderVSSelects() {
+                const sel1 = document.getElementById('vsBailarina1');
+                const sel2 = document.getElementById('vsBailarina2');
+                if (!sel1 || !sel2 || !QUEENS || QUEENS.length === 0) return;
+
+                const val1 = sel1.value;
+                const val2 = sel2.value;
+
+                sel1.innerHTML = '';
+                sel2.innerHTML = '';
+
+                QUEENS.forEach((q) => {
+                    const apodo = (APODOS && APODOS[q]) ? ` (${APODOS[q]})` : '';
+                    sel1.innerHTML += `<option value="${q}">${q}${apodo}</option>`;
+                    sel2.innerHTML += `<option value="${q}">${q}${apodo}</option>`;
+                });
+
+                if (val1 && QUEENS.includes(val1)) {
+                    sel1.value = val1;
+                } else if (QUEENS[0]) {
+                    sel1.value = QUEENS[0];
+                }
+
+                if (val2 && QUEENS.includes(val2)) {
+                    sel2.value = val2;
+                } else if (QUEENS[1]) {
+                    sel2.value = QUEENS[1];
+                } else if (QUEENS[0]) {
+                    sel2.value = QUEENS[0];
+                }
+            }
+
+            function iniciarBatallaVS() {
+                const sel1 = document.getElementById('vsBailarina1');
+                const sel2 = document.getElementById('vsBailarina2');
+                if (!sel1 || !sel2) return;
+                const b1 = sel1.value;
+                const b2 = sel2.value;
+                if (!b1 || !b2) {
+                    alert('⚠️ Por favor selecciona ambas bailarinas para el VS.');
+                    return;
+                }
+                if (b1 === b2) {
+                    alert('⚠️ Debes seleccionar dos bailarinas diferentes para la Batalla VS.');
+                    return;
+                }
+                const m = document.getElementById('tiempoBatallaVS').value || 3;
+                cambiarVistaUniversal('/batalla-vs');
+                hacerFetch('/batalla/start?m=' + m + '&p=' + encodeURIComponent(b1 + ',' + b2));
+            }
+
             function renderBatallaOptions() {
+                renderVSSelects();
                 const sel = document.getElementById('participantesBatalla');
                 if (!sel || QUEENS.length < 2) return; sel.innerHTML = `<option value="${QUEENS.join(',')}">🛡 Todas (${QUEENS.length})</option>`;
                 if (QUEENS.length > 2) QUEENS.forEach(q => {

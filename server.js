@@ -290,6 +290,7 @@ app.get('/ranking-clasico',(req, res) => res.sendFile(pub('ranking-clasico.html'
 app.get('/batalla',       (req, res) => res.sendFile(pub('batalla.html')));
 app.get('/batalla-futbol',(req, res) => res.sendFile(pub('batalla-futbol.html')));
 app.get('/batalla-pk',    (req, res) => res.sendFile(pub('batalla-pk.html')));
+app.get('/batalla-vs',    (req, res) => res.sendFile(pub('batalla-vs.html')));
 app.get('/timer',         (req, res) => res.sendFile(pub('timer.html')));
 app.get('/conociendo',    (req, res) => res.sendFile(pub('conociendo.html')));
 app.get('/ranking-conociendo', (req, res) => {
@@ -430,7 +431,9 @@ io.on('connection', (socket) => {
                 puntos: session.puntosBatalla,
                 victorias,
                 equipos: session.equipos,
-                participantes: session.participantesActuales
+                participantes: session.participantesActuales,
+                batalla2X: session.batalla2X || false,
+                batalla2XTiempo: session.batalla2XTiempo || 0
             });
         }
         socket.emit('tiktokEstado', { estado: session.tiktokEstado, usuario: session.tiktokUsuario });

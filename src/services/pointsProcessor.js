@@ -432,7 +432,8 @@ function createPointsProcessor(io, activeSessions, resolverNombreFn, timerHandle
             if (item.nombre) {
                 sumas[item.nombre] = (sumas[item.nombre] || 0) + item.puntos;
                 if (session.estadoBatalla === 'activa' && session.participantesActuales.includes(item.nombre)) {
-                    pointsBatallaDelta[item.nombre] = (pointsBatallaDelta[item.nombre] || 0) + item.puntos;
+                    const multBatalla = (session.batalla2X ? 2 : 1);
+                    pointsBatallaDelta[item.nombre] = (pointsBatallaDelta[item.nombre] || 0) + (item.puntos * multBatalla);
                 }
                 if (session.dinamicaActiva && session.dinamicaActiva.participantes.includes(item.nombre) && !session.eliminadosDinamica.includes(item.nombre)) {
                     pointsDinamicaDelta[item.nombre] = (pointsDinamicaDelta[item.nombre] || 0) + item.puntos;

@@ -1,0 +1,1231 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="referrer" content="no-referrer">
+    <title>Batalla VS TikTok LIVE — TikDance</title>
+
+    <!-- Inyección de multi-cuenta -->
+    <script>
+        (function () {
+            const urlParams = new URLSearchParams(window.location.search);
+            const user = urlParams.get('user');
+            if (user) {
+                const originalFetch = window.fetch;
+                window.fetch = function (url, options) {
+                    if (typeof url === 'string' && !url.includes('user=')) {
+                        const sep = url.includes('?') ? '&' : '?';
+                        url = url + sep + 'user=' + encodeURIComponent(user);
+                    }
+                    return originalFetch(url, options);
+                };
+                const originalIo = window.io;
+                if (originalIo) {
+                    window.io = function (opts) {
+                        opts = opts || {};
+                        opts.query = opts.query || {};
+                        opts.query.user = user;
+                        return originalIo(opts);
+                    };
+                } else {
+                    let _io = undefined;
+                    Object.defineProperty(window, 'io', {
+                        get: function () { return _io; },
+                        set: function (val) {
+                            _io = function (opts) {
+                                opts = opts || {};
+                                opts.query = opts.query || {};
+                                opts.query.user = user;
+                                return val(opts);
+                            };
+                        },
+                        configurable: true
+                    });
+                }
+            }
+        })();
+    </script>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@600;700;800;900&family=Lilita+One&family=Outfit:wght@700;800;900&display=swap" rel="stylesheet">
+
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            background: transparent;
+            font-family: 'Inter', sans-serif;
+            overflow: hidden;
+            width: 100vw;
+            height: 100vh;
+            position: relative;
+            color: #fff;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        /* ── CONTENEDOR PRINCIPAL DEL HUD VS ── */
+        #pk-hud-wrap {
+            position: absolute;
+            top: 40px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 95%;
+            max-width: 960px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            z-index: 20;
+            user-select: none;
+        }
+
+        /* ── RELOJ DIGITAL SUPERIOR ── */
+        .battle-timer-wrap {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 4px;
+            position: relative;
+            z-index: 10;
+        }
+
+        .battle-timer {
+            font-family: 'Outfit', 'Inter', sans-serif;
+            font-size: 52px;
+            font-weight: 900;
+            letter-spacing: 2px;
+            color: #ffffff;
+            text-shadow: 
+                0 0 10px rgba(255, 215, 0, 0.9),
+                0 0 25px rgba(255, 180, 0, 0.7),
+                0 0 45px rgba(255, 140, 0, 0.5),
+                2px 3px 6px rgba(0, 0, 0, 0.9);
+            line-height: 1;
+            transition: all 0.3s ease;
+        }
+
+        .battle-timer.urgente {
+            color: #ff3b30;
+            text-shadow: 
+                0 0 12px rgba(255, 59, 48, 0.9),
+                0 0 30px rgba(255, 0, 0, 0.8),
+                0 0 50px rgba(200, 0, 0, 0.6),
+                2px 3px 6px rgba(0, 0, 0, 0.9);
+            animation: timer-pulse 0.6s infinite alternate ease-in-out;
+        }
+
+        @keyframes timer-pulse {
+            0% { transform: scale(1); }
+            100% { transform: scale(1.1); }
+        }
+
+        /* ── FILA CENTRAL (AVATARES + BARRA TUG-OF-WAR) ── */
+        .battle-stage-row {
+            width: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            position: relative;
+        }
+
+        /* ── ESTRUCTURA DE CADA JUGADORA ── */
+        .competitor-block {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            position: relative;
+            z-index: 15;
+            width: 170px;
+        }
+
+        /* Wrapper del círculo con reborde neón */
+        .avatar-circle-wrap {
+            position: relative;
+            width: 150px;
+            height: 150px;
+            border-radius: 50%;
+            padding: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        /* Lado Izquierdo (Púrpura / Magenta) */
+        .competitor-block.left .avatar-circle-wrap {
+            background: linear-gradient(135deg, #d946ef, #8b5cf6);
+            box-shadow: 
+                0 0 20px rgba(217, 70, 239, 0.85),
+                0 0 40px rgba(139, 92, 246, 0.5),
+                inset 0 0 15px rgba(255, 255, 255, 0.6);
+            border: 4px solid #f0abfc;
+        }
+
+        /* Lado Derecho (Dorado / Amarillo) */
+        .competitor-block.right .avatar-circle-wrap {
+            background: linear-gradient(135deg, #fbbf24, #f59e0b);
+            box-shadow: 
+                0 0 20px rgba(251, 191, 36, 0.85),
+                0 0 40px rgba(245, 158, 11, 0.5),
+                inset 0 0 15px rgba(255, 255, 255, 0.6);
+            border: 4px solid #fef08a;
+        }
+
+        /* Foto de la Bailarina */
+        .avatar-img-container {
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            overflow: hidden;
+            background: #111;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+        }
+
+        .avatar-photo {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            border-radius: 50%;
+            display: block;
+        }
+
+        .avatar-initials {
+            font-size: 52px;
+            font-weight: 900;
+            color: #fff;
+            text-transform: uppercase;
+            text-shadow: 0 2px 8px rgba(0,0,0,0.8);
+        }
+
+        /* Nombre de la bailarina sobre la foto o sutil */
+        .competitor-name-tag {
+            position: absolute;
+            bottom: 2px;
+            background: rgba(0, 0, 0, 0.75);
+            backdrop-filter: blur(4px);
+            padding: 2px 10px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 800;
+            letter-spacing: 0.5px;
+            text-transform: uppercase;
+            max-width: 90%;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            z-index: 5;
+        }
+
+        /* ── ÍCONO DE REGALO ACTIVADOR (ARRIBA DEL CÍRCULO) ── */
+        .activator-gift-badge {
+            position: absolute;
+            top: -26px;
+            width: 58px;
+            height: 58px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 25;
+            filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.6)) drop-shadow(0 0 12px rgba(255, 255, 255, 0.7));
+            transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        .competitor-block.left .activator-gift-badge {
+            left: 2px;
+        }
+
+        .competitor-block.right .activator-gift-badge {
+            right: 2px;
+        }
+
+        .activator-gift-badge img {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+        }
+
+        .activator-gift-badge.bounce {
+            animation: gift-pop 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        @keyframes gift-pop {
+            0% { transform: scale(1) rotate(0deg); }
+            40% { transform: scale(1.35) rotate(-10deg); }
+            70% { transform: scale(0.9) rotate(5deg); }
+            100% { transform: scale(1) rotate(0deg); }
+        }
+
+        /* ── BADGE WIN XN (ANCLADO AL BORDE INFERIOR DEL CÍRCULO) ── */
+        .win-badge {
+            position: absolute;
+            bottom: -12px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: linear-gradient(135deg, #ffd700 0%, #ff9900 100%);
+            color: #000;
+            font-family: 'Outfit', sans-serif;
+            font-size: 13px;
+            font-weight: 900;
+            padding: 3px 14px;
+            border-radius: 20px;
+            box-shadow: 
+                0 3px 8px rgba(0, 0, 0, 0.6),
+                0 0 12px rgba(255, 215, 0, 0.6),
+                inset 0 1px 1px rgba(255, 255, 255, 0.9);
+            border: 1.5px solid #fff;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            z-index: 30;
+            white-space: nowrap;
+        }
+
+        /* ── BONUS 2X PUNTOS (SPEED CHALLENGE) ── */
+        .bonus-2x-card {
+            margin-top: 26px;
+            background: linear-gradient(135deg, #f59e0b 0%, #d97706 50%, #b45309 100%);
+            border: 2px solid #fde68a;
+            box-shadow: 
+                0 4px 14px rgba(0, 0, 0, 0.5),
+                0 0 18px rgba(245, 158, 11, 0.6),
+                inset 0 1px 2px rgba(255, 255, 255, 0.8);
+            border-radius: 14px;
+            padding: 6px 14px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: all 0.4s ease;
+            position: relative;
+            overflow: hidden;
+            z-index: 10;
+        }
+
+        .bonus-2x-card.hidden {
+            opacity: 0;
+            transform: scale(0.7) translateY(-10px);
+            pointer-events: none;
+            visibility: hidden;
+        }
+
+        .bonus-2x-badge {
+            font-family: 'Outfit', sans-serif;
+            font-size: 26px;
+            font-weight: 900;
+            color: #ffffff;
+            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.7);
+            line-height: 1;
+        }
+
+        .bonus-2x-details {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+            justify-content: center;
+        }
+
+        .bonus-2x-title {
+            font-size: 10px;
+            font-weight: 900;
+            letter-spacing: 0.8px;
+            color: #fef3c7;
+            text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8);
+            line-height: 1;
+            margin-bottom: 2px;
+        }
+
+        .bonus-2x-timer {
+            font-family: 'Outfit', sans-serif;
+            font-size: 15px;
+            font-weight: 900;
+            color: #ffffff;
+            text-shadow: 0 1px 3px rgba(0, 0, 0, 0.9);
+            line-height: 1;
+        }
+
+        /* ── BARRA TUG-OF-WAR CENTRAL ── */
+        .pk-bar-container {
+            flex: 1;
+            position: relative;
+            margin: 0 -22px; /* Superposición sutil con los avatares como en TikTok */
+            height: 48px;
+            display: flex;
+            align-items: center;
+            z-index: 10;
+        }
+
+        .pk-bar-track {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            border-radius: 24px;
+            overflow: hidden;
+            box-shadow: 
+                0 6px 20px rgba(0, 0, 0, 0.7),
+                inset 0 2px 4px rgba(255, 255, 255, 0.25),
+                inset 0 -2px 4px rgba(0, 0, 0, 0.4);
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            background: #181820;
+            position: relative;
+        }
+
+        /* Lado Izquierdo Barra (Púrpura) */
+        .pk-bar-fill-left {
+            width: 50%;
+            height: 100%;
+            background: linear-gradient(90deg, #7c3aed 0%, #a855f7 70%, #c084fc 100%);
+            display: flex;
+            align-items: center;
+            justify-content: flex-start;
+            padding-left: 38px;
+            transition: width 0.45s cubic-bezier(0.25, 1, 0.5, 1);
+            position: relative;
+        }
+
+        /* Lado Derecho Barra (Dorado) */
+        .pk-bar-fill-right {
+            width: 50%;
+            height: 100%;
+            background: linear-gradient(90deg, #fde047 0%, #eab308 30%, #ca8a04 100%);
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+            padding-right: 38px;
+            transition: width 0.45s cubic-bezier(0.25, 1, 0.5, 1);
+            position: relative;
+        }
+
+        /* Números de Puntos */
+        .pk-score-text {
+            font-family: 'Outfit', 'Inter', sans-serif;
+            font-size: 34px;
+            font-weight: 900;
+            color: #ffffff;
+            text-shadow: 
+                0 2px 6px rgba(0, 0, 0, 0.8),
+                0 0 10px rgba(0, 0, 0, 0.5);
+            letter-spacing: 1px;
+            line-height: 1;
+            z-index: 5;
+            white-space: nowrap;
+        }
+
+        /* Badge Central VS */
+        .vs-badge-center {
+            position: absolute;
+            top: 50%;
+            transform: translate(-50%, -50%);
+            background: #111116;
+            color: #ffffff;
+            font-family: 'Outfit', sans-serif;
+            font-size: 16px;
+            font-weight: 900;
+            padding: 4px 14px;
+            border-radius: 20px;
+            border: 2px solid rgba(255, 255, 255, 0.5);
+            box-shadow: 
+                0 4px 12px rgba(0, 0, 0, 0.8),
+                0 0 10px rgba(255, 255, 255, 0.3);
+            z-index: 20;
+            transition: left 0.45s cubic-bezier(0.25, 1, 0.5, 1);
+            letter-spacing: 0.5px;
+            text-transform: lowercase;
+        }
+
+        /* ── PODIO TOP 3 DONADORES (ENCIMA DE LA BARRA) ── */
+        .top-gifters-cluster {
+            position: absolute;
+            top: -46px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            z-index: 18;
+        }
+
+        .top-gifters-cluster.left {
+            left: 36px;
+        }
+
+        .top-gifters-cluster.right {
+            right: 36px;
+            flex-direction: row-reverse;
+        }
+
+        .top-gifter-slot {
+            position: relative;
+            width: 38px;
+            height: 38px;
+            border-radius: 50%;
+            padding: 2px;
+            background: rgba(255, 255, 255, 0.25);
+            backdrop-filter: blur(4px);
+            box-shadow: 0 3px 8px rgba(0, 0, 0, 0.6);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: transform 0.3s ease;
+        }
+
+        .top-gifter-slot.rank-1 {
+            width: 44px;
+            height: 44px;
+            background: linear-gradient(135deg, #ffd700, #ff9900);
+            box-shadow: 0 0 12px rgba(255, 215, 0, 0.7);
+        }
+
+        .top-gifter-slot img {
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            object-fit: cover;
+            display: block;
+        }
+
+        .top-gifter-slot .crown-icon {
+            position: absolute;
+            top: -15px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 16px;
+            filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.8));
+            animation: crown-float 1.8s infinite alternate ease-in-out;
+        }
+
+        @keyframes crown-float {
+            0% { transform: translateX(-50%) translateY(0); }
+            100% { transform: translateX(-50%) translateY(-3px); }
+        }
+
+        /* ── CORONA DORADA EN AVATAR GANADOR ── */
+        .winner-crown {
+            position: absolute;
+            top: -42px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 74px;
+            height: 52px;
+            z-index: 40;
+            display: none;
+            filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.6)) drop-shadow(0 0 15px rgba(255, 215, 0, 0.85));
+            animation: crownPop 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+            pointer-events: none;
+        }
+
+        .winner-crown svg {
+            width: 100%;
+            height: 100%;
+            display: block;
+        }
+
+        @keyframes crownPop {
+            0% { transform: translateX(-50%) scale(0.2) rotate(-10deg); opacity: 0; }
+            70% { transform: translateX(-50%) scale(1.15) rotate(3deg); opacity: 1; }
+            100% { transform: translateX(-50%) scale(1) rotate(0deg); opacity: 1; }
+        }
+
+        /* Aura Dorada y Pulso en el Círculo Ganador */
+        .winner-avatar-glow {
+            border-color: #fef08a !important;
+            box-shadow: 
+                0 0 30px #f59e0b,
+                0 0 60px #ea580c,
+                inset 0 0 15px rgba(255, 255, 255, 0.85) !important;
+            animation: winnerGlowPulse 1.4s infinite alternate ease-in-out !important;
+        }
+
+        @keyframes winnerGlowPulse {
+            0% { transform: scale(1); filter: drop-shadow(0 0 15px rgba(245, 158, 11, 0.7)); }
+            100% { transform: scale(1.05); filter: drop-shadow(0 0 35px rgba(234, 88, 12, 0.95)); }
+        }
+
+
+
+        /* ── LADO DERROTADO / PERDEDOR (ESCALA DE GRISES) ── */
+        .competitor-block.loser-defeated .avatar-circle-wrap,
+        .competitor-block.loser-defeated .activator-gift-badge,
+        .competitor-block.loser-defeated .win-badge,
+        .competitor-block.loser-defeated .competitor-name-tag {
+            filter: grayscale(1) contrast(0.85) opacity(0.55) !important;
+            transition: filter 0.6s ease, opacity 0.6s ease;
+        }
+
+        .pk-bar-fill-left.loser-bar,
+        .pk-bar-fill-right.loser-bar {
+            background: linear-gradient(90deg, #f3f4f6 0%, #e5e7eb 50%, #d1d5db 100%) !important;
+        }
+
+        .pk-bar-fill-left.loser-bar .pk-score-text,
+        .pk-bar-fill-right.loser-bar .pk-score-text {
+            color: #4b5563 !important;
+            text-shadow: none !important;
+        }
+
+        /* ── CANVAS DE CONFETI EN PANTALLA ── */
+        #winner-confetti-canvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            pointer-events: none;
+            z-index: 50;
+        }
+    </style>
+</head>
+
+<body>
+    <!-- CANVAS DE CONFETI CELEBRATORIO -->
+    <canvas id="winner-confetti-canvas"></canvas>
+
+    <!-- CONTENEDOR HUD PRINCIPAL -->
+    <div id="pk-hud-wrap">
+
+        <!-- 1. RELOJ DIGITAL SUPERIOR -->
+        <div class="battle-timer-wrap">
+            <div id="battle-timer" class="battle-timer">03:00</div>
+        </div>
+
+        <!-- 2. FILA DE ESCENARIO BATALLA -->
+        <div class="battle-stage-row">
+
+            <!-- JUGADORA IZQUIERDA -->
+            <div class="competitor-block left" id="block-left">
+                <!-- Ícono Activador -->
+                <div class="activator-gift-badge" id="gift-badge-left">
+                    <img id="gift-img-left" src="/regalos/Rosa.png" alt="Activador">
+                </div>
+
+                <!-- Círculo Avatar -->
+                <div class="avatar-circle-wrap" id="circle-left">
+                    <!-- Corona Dorada Ganadora -->
+                    <div class="winner-crown" id="winner-crown-left">
+                        <svg viewBox="0 0 100 68">
+                            <defs>
+                                <linearGradient id="gold-crown-left" x1="0%" y1="0%" x2="100%" y2="100%">
+                                    <stop offset="0%" stop-color="#fffbeb" />
+                                    <stop offset="25%" stop-color="#fde047" />
+                                    <stop offset="65%" stop-color="#f59e0b" />
+                                    <stop offset="100%" stop-color="#b45309" />
+                                </linearGradient>
+                            </defs>
+                            <path d="M12 56 C25 60 75 60 88 56 L96 22 L72 38 L50 10 L28 38 L4 22 Z" fill="url(#gold-crown-left)" stroke="#78350f" stroke-width="2.5" stroke-linejoin="round" />
+                            <circle cx="50" cy="10" r="4.5" fill="#ffffff" stroke="#b45309" stroke-width="1.5" />
+                            <circle cx="4" cy="22" r="3.5" fill="#ffffff" stroke="#b45309" stroke-width="1.5" />
+                            <circle cx="96" cy="22" r="3.5" fill="#ffffff" stroke="#b45309" stroke-width="1.5" />
+                            <circle cx="50" cy="38" r="3" fill="#ffffff" opacity="0.85" />
+                        </svg>
+                    </div>
+
+                    <div class="avatar-img-container">
+                        <img id="photo-left" class="avatar-photo" src="" alt="Avatar" style="display:none;">
+                        <span id="initials-left" class="avatar-initials">A</span>
+                        <div class="competitor-name-tag" id="name-left">BAILARINA 1</div>
+                    </div>
+                    <!-- Badge Victorias anclado al círculo -->
+                    <div class="win-badge" id="win-badge-left">win x0</div>
+                </div>
+
+                <!-- Bonus 2X Puntos -->
+                <div class="bonus-2x-card" id="bonus-card-left">
+                    <div class="bonus-2x-badge">2X</div>
+                    <div class="bonus-2x-details">
+                        <span class="bonus-2x-title">PUNTOS</span>
+                        <span class="bonus-2x-timer" id="bonus-timer-left">0:45</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- BARRA CENTRAL TUG-OF-WAR -->
+            <div class="pk-bar-container">
+                <!-- Podio Top 3 Donadores Izquierda -->
+                <div class="top-gifters-cluster left" id="top-gifters-left"></div>
+
+                <!-- Podio Top 3 Donadores Derecha -->
+                <div class="top-gifters-cluster right" id="top-gifters-right"></div>
+
+                <!-- Riel de la barra -->
+                <div class="pk-bar-track">
+                    <div id="bar-fill-left" class="pk-bar-fill-left">
+                        <span class="pk-score-text" id="score-left">0</span>
+                    </div>
+                    <div id="bar-fill-right" class="pk-bar-fill-right">
+                        <span class="pk-score-text" id="score-right">0</span>
+                    </div>
+                </div>
+
+
+                <!-- Divisor Central VS -->
+                <div id="vs-divider" class="vs-badge-center" style="left: 50%;">vs</div>
+            </div>
+
+            <!-- JUGADORA DERECHA -->
+            <div class="competitor-block right" id="block-right">
+                <!-- Ícono Activador -->
+                <div class="activator-gift-badge" id="gift-badge-right">
+                    <img id="gift-img-right" src="/regalos/tiktok.png" alt="Activador">
+                </div>
+
+                <!-- Círculo Avatar -->
+                <div class="avatar-circle-wrap" id="circle-right">
+                    <!-- Corona Dorada Ganadora -->
+                    <div class="winner-crown" id="winner-crown-right">
+                        <svg viewBox="0 0 100 68">
+                            <defs>
+                                <linearGradient id="gold-crown-right" x1="0%" y1="0%" x2="100%" y2="100%">
+                                    <stop offset="0%" stop-color="#fffbeb" />
+                                    <stop offset="25%" stop-color="#fde047" />
+                                    <stop offset="65%" stop-color="#f59e0b" />
+                                    <stop offset="100%" stop-color="#b45309" />
+                                </linearGradient>
+                            </defs>
+                            <path d="M12 56 C25 60 75 60 88 56 L96 22 L72 38 L50 10 L28 38 L4 22 Z" fill="url(#gold-crown-right)" stroke="#78350f" stroke-width="2.5" stroke-linejoin="round" />
+                            <circle cx="50" cy="10" r="4.5" fill="#ffffff" stroke="#b45309" stroke-width="1.5" />
+                            <circle cx="4" cy="22" r="3.5" fill="#ffffff" stroke="#b45309" stroke-width="1.5" />
+                            <circle cx="96" cy="22" r="3.5" fill="#ffffff" stroke="#b45309" stroke-width="1.5" />
+                            <circle cx="50" cy="38" r="3" fill="#ffffff" opacity="0.85" />
+                        </svg>
+                    </div>
+
+                    <div class="avatar-img-container">
+                        <img id="photo-right" class="avatar-photo" src="" alt="Avatar" style="display:none;">
+                        <span id="initials-right" class="avatar-initials">B</span>
+                        <div class="competitor-name-tag" id="name-right">BAILARINA 2</div>
+                    </div>
+                    <!-- Badge Victorias anclado al círculo -->
+                    <div class="win-badge" id="win-badge-right">win x0</div>
+                </div>
+
+                <!-- Bonus 2X Puntos -->
+                <div class="bonus-2x-card" id="bonus-card-right">
+                    <div class="bonus-2x-badge">2X</div>
+                    <div class="bonus-2x-details">
+                        <span class="bonus-2x-title">PUNTOS</span>
+                        <span class="bonus-2x-timer" id="bonus-timer-right">0:45</span>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+
+    </div>
+
+    <!-- Scripts de conexión -->
+    <script src="/js/iframe-bridge.js"></script>
+    <script src="/socket.io/socket.io.js"></script>
+    <script>
+        const urlParams = new URLSearchParams(window.location.search);
+        const userParam = urlParams.get('user') || '';
+        const socket = window.__iframeBridgeSocket || io({ query: userParam ? { user: userParam } : {} });
+
+        // Estado local de la batalla
+        let participantes = [];
+        let equipos = {};
+        let victorias = {};
+        let puntos = {};
+        let APODOS = {};
+
+        // Top donadores por bailarina: { [bailarina]: { [viewer]: { viewer, avatar, coins } } }
+        let donadoresBatalla = {};
+
+        // Elementos DOM
+        const timerEl = document.getElementById('battle-timer');
+        const scoreLeftEl = document.getElementById('score-left');
+        const scoreRightEl = document.getElementById('score-right');
+        const barLeftEl = document.getElementById('bar-fill-left');
+        const barRightEl = document.getElementById('bar-fill-right');
+        const vsDividerEl = document.getElementById('vs-divider');
+
+        // Lado Izquierdo
+        const nameLeftEl = document.getElementById('name-left');
+        const photoLeftEl = document.getElementById('photo-left');
+        const initialsLeftEl = document.getElementById('initials-left');
+        const circleLeftEl = document.getElementById('circle-left');
+        const winBadgeLeftEl = document.getElementById('win-badge-left');
+        const giftImgLeftEl = document.getElementById('gift-img-left');
+        const giftBadgeLeftEl = document.getElementById('gift-badge-left');
+        const bonusCardLeftEl = document.getElementById('bonus-card-left');
+        const bonusTimerLeftEl = document.getElementById('bonus-timer-left');
+        const topGiftersLeftEl = document.getElementById('top-gifters-left');
+
+        // Lado Derecho
+        const nameRightEl = document.getElementById('name-right');
+        const photoRightEl = document.getElementById('photo-right');
+        const initialsRightEl = document.getElementById('initials-right');
+        const circleRightEl = document.getElementById('circle-right');
+        const winBadgeRightEl = document.getElementById('win-badge-right');
+        const giftImgRightEl = document.getElementById('gift-img-right');
+        const giftBadgeRightEl = document.getElementById('gift-badge-right');
+        const bonusCardRightEl = document.getElementById('bonus-card-right');
+        const bonusTimerRightEl = document.getElementById('bonus-timer-right');
+        const topGiftersRightEl = document.getElementById('top-gifters-right');
+
+        // Elementos de Celebración de Victoria Estilo TikTok LIVE
+        const crownLeftEl = document.getElementById('winner-crown-left');
+        const crownRightEl = document.getElementById('winner-crown-right');
+        const blockLeftEl = document.getElementById('block-left');
+        const blockRightEl = document.getElementById('block-right');
+        const confettiCanvas = document.getElementById('winner-confetti-canvas');
+
+        // ── MOTOR DE CONFETI CELEBRATORIO ──
+        let confettiCtx = null;
+        let confettiParticles = [];
+        let confettiAnimationId = null;
+
+        function initConfettiCanvas() {
+            if (!confettiCanvas) return;
+            confettiCanvas.width = window.innerWidth;
+            confettiCanvas.height = window.innerHeight;
+            confettiCtx = confettiCanvas.getContext('2d');
+        }
+        window.addEventListener('resize', initConfettiCanvas);
+        initConfettiCanvas();
+
+        const CONFETTI_COLORS = ['#f43f5e', '#ec4899', '#a855f7', '#3b82f6', '#06b6d4', '#eab308', '#f97316', '#ffffff'];
+
+        function lanzarConfeti(originX, originY) {
+            detenerConfeti();
+            initConfettiCanvas();
+            confettiParticles = [];
+
+            // Generar 75 partículas festivas alrededor del avatar de la ganadora
+            for (let i = 0; i < 75; i++) {
+                const angle = Math.random() * Math.PI * 2;
+                const speed = 4 + Math.random() * 9;
+                confettiParticles.push({
+                    x: originX,
+                    y: originY,
+                    vx: Math.cos(angle) * speed,
+                    vy: Math.sin(angle) * speed - 3.5,
+                    size: 7 + Math.random() * 8,
+                    color: CONFETTI_COLORS[Math.floor(Math.random() * CONFETTI_COLORS.length)],
+                    rotation: Math.random() * 360,
+                    rotationSpeed: (Math.random() - 0.5) * 14,
+                    opacity: 1,
+                    decay: 0.007 + Math.random() * 0.008,
+                    gravity: 0.18
+                });
+            }
+
+            animarConfeti();
+        }
+
+        function animarConfeti() {
+            if (!confettiCtx) return;
+            confettiCtx.clearRect(0, 0, confettiCanvas.width, confettiCanvas.height);
+
+            let particlesAlive = false;
+
+            for (let i = 0; i < confettiParticles.length; i++) {
+                const p = confettiParticles[i];
+                if (p.opacity <= 0) continue;
+
+                p.x += p.vx;
+                p.y += p.vy;
+                p.vy += p.gravity;
+                p.vx *= 0.98;
+                p.rotation += p.rotationSpeed;
+                p.opacity -= p.decay;
+
+                if (p.opacity > 0) {
+                    particlesAlive = true;
+                    confettiCtx.save();
+                    confettiCtx.translate(p.x, p.y);
+                    confettiCtx.rotate((p.rotation * Math.PI) / 180);
+                    confettiCtx.globalAlpha = Math.max(0, p.opacity);
+                    confettiCtx.fillStyle = p.color;
+                    confettiCtx.fillRect(-p.size / 2, -p.size / 2, p.size, p.size * 0.6);
+                    confettiCtx.restore();
+                }
+            }
+
+            if (particlesAlive) {
+                confettiAnimationId = requestAnimationFrame(animarConfeti);
+            } else {
+                detenerConfeti();
+            }
+        }
+
+        function detenerConfeti() {
+            if (confettiAnimationId) {
+                cancelAnimationFrame(confettiAnimationId);
+                confettiAnimationId = null;
+            }
+            if (confettiCtx && confettiCanvas) {
+                confettiCtx.clearRect(0, 0, confettiCanvas.width, confettiCanvas.height);
+            }
+            confettiParticles = [];
+        }
+
+        function resetVictoriaUI() {
+            if (crownLeftEl) crownLeftEl.style.display = 'none';
+            if (crownRightEl) crownRightEl.style.display = 'none';
+            if (vsDividerEl) vsDividerEl.style.display = 'block';
+
+            if (circleLeftEl) circleLeftEl.classList.remove('winner-avatar-glow');
+            if (circleRightEl) circleRightEl.classList.remove('winner-avatar-glow');
+            if (blockLeftEl) blockLeftEl.classList.remove('loser-defeated');
+            if (blockRightEl) blockRightEl.classList.remove('loser-defeated');
+            if (barLeftEl) barLeftEl.classList.remove('loser-bar');
+            if (barRightEl) barRightEl.classList.remove('loser-bar');
+
+            detenerConfeti();
+        }
+
+        // Cargar apodos
+        fetch('/api/apodos').then(r => r.json()).then(data => { APODOS = data || {}; }).catch(() => {});
+
+        function getDisplayLabel(chica) {
+            return APODOS[chica] || (equipos[chica]?.nombre || chica).toUpperCase();
+        }
+
+        // Formatear segundos en MM:SS
+        function formatMMSS(segundos) {
+            const m = Math.floor(segundos / 60).toString().padStart(2, '0');
+            const s = (segundos % 60).toString().padStart(2, '0');
+            return `${m}:${s}`;
+        }
+
+        // Renderizar iniciales o foto
+        function configurarAvatar(chica, photoEl, initialsEl) {
+            const eq = equipos[chica] || {};
+            if (eq.avatar_img && eq.avatar_img.trim()) {
+                photoEl.src = eq.avatar_img;
+                photoEl.style.display = 'block';
+                initialsEl.style.display = 'none';
+                photoEl.onerror = () => {
+                    photoEl.style.display = 'none';
+                    initialsEl.style.display = 'block';
+                    initialsEl.textContent = chica.substring(0, 2).toUpperCase();
+                };
+            } else {
+                photoEl.style.display = 'none';
+                initialsEl.style.display = 'block';
+                initialsEl.textContent = chica.substring(0, 2).toUpperCase();
+            }
+        }
+
+        // Configurar regalo activador
+        function configurarRegaloActivador(chica, imgEl, fallbackSrc) {
+            const eq = equipos[chica] || {};
+            let src = eq.regalo_img || fallbackSrc;
+            if (src && !src.startsWith('/') && !src.startsWith('http') && !src.startsWith('data:')) {
+                src = '/regalos/' + src;
+            }
+            imgEl.src = src;
+            imgEl.onerror = () => { imgEl.src = fallbackSrc; };
+        }
+
+        // Helper para manipulación de colores dinámicos
+        function parseHex(hex) {
+            if (!hex || typeof hex !== 'string') return [157, 78, 221];
+            hex = hex.replace('#', '');
+            if (hex.length === 3) hex = hex.split('').map(c => c + c).join('');
+            if (hex.length !== 6) return [157, 78, 221];
+            return [parseInt(hex.slice(0, 2), 16), parseInt(hex.slice(2, 4), 16), parseInt(hex.slice(4, 6), 16)];
+        }
+
+        function lightenColor(hex, amt = 40) {
+            try {
+                let [r, g, b] = parseHex(hex);
+                return `rgb(${Math.min(255, r + amt)}, ${Math.min(255, g + amt)}, ${Math.min(255, b + amt)})`;
+            } catch (e) { return hex; }
+        }
+
+        function darkenColor(hex, amt = 40) {
+            try {
+                let [r, g, b] = parseHex(hex);
+                return `rgb(${Math.max(0, r - amt)}, ${Math.max(0, g - amt)}, ${Math.max(0, b - amt)})`;
+            } catch (e) { return hex; }
+        }
+
+        function rgbaColor(hex, alpha = 0.8) {
+            try {
+                let [r, g, b] = parseHex(hex);
+                return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+            } catch (e) { return hex; }
+        }
+
+        // Aplicar colores configurados de cada bailarina a la barra y aros
+        function aplicarColoresDinamicos(chicaL, chicaR) {
+            const colL = equipos[chicaL]?.color || '#9d4edd';
+            const colR = equipos[chicaR]?.color || '#ffb703';
+
+            // Barra Izquierda
+            barLeftEl.style.background = `linear-gradient(90deg, ${darkenColor(colL, 50)} 0%, ${colL} 60%, ${lightenColor(colL, 40)} 100%)`;
+            // Barra Derecha
+            barRightEl.style.background = `linear-gradient(90deg, ${lightenColor(colR, 40)} 0%, ${colR} 40%, ${darkenColor(colR, 50)} 100%)`;
+
+            // Círculo Avatar Izquierdo
+            circleLeftEl.style.background = `linear-gradient(135deg, ${lightenColor(colL, 30)}, ${colL})`;
+            circleLeftEl.style.borderColor = lightenColor(colL, 40);
+            circleLeftEl.style.boxShadow = `0 0 22px ${rgbaColor(colL, 0.9)}, 0 0 45px ${rgbaColor(colL, 0.55)}, inset 0 0 15px rgba(255, 255, 255, 0.6)`;
+
+            // Círculo Avatar Derecho
+            circleRightEl.style.background = `linear-gradient(135deg, ${lightenColor(colR, 30)}, ${colR})`;
+            circleRightEl.style.borderColor = lightenColor(colR, 40);
+            circleRightEl.style.boxShadow = `0 0 22px ${rgbaColor(colR, 0.9)}, 0 0 45px ${rgbaColor(colR, 0.55)}, inset 0 0 15px rgba(255, 255, 255, 0.6)`;
+
+            // Acentos de nombres
+            nameLeftEl.style.borderColor = rgbaColor(colL, 0.6);
+            nameLeftEl.style.color = lightenColor(colL, 50);
+            nameRightEl.style.borderColor = rgbaColor(colR, 0.6);
+            nameRightEl.style.color = lightenColor(colR, 50);
+        }
+
+        // Renderizar batalla completa
+        function renderBatalla(data) {
+            participantes = (data.participantes && data.participantes.length >= 2) 
+                ? data.participantes.slice(0, 2) 
+                : ['BAILARINA 1', 'BAILARINA 2'];
+            
+            equipos = data.equipos || {};
+            victorias = data.victorias || {};
+            puntos = data.puntos || {};
+            donadoresBatalla = {};
+
+            const chicaL = participantes[0];
+            const chicaR = participantes[1];
+
+            // Aplicar colores dinámicos de cada bailarina
+            aplicarColoresDinamicos(chicaL, chicaR);
+
+            // Reset de estado visual de victoria
+            resetVictoriaUI();
+
+            // Configurar Lado Izquierdo
+            nameLeftEl.textContent = getDisplayLabel(chicaL);
+            configurarAvatar(chicaL, photoLeftEl, initialsLeftEl);
+            configurarRegaloActivador(chicaL, giftImgLeftEl, '/regalos/Rosa.png');
+            winBadgeLeftEl.textContent = `win x${victorias[chicaL] || 0}`;
+
+            // Configurar Lado Derecho
+            nameRightEl.textContent = getDisplayLabel(chicaR);
+            configurarAvatar(chicaR, photoRightEl, initialsRightEl);
+            configurarRegaloActivador(chicaR, giftImgRightEl, '/regalos/tiktok.png');
+            winBadgeRightEl.textContent = `win x${victorias[chicaR] || 0}`;
+
+            // Timer
+            if (data.tiempo !== undefined) {
+                timerEl.textContent = formatMMSS(data.tiempo);
+                timerEl.classList.remove('urgente');
+            }
+
+            // 2X Speed Challenge
+            if (data.batalla2X && data.batalla2XTiempo > 0) {
+                mostrar2X(data.batalla2XTiempo);
+            } else {
+                ocultar2X();
+            }
+
+            // Actualizar barras
+            actualizarBarras(puntos);
+            renderTopGifters();
+        }
+
+        function mostrar2X(tiempoRestante) {
+            bonusCardLeftEl.classList.remove('hidden');
+            bonusCardRightEl.classList.remove('hidden');
+            const tiempoStr = formatMMSS(tiempoRestante);
+            bonusTimerLeftEl.textContent = tiempoStr;
+            bonusTimerRightEl.textContent = tiempoStr;
+        }
+
+        function ocultar2X() {
+            bonusCardLeftEl.classList.add('hidden');
+            bonusCardRightEl.classList.add('hidden');
+        }
+
+        // Actualizar Tug-of-War Bar
+        function actualizarBarras(nuevosPuntos) {
+            puntos = { ...nuevosPuntos };
+            if (participantes.length < 2) return;
+
+            const pL = participantes[0];
+            const pR = participantes[1];
+
+            const ptsL = puntos[pL] || 0;
+            const ptsR = puntos[pR] || 0;
+
+            scoreLeftEl.textContent = ptsL.toLocaleString();
+            scoreRightEl.textContent = ptsR.toLocaleString();
+
+            const total = ptsL + ptsR;
+            let pctL = 50;
+
+            if (total > 0) {
+                pctL = (ptsL / total) * 100;
+                // Límites mínimos para que los números siempre quepan en pantalla
+                pctL = Math.max(14, Math.min(86, pctL));
+            }
+
+            const pctR = 100 - pctL;
+
+            barLeftEl.style.width = pctL + '%';
+            barRightEl.style.width = pctR + '%';
+            vsDividerEl.style.left = pctL + '%';
+        }
+
+        // Registrar donación en tiempo real para el podio de Top 3 Donadores
+        function registrarDonador(chica, viewer, avatar, coins) {
+            if (!donadoresBatalla[chica]) donadoresBatalla[chica] = {};
+            if (!donadoresBatalla[chica][viewer]) {
+                donadoresBatalla[chica][viewer] = { viewer, avatar, coins: 0 };
+            }
+            donadoresBatalla[chica][viewer].coins += coins;
+            if (avatar) donadoresBatalla[chica][viewer].avatar = avatar;
+
+            renderTopGifters();
+
+            // Animación de rebote en el regalo de la chica que recibió puntos
+            const isLeft = (participantes[0] === chica);
+            const badgeEl = isLeft ? giftBadgeLeftEl : giftBadgeRightEl;
+            if (badgeEl) {
+                badgeEl.classList.remove('bounce');
+                void badgeEl.offsetWidth; // trigger reflow
+                badgeEl.classList.add('bounce');
+            }
+        }
+
+        // Renderizar los avatares circulares del Top 3 en vivo
+        function renderTopGifters() {
+            if (participantes.length < 2) return;
+            const chicaL = participantes[0];
+            const chicaR = participantes[1];
+
+            renderCluster(topGiftersLeftEl, donadoresBatalla[chicaL] || {});
+            renderCluster(topGiftersRightEl, donadoresBatalla[chicaR] || {});
+        }
+
+        function renderCluster(containerEl, mapaDonadores) {
+            containerEl.innerHTML = '';
+            const lista = Object.values(mapaDonadores).sort((a, b) => b.coins - a.coins).slice(0, 3);
+            if (lista.length === 0) return;
+
+            lista.forEach((gifter, index) => {
+                const slot = document.createElement('div');
+                slot.className = `top-gifter-slot rank-${index + 1}`;
+                slot.title = `${gifter.viewer}: ${gifter.coins} pts`;
+
+                if (index === 0) {
+                    const crown = document.createElement('div');
+                    crown.className = 'crown-icon';
+                    crown.textContent = '👑';
+                    slot.appendChild(crown);
+                }
+
+                const img = document.createElement('img');
+                img.src = gifter.avatar || '/regalos/tiktok.png';
+                img.onerror = () => { img.src = '/regalos/tiktok.png'; };
+                slot.appendChild(img);
+
+                containerEl.appendChild(slot);
+            });
+        }
+
+        // ── SOCKET.IO EVENT HANDLERS ──
+        socket.on('batallaInicio', (data) => {
+            renderBatalla(data);
+        });
+
+        socket.on('batallaTick', (tiempo) => {
+            timerEl.textContent = formatMMSS(tiempo);
+            if (tiempo <= 10 && tiempo > 0) {
+                timerEl.classList.add('urgente');
+            } else {
+                timerEl.classList.remove('urgente');
+            }
+        });
+
+        socket.on('batalla2XTick', (data) => {
+            if (data && data.activo && data.tiempo2X > 0) {
+                mostrar2X(data.tiempo2X);
+            } else {
+                ocultar2X();
+            }
+        });
+
+        socket.on('batalla2XFin', () => {
+            ocultar2X();
+        });
+
+        socket.on('batallaPuntos', (puntosBatalla) => {
+            actualizarBarras(puntosBatalla);
+        });
+
+        socket.on('nuevoRegalo', (data) => {
+            if (participantes.includes(data.nombre)) {
+                registrarDonador(data.nombre, data.viewer || 'Anónimo', data.avatar || '', data.coins || 1);
+            }
+        });
+
+        socket.on('batallaFin', (data) => {
+            timerEl.textContent = '00:00';
+            timerEl.classList.remove('urgente');
+            ocultar2X();
+            resetVictoriaUI();
+
+            const chicaL = participantes[0];
+            const chicaR = participantes[1];
+            const ganadora = data.ganadora;
+
+            if (ganadora && ganadora !== 'EMPATE' && ganadora !== 'SIN PUNTOS') {
+                if (ganadora === chicaL) {
+                    crownLeftEl.style.display = 'block';
+                    circleLeftEl.classList.add('winner-avatar-glow');
+                    blockRightEl.classList.add('loser-defeated');
+                    barRightEl.classList.add('loser-bar');
+
+                    // Lanzar confeti centrado en el avatar ganador
+                    const rect = circleLeftEl.getBoundingClientRect();
+                    lanzarConfeti(rect.left + rect.width / 2, rect.top + rect.height / 2);
+                } else if (ganadora === chicaR) {
+                    crownRightEl.style.display = 'block';
+                    circleRightEl.classList.add('winner-avatar-glow');
+                    blockLeftEl.classList.add('loser-defeated');
+                    barLeftEl.classList.add('loser-bar');
+
+                    // Lanzar confeti centrado en el avatar ganador
+                    const rect = circleRightEl.getBoundingClientRect();
+                    lanzarConfeti(rect.left + rect.width / 2, rect.top + rect.height / 2);
+                }
+            }
+
+            // Actualizar victorias si vienen en el payload
+            if (data.victorias) {
+                victorias = data.victorias;
+                if (chicaL) winBadgeLeftEl.textContent = `win x${victorias[chicaL] || 0}`;
+                if (chicaR) winBadgeRightEl.textContent = `win x${victorias[chicaR] || 0}`;
+            }
+        });
+
+        socket.on('batallaCancelada', () => {
+            timerEl.textContent = '00:00';
+            timerEl.classList.remove('urgente');
+            ocultar2X();
+            resetVictoriaUI();
+        });
+
+        socket.on('queensActualizadas', (d) => {
+            if (d.equipos) equipos = d.equipos;
+            if (d.apodos) APODOS = d.apodos;
+            if (participantes.length >= 2) {
+                aplicarColoresDinamicos(participantes[0], participantes[1]);
+                configurarAvatar(participantes[0], photoLeftEl, initialsLeftEl);
+                configurarAvatar(participantes[1], photoRightEl, initialsRightEl);
+                nameLeftEl.textContent = getDisplayLabel(participantes[0]);
+                nameRightEl.textContent = getDisplayLabel(participantes[1]);
+            }
+        });
+    </script>
+</body>
+
+</html>

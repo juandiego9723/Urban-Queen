@@ -7,14 +7,32 @@ function setupBatallaDynamics(app, io, requireSession) {
         s.puntosBatalla = {};
         s.participantesActuales.forEach(p => s.puntosBatalla[p] = 0);
         s.estadoBatalla = 'activa';
+        s.batalla2X = true;
+        s.batalla2XTiempo = Math.min(45, s.tiempoBatalla);
         clearInterval(s.timerBatalla);
         let subTickBatalla = 0;
         let tiempoExtraSnipe = 5;
         const victorias = s.db.getVictorias();
         
-        io.to(user).emit('batallaInicio', { tiempo: s.tiempoBatalla, puntos: s.puntosBatalla, victorias, equipos: s.equipos, participantes: s.participantesActuales });
+        io.to(user).emit('batallaInicio', { 
+            tiempo: s.tiempoBatalla, 
+            puntos: s.puntosBatalla, 
+            victorias, 
+            equipos: s.equipos, 
+            participantes: s.participantesActuales,
+            batalla2X: s.batalla2X,
+            batalla2XTiempo: s.batalla2XTiempo
+        });
         
         s.timerBatalla = setInterval(() => {
+            if (s.batalla2XTiempo > 0) {
+                s.batalla2XTiempo--;
+                if (s.batalla2XTiempo === 0) {
+                    s.batalla2X = false;
+                    io.to(user).emit('batalla2XFin');
+                }
+                io.to(user).emit('batalla2XTick', { tiempo2X: s.batalla2XTiempo, activo: s.batalla2X });
+            }
             if (s.tiempoBatalla > 3) {
                 s.tiempoBatalla--;
                 io.to(user).emit('batallaTick', s.tiempoBatalla);
@@ -83,6 +101,8 @@ function setupBatallaDynamics(app, io, requireSession) {
         const s = req.userSession;
         clearInterval(s.timerBatalla);
         s.estadoBatalla = 'inactiva';
+        s.batalla2X = false;
+        s.batalla2XTiempo = 0;
         io.to(req.username).emit('batallaCancelada');
         setTimeout(() => io.to(req.username).emit('batallaCancelada'), 300);
         setTimeout(() => io.to(req.username).emit('batallaCancelada'), 600);
