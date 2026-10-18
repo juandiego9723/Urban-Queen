@@ -299,7 +299,10 @@ app.get('/ranking-conociendo', (req, res) => {
 app.get('/revivir',       (req, res) => res.sendFile(pub('revivir.html')));
 app.get('/revivir-ranking', (req, res) => res.sendFile(pub('revivir-ranking.html')));
 app.get('/copa',          (req, res) => res.sendFile(pub('copa.html')));
-app.get('/lista-regalos', (req, res) => res.sendFile(pub('lista-regalos.html')));
+app.get('/lista-regalos', (req, res) => {
+    const q = req.url.includes('?') ? req.url.substring(req.url.indexOf('?')) : '';
+    res.redirect(301, '/timer' + q);
+});
 app.get('/control', (req, res) => {
     if (!req.session || !req.session.user) return res.redirect('/login');
     const slug = req.session.agencySlug || (req.agency ? req.agency.slug : null);

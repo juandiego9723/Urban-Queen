@@ -1135,11 +1135,10 @@
                 <a class="topbar-link" href="/batalla" target="_blank">⚔️ Batalla</a>
                 <a class="topbar-link" href="/batalla-futbol" target="_blank">⚽ Clásico</a>
                 <a class="topbar-link" href="/revivir" target="_blank">❤️ Revivir</a>
-                <a class="topbar-link" href="/timer" target="_blank">💃 Timer</a>
+                <a class="topbar-link" href="/timer" target="_blank">💃 Timer & Regalos</a>
                 <a class="topbar-link" href="/conociendo" target="_blank">👑 Conociendo</a>
                 <a class="topbar-link" href="/revivir-ranking" target="_blank">📊 Ranking Revivir</a>
                 <a class="topbar-link" href="/copa" target="_blank">🥇 Copa</a>
-                <a class="topbar-link" href="/lista-regalos" target="_blank">🎁 Regalos</a>
                 <a class="topbar-link" href="/dinamica" target="_blank">⚡ Dinámica</a>
                 <a class="topbar-link" href="/gestor-regalos" target="_blank">🖼️ Overlay Custom</a>
             </div>
@@ -1925,16 +1924,11 @@
                                     Clásico (Fútbol)</button>
                                 <button class="btn btn-primary" onclick="cambiarVistaUniversal('/timer')"
                                     id="btn-view-timer"
-                                    style="transition: all 0.3s ease; text-align: left; padding: 12px 16px;">💃 Timer de
-                                    Baile</button>
+                                    style="transition: all 0.3s ease; text-align: left; padding: 12px 16px;">💃 Timer & Salta Turno</button>
                                 <button class="btn btn-primary" onclick="cambiarVistaUniversal('/conociendo')"
                                     id="btn-view-conociendo"
                                     style="transition: all 0.3s ease; text-align: left; padding: 12px 16px;">👑
                                     Conociendo a mi Queen</button>
-                                <button class="btn btn-primary" onclick="cambiarVistaUniversal('/lista-regalos')"
-                                    id="btn-view-lista-regalos"
-                                    style="transition: all 0.3s ease; text-align: left; padding: 12px 16px;">🎁 Lista
-                                    Regalos</button>
                                 <button class="btn btn-primary" onclick="cambiarVistaUniversal('/dinamica')"
                                     id="btn-view-dinamica"
                                     style="transition: all 0.3s ease; text-align: left; padding: 12px 16px;">⚡ Dinámica
@@ -2702,10 +2696,9 @@
                 { emoji: '⚔️', nombre: 'Batalla Normal', url: '/batalla', desc: 'Modo batalla con barra de puntos, timer y ganadora. Hasta 4 bailarinas.' },
                 { emoji: '⚽', nombre: 'El Clásico', url: '/batalla-futbol', desc: 'Modo fútbol con equipos, tarjetas amarilla/roja y goles.' },
                 { emoji: '❤️', nombre: 'Dinámica Revivir', url: '/revivir', desc: 'Dinámica de eliminación y revivir por meta de puntos.' },
-                { emoji: '💃', nombre: 'Timer de Baile', url: '/timer', desc: 'Turno automático entre bailarinas. Cada regalo extiende el tiempo.' },
+                { emoji: '💃', nombre: 'Timer & Salta Turno', url: '/timer', desc: 'Overlay unificado: Turno automático entre bailarinas con lista de regalos para saltar turno y extensión de tiempo.' },
                 { emoji: '👑', nombre: 'Conociendo a mi Queen', url: '/conociendo', desc: 'Meta de puntos por bailarina con barra de progreso.' },
                 { emoji: '🥇', nombre: 'Copa del Día', url: '/copa', desc: 'Acumulado del día en El Clásico. Muestra el equipo líder.' },
-                { emoji: '🎁', nombre: 'Lista de Regalos', url: '/lista-regalos', desc: 'Overlay que muestra qué regalo corresponde a cada bailarina y cuántos puntos vale.' },
                 { emoji: '⚡', nombre: 'Dinámica', url: '/dinamica', desc: 'Overlay genérico para dinámicas personalizadas creadas desde el Constructor.' },
                 { emoji: '📺', nombre: 'Grid Multi-cámara (Zukaa)', url: '/multicam', desc: 'Overlay de rejilla multi-pantalla transparente con marcos neón reactivos para OBS.' },
                 { emoji: '🔮', nombre: 'Overlay Universal (Zukaa)', url: '/overlay-universal', desc: 'Overlay inteligente para OBS que cambia de pantalla automáticamente en tiempo real según lo decidas.' },
@@ -4787,7 +4780,6 @@
                     '/batalla-futbol': 'btn-view-batalla-futbol',
                     '/timer': 'btn-view-timer',
                     '/conociendo': 'btn-view-conociendo',
-                    '/lista-regalos': 'btn-view-lista-regalos',
                     '/multicam': 'btn-view-multicam',
                     '/dinamica': 'btn-view-dinamica',
                     '/gestor-regalos': 'btn-view-gestor-regalos'

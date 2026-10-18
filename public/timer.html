@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html lang="es">
-    <head>
+<head>
     <!-- Inyección de multi-cuenta -->
     <script>
         (function() {
@@ -42,176 +42,1012 @@
         })();
     </script>
 
-        <meta charset="UTF-8">
-        <title>Timer de Baile TikDance</title>
-        <link rel="preconnect" href="https://fonts.googleapis.com">
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-        <link href="https://fonts.googleapis.com/css2?family=Bangers&family=Nosifer&display=swap"
-              rel="stylesheet">
-        <style>
-        /* Fondo transparente para OBS y TikTok Studio */
-        body { font-family: 'Nosifer', 'Bangers', cursive; text-align: center; overflow: hidden; background: transparent; color: white; margin: 0; padding: 20px; letter-spacing: 2px; }
+    <meta charset="UTF-8">
+    <title>Timer & Salta el Turno — Urban Queen</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Bangers&family=Nosifer&family=Orbitron:wght@500;700;900&family=Outfit:wght@600;800;900&display=swap" rel="stylesheet">
+    
+    <style>
+        :root {
+            --neon-green: #39ff14;
+            --neon-green-glow: rgba(57, 255, 20, 0.6);
+            --neon-pink: #ff1493;
+            --neon-pink-glow: rgba(255, 20, 147, 0.6);
+            --neon-cyan: #00ffff;
+            --neon-cyan-glow: rgba(0, 255, 255, 0.6);
+            --neon-yellow: #ffe600;
+            --active-color: #ff1493;
+        }
 
-        /* Configuración de brillo neón global */
+        * {
+            box-sizing: border-box;
+            user-select: none;
+        }
+
+        body {
+            font-family: 'Outfit', sans-serif;
+            margin: 0;
+            padding: 15px;
+            background: transparent;
+            color: #ffffff;
+            overflow: hidden;
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            min-height: 100vh;
+        }
+
+        /* Modos de brillo global (Brand Manager) */
         body.neon-none * {
             text-shadow: none !important;
             box-shadow: none !important;
-            border-color: rgba(255,255,255,0.2) !important;
         }
         body.neon-low * {
             text-shadow: 0 0 3px currentColor !important;
             box-shadow: 0 0 5px currentColor !important;
         }
-        
-        .timer-container { display: none; justify-content: center; align-items: flex-start; height: 100vh;}
-        .timer-activo { display: flex; }
-        
-        /* Contenedor ancho tipo banner para AMBOS (Reloj y Transición) */
-        .caja-central { 
-            background: rgba(0, 0, 0, 0.85); 
-            border: 4px solid #00FFFF; 
-            border-radius: 20px; 
-            padding: 15px 30px; 
-            width: max-content; 
-            min-width: 500px; 
-            box-shadow: 0 0 30px #00FFFF; 
-            animation: latirReloj 1s infinite alternate;
-            display: flex;
-            flex-direction: column; 
-        }
-        @keyframes latirReloj { from { box-shadow: 0 0 20px #00FFFF; } to { box-shadow: 0 0 40px #00FFFF; transform: scale(1.02); } }
 
-        /* Fila principal: Título y Reloj alineados horizontalmente */
-        .fila-principal {
+        /* ══════════════════════════════════════════════════════════════
+           CHASIS PRINCIPAL CYBERPUNK (FRAME EXTERIOR)
+           ══════════════════════════════════════════════════════════════ */
+        .hud-banner {
+            position: relative;
+            display: flex;
+            align-items: stretch;
+            gap: 0;
+            background: linear-gradient(135deg, rgba(10, 12, 22, 0.94) 0%, rgba(18, 14, 30, 0.96) 100%);
+            border: 2px solid rgba(255, 255, 255, 0.12);
+            border-radius: 24px;
+            padding: 18px 24px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.85),
+                        inset 0 0 25px rgba(0, 255, 255, 0.05),
+                        inset 0 0 1px rgba(255, 255, 255, 0.2);
+            backdrop-filter: blur(8px);
+            width: 1020px;
+            max-width: 98vw;
+            min-height: 290px;
+            z-index: 10;
+        }
+
+        /* Tubos de neón exteriores del chasis */
+        .neon-tube-top {
+            position: absolute;
+            top: -6px;
+            left: 60px;
+            right: 60px;
+            height: 5px;
+            background: linear-gradient(90deg, #39ff14 0%, #00ffff 50%, #ff1493 100%);
+            border-radius: 6px;
+            box-shadow: 0 0 12px #00ffff, 0 0 24px #ff1493;
+            pointer-events: none;
+        }
+        .neon-tube-bottom {
+            position: absolute;
+            bottom: -6px;
+            left: 40px;
+            right: 40px;
+            height: 5px;
+            background: linear-gradient(90deg, #ff1493 0%, #00ffff 60%, #39ff14 100%);
+            border-radius: 6px;
+            box-shadow: 0 0 12px #ff1493, 0 0 22px #00ffff;
+            pointer-events: none;
+        }
+
+        /* Tornillos/remaches hexagonales en esquinas */
+        .bolt {
+            position: absolute;
+            width: 9px;
+            height: 9px;
+            background: #4a5568;
+            border: 1px solid #718096;
+            border-radius: 50%;
+            box-shadow: inset 0 1px 2px #000, 0 1px 1px rgba(255, 255, 255, 0.2);
+        }
+        .bolt-tl { top: 10px; left: 10px; }
+        .bolt-tr { top: 10px; right: 10px; }
+        .bolt-bl { bottom: 10px; left: 10px; }
+        .bolt-br { bottom: 10px; right: 10px; }
+
+        /* Barras de ecualizador de audio en las esquinas */
+        .equalizer {
+            position: absolute;
+            display: flex;
+            align-items: flex-end;
+            gap: 3px;
+            height: 24px;
+            pointer-events: none;
+        }
+        .eq-bottom-left { bottom: 14px; left: 16px; }
+        .eq-top-right { top: 14px; right: 20px; }
+        .eq-bottom-right { bottom: 14px; right: 20px; }
+
+        .eq-bar {
+            width: 3px;
+            background: #39ff14;
+            border-radius: 2px;
+            box-shadow: 0 0 6px #39ff14;
+            animation: eqAnim 1s ease-in-out infinite alternate;
+        }
+        .eq-bar:nth-child(1) { height: 35%; animation-delay: 0.1s; }
+        .eq-bar:nth-child(2) { height: 75%; animation-delay: 0.3s; }
+        .eq-bar:nth-child(3) { height: 50%; animation-delay: 0.2s; }
+        .eq-bar:nth-child(4) { height: 95%; animation-delay: 0.4s; }
+        .eq-bar:nth-child(5) { height: 60%; animation-delay: 0.15s; }
+        .eq-bar:nth-child(6) { height: 85%; animation-delay: 0.35s; }
+        .eq-bar:nth-child(7) { height: 40%; animation-delay: 0.25s; }
+
+        @keyframes eqAnim {
+            0% { transform: scaleY(0.3); opacity: 0.6; }
+            50% { transform: scaleY(1); opacity: 1; }
+            100% { transform: scaleY(0.4); opacity: 0.8; }
+        }
+
+        /* ══════════════════════════════════════════════════════════════
+           PANEL IZQUIERDO: SALTA EL TURNO (LISTA DE BAILARINAS Y REGALOS)
+           ══════════════════════════════════════════════════════════════ */
+        .panel-salta {
+            position: relative;
+            flex: 0 0 350px;
+            background: rgba(14, 18, 32, 0.88);
+            border: 3.5px solid var(--neon-green);
+            border-radius: 18px;
+            padding: 24px 14px 14px 14px;
+            box-shadow: 0 0 20px rgba(57, 255, 20, 0.35),
+                        inset 0 0 15px rgba(57, 255, 20, 0.12);
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-start;
+            z-index: 5;
+        }
+
+        /* Badge superior "▶▶ SALTA EL TURNO ▶▶" */
+        .badge-salta-titulo {
+            position: absolute;
+            top: -16px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #0a0d18;
+            border: 2px solid var(--neon-green);
+            border-radius: 20px;
+            padding: 4px 16px;
+            font-family: 'Orbitron', 'Bangers', sans-serif;
+            font-size: 14px;
+            font-weight: 900;
+            color: #ffe600;
+            text-shadow: 0 0 8px #ffe600, 0 0 16px rgba(255, 230, 0, 0.5);
+            letter-spacing: 2px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            white-space: nowrap;
+            box-shadow: 0 0 15px rgba(57, 255, 20, 0.4);
+        }
+        .badge-salta-titulo .chevrons {
+            color: var(--neon-green);
+            font-size: 13px;
+            letter-spacing: -2px;
+            text-shadow: 0 0 6px var(--neon-green);
+        }
+
+        /* Lista de regalos / chicas */
+        .lista-chicas {
+            display: flex;
+            flex-direction: column;
+            gap: 7px;
+            margin-top: 4px;
+            max-height: 240px;
+            overflow-y: auto;
+            scrollbar-width: thin;
+            scrollbar-color: var(--neon-green) rgba(0,0,0,0.3);
+            padding-right: 4px;
+        }
+        .lista-chicas::-webkit-scrollbar {
+            width: 4px;
+        }
+        .lista-chicas::-webkit-scrollbar-thumb {
+            background: var(--neon-green);
+            border-radius: 4px;
+        }
+
+        /* Cada fila de bailarina */
+        .fila-reina {
             display: flex;
             align-items: center;
             justify-content: space-between;
-            gap: 30px; 
-            width: 100%;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-left: 5px solid var(--neon-green);
+            border-radius: 10px;
+            padding: 5px 10px;
+            gap: 10px;
+            transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            position: relative;
+            overflow: hidden;
+        }
+        .fila-reina:hover {
+            background: rgba(255, 255, 255, 0.1);
+            transform: translateX(3px);
         }
 
-        .titulo-bailando { font-size: 55px; color: #FFF; text-shadow: 3px 3px 5px #000; text-transform: uppercase; margin: 0;}
-        .reloj { font-size: 85px; color: #FFFFFF; text-shadow: 5px 5px 15px #00FFFF; line-height: 1; margin: 0;}
-        
-        /* Franja inferior ancha */
-        .texto-monedas { 
-            font-size: 22px; 
-            color: #FFD700; 
-            background: #222; 
-            border-radius: 8px; 
-            padding: 5px 15px; 
-            margin-top: 10px; 
-            border: 2px solid #FFD700;
-            width: 100%;
-            box-sizing: border-box; 
+        /* Efecto cuando salta el turno a esta chica */
+        .fila-reina.salto-activo {
+            animation: flashSalto 1.5s ease-out;
+            background: rgba(57, 255, 20, 0.25) !important;
+            border-color: #39ff14 !important;
+            box-shadow: 0 0 25px rgba(57, 255, 20, 0.8);
+            transform: scale(1.03);
         }
-        
-        /* Colores aplicados dinámicamente via JS */
+        @keyframes flashSalto {
+            0% { transform: scale(1.08); background: rgba(57, 255, 20, 0.7); }
+            50% { transform: scale(1.04); background: rgba(57, 255, 20, 0.3); }
+            100% { transform: scale(1); background: rgba(255, 255, 255, 0.05); }
+        }
 
-        /* Animación para el reloj de transición */
-        .parpadeo { animation: parpadeoAnim 0.8s infinite alternate; }
-        @keyframes parpadeoAnim { from { opacity: 1; } to { opacity: 0.3; } }
-        </style>
-    </head>
-    <body>
-        <div class="timer-container" id="contenedor-principal">
-            <div class="caja-central" id="caja-reloj">
-                <div class="fila-principal">
-                    <div class="titulo-bailando">
-                        BAILANDO: <span id="nombre-bailando">RAY</span>
-                    </div>
-                    <div class="reloj" id="timer-display">30</div>
-                </div>
-                <div class="texto-monedas">+3 SEGUNDOS POR MONEDA (O PUNTO)</div>
+        .reina-col-izq {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            min-width: 0;
+            flex: 1;
+        }
+
+        .gift-avatar {
+            width: 38px;
+            height: 38px;
+            min-width: 38px;
+            object-fit: contain;
+            border-radius: 8px;
+            background: rgba(0,0,0,0.3);
+            filter: drop-shadow(0 0 4px rgba(255,255,255,0.3));
+        }
+        .gift-emoji-fallback {
+            width: 38px;
+            height: 38px;
+            min-width: 38px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 26px;
+        }
+
+        .nombre-reina {
+            font-family: 'Outfit', sans-serif;
+            font-size: 18px;
+            font-weight: 800;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            text-shadow: 0 0 6px rgba(0, 0, 0, 0.8), 0 0 10px currentColor;
+        }
+
+        /* Píldora de costo / diamantes */
+        .costo-badge {
+            font-family: 'Orbitron', 'Bangers', monospace;
+            font-size: 13px;
+            font-weight: 700;
+            color: #ffe600;
+            background: rgba(0, 0, 0, 0.7);
+            border: 1px solid rgba(255, 230, 0, 0.5);
+            padding: 3px 8px;
+            border-radius: 6px;
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            white-space: nowrap;
+            box-shadow: 0 0 6px rgba(255, 230, 0, 0.3);
+        }
+
+        /* ══════════════════════════════════════════════════════════════
+           ZONA CENTRAL: CABLES NEÓN Y PISTAS DE CIRCUITO
+           ══════════════════════════════════════════════════════════════ */
+        .cables-svg-container {
+            flex: 1;
+            position: relative;
+            min-width: 80px;
+            max-width: 130px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: visible;
+            pointer-events: none;
+            z-index: 4;
+        }
+        .cables-svg {
+            width: 100%;
+            height: 100%;
+            overflow: visible;
+        }
+        .cable-pulse-pink {
+            stroke-dasharray: 20 60;
+            animation: cableFlow 2s linear infinite;
+        }
+        .cable-pulse-cyan {
+            stroke-dasharray: 20 60;
+            animation: cableFlow 2.4s linear infinite reverse;
+        }
+        @keyframes cableFlow {
+            from { stroke-dashoffset: 160; }
+            to { stroke-dashoffset: 0; }
+        }
+
+        /* Chispas flotantes */
+        .spark {
+            position: absolute;
+            width: 4px;
+            height: 4px;
+            border-radius: 50%;
+            background: #fff;
+            box-shadow: 0 0 8px #00ffff, 0 0 12px #ff1493;
+            opacity: 0;
+            animation: sparkFloat 3s ease-in-out infinite;
+        }
+        .spark-1 { top: 30%; left: 35%; animation-delay: 0.3s; }
+        .spark-2 { top: 70%; left: 55%; animation-delay: 1.2s; }
+        .spark-3 { top: 45%; left: 75%; animation-delay: 2.1s; }
+
+        @keyframes sparkFloat {
+            0% { opacity: 0; transform: translateY(0) scale(0.5); }
+            50% { opacity: 1; transform: translateY(-12px) scale(1.3); }
+            100% { opacity: 0; transform: translateY(-24px) scale(0.2); }
+        }
+
+        /* ══════════════════════════════════════════════════════════════
+           PANEL DERECHO: BAILANDO + TIMER GIGANTE + MULTIPLICADOR
+           ══════════════════════════════════════════════════════════════ */
+        .panel-derecho {
+            flex: 1.45;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            gap: 12px;
+            z-index: 5;
+            padding-left: 6px;
+            min-width: 0;
+        }
+
+        /* Chasis metálico oscuro para el reloj */
+        .reloj-chassis {
+            position: relative;
+            width: 100%;
+            background: rgba(14, 16, 28, 0.92);
+            border: 3.5px solid var(--active-color);
+            border-radius: 20px;
+            padding: 14px 20px;
+            box-shadow: 0 0 25px var(--active-color),
+                        inset 0 0 20px rgba(0, 0, 0, 0.7);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            transition: border-color 0.5s ease, box-shadow 0.5s ease;
+        }
+
+        /* Tornillos del chasis del reloj */
+        .reloj-chassis .chassis-screw {
+            position: absolute;
+            width: 8px;
+            height: 8px;
+            background: #2d3748;
+            border: 1px solid #4a5568;
+            border-radius: 50%;
+        }
+        .screw-tl { top: 8px; left: 8px; }
+        .screw-tr { top: 8px; right: 8px; }
+        .screw-bl { bottom: 8px; left: 8px; }
+        .screw-br { bottom: 8px; right: 8px; }
+
+        /* LEDs indicadores superiores */
+        .led-indicator-bar {
+            position: absolute;
+            top: 6px;
+            display: flex;
+            gap: 6px;
+        }
+        .led-dot {
+            width: 10px;
+            height: 4px;
+            border-radius: 2px;
+        }
+        .led-cyan { background: #00ffff; box-shadow: 0 0 6px #00ffff; }
+        .led-pink { background: #ff1493; box-shadow: 0 0 6px #ff1493; }
+
+        /* Fila del Título y Dígitos */
+        .fila-baile-reloj {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            width: 100%;
+            gap: 14px;
+        }
+
+        .col-bailando {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+            flex: 1;
+            min-width: 0;
+            overflow: visible;
+        }
+
+        .label-bailando {
+            font-family: 'Orbitron', 'Outfit', sans-serif;
+            font-size: 19px;
+            font-weight: 900;
+            color: #ff66cc;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            text-shadow: 0 0 10px rgba(255, 20, 147, 0.7), 0 0 20px rgba(255, 20, 147, 0.4);
+            margin-bottom: -2px;
+            white-space: nowrap;
+        }
+
+        /* Nombre de la chica en fuente goteante/dripping estilo Nosifer */
+        .nombre-bailando-drip {
+            font-family: 'Nosifer', 'Bangers', cursive;
+            font-size: 46px;
+            color: var(--active-color);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            line-height: 1.1;
+            white-space: nowrap;
+            overflow: visible;
+            max-width: 100%;
+            text-shadow: 0 0 12px var(--active-color), 0 0 28px var(--active-color), 3px 3px 6px #000;
+            transition: color 0.4s ease, text-shadow 0.4s ease, font-size 0.2s ease;
+        }
+
+        /* Dígito gigante del reloj */
+        .display-reloj {
+            font-family: 'Orbitron', 'Bangers', sans-serif;
+            font-size: 80px;
+            font-weight: 900;
+            color: #ffffff;
+            line-height: 0.95;
+            text-align: right;
+            text-shadow: 0 0 15px var(--active-color), 0 0 30px var(--active-color), 0 0 50px var(--active-color);
+            letter-spacing: -1px;
+            min-width: 100px;
+            flex-shrink: 0;
+            transition: text-shadow 0.4s ease;
+        }
+
+        /* Badge inferior: +3 SEGUNDOS POR MONEDA (O PUNTO) */
+        .badge-monedas {
+            background: #0d0f1a;
+            border: 2px solid var(--neon-yellow);
+            border-radius: 25px;
+            padding: 7px 22px;
+            font-family: 'Orbitron', 'Bangers', sans-serif;
+            font-size: 17px;
+            font-weight: 900;
+            color: var(--neon-yellow);
+            text-shadow: 0 0 8px rgba(255, 230, 0, 0.8), 0 0 18px rgba(255, 230, 0, 0.4);
+            letter-spacing: 2px;
+            box-shadow: 0 0 15px rgba(255, 230, 0, 0.35);
+            text-align: center;
+            width: fit-content;
+        }
+
+        /* ══════════════════════════════════════════════════════════════
+           ESTADO DE TRANSICIÓN (¡SIGUIENTE BAILARINA!)
+           ══════════════════════════════════════════════════════════════ */
+        .pantalla-transicion {
+            display: none;
+            width: 100%;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+        .transicion-activa .pantalla-normal {
+            display: none !important;
+        }
+        .transicion-activa .pantalla-transicion {
+            display: flex !important;
+        }
+
+        .transicion-fila {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            width: 100%;
+            gap: 20px;
+        }
+
+        .texto-sig {
+            font-family: 'Orbitron', 'Nosifer', sans-serif;
+            font-size: 32px;
+            font-weight: 900;
+            color: #ffffff;
+            text-transform: uppercase;
+            text-shadow: 0 0 15px var(--active-color);
+        }
+        .chica-siguiente-nombre {
+            color: var(--active-color);
+            font-family: 'Nosifer', 'Bangers', cursive;
+            display: block;
+            font-size: 42px;
+            text-shadow: 0 0 20px var(--active-color);
+        }
+
+        .reloj-transicion {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 78px;
+            font-weight: 900;
+            color: #ffffff;
+            text-shadow: 0 0 20px var(--active-color);
+            animation: parpadeoAlerta 0.7s infinite alternate;
+        }
+
+        @keyframes parpadeoAlerta {
+            from { opacity: 1; transform: scale(1); }
+            to { opacity: 0.35; transform: scale(0.96); }
+        }
+
+        .alerta-posicion {
+            font-size: 14px;
+            letter-spacing: 1.5px;
+            color: #00ffff;
+            text-shadow: 0 0 8px #00ffff;
+            font-weight: 800;
+            margin-top: 4px;
+        }
+
+        /* ══════════════════════════════════════════════════════════════
+           ESTADO EN ESPERA / IDLE (CUANDO EL TIMER NO ESTÁ CORRIENDO)
+           ══════════════════════════════════════════════════════════════ */
+        .estado-idle .label-bailando {
+            color: #a0aec0;
+            text-shadow: none;
+        }
+        .estado-idle .nombre-bailando-drip {
+            font-size: 38px;
+            color: #718096;
+            text-shadow: none;
+        }
+        .estado-idle .display-reloj {
+            color: #4a5568;
+            text-shadow: none;
+        }
+        .estado-idle .reloj-chassis {
+            border-color: rgba(255, 255, 255, 0.15);
+            box-shadow: 0 0 10px rgba(0,0,0,0.5);
+        }
+        .estado-idle .badge-monedas {
+            border-color: #718096;
+            color: #a0aec0;
+            box-shadow: none;
+            text-shadow: none;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- CHASIS PRINCIPAL UNIFICADO -->
+    <div class="hud-banner" id="hud-banner">
+        
+        <!-- Tubos de neón decorativos en el contorno -->
+        <div class="neon-tube-top"></div>
+        <div class="neon-tube-bottom"></div>
+
+        <!-- Remaches en las 4 esquinas del chasis -->
+        <div class="bolt bolt-tl"></div>
+        <div class="bolt bolt-tr"></div>
+        <div class="bolt bolt-bl"></div>
+        <div class="bolt bolt-br"></div>
+
+        <!-- Barras de ecualizador en esquinas -->
+        <div class="equalizer eq-bottom-left">
+            <div class="eq-bar"></div><div class="eq-bar"></div><div class="eq-bar"></div><div class="eq-bar"></div><div class="eq-bar"></div>
+        </div>
+        <div class="equalizer eq-top-right">
+            <div class="eq-bar"></div><div class="eq-bar"></div><div class="eq-bar"></div><div class="eq-bar"></div><div class="eq-bar"></div>
+        </div>
+        <div class="equalizer eq-bottom-right">
+            <div class="eq-bar"></div><div class="eq-bar"></div><div class="eq-bar"></div><div class="eq-bar"></div><div class="eq-bar"></div>
+        </div>
+
+        <!-- ── PANEL IZQUIERDO: SALTA EL TURNO ── -->
+        <div class="panel-salta" id="panel-salta">
+            <div class="badge-salta-titulo">
+                <span class="chevrons">▶▶</span> SALTA EL TURNO <span class="chevrons">▶▶</span>
             </div>
-            <div class="caja-central" id="caja-transicion" style="display: none;">
-                <div class="fila-principal">
-                    <div class="titulo-bailando" id="texto-transicion">
-                        ¡SIGUIENTE: <span class="t-Amy">AMY</span>!
-                    </div>
-                    <div class="reloj parpadeo" id="countdown-transicion">5</div>
-                </div>
-                <div class="texto-monedas"
-                     style="color: #FFF;
-                            border-color: #FFF;
-                            background: #111">¡PREPÁRATE EN POSICIÓN!</div>
+            <div class="lista-chicas" id="lista-chicas">
+                <!-- Se llena dinámicamente con las chicas y sus regalos de TikTok -->
             </div>
         </div>
-        <script src="/js/iframe-bridge.js"></script>
-        <script src="/socket.io/socket.io.js"></script>
-        <script>
+
+        <!-- ── ZONA CENTRAL: CABLES Y CIRCUITOS NEÓN CONECTADOS ── -->
+        <div class="cables-svg-container">
+            <svg class="cables-svg" viewBox="0 0 120 220" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <defs>
+                    <filter id="glow-pink" x="-20%" y="-20%" width="140%" height="140%">
+                        <feDropShadow dx="0" dy="0" stdDeviation="4" flood-color="#ff1493"/>
+                    </filter>
+                    <filter id="glow-cyan" x="-20%" y="-20%" width="140%" height="140%">
+                        <feDropShadow dx="0" dy="0" stdDeviation="4" flood-color="#00ffff"/>
+                    </filter>
+                    <filter id="glow-green" x="-20%" y="-20%" width="140%" height="140%">
+                        <feDropShadow dx="0" dy="0" stdDeviation="4" flood-color="#39ff14"/>
+                    </filter>
+                </defs>
+
+                <!-- Cable rosa superior hacia el reloj -->
+                <path d="M 0 50 C 50 50, 40 30, 90 30 L 120 30" stroke="#ff1493" stroke-width="4" stroke-linecap="round" filter="url(#glow-pink)"/>
+                <path class="cable-pulse-pink" d="M 0 50 C 50 50, 40 30, 90 30 L 120 30" stroke="#ffffff" stroke-width="2" stroke-linecap="round"/>
+
+                <!-- Cable cian medio -->
+                <path d="M 0 95 C 40 95, 50 80, 80 80 L 120 80" stroke="#00ffff" stroke-width="3" stroke-linecap="round" filter="url(#glow-cyan)"/>
+                <path class="cable-pulse-cyan" d="M 0 95 C 40 95, 50 80, 80 80 L 120 80" stroke="#ffffff" stroke-width="2" stroke-linecap="round"/>
+
+                <!-- Pista de circuito verde inferior -->
+                <path d="M 0 140 C 35 140, 50 160, 85 160 L 120 160" stroke="#39ff14" stroke-width="3.5" stroke-linecap="round" filter="url(#glow-green)"/>
+
+                <!-- Cable rosa inferior cruzado -->
+                <path d="M 0 180 C 45 180, 55 195, 95 195 L 120 195" stroke="#ff1493" stroke-width="3" stroke-linecap="round" filter="url(#glow-pink)"/>
+
+                <!-- Nodos / Terminales de circuito -->
+                <circle cx="8" cy="50" r="4" fill="#ff1493" filter="url(#glow-pink)"/>
+                <circle cx="8" cy="95" r="3.5" fill="#00ffff" filter="url(#glow-cyan)"/>
+                <circle cx="8" cy="140" r="3.5" fill="#39ff14" filter="url(#glow-green)"/>
+                <circle cx="8" cy="180" r="4" fill="#ff1493" filter="url(#glow-pink)"/>
+            </svg>
+
+            <!-- Chispas que flotan alrededor de los cables -->
+            <div class="spark spark-1"></div>
+            <div class="spark spark-2"></div>
+            <div class="spark spark-3"></div>
+        </div>
+
+        <!-- ── PANEL DERECHO: BAILANDO + TIMER + MULTIPLICADOR ── -->
+        <div class="panel-derecho estado-idle" id="panel-derecho">
+            
+            <!-- Chasis Metálico Neón del Reloj -->
+            <div class="reloj-chassis" id="reloj-chassis">
+                <div class="chassis-screw screw-tl"></div>
+                <div class="chassis-screw screw-tr"></div>
+                <div class="chassis-screw screw-bl"></div>
+                <div class="chassis-screw screw-br"></div>
+
+                <div class="led-indicator-bar">
+                    <div class="led-dot led-cyan"></div>
+                    <div class="led-dot led-pink"></div>
+                </div>
+
+                <!-- Vista Normal: Bailando y Tiempo -->
+                <div class="pantalla-normal fila-baile-reloj" id="pantalla-normal">
+                    <div class="col-bailando">
+                        <span class="label-bailando">BAILANDO:</span>
+                        <span class="nombre-bailando-drip" id="nombre-bailando">EN ESPERA</span>
+                    </div>
+                    <div class="display-reloj" id="timer-display">--</div>
+                </div>
+
+                <!-- Vista Transición: Siguiente Chica Parpadeando -->
+                <div class="pantalla-transicion" id="pantalla-transicion">
+                    <div class="transicion-fila">
+                        <div class="texto-sig">
+                            ¡SIGUIENTE:
+                            <span class="chica-siguiente-nombre" id="nombre-siguiente">AMY</span>!
+                        </div>
+                        <div class="reloj-transicion" id="countdown-transicion">5</div>
+                    </div>
+                    <div class="alerta-posicion">⚡ ¡PREPÁRATE EN POSICIÓN! ⚡</div>
+                </div>
+            </div>
+
+            <!-- Badge inferior de regla de monedas/segundos -->
+            <div class="badge-monedas" id="badge-monedas">
+                +3 SEGUNDOS POR MONEDA (O PUNTO)
+            </div>
+
+        </div>
+
+    </div>
+
+    <!-- Scripts y Sockets -->
+    <script src="/js/iframe-bridge.js"></script>
+    <script src="/socket.io/socket.io.js"></script>
+    <script>
         const socket = window.__iframeBridgeSocket || io();
+
         let QUEEN_COLORS = {};
         let APODOS = {};
-        const contenedor = document.getElementById('contenedor-principal');
-        const cajaReloj = document.getElementById('caja-reloj');
-        const displayReloj = document.getElementById('timer-display');
+        let TIMER_MAPA = {};
+        let CATALOGO = [];
+        let QUEENS_LIST = [];
+        let chicaActual = '';
+        let timerActivo = false;
+
+        const hudBanner = document.getElementById('hud-banner');
+        const panelDerecho = document.getElementById('panel-derecho');
+        const relojChassis = document.getElementById('reloj-chassis');
         const nombreBailando = document.getElementById('nombre-bailando');
-        const cajaTransicion = document.getElementById('caja-transicion');
-        const textoTransicion = document.getElementById('texto-transicion');
+        const timerDisplay = document.getElementById('timer-display');
+        const badgeMonedas = document.getElementById('badge-monedas');
+        const listaChicas = document.getElementById('lista-chicas');
+        const nombreSiguiente = document.getElementById('nombre-siguiente');
         const countdownTransicion = document.getElementById('countdown-transicion');
 
-        fetch('/api/queens/all').then(r => r.json()).then(all => {
-            all.forEach(q => { QUEEN_COLORS[q.name] = q.color; });
-        });
-        fetch('/api/apodos').then(r => r.json()).then(map => { APODOS = map; });
-
-        socket.on('queensActualizadas', (data) => {
-            if (data.equipos) Object.keys(data.equipos).forEach(n => { QUEEN_COLORS[n] = data.equipos[n].color; });
-            if (data.apodos) APODOS = data.apodos;
-        });
-
+        // Formato MM:SS o segundos
         function formatearTiempo(segundos) {
-            if(segundos < 60) return segundos;
-            let m = Math.floor(segundos / 60);
-            let s = (segundos % 60).toString().padStart(2, '0');
-            return m + ':' + s;
+            if (segundos < 60) return segundos;
+            const m = Math.floor(segundos / 60);
+            const s = (segundos % 60).toString().padStart(2, '0');
+            return `${m}:${s}`;
         }
 
-        function aplicarColoresChica(chica) {
-            const color = QUEEN_COLORS[chica] || '#00ffff';
-            nombreBailando.innerText = APODOS[chica] || chica;
+        // Aplica color y brillo neón dinámico según la bailarina
+        function aplicarColorBailarina(nombre) {
+            const color = QUEEN_COLORS[nombre] || '#ff1493';
+            document.documentElement.style.setProperty('--active-color', color);
+            relojChassis.style.borderColor = color;
+            relojChassis.style.boxShadow = `0 0 28px ${color}, inset 0 0 15px rgba(0,0,0,0.8)`;
             nombreBailando.style.color = color;
-            cajaReloj.style.borderColor = color;
-            cajaReloj.style.boxShadow = `0 0 30px ${color}`;
-            cajaTransicion.style.borderColor = color;
-            cajaTransicion.style.boxShadow = `0 0 30px ${color}`;
-            const brillo = `5px 5px 15px ${color}`;
-            displayReloj.style.textShadow = brillo;
-            countdownTransicion.style.textShadow = brillo;
+            nombreBailando.style.textShadow = `0 0 12px ${color}, 0 0 28px ${color}, 3px 3px 6px #000`;
+            timerDisplay.style.textShadow = `0 0 15px ${color}, 0 0 32px ${color}, 0 0 50px ${color}`;
+            countdownTransicion.style.textShadow = `0 0 25px ${color}`;
         }
 
+        // ══════════════════════════════════════════════════════════════
+        //  CARGA DE DATOS: BAILARINAS, APODOS Y REGALOS DE SALTA EL TURNO
+        // ══════════════════════════════════════════════════════════════
+        async function cargarDatosRegalos() {
+            try {
+                const [rQueens, rApodos, rMapa, rCat] = await Promise.all([
+                    fetch('/api/queens/all').then(r => r.json()).catch(() => []),
+                    fetch('/api/apodos').then(r => r.json()).catch(() => ({})),
+                    fetch('/api/tiktok/timer_mapa').then(r => r.json()).catch(() => ({})),
+                    fetch('/api/tiktok/catalogo').then(r => r.json()).catch(() => ({ regalos: [] }))
+                ]);
+
+                QUEENS_LIST = rQueens || [];
+                APODOS = rApodos || {};
+                TIMER_MAPA = rMapa || {};
+                CATALOGO = (rCat && rCat.regalos) ? rCat.regalos : [];
+
+                QUEENS_LIST.forEach(q => {
+                    if (q.name && q.color) QUEEN_COLORS[q.name] = q.color;
+                });
+
+                renderizarListaRegalos();
+            } catch (err) {
+                console.error("Error al cargar regalos para timer:", err);
+            }
+        }
+
+        function renderizarListaRegalos() {
+            // Invertir mapa: QueenName -> GiftName
+            const reinaAregalo = {};
+            for (let gift in TIMER_MAPA) {
+                const queenName = TIMER_MAPA[gift];
+                if (!reinaAregalo[queenName]) reinaAregalo[queenName] = gift;
+            }
+
+            listaChicas.innerHTML = '';
+
+            const activas = QUEENS_LIST.filter(q => q.activo);
+            if (activas.length === 0) {
+                listaChicas.innerHTML = '<div style="color:#718096;text-align:center;padding:10px;font-size:13px;">No hay bailarinas activas</div>';
+                return;
+            }
+
+            activas.forEach(q => {
+                const nombreMostrar = (APODOS[q.name] || q.name).toUpperCase();
+                const color = q.color || '#39ff14';
+
+                // Buscar regalo asignado
+                const giftName = reinaAregalo[q.name];
+                const giftOficial = giftName ? CATALOGO.find(g => g.name === giftName) : null;
+
+                let img = '';
+                let pts = q.regalo_pts || 0;
+                let costoHtml = '';
+
+                if (giftOficial) {
+                    img = giftOficial.imageUrl || '';
+                    pts = giftOficial.diamondCount || pts;
+                    costoHtml = pts > 0 ? `<span class="costo-badge">${pts} 💎</span>` : '';
+                } else {
+                    const rawImg = q.regalo_img || '';
+                    img = rawImg && !rawImg.startsWith('/') && !rawImg.startsWith('http') ? '/regalos/' + rawImg : rawImg;
+                    costoHtml = pts > 0 ? `<span class="costo-badge">${pts} PTS</span>` : '';
+                }
+
+                const mediaHtml = img
+                    ? `<img class="gift-avatar" src="${img}" alt="🎁" onerror="this.style.display='none';this.nextElementSibling.style.display='flex';"><div class="gift-emoji-fallback" style="display:none">🎁</div>`
+                    : `<div class="gift-emoji-fallback">🎁</div>`;
+
+                const fila = document.createElement('div');
+                fila.className = 'fila-reina';
+                fila.id = `fila-reina-${encodeURIComponent(q.name)}`;
+                fila.style.borderLeftColor = color;
+
+                const badgeColHtml = costoHtml ? `<div>${costoHtml}</div>` : '';
+
+                fila.innerHTML = `
+                    <div class="reina-col-izq">
+                        ${mediaHtml}
+                        <span class="nombre-reina" style="color: ${color}">${nombreMostrar}</span>
+                    </div>
+                    ${badgeColHtml}
+                `;
+
+                listaChicas.appendChild(fila);
+            });
+        }
+
+        // Resalta visualmente la fila de la chica en el panel izquierdo cuando salta el turno
+        function animarSaltoChica(chica) {
+            if (!chica) return;
+            const el = document.getElementById(`fila-reina-${encodeURIComponent(chica)}`);
+            if (el) {
+                el.classList.remove('salto-activo');
+                void el.offsetWidth; // Trigger reflow
+                el.classList.add('salto-activo');
+                setTimeout(() => el.classList.remove('salto-activo'), 2500);
+            }
+        }
+
+        // ══════════════════════════════════════════════════════════════
+        //  AJUSTE DINÁMICO DE TAMAÑO PARA NOMBRES DE BAILARINAS
+        // ══════════════════════════════════════════════════════════════
+        function ajustarTamanoNombre(texto) {
+            if (!nombreBailando) return;
+            nombreBailando.textContent = texto;
+            const len = (texto || '').length;
+            let size = 46;
+            if (len > 12) size = 26;
+            else if (len > 9) size = 32;
+            else if (len > 7) size = 38;
+            else if (len > 5) size = 42; // ALASKA (6 letras) -> 42px
+            nombreBailando.style.fontSize = `${size}px`;
+
+            // Verificar si excede el ancho y reducir dinámicamente si es necesario
+            requestAnimationFrame(() => {
+                const parent = nombreBailando.parentElement;
+                if (!parent) return;
+                const maxW = parent.clientWidth || 340;
+                let s = size;
+                while (nombreBailando.scrollWidth > maxW && s > 20) {
+                    s -= 2;
+                    nombreBailando.style.fontSize = `${s}px`;
+                }
+            });
+        }
+
+        function ajustarTamanoNombreSiguiente(texto) {
+            if (!nombreSiguiente) return;
+            nombreSiguiente.textContent = texto;
+            const len = (texto || '').length;
+            let size = 42;
+            if (len > 10) size = 28;
+            else if (len > 6) size = 34;
+            nombreSiguiente.style.fontSize = `${size}px`;
+        }
+
+        // ══════════════════════════════════════════════════════════════
+        //  RESTAURAR ESTADO INICIAL VÍA /timer/status
+        // ══════════════════════════════════════════════════════════════
+        async function restaurarEstadoTimer() {
+            try {
+                const status = await fetch('/timer/status').then(r => r.json()).catch(() => null);
+                if (status && status.activo) {
+                    timerActivo = true;
+                    panelDerecho.classList.remove('estado-idle');
+                    chicaActual = status.chicaActual || '';
+                    
+                    if (status.estado === 'transicion') {
+                        relojChassis.classList.add('transicion-activa');
+                        ajustarTamanoNombreSiguiente(APODOS[chicaActual] || chicaActual);
+                        countdownTransicion.textContent = status.tiempoTransicion || 5;
+                        aplicarColorBailarina(chicaActual);
+                    } else {
+                        relojChassis.classList.remove('transicion-activa');
+                        ajustarTamanoNombre(APODOS[chicaActual] || chicaActual);
+                        timerDisplay.textContent = formatearTiempo(status.tiempo || 0);
+                        aplicarColorBailarina(chicaActual);
+                    }
+
+                    if (status.segundosPorMoneda) {
+                        badgeMonedas.textContent = `+${status.segundosPorMoneda} SEGUNDOS POR MONEDA (O PUNTO)`;
+                    }
+                }
+            } catch (e) {
+                console.warn("No se pudo restaurar estado de timer:", e);
+            }
+        }
+
+        // ══════════════════════════════════════════════════════════════
+        //  SOCKET EVENTS
+        // ══════════════════════════════════════════════════════════════
+
+        // Inicio de baile / cambio a nueva bailarina
         socket.on('timerInicio', (data) => {
-            cajaTransicion.style.display = 'none';
-            cajaReloj.style.display = 'flex';
-            contenedor.classList.add('timer-activo');
-            aplicarColoresChica(data.chica);
-            displayReloj.innerText = formatearTiempo(data.tiempo);
-            const elMonedas = document.querySelector('#caja-reloj .texto-monedas');
-            if (elMonedas) {
-                const segs = data.segundosPorMoneda || 3;
-                elMonedas.textContent = `+${segs} SEGUNDOS POR MONEDA (O PUNTO)`;
+            timerActivo = true;
+            panelDerecho.classList.remove('estado-idle');
+            relojChassis.classList.remove('transicion-activa');
+
+            chicaActual = data.chica || '';
+            ajustarTamanoNombre(APODOS[chicaActual] || chicaActual);
+            timerDisplay.textContent = formatearTiempo(data.tiempo);
+            aplicarColorBailarina(chicaActual);
+
+            if (data.segundosPorMoneda) {
+                badgeMonedas.textContent = `+${data.segundosPorMoneda} SEGUNDOS POR MONEDA (O PUNTO)`;
             }
         });
 
-        socket.on('timerTick', (tiempo) => { displayReloj.innerText = formatearTiempo(tiempo); });
-
-        socket.on('timerTransicion', (data) => {
-            cajaReloj.style.display = 'none';
-            cajaTransicion.style.display = 'flex';
-            contenedor.classList.add('timer-activo');
-            
-            textoTransicion.innerHTML = '¡SIGUIENTE: ' + (APODOS[data.chica] || data.chica) + '!';
-            countdownTransicion.innerText = data.tiempo;
-            aplicarColoresChica(data.chica); // Pinta la caja del color de la chica que sigue
+        // Tics del reloj (segundo a segundo o incremento por regalo)
+        socket.on('timerTick', (tiempo) => {
+            timerDisplay.textContent = formatearTiempo(tiempo);
         });
 
-        socket.on('timerTransicionTick', (tiempo) => { countdownTransicion.innerText = tiempo; });
-        
-        socket.on('timerCancelado', () => { 
-            contenedor.classList.remove('timer-activo'); 
-            cajaReloj.style.display = 'none';
-            cajaTransicion.style.display = 'none';
+        // Transición de cambio de turno ("¡SIGUIENTE: ...!")
+        socket.on('timerTransicion', (data) => {
+            timerActivo = true;
+            panelDerecho.classList.remove('estado-idle');
+            relojChassis.classList.add('transicion-activa');
+
+            const siguiente = data.chica || '';
+            ajustarTamanoNombreSiguiente(APODOS[siguiente] || siguiente);
+            countdownTransicion.textContent = data.tiempo || 5;
+            aplicarColorBailarina(siguiente);
+            animarSaltoChica(siguiente);
+        });
+
+        // Tics de la cuenta regresiva de transición (5 a 0)
+        socket.on('timerTransicionTick', (tiempo) => {
+            countdownTransicion.textContent = tiempo;
+        });
+
+        // Cancelación o detención del timer
+        socket.on('timerCancelado', () => {
+            timerActivo = false;
+            relojChassis.classList.remove('transicion-activa');
+            panelDerecho.classList.add('estado-idle');
+            ajustarTamanoNombre('EN ESPERA');
+            timerDisplay.textContent = '--';
+            document.documentElement.style.setProperty('--active-color', '#ff1493');
+            relojChassis.style.borderColor = 'rgba(255, 255, 255, 0.15)';
+            relojChassis.style.boxShadow = '0 0 10px rgba(0,0,0,0.5)';
+        });
+
+        // Regalo recibido en vivo: Si activa salto, resaltar a la chica en la lista izquierda
+        socket.on('nuevoRegalo', (data) => {
+            if (data && data.nombre) {
+                // Si el regalo coincide con alguna chica del mapa de timer
+                const giftName = data.giftName;
+                if (giftName && TIMER_MAPA[giftName]) {
+                    animarSaltoChica(TIMER_MAPA[giftName]);
+                } else if (data.nombre) {
+                    animarSaltoChica(data.nombre);
+                }
+            }
+        });
+
+        // Actualizaciones de configuración de chicas, apodos o mapa de regalos
+        socket.on('queensActualizadas', (data) => {
+            if (data && data.equipos) {
+                Object.keys(data.equipos).forEach(n => {
+                    QUEEN_COLORS[n] = data.equipos[n].color;
+                });
+            }
+            if (data && data.apodos) APODOS = data.apodos;
+            cargarDatosRegalos();
+        });
+
+        socket.on('mapaTimerCambiado', (mapa) => {
+            TIMER_MAPA = mapa || {};
+            renderizarListaRegalos();
+        });
+
+        socket.on('catalogoCargado', (cat) => {
+            CATALOGO = (cat && cat.regalos) ? cat.regalos : [];
+            renderizarListaRegalos();
         });
 
         // ── BRAND MANAGER LOGIC ──
@@ -231,11 +1067,7 @@
 
         function aplicarMarca(config) {
             if (!config) return;
-            // Tipografía
-            if (config.fontFamily) {
-                loadGoogleFont(config.fontFamily);
-            }
-            // Logotipo
+            if (config.fontFamily) loadGoogleFont(config.fontFamily);
             const logoContainer = document.getElementById('agency-logo-container');
             const logoImg = document.getElementById('agency-logo');
             if (logoContainer && logoImg) {
@@ -248,7 +1080,6 @@
                     logoContainer.style.transform = 'scale(0.8)';
                 }
             }
-            // Brillo neón
             document.body.classList.remove('neon-none', 'neon-low', 'neon-high');
             if (config.neonIntensity && config.neonIntensity !== 'normal') {
                 document.body.classList.add('neon-' + config.neonIntensity);
@@ -256,11 +1087,17 @@
         }
 
         socket.on('marcaCambiado', aplicarMarca);
-        </script>
 
-    <!-- Logotipo de la Agencia Flotante -->
+        // Inicializar datos y restaurar estado
+        cargarDatosRegalos().then(() => {
+            restaurarEstadoTimer();
+        });
+    </script>
+
+    <!-- Logotipo de la Agencia Flotante (Brand Manager) -->
     <div id="agency-logo-container" style="position: absolute; top: 20px; right: 20px; z-index: 9999; pointer-events: none; transition: all 0.5s ease; opacity: 0; transform: scale(0.8);">
-        <img id="agency-logo" src="" style="max-height: 80px; max-width: 150px; object-fit: contain; filter: drop-shadow(0 0 10px rgba(0,0,0,0.5));">
+        <img id="agency-logo" src="" alt="" style="max-height: 80px; max-width: 150px; object-fit: contain; filter: drop-shadow(0 0 10px rgba(0,0,0,0.5));">
     </div>
+
 </body>
 </html>
