@@ -298,56 +298,101 @@
             line-height: 1;
         }
 
-        /* Medallas Doradas de Victorias */
+        /* ── MEDALLAS / CONTADOR DE VICTORIAS REDISEÑADO ── */
         .queen-vics {
             display: inline-flex;
             align-items: center;
             justify-content: center;
-            gap: 4px;
-            font-size: 21px;
-            font-weight: 900;
-            color: #FFD700;
-            letter-spacing: 0.5px;
-            animation: latido-suave 2.5s infinite ease-in-out;
+            gap: 6px;
+            background: rgba(0, 0, 0, 0.72);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+            border: 1.5px solid rgba(255, 215, 0, 0.65);
+            border-radius: 20px;
+            padding: 3px 12px;
+            margin-top: 5px;
+            box-shadow: 0 4px 14px rgba(0, 0, 0, 0.75),
+                0 0 12px rgba(255, 215, 0, 0.35);
+            animation: latido-vics 2.8s infinite ease-in-out;
+            transition: transform 0.25s ease, border-color 0.3s ease, box-shadow 0.3s ease;
         }
 
         .queen-vics .vic-icon {
-            font-size: 20px;
-            filter: drop-shadow(0 2px 3px rgba(0, 0, 0, 0.7));
-            transition: transform 0.3s ease;
+            font-size: 26px;
+            line-height: 1;
+            filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.8));
+            display: inline-block;
+            transform: translateY(-1px);
+        }
+
+        .queen-vics .vic-tag {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            background: linear-gradient(135deg, #FFE259 0%, #FFA751 100%);
+            color: #111;
+            font-family: 'Inter', sans-serif;
+            font-size: 13px;
+            font-weight: 900;
+            letter-spacing: 1.5px;
+            padding: 3px 8px;
+            border-radius: 6px;
+            line-height: 1;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.5),
+                0 0 8px rgba(255, 215, 0, 0.4);
+            transform: translateY(-1px);
         }
 
         .queen-vics .vic-count {
-            background: linear-gradient(135deg, #FFE066 0%, #F5B041 100%);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.8);
-            filter: drop-shadow(0 2px 3px rgba(0, 0, 0, 0.6));
+            font-family: 'Bangers', 'Inter', cursive, sans-serif;
+            font-size: 28px;
+            line-height: 1;
+            font-weight: 900;
+            color: #FFEA00;
+            letter-spacing: 1px;
+            -webkit-text-stroke: 1.2px #000;
+            text-shadow: 0 0 10px rgba(255, 215, 0, 0.8),
+                2px 2px 0px #000;
+            filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.8));
         }
 
         /* Estilo de Calabazas de Halloween */
+        body.theme-halloween .queen-vics {
+            border-color: rgba(255, 140, 0, 0.75);
+            box-shadow: 0 4px 14px rgba(0, 0, 0, 0.8),
+                0 0 12px rgba(255, 140, 0, 0.4);
+            animation: latido-vics-hw 2.8s infinite ease-in-out;
+        }
+
         body.theme-halloween .queen-vics .vic-icon {
             filter: drop-shadow(0 0 8px rgba(255, 140, 0, 0.95)) drop-shadow(0 2px 3px rgba(0, 0, 0, 0.8));
         }
 
         body.theme-halloween .queen-vics .vic-count {
-            background: linear-gradient(135deg, #ffd166 0%, #ff8c00 100%);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            filter: drop-shadow(0 0 6px rgba(255, 140, 0, 0.7));
+            color: #FFA500;
+            text-shadow: 0 0 10px rgba(255, 140, 0, 0.85),
+                2px 2px 0px #000;
         }
 
-        @keyframes latido-suave {
-
-            0%,
-            100% {
+        @keyframes latido-vics {
+            0%, 100% {
                 transform: scale(1);
-                filter: brightness(1) drop-shadow(0 2px 3px rgba(0, 0, 0, 0.6));
             }
-
             50% {
                 transform: scale(1.06);
-                filter: brightness(1.2) drop-shadow(0 4px 6px rgba(0, 0, 0, 0.7));
+                box-shadow: 0 6px 18px rgba(0, 0, 0, 0.85),
+                    0 0 16px rgba(255, 215, 0, 0.55);
+            }
+        }
+
+        @keyframes latido-vics-hw {
+            0%, 100% {
+                transform: scale(1);
+            }
+            50% {
+                transform: scale(1.06);
+                box-shadow: 0 6px 18px rgba(0, 0, 0, 0.85),
+                    0 0 16px rgba(255, 140, 0, 0.6);
             }
         }
 
@@ -485,8 +530,10 @@
         let isHalloweenTheme = (themeParam !== 'clasico' && themeParam !== 'default');
 
         function getVicHtml(count) {
-            const vicIcon = isHalloweenTheme ? '🎃' : '👑';
-            return `<span class="vic-icon">${vicIcon}</span> <span class="vic-count">X${count}</span>`;
+            if (isHalloweenTheme) {
+                return `<span class="vic-icon">🎃</span> <span class="vic-count">X${count}</span>`;
+            }
+            return `<span class="vic-tag">WIN</span> <span class="vic-count">${count}</span>`;
         }
 
         function aplicarTemaBatalla() {
