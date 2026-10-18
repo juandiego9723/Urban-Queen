@@ -1111,6 +1111,7 @@
                 <div class="menu-item tab" onclick="cambiarTab('clasico',this)">Clásico</div>
                 <div class="menu-item tab" onclick="cambiarTab('puntos',this)">Conociendo</div>
                 <div class="menu-item tab" onclick="cambiarTab('timer',this)">Timer</div>
+                <div class="menu-item tab" onclick="cambiarTab('torneo',this)">Torneo Revivir</div>
                 <div class="menu-item tab" onclick="cambiarTab('dinamicas',this)">Dinámicas</div>
                 <div class="menu-item tab" onclick="cambiarTab('gestor',this)">Gestor Custom</div>
 
@@ -1687,9 +1688,12 @@
                             <div id="timer-acumulado"></div>
                         </div>
                     </div>
+                </div>
 
+                <!-- ══ TORNEO REVIVIR ══ -->
+                <div id="tab-torneo" class="tab-content">
                     <!-- CARD DE TORNEO POR RONDAS -->
-                    <div id="card-torneo" class="card" style="margin-top: 15px;">
+                    <div id="card-torneo" class="card">
                         <div class="card-title"
                             style="display: flex; justify-content: space-between; align-items: center;">
                             <div>🏆 <span class="card-title-accent">Torneo por Rondas con Eliminación</span></div>
@@ -1811,7 +1815,39 @@
                         </div>
                     </div>
 
-
+                    <!-- CARD DE REVIVIR QUEEN (SALVACIÓN) -->
+                    <div class="card">
+                        <div class="card-title">
+                            ❤️ <span class="card-title-accent">Dinámica Revivir (Salvación)</span>
+                        </div>
+                        <div class="col" style="gap: 10px;">
+                            <div class="row" style="gap:10px; align-items: center;">
+                                <span class="label" style="flex:1">Bailarina a Revivir:</span>
+                                <select id="revivirChicaSelect" class="select" style="width:130px; font-size:12px; height:32px; padding: 6px 10px;">
+                                    <!-- Se llenará dinámicamente -->
+                                </select>
+                            </div>
+                            <div class="row" style="gap:10px; align-items: center;">
+                                <span class="label" style="flex:1">Tiempo (seg):</span>
+                                <input type="number" id="tiempoRevivirInput" value="90" class="input input-num" style="width:130px; height:32px;">
+                            </div>
+                            <button class="btn btn-success btn-full" onclick="iniciarRevivir()">❤️ Iniciar Salvación</button>
+                            <div class="row-2" style="gap: 10px; margin-top: 5px;">
+                                <button class="btn btn-danger btn-full" onclick="hacerFetch('/api/revivir/stop')">⏹ Eliminar</button>
+                                <button class="btn btn-success btn-full" style="background-color: #10b981;" onclick="hacerFetch('/api/revivir/stop?exito=true')">❤️ Salvar</button>
+                            </div>
+                            <div id="btn-confirm-fallo-wrap" style="display: none; margin-top: 5px;">
+                                <style>
+                                    @keyframes pulse-btn-danger {
+                                        0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(239,68,68, 0.7); }
+                                        70% { transform: scale(1.02); box-shadow: 0 0 0 8px rgba(239,68,68, 0); }
+                                        100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(239,68,68, 0); }
+                                    }
+                                </style>
+                                <button class="btn btn-danger btn-full" style="height: 40px; font-weight: 800; border: 2px solid #ef4444; animation: pulse-btn-danger 1.5s infinite; background-color: #ef4444; color: #fff;" onclick="hacerFetch('/api/revivir/confirm-fallo')">⚠️ Declarar Eliminada (Tiempo Agotado)</button>
+                            </div>
+                        </div>
+                    </div>
                 </div>
                 <!-- ══ PANTALLAS ══ -->
                 <div id="tab-pantallas" class="tab-content">

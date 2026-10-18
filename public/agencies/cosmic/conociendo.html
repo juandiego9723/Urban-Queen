@@ -65,7 +65,7 @@
         body.neon-none * { text-shadow: none !important; box-shadow: none !important; }
         body.neon-low *  { text-shadow: 0 0 3px currentColor !important; }
 
-        .timer-container { display: none; justify-content: center; align-items: flex-start; }
+        .timer-container { display: flex; justify-content: center; align-items: flex-start; }
         .timer-activo    { display: flex; }
 
         /* ═══ BANNER PRINCIPAL ═══ */
@@ -376,7 +376,7 @@
         <div class="caja-central" id="caja-reloj">
             <div class="title-pill">
                 <span class="sparkle">✦</span>
-                <span id="nombre-bailando">PRUEBA1</span>
+                <span id="nombre-bailando">EN ESPERA</span>
                 <span class="sparkle">✦</span>
             </div>
 
@@ -406,7 +406,7 @@
                     <div class="hex-ring hex-ring-2"></div>
                     <div class="hex-ring hex-ring-1">
                         <div class="hex-inner">
-                            <div class="reloj" id="timer-display">05:00</div>
+                            <div class="reloj" id="timer-display">00:00</div>
                         </div>
                     </div>
                 </div>
@@ -554,11 +554,19 @@
 
         socket.on('conociendoTransicionTick', (tiempo) => { countdownTransicion.innerText = tiempo; });
         
-        socket.on('conociendoCancelado', () => { 
-            contenedor.classList.remove('timer-activo'); 
-            cajaReloj.style.display = 'none';
+        function resetearStandbyConociendo() {
             cajaTransicion.style.display = 'none';
-        });
+            cajaReloj.style.display = 'flex';
+            if (nombreBailando) {
+                nombreBailando.innerText = 'EN ESPERA';
+                nombreBailando.style.color = '#fff';
+            }
+            if (displayReloj) displayReloj.innerText = '00:00';
+            actualizarBarra(0, 2000);
+        }
+
+        socket.on('conociendoCancelado', resetearStandbyConociendo);
+        resetearStandbyConociendo();
 
         function actualizarBarra(puntos, meta) {
             txtPuntos.innerText = puntos.toLocaleString();

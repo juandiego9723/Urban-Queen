@@ -455,6 +455,28 @@ io.on('connection', (socket) => {
             });
         }
 
+        if (session.conociendo && session.conociendo.activo) {
+            socket.emit('conociendoInicio', {
+                chica: session.conociendo.chicaActual,
+                tiempo: session.conociendo.tiempo,
+                meta: session.conociendo.meta,
+                puntos: session.conociendo.puntos,
+                titulo: session.conociendo.titulo
+            });
+        }
+
+        if (session.revivir && session.revivir.activo) {
+            socket.emit('revivirInicio', {
+                chica: session.revivir.chicaActual,
+                tiempo: session.revivir.tiempo,
+                meta: session.revivir.meta,
+                puntos: session.revivir.puntos,
+                clasificadas: session.revivir.clasificadas,
+                modoTorneo: session.timerBaile ? session.timerBaile.modoTorneo : false,
+                rondaActual: session.timerBaile ? session.timerBaile.rondaActual : 1
+            });
+        }
+
         if (!session.goalConfig) {
             try {
                 const rawGoal = session.db.getConfigVal('goal_config');

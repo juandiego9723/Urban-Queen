@@ -1098,6 +1098,7 @@
                 <div class="menu-item tab" onclick="cambiarTab('clasico',this)">Clásico</div>
                 <div class="menu-item tab" onclick="cambiarTab('puntos',this)">Conociendo</div>
                 <div class="menu-item tab" onclick="cambiarTab('timer',this)">Timer</div>
+                <div class="menu-item tab" onclick="cambiarTab('torneo',this)">Torneo Revivir</div>
                 <div class="menu-item tab" onclick="cambiarTab('dinamicas',this)">Dinámicas</div>
                 <div class="menu-item tab" onclick="cambiarTab('gestor',this)">Gestor Custom</div>
 
@@ -1604,9 +1605,12 @@
                             <div id="timer-acumulado"></div>
                         </div>
                     </div>
+                </div>
 
+                <!-- ══ TORNEO REVIVIR ══ -->
+                <div id="tab-torneo" class="tab-content">
                     <!-- CARD DE TORNEO POR RONDAS -->
-                    <div id="card-torneo" class="card" style="margin-top: 15px;">
+                    <div id="card-torneo" class="card">
                         <div class="card-title" style="display: flex; justify-content: space-between; align-items: center;">
                             <div>🏆 <span class="card-title-accent">Torneo por Rondas con Eliminación</span></div>
                             <span id="torneo-badge-ronda" class="badge badge-info" style="display: none; font-size: 11px;">Ronda 1</span>
@@ -1687,7 +1691,7 @@
                     </div>
 
                     <!-- CARD DE REVIVIR QUEEN (SALVACIÓN) -->
-                    <div class="card" style="margin-top: 15px;">
+                    <div class="card">
                         <div class="card-title">
                             ❤️ <span class="card-title-accent">Dinámica Revivir (Salvación)</span>
                         </div>

@@ -71,7 +71,7 @@
             border-radius: 20px;
             padding: 12px 18px;
             box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6);
-            display: none; /* Se activa dinámicamente */
+            display: flex; /* Visible por defecto en standby */
             align-items: center;
             gap: 16px;
             z-index: 10;
@@ -327,7 +327,7 @@
             <div class="right-content-area">
                 <!-- Fila Superior: Nombre y Regalos Recibidos -->
                 <div class="top-row-info">
-                    <div class="dancer-pill-name" id="dancer-name-pill">-</div>
+                    <div class="dancer-pill-name" id="dancer-name-pill">DINÁMICA REVIVIR</div>
                     <div class="gifts-horizontal-list" id="gifts-list">
                         <!-- Iconos de regalos acumulados se inyectan acá -->
                     </div>
@@ -335,16 +335,16 @@
 
                 <!-- Fila Media: Estado / Tiempo -->
                 <div class="middle-status-area">
-                    <h2 class="status-text-display" id="status-text">PREPÁRATE</h2>
-                    <h2 class="countdown-time-display" id="countdown-text">01:30</h2>
+                    <h2 class="status-text-display" id="status-text" style="display: block; width: 100%; text-align: center; color: #ffee00;">EN ESPERA</h2>
+                    <h2 class="countdown-time-display" id="countdown-text" style="display: none;">00:00</h2>
                 </div>
 
                 <!-- Fila Inferior: Progreso de Puntos -->
                 <div class="bottom-progress-row">
-                    <div id="meta-container" style="font-family:'Montserrat', sans-serif; font-size:14px; font-weight:900; color:#ffee00; text-align:left; letter-spacing:0.5px;">FALTAN: <span id="meta-valor" style="font-size:18px; font-style:italic;">0</span> PTS</div>
+                    <div id="meta-container" style="font-family:'Montserrat', sans-serif; font-size:14px; font-weight:900; color:#ffee00; text-align:left; letter-spacing:0.5px;">ESTADO: <span id="meta-valor" style="font-size:18px; font-style:italic;">LISTA</span></div>
                     <div class="revivir-progress-container">
-                        <div class="revivir-progress-fill" id="bar-fill"></div>
-                        <div class="revivir-progress-label" id="bar-label">0 / 0</div>
+                        <div class="revivir-progress-fill" id="bar-fill" style="width:0%"></div>
+                        <div class="revivir-progress-label" id="bar-label">ESPERANDO INICIO...</div>
                     </div>
                 </div>
             </div>
@@ -769,11 +769,46 @@
             statusText.style.textShadow = '0 0 15px #ff3b30';
         });
 
-        socket.on('revivirCancelado', () => {
+        function resetearStandbyRevivir() {
             if (introTimeout) clearTimeout(introTimeout);
             isIntroRunning = false;
-            topCard.style.display = 'none';
-        });
+            activeQueen = '';
+            topCard.style.display = 'flex';
+            topCard.style.borderColor = 'rgba(255, 255, 255, 0.15)';
+            topCard.style.boxShadow = '0 8px 32px rgba(0, 0, 0, 0.6)';
+            dancerNamePill.innerText = 'DINÁMICA REVIVIR';
+            dancerNamePill.style.color = '#fff';
+            dancerNamePill.style.backgroundColor = 'rgba(255, 255, 255, 0.15)';
+            statusText.style.display = 'block';
+            statusText.style.width = '100%';
+            statusText.style.textAlign = 'center';
+            statusText.innerText = 'EN ESPERA';
+            statusText.style.color = '#ffee00';
+            statusText.style.textShadow = '0 0 10px rgba(255, 238, 0, 0.5)';
+            statusText.style.fontSize = '26px';
+            countdownText.style.display = 'none';
+            if (metaContainer) {
+                metaContainer.style.display = 'block';
+                metaContainer.innerHTML = 'ESTADO: <span id="meta-valor" style="font-size:18px; font-style:italic;">LISTA</span>';
+            }
+            barFill.style.width = '0%';
+            barFill.classList.remove('rainbow-celebration-bar');
+            barFill.style.background = 'linear-gradient(90deg, #4facfe, #00f2fe, #ffee00, #4facfe)';
+            barLabel.innerText = 'ESPERANDO INICIO...';
+            crownIcon.style.display = 'none';
+            mvpBadge.style.display = 'none';
+            usernameUnder.style.display = 'none';
+            avatarContainer.style.borderColor = 'rgba(255, 255, 255, 0.3)';
+            avatarContainer.classList.remove('mvp-glow');
+            imgAvatar.style.display = 'none';
+            fallbackAvatar.style.display = 'flex';
+            fallbackAvatar.innerText = '❤️';
+            fallbackAvatar.style.background = 'linear-gradient(135deg, #ff007f, #ffee00)';
+            if (giftsList) giftsList.innerHTML = '';
+        }
+
+        socket.on('revivirCancelado', resetearStandbyRevivir);
+        resetearStandbyRevivir();
         </script>
     </body>
 </html>

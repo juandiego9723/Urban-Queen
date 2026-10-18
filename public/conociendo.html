@@ -62,7 +62,7 @@
         }
         
         .timer-container { 
-            display: none; 
+            display: flex; 
             justify-content: center; 
             align-items: flex-start; 
             width: 100%;
@@ -447,9 +447,9 @@
                 <div class="contenido-derecho">
                     <div class="fila-principal">
                         <div class="titulo-bailando">
-                            <span id="texto-titulo-dinamica">CONOCIENDO A:</span> <span id="nombre-bailando">RAY</span>
+                            <span id="texto-titulo-dinamica">CONOCIENDO A:</span> <span id="nombre-bailando">EN ESPERA</span>
                         </div>
-                        <div class="reloj" id="timer-display">05:00</div>
+                        <div class="reloj" id="timer-display">00:00</div>
                     </div>
                     <div class="bar-container">
                         <div class="bar-fill" id="barra-meta"></div>
@@ -770,11 +770,41 @@
 
         socket.on('conociendoTransicionTick', (tiempo) => { countdownTransicion.innerText = tiempo; });
         
-        socket.on('conociendoCancelado', () => { 
-            contenedor.classList.remove('timer-activo'); 
-            cajaReloj.style.display = 'none';
+        function resetearStandbyConociendo() {
+            currentChica = '';
+            currentPuntos = 0;
+            currentTiempo = 0;
+            confetiDisparado = false;
             cajaTransicion.style.display = 'none';
-        });
+            cajaReloj.style.display = 'flex';
+            cajaReloj.style.borderColor = 'rgba(200,0,255,0.6)';
+            cajaReloj.style.boxShadow = '0 8px 40px rgba(0,0,0,0.9), 0 0 22px rgba(180,0,255,0.25)';
+            if (nombreBailando) {
+                nombreBailando.innerText = 'EN ESPERA';
+                nombreBailando.style.color = '#fff';
+                nombreBailando.classList.remove('animacion-logrado-activa');
+                nombreBailando.style.webkitTextFillColor = '';
+                nombreBailando.style.background = '';
+                nombreBailando.style.textShadow = '3px 3px 6px #000';
+            }
+            const txtTit = document.getElementById('texto-titulo-dinamica');
+            if (txtTit) {
+                txtTit.style.display = 'inline';
+                txtTit.innerText = currentTituloPrefix ? currentTituloPrefix + ' ' : 'CONOCIENDO A: ';
+            }
+            if (displayReloj) displayReloj.innerText = '00:00';
+            actualizarBarra(0, currentMeta || 2000);
+            const fb = document.getElementById('avatar-fallback-reloj');
+            const img = document.getElementById('avatar-img-reloj');
+            if (fb) {
+                fb.innerText = '👑';
+                fb.style.display = 'flex';
+            }
+            if (img) img.style.display = 'none';
+        }
+
+        socket.on('conociendoCancelado', resetearStandbyConociendo);
+        resetearStandbyConociendo();
 
         function actualizarBarra(puntos, meta) {
             txtPuntos.innerText = puntos;
