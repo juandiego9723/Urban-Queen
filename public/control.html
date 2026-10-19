@@ -5028,7 +5028,7 @@
                 }
                 const m = document.getElementById('tiempoBatallaVS').value || 3;
                 cambiarVistaUniversal('/batalla-vs');
-                hacerFetch('/batalla/start?m=' + m + '&p=' + encodeURIComponent(b1 + ',' + b2));
+                hacerFetch('/batalla/start?tipo=vs&m=' + m + '&p=' + encodeURIComponent(b1 + ',' + b2));
             }
 
             function renderBatallaOptions() {
@@ -5044,7 +5044,7 @@
             function iniciarBatalla() {
                 const m = document.getElementById('tiempoBatalla').value;
                 const p = document.getElementById('participantesBatalla').value;
-                hacerFetch('/batalla/start?m=' + m + '&p=' + p);
+                hacerFetch('/batalla/start?tipo=normal&m=' + m + '&p=' + p);
             }
 
             function guardarReglasFutbol() {

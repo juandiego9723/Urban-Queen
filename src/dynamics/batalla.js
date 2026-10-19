@@ -21,15 +21,21 @@ function setupBatallaDynamics(app, io, requireSession) {
         s.puntosBatalla = {};
         s.participantesActuales.forEach(p => s.puntosBatalla[p] = 0);
         s.estadoBatalla = 'activa';
+        s.esBatallaVS = (req.query.tipo === 'vs' || req.query.modo === 'vs' || s.vistaActiva === '/batalla-vs');
         
-        if (isCosmic) {
-            // Cosmic: 2X exclusivamente en los últimos 30 segundos
-            s.batalla2X = (s.tiempoBatalla <= 30);
-            s.batalla2XTiempo = s.batalla2X ? s.tiempoBatalla : 0;
+        if (s.esBatallaVS) {
+            if (isCosmic) {
+                // Cosmic: 2X exclusivamente en los últimos 30 segundos
+                s.batalla2X = (s.tiempoBatalla <= 30);
+                s.batalla2XTiempo = s.batalla2X ? s.tiempoBatalla : 0;
+            } else {
+                // Urban (original): 2X los primeros 45 segundos
+                s.batalla2X = true;
+                s.batalla2XTiempo = Math.min(45, s.tiempoBatalla);
+            }
         } else {
-            // Urban (original): 2X los primeros 45 segundos
-            s.batalla2X = true;
-            s.batalla2XTiempo = Math.min(45, s.tiempoBatalla);
+            s.batalla2X = false;
+            s.batalla2XTiempo = 0;
         }
 
         clearInterval(s.timerBatalla);
@@ -109,29 +115,34 @@ function setupBatallaDynamics(app, io, requireSession) {
                 }
             }
 
-            // ── Lógica 2X según Agencia ──
-            if (isCosmic) {
-                // Cosmic: 2X activo exclusivamente en los últimos 30 segundos
-                if (s.tiempoBatalla <= 30 && s.tiempoBatalla > 0) {
-                    s.batalla2X = true;
-                    s.batalla2XTiempo = s.tiempoBatalla;
-                    io.to(user).emit('batalla2XTick', { tiempo2X: s.batalla2XTiempo, activo: true });
-                } else if (s.batalla2X) {
-                    s.batalla2X = false;
-                    s.batalla2XTiempo = 0;
-                    io.to(user).emit('batalla2XFin');
-                    io.to(user).emit('batalla2XTick', { tiempo2X: 0, activo: false });
+            // ── Lógica 2X según Agencia (exclusiva para Batalla VS) ──
+            if (s.esBatallaVS) {
+                if (isCosmic) {
+                    // Cosmic: 2X activo exclusivamente en los últimos 30 segundos
+                    if (s.tiempoBatalla <= 30 && s.tiempoBatalla > 0) {
+                        s.batalla2X = true;
+                        s.batalla2XTiempo = s.tiempoBatalla;
+                        io.to(user).emit('batalla2XTick', { tiempo2X: s.batalla2XTiempo, activo: true });
+                    } else if (s.batalla2X) {
+                        s.batalla2X = false;
+                        s.batalla2XTiempo = 0;
+                        io.to(user).emit('batalla2XFin');
+                        io.to(user).emit('batalla2XTick', { tiempo2X: 0, activo: false });
+                    }
+                } else {
+                    // Urban (original): 2X los primeros 45 segundos
+                    if (s.batalla2XTiempo > 0) {
+                        s.batalla2XTiempo--;
+                        if (s.batalla2XTiempo === 0) {
+                            s.batalla2X = false;
+                            io.to(user).emit('batalla2XFin');
+                        }
+                        io.to(user).emit('batalla2XTick', { tiempo2X: s.batalla2XTiempo, activo: s.batalla2X });
+                    }
                 }
             } else {
-                // Urban (original): 2X los primeros 45 segundos
-                if (s.batalla2XTiempo > 0) {
-                    s.batalla2XTiempo--;
-                    if (s.batalla2XTiempo === 0) {
-                        s.batalla2X = false;
-                        io.to(user).emit('batalla2XFin');
-                    }
-                    io.to(user).emit('batalla2XTick', { tiempo2X: s.batalla2XTiempo, activo: s.batalla2X });
-                }
+                s.batalla2X = false;
+                s.batalla2XTiempo = 0;
             }
         }, 1000);
         res.send("OK");
@@ -141,6 +152,7 @@ function setupBatallaDynamics(app, io, requireSession) {
         const s = req.userSession;
         clearInterval(s.timerBatalla);
         s.estadoBatalla = 'inactiva';
+        s.esBatallaVS = false;
         s.batalla2X = false;
         s.batalla2XTiempo = 0;
         io.to(req.username).emit('batallaCancelada');

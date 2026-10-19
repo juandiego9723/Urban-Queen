@@ -45,12 +45,9 @@
 
         // ── Función para reenviar un evento al iframe vía postMessage ──
         function forwardToIframe(event, data) {
-            const msg = { type: 'SOCKET_IO_EVENT', event: event, data: data };
+            const msg = { type: 'socket-event', event: event, data: data };
             if (iframeReady && frame.contentWindow) {
-                try {
-                    frame.contentWindow.postMessage(msg, '*');
-                    frame.contentWindow.postMessage({ type: 'socket-event', event: event, data: data }, '*');
-                } catch(e) {}
+                try { frame.contentWindow.postMessage(msg, '*'); } catch(e) {}
             } else {
                 eventQueue.push(msg);
             }
@@ -61,10 +58,7 @@
             iframeReady = true;
             setTimeout(function() {
                 eventQueue.forEach(function(msg) {
-                    try {
-                        frame.contentWindow.postMessage(msg, '*');
-                        frame.contentWindow.postMessage({ type: 'socket-event', event: msg.event, data: msg.data }, '*');
-                    } catch(e) {}
+                    try { frame.contentWindow.postMessage(msg, '*'); } catch(e) {}
                 });
                 eventQueue = [];
             }, 150);
