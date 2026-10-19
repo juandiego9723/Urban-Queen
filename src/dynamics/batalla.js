@@ -1,14 +1,37 @@
+function checkIsCosmic(req, session) {
+    if (session && session.agencySlug === 'cosmic') return true;
+    if (session && session.db && session.db.agencySlug === 'cosmic') return true;
+    if (req && req.agencySlug === 'cosmic') return true;
+    if (req && req.agency && req.agency.slug === 'cosmic') return true;
+    if (req && req.query && req.query.agency === 'cosmic') return true;
+    const referer = (req && req.headers && req.headers.referer) ? req.headers.referer.toLowerCase() : '';
+    if (referer.includes('/cosmic') || referer.includes('agency=cosmic')) return true;
+    const username = (req && req.username) || (session && session.username) || '';
+    if (username.toLowerCase().includes('cosmic')) return true;
+    return false;
+}
+
 function setupBatallaDynamics(app, io, requireSession) {
     app.all('/batalla/start', requireSession, (req, res) => {
         const s = req.userSession;
         const user = req.username;
+        const isCosmic = checkIsCosmic(req, s);
         s.tiempoBatalla = (parseInt(req.query.m) || 3) * 60;
         s.participantesActuales = req.query.p ? req.query.p.split(',') : [...s.QUEENS];
         s.puntosBatalla = {};
         s.participantesActuales.forEach(p => s.puntosBatalla[p] = 0);
         s.estadoBatalla = 'activa';
-        s.batalla2X = true;
-        s.batalla2XTiempo = Math.min(45, s.tiempoBatalla);
+        
+        if (isCosmic) {
+            // Cosmic: 2X exclusivamente en los últimos 30 segundos
+            s.batalla2X = (s.tiempoBatalla <= 30);
+            s.batalla2XTiempo = s.batalla2X ? s.tiempoBatalla : 0;
+        } else {
+            // Urban (original): 2X los primeros 45 segundos
+            s.batalla2X = true;
+            s.batalla2XTiempo = Math.min(45, s.tiempoBatalla);
+        }
+
         clearInterval(s.timerBatalla);
         let subTickBatalla = 0;
         let tiempoExtraSnipe = 5;
@@ -25,14 +48,6 @@ function setupBatallaDynamics(app, io, requireSession) {
         });
         
         s.timerBatalla = setInterval(() => {
-            if (s.batalla2XTiempo > 0) {
-                s.batalla2XTiempo--;
-                if (s.batalla2XTiempo === 0) {
-                    s.batalla2X = false;
-                    io.to(user).emit('batalla2XFin');
-                }
-                io.to(user).emit('batalla2XTick', { tiempo2X: s.batalla2XTiempo, activo: s.batalla2X });
-            }
             if (s.tiempoBatalla > 3) {
                 s.tiempoBatalla--;
                 io.to(user).emit('batallaTick', s.tiempoBatalla);
@@ -91,6 +106,31 @@ function setupBatallaDynamics(app, io, requireSession) {
                     io.to(user).emit('batallaFin', payloadFin);
                     setTimeout(() => io.to(user).emit('batallaFin', payloadFin), 300);
                     setTimeout(() => io.to(user).emit('batallaFin', payloadFin), 600);
+                }
+            }
+
+            // ── Lógica 2X según Agencia ──
+            if (isCosmic) {
+                // Cosmic: 2X activo exclusivamente en los últimos 30 segundos
+                if (s.tiempoBatalla <= 30 && s.tiempoBatalla > 0) {
+                    s.batalla2X = true;
+                    s.batalla2XTiempo = s.tiempoBatalla;
+                    io.to(user).emit('batalla2XTick', { tiempo2X: s.batalla2XTiempo, activo: true });
+                } else if (s.batalla2X) {
+                    s.batalla2X = false;
+                    s.batalla2XTiempo = 0;
+                    io.to(user).emit('batalla2XFin');
+                    io.to(user).emit('batalla2XTick', { tiempo2X: 0, activo: false });
+                }
+            } else {
+                // Urban (original): 2X los primeros 45 segundos
+                if (s.batalla2XTiempo > 0) {
+                    s.batalla2XTiempo--;
+                    if (s.batalla2XTiempo === 0) {
+                        s.batalla2X = false;
+                        io.to(user).emit('batalla2XFin');
+                    }
+                    io.to(user).emit('batalla2XTick', { tiempo2X: s.batalla2XTiempo, activo: s.batalla2X });
                 }
             }
         }, 1000);

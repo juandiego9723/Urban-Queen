@@ -141,6 +141,7 @@ function getUserSession(username, io, procesarPuntosFn) {
 
         const session = {
             db: dbInstance,
+            agencySlug: (username && username.toLowerCase().includes('cosmic')) ? 'cosmic' : 'urbanqueens',
             QUEENS: [],
             equipos: {},
             rachasPerdidas: {},
@@ -190,6 +191,7 @@ function getUserSession(username, io, procesarPuntosFn) {
             try {
                 const rawGoal = session.db.getConfigVal('goal_config');
                 if (rawGoal) session.goalConfig = JSON.parse(rawGoal);
+                if (dbInstance.agencySlug) session.agencySlug = dbInstance.agencySlug;
             } catch (e) {}
             reconstruirQueens(session);
             session.participantesActuales = [...session.QUEENS];
