@@ -1598,16 +1598,33 @@
                                 <!-- EQUIPO 1 -->
                                 <div class="col"
                                     style="background:var(--surface2); padding:15px; border-radius:12px; border:1px solid var(--border);">
-                                    <div class="label">EQUIPO 1</div>
-                                    <input type="text" id="eq1Nombre" class="input" placeholder="Nombre (ej. BARÇA)">
-                                    <div class="row">
+                                    <div class="row" style="align-items:center; justify-content:space-between;">
+                                        <div class="label" style="font-weight:700;">EQUIPO 1</div>
+                                        <div style="display:flex; gap:4px;">
+                                            <button type="button" onclick="aplicarPresetEquipo(1, 'barsa')" style="padding:2px 7px; font-size:11px; border-radius:6px; border:1px solid var(--border); background:var(--surface); color:var(--text); cursor:pointer;">🔵🔴 Barça</button>
+                                            <button type="button" onclick="aplicarPresetEquipo(1, 'real')" style="padding:2px 7px; font-size:11px; border-radius:6px; border:1px solid var(--border); background:var(--surface); color:var(--text); cursor:pointer;">⚪⚪ Madrid</button>
+                                            <button type="button" onclick="aplicarPresetEquipo(1, 'psg')" style="padding:2px 7px; font-size:11px; border-radius:6px; border:1px solid var(--border); background:var(--surface); color:var(--text); cursor:pointer;">🔵⚪🔴 PSG</button>
+                                        </div>
+                                    </div>
+                                    <input type="text" id="eq1Nombre" class="input" placeholder="Nombre (ej. BARÇA)" style="margin-top:6px;">
+                                    <div class="row" style="margin-top:6px; align-items:center;">
+                                        <div class="label" style="flex:1">Diseño:</div>
+                                        <select id="eq1Diseno" class="input" style="flex:2; padding:4px 8px; font-size:12px;" onchange="alCambiarDiseno(1)">
+                                            <option value="auto">⚡ Auto (Por Nombre)</option>
+                                            <option value="barsa">🔵🔴 Barça (Rayas)</option>
+                                            <option value="real">⚪⚪ Real Madrid (Blanco)</option>
+                                            <option value="psg">🔵⚪🔴 PSG (Franja Central)</option>
+                                            <option value="personalizado">🎨 Personalizado (Degradado)</option>
+                                        </select>
+                                    </div>
+                                    <div class="row" style="margin-top:6px; align-items:center;">
                                         <div class="label" style="flex:1">Colores:</div>
                                         <input type="color" id="eq1Color1" value="#004D98"
                                             style="width:30px;height:30px;border-radius:4px;border:none;cursor:pointer;">
                                         <input type="color" id="eq1Color2" value="#A50044"
                                             style="width:30px;height:30px;border-radius:4px;border:none;cursor:pointer;">
                                     </div>
-                                    <div class="label" style="margin-top:5px;">Miembros (Checkboxes):</div>
+                                    <div class="label" style="margin-top:8px;">Miembros (Checkboxes):</div>
                                     <div id="eq1Miembros" class="col"
                                         style="gap:5px; max-height:120px; overflow-y:auto; padding:5px; background:var(--bg); border-radius:8px;">
                                     </div>
@@ -1615,16 +1632,33 @@
                                 <!-- EQUIPO 2 -->
                                 <div class="col"
                                     style="background:var(--surface2); padding:15px; border-radius:12px; border:1px solid var(--border);">
-                                    <div class="label">EQUIPO 2</div>
-                                    <input type="text" id="eq2Nombre" class="input" placeholder="Nombre (ej. MADRID)">
-                                    <div class="row">
+                                    <div class="row" style="align-items:center; justify-content:space-between;">
+                                        <div class="label" style="font-weight:700;">EQUIPO 2</div>
+                                        <div style="display:flex; gap:4px;">
+                                            <button type="button" onclick="aplicarPresetEquipo(2, 'barsa')" style="padding:2px 7px; font-size:11px; border-radius:6px; border:1px solid var(--border); background:var(--surface); color:var(--text); cursor:pointer;">🔵🔴 Barça</button>
+                                            <button type="button" onclick="aplicarPresetEquipo(2, 'real')" style="padding:2px 7px; font-size:11px; border-radius:6px; border:1px solid var(--border); background:var(--surface); color:var(--text); cursor:pointer;">⚪⚪ Madrid</button>
+                                            <button type="button" onclick="aplicarPresetEquipo(2, 'psg')" style="padding:2px 7px; font-size:11px; border-radius:6px; border:1px solid var(--border); background:var(--surface); color:var(--text); cursor:pointer;">🔵⚪🔴 PSG</button>
+                                        </div>
+                                    </div>
+                                    <input type="text" id="eq2Nombre" class="input" placeholder="Nombre (ej. MADRID)" style="margin-top:6px;">
+                                    <div class="row" style="margin-top:6px; align-items:center;">
+                                        <div class="label" style="flex:1">Diseño:</div>
+                                        <select id="eq2Diseno" class="input" style="flex:2; padding:4px 8px; font-size:12px;" onchange="alCambiarDiseno(2)">
+                                            <option value="auto">⚡ Auto (Por Nombre)</option>
+                                            <option value="barsa">🔵🔴 Barça (Rayas)</option>
+                                            <option value="real">⚪⚪ Real Madrid (Blanco)</option>
+                                            <option value="psg">🔵⚪🔴 PSG (Franja Central)</option>
+                                            <option value="personalizado">🎨 Personalizado (Degradado)</option>
+                                        </select>
+                                    </div>
+                                    <div class="row" style="margin-top:6px; align-items:center;">
                                         <div class="label" style="flex:1">Colores:</div>
                                         <input type="color" id="eq2Color1" value="#ffffff"
                                             style="width:30px;height:30px;border-radius:4px;border:none;cursor:pointer;">
                                         <input type="color" id="eq2Color2" value="#cccccc"
                                             style="width:30px;height:30px;border-radius:4px;border:none;cursor:pointer;">
                                     </div>
-                                    <div class="label" style="margin-top:5px;">Miembros (Checkboxes):</div>
+                                    <div class="label" style="margin-top:8px;">Miembros (Checkboxes):</div>
                                     <div id="eq2Miembros" class="col"
                                         style="gap:5px; max-height:120px; overflow-y:auto; padding:5px; background:var(--bg); border-radius:8px;">
                                     </div>
@@ -4088,6 +4122,45 @@
             // ── EL CLÁSICO (FUTBOL) CONFIG ──
             let futbolConfigCache = null;
 
+            window.aplicarPresetEquipo = function(num, preset) {
+                const elNombre = document.getElementById(`eq${num}Nombre`);
+                const elDiseno = document.getElementById(`eq${num}Diseno`);
+                const elC1 = document.getElementById(`eq${num}Color1`);
+                const elC2 = document.getElementById(`eq${num}Color2`);
+                if (preset === 'barsa') {
+                    elNombre.value = 'BARÇA';
+                    elDiseno.value = 'barsa';
+                    elC1.value = '#004D98';
+                    elC2.value = '#A50044';
+                } else if (preset === 'real') {
+                    elNombre.value = 'REAL MADRID';
+                    elDiseno.value = 'real';
+                    elC1.value = '#FFFFFF';
+                    elC2.value = '#CBD3DC';
+                } else if (preset === 'psg') {
+                    elNombre.value = 'PSG';
+                    elDiseno.value = 'psg';
+                    elC1.value = '#001C3D';
+                    elC2.value = '#DA291C';
+                }
+            };
+
+            window.alCambiarDiseno = function(num) {
+                const diseno = document.getElementById(`eq${num}Diseno`).value;
+                const elC1 = document.getElementById(`eq${num}Color1`);
+                const elC2 = document.getElementById(`eq${num}Color2`);
+                if (diseno === 'barsa') {
+                    elC1.value = '#004D98';
+                    elC2.value = '#A50044';
+                } else if (diseno === 'real') {
+                    elC1.value = '#FFFFFF';
+                    elC2.value = '#CBD3DC';
+                } else if (diseno === 'psg') {
+                    elC1.value = '#001C3D';
+                    elC2.value = '#DA291C';
+                }
+            };
+
             async function cargarFutbolConfig() {
                 try {
                     const res = await fetch('/api/futbol/config');
@@ -4096,10 +4169,16 @@
                     futbolConfigCache = config;
 
                     document.getElementById('eq1Nombre').value = config.equipo1.nombre || '';
+                    if (document.getElementById('eq1Diseno')) {
+                        document.getElementById('eq1Diseno').value = config.equipo1.diseno || 'auto';
+                    }
                     document.getElementById('eq1Color1').value = config.equipo1.color1 || '#004D98';
                     document.getElementById('eq1Color2').value = config.equipo1.color2 || '#A50044';
 
                     document.getElementById('eq2Nombre').value = config.equipo2.nombre || '';
+                    if (document.getElementById('eq2Diseno')) {
+                        document.getElementById('eq2Diseno').value = config.equipo2.diseno || 'auto';
+                    }
                     document.getElementById('eq2Color1').value = config.equipo2.color1 || '#ffffff';
                     document.getElementById('eq2Color2').value = config.equipo2.color2 || '#cccccc';
 
@@ -4132,12 +4211,14 @@
                 const config = {
                     equipo1: {
                         nombre: document.getElementById('eq1Nombre').value.trim(),
+                        diseno: document.getElementById('eq1Diseno') ? document.getElementById('eq1Diseno').value : 'auto',
                         color1: document.getElementById('eq1Color1').value,
                         color2: document.getElementById('eq1Color2').value,
                         miembros: getChecked('eq1Miembros')
                     },
                     equipo2: {
                         nombre: document.getElementById('eq2Nombre').value.trim(),
+                        diseno: document.getElementById('eq2Diseno') ? document.getElementById('eq2Diseno').value : 'auto',
                         color1: document.getElementById('eq2Color1').value,
                         color2: document.getElementById('eq2Color2').value,
                         miembros: getChecked('eq2Miembros')

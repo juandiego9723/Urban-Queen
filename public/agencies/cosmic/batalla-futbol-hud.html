@@ -389,12 +389,34 @@
                 #004D98 22px,
                 #A50044 22px,
                 #A50044 44px
-            );
+            ) !important;
         }
 
         /* Fondo Real Madrid */
         .avatar-bg-real {
-            background: radial-gradient(circle, #D8DCE3 0%, #B0B7C3 100%);
+            background: repeating-linear-gradient(
+                90deg,
+                #FFFFFF 0px,
+                #FFFFFF 22px,
+                #CBD3DC 22px,
+                #CBD3DC 44px
+            ) !important;
+        }
+
+        /* Franja Central PSG (Banda Hechter) */
+        .avatar-bg-psg {
+            background: linear-gradient(90deg,
+                #001C3D 0%,
+                #001C3D calc(50% - 16px),
+                #FFFFFF calc(50% - 16px),
+                #FFFFFF calc(50% - 12px),
+                #DA291C calc(50% - 12px),
+                #DA291C calc(50% + 12px),
+                #FFFFFF calc(50% + 12px),
+                #FFFFFF calc(50% + 16px),
+                #001C3D calc(50% + 16px),
+                #001C3D 100%
+            ) !important;
         }
 
         .avatar-img-custom {
@@ -839,7 +861,22 @@
     <script src="/js/iframe-bridge.js"></script>
     <script src="/socket.io/socket.io.js"></script>
     <script>
-        const socket = window.__iframeBridgeSocket || io();
+        const urlParams = new URLSearchParams(window.location.search);
+        let userParam = urlParams.get('user') || '';
+        if (!userParam && window.parent !== window) {
+            try {
+                const parentParams = new URLSearchParams(window.parent.location.search);
+                userParam = parentParams.get('user') || '';
+            } catch (e) { }
+        }
+        if (!userParam) {
+            const pathParts = window.location.pathname.split('/').filter(Boolean);
+            if (pathParts.length > 0 && !pathParts[0].includes('overlay') && !pathParts[0].includes('batalla')) {
+                userParam = pathParts[0];
+            }
+        }
+
+        const socket = window.__iframeBridgeSocket || io({ query: userParam ? { user: userParam } : {} });
 
         // Elementos DOM
         const nombreEq1 = document.getElementById('nombre-eq1');
@@ -897,25 +934,98 @@
             const c2_1 = (config.equipo2 && config.equipo2.color1) || '#CCCCCC';
             const c2_2 = (config.equipo2 && config.equipo2.color2) || '#FFFFFF';
 
-            barraEq1.style.background = `linear-gradient(90deg, ${c1_1}, ${c1_2})`;
-            barraEq2.style.background = `linear-gradient(90deg, ${c2_1}, ${c2_2})`;
+            const diseno1 = (config.equipo1 && config.equipo1.diseno) || 'auto';
+            const diseno2 = (config.equipo2 && config.equipo2.diseno) || 'auto';
 
-            if (c1_1.toLowerCase() === '#004d98' && c1_2.toLowerCase() === '#a50044') {
-                innerAvatarEq1.className = 'avatar-inner avatar-bg-barsa';
-            } else {
-                innerAvatarEq1.className = 'avatar-inner';
-                innerAvatarEq1.style.background = `linear-gradient(135deg, ${c1_1}, ${c1_2})`;
+            aplicarFondoEquipo(innerAvatarEq1, barraEq1, name1, c1_1, c1_2, diseno1, 'barsa', '#FF2A5F');
+            aplicarFondoEquipo(innerAvatarEq2, barraEq2, name2, c2_1, c2_2, diseno2, 'real', '#00E5FF');
+        }
+
+        function aplicarFondoEquipo(innerAvatar, barra, nombre, c1, c2, diseno, tipoDefault, defaultColorBarra) {
+            const n = (nombre || '').trim().toLowerCase();
+            const d = (diseno || 'auto').trim().toLowerCase();
+
+            // 1. Selección explícita por diseño si el streamer lo escogió en el panel
+            if (d === 'psg') {
+                innerAvatar.className = 'avatar-inner avatar-bg-psg';
+                innerAvatar.style.background = '';
+                barra.style.background = (c1 && c2) ? `linear-gradient(90deg, ${c1}, ${c2})` : 'linear-gradient(90deg, #001C3D, #DA291C)';
+                return;
+            }
+            if (d === 'barsa') {
+                innerAvatar.className = 'avatar-inner avatar-bg-barsa';
+                innerAvatar.style.background = '';
+                barra.style.background = (c1 && c2 && (c1.toLowerCase() === '#004d98' || c2.toLowerCase() === '#a50044'))
+                    ? `linear-gradient(90deg, ${c1}, ${c2})`
+                    : defaultColorBarra;
+                return;
+            }
+            if (d === 'real') {
+                innerAvatar.className = 'avatar-inner avatar-bg-real';
+                innerAvatar.style.background = '';
+                barra.style.background = (c1 && c2 && (c1.toLowerCase().includes('fff') || c2.toLowerCase().includes('fff')))
+                    ? `linear-gradient(90deg, ${c1}, ${c2})`
+                    : defaultColorBarra;
+                return;
+            }
+            if (d === 'personalizado') {
+                innerAvatar.className = 'avatar-inner';
+                if (c1 && c2) {
+                    innerAvatar.style.background = `linear-gradient(135deg, ${c1}, ${c2})`;
+                    barra.style.background = `linear-gradient(90deg, ${c1}, ${c2})`;
+                } else {
+                    innerAvatar.style.background = defaultColorBarra;
+                    barra.style.background = defaultColorBarra;
+                }
+                return;
             }
 
-            if (c2_1.toLowerCase().includes('fff') || c2_2.toLowerCase().includes('fff')) {
-                innerAvatarEq2.className = 'avatar-inner avatar-bg-real';
+            // 2. Detección automática por nombre (d === 'auto' o sin definir)
+            const clean = n.replace(/\./g, '').trim();
+            // Real Madrid: cubre "REAL", "MADRID", "REAL MADRID", "R. MADRID", "R.MADRID", etc.
+            const isRealName = /(^|\s|\b)(real(\s*madrid)?|madrid|rmadrid)(\b|\s|$)/i.test(clean) || clean.includes('madrid') || clean === 'real';
+            // PSG: cubre "PSG", "P.S.G", "PARIS", "PARIS SG", "PARIS SAINT-GERMAIN", etc.
+            const isPsgName = /(^|\s|\b)(psg|paris(\s*(saint\s*germain|sg))?)(\b|\s|$)/i.test(clean) || clean.includes('psg') || clean.includes('paris');
+            // Barça: cubre "BARCA", "BARSAD", "BARÇA", "BARCELONA", "FCB", etc.
+            const isBarsaName = /bar[csç]a|barcelona|fcb/i.test(clean);
+
+            const isBarsaColors = c1 && c2 && (c1.toLowerCase() === '#004d98' || c2.toLowerCase() === '#a50044');
+            const isRealColors = c1 && c2 && (c1.toLowerCase().includes('fff') || c2.toLowerCase().includes('fff') || c1.toLowerCase().includes('ccc'));
+            const isPsgColors = c1 && c2 && (c1.toLowerCase() === '#001c3d' || c2.toLowerCase() === '#da291c');
+
+            const esPsg = isPsgName || (!isRealName && !isBarsaName && isPsgColors);
+            const esReal = isRealName || (!isBarsaName && !isPsgName && isRealColors) || (tipoDefault === 'real' && !isBarsaName && !isPsgName && (!c1 || c1 === '#3ab9e4' || c1 === '#00E5FF'));
+            const esBarsa = isBarsaName || (!isRealName && !isPsgName && isBarsaColors) || (tipoDefault === 'barsa' && !isRealName && !isPsgName && (!c1 || c1 === '#df5d9c' || c1 === '#FF2A5F'));
+
+            if (esPsg) {
+                innerAvatar.className = 'avatar-inner avatar-bg-psg';
+                innerAvatar.style.background = '';
+                barra.style.background = (c1 && c2) ? `linear-gradient(90deg, ${c1}, ${c2})` : 'linear-gradient(90deg, #001C3D, #DA291C)';
+            } else if (esReal) {
+                innerAvatar.className = 'avatar-inner avatar-bg-real';
+                innerAvatar.style.background = '';
+                barra.style.background = (c1 && c2 && (c1.toLowerCase().includes('fff') || c2.toLowerCase().includes('fff')))
+                    ? `linear-gradient(90deg, ${c1}, ${c2})`
+                    : defaultColorBarra;
+            } else if (esBarsa) {
+                innerAvatar.className = 'avatar-inner avatar-bg-barsa';
+                innerAvatar.style.background = '';
+                barra.style.background = (c1 && c2 && (c1.toLowerCase() === '#004d98' || c2.toLowerCase() === '#a50044'))
+                    ? `linear-gradient(90deg, ${c1}, ${c2})`
+                    : defaultColorBarra;
+            } else if (c1 && c2) {
+                innerAvatar.className = 'avatar-inner';
+                innerAvatar.style.background = `linear-gradient(135deg, ${c1}, ${c2})`;
+                barra.style.background = `linear-gradient(90deg, ${c1}, ${c2})`;
             } else {
-                innerAvatarEq2.className = 'avatar-inner';
-                innerAvatarEq2.style.background = `linear-gradient(135deg, ${c2_1}, ${c2_2})`;
+                innerAvatar.className = 'avatar-inner';
+                innerAvatar.style.background = defaultColorBarra;
+                barra.style.background = defaultColorBarra;
             }
         }
 
-        fetch('/api/futbol/config')
+        const configUrl = userParam ? `/api/futbol/config?user=${encodeURIComponent(userParam)}` : '/api/futbol/config';
+        fetch(configUrl)
             .then(r => r.json())
             .then(data => {
                 if (data && (data.equipo1 || data.equipo2)) aplicarConfiguracion(data);
