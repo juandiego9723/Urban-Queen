@@ -160,14 +160,14 @@
         socket.on('connect', function() {
             forwardToIframe('connect', { connected: true });
             setTimeout(function() {
-                if (!ultimaVista && (!frame.src || frame.src === 'about:blank' || frame.src.endsWith('about:blank'))) {
+                if (!ultimaVista || !frame.src || frame.src === 'about:blank' || frame.src.endsWith('about:blank')) {
                     let defaultVista = userParam ? `/${userParam}/batalla` : '/batalla';
                     if (userParam && !defaultVista.includes('user=')) {
                         defaultVista += `?user=${userParam}`;
                     }
                     frame.src = defaultVista;
                 }
-            }, 300);
+            }, 400);
         });
         socket.on('disconnect', function() {
             forwardToIframe('disconnect', { connected: false });
@@ -178,7 +178,7 @@
         // ══════════════════════════════════════════════════════════════
         socket.on('cambioVista', (vista) => {
             if (!vista) return;
-            if (vista === ultimaVista) return;
+            if (vista === ultimaVista && frame.src && !frame.src.endsWith('about:blank')) return;
             ultimaVista = vista;
 
             // Resetear estado del iframe

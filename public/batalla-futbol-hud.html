@@ -1,0 +1,1593 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <!-- Inyección de multi-cuenta -->
+    <script>
+        (function () {
+            const urlParams = new URLSearchParams(window.location.search);
+            const user = urlParams.get('user');
+            if (user) {
+                const originalFetch = window.fetch;
+                window.fetch = function (url, options) {
+                    if (typeof url === 'string' && !url.includes('user=')) {
+                        const sep = url.includes('?') ? '&' : '?';
+                        url = url + sep + 'user=' + encodeURIComponent(user);
+                    }
+                    return originalFetch(url, options);
+                };
+                const originalIo = window.io;
+                if (originalIo) {
+                    window.io = function (opts) {
+                        opts = opts || {};
+                        opts.query = opts.query || {};
+                        opts.query.user = user;
+                        return originalIo(opts);
+                    };
+                } else {
+                    let _io = undefined;
+                    Object.defineProperty(window, 'io', {
+                        get: function () { return _io; },
+                        set: function (val) {
+                            _io = function (opts) {
+                                opts = opts || {};
+                                opts.query = opts.query || {};
+                                opts.query.user = user;
+                                return val(opts);
+                            };
+                        },
+                        configurable: true
+                    });
+                }
+            }
+        })();
+    </script>
+
+    <meta charset="UTF-8">
+    <title>HUD El Clásico - Batalla de Fútbol (Urban Queen)</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Montserrat:ital,wght@0,700;0,800;0,900;1,800;1,900&display=swap"
+        rel="stylesheet">
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            user-select: none;
+        }
+
+        body {
+            background: transparent;
+            font-family: 'Montserrat', sans-serif;
+            margin: 0;
+            overflow: hidden;
+            width: 100vw;
+            height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+        }
+
+        /* Intensidad de Neón de Marca */
+        body.neon-none * {
+            text-shadow: none !important;
+            box-shadow: none !important;
+        }
+
+        body.neon-low * {
+            text-shadow: 0 0 4px currentColor !important;
+        }
+
+        /* ── CONTENEDOR PRINCIPAL HUD ── */
+        .hud-wrapper {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            z-index: 10;
+            width: 100%;
+            max-width: 960px;
+            padding: 0 40px;
+        }
+
+        /* ── CABECERA SUPERIOR (RELOJ / EMPATE / WIN) ── */
+        .hud-top-display {
+            min-height: 85px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 8px;
+            position: relative;
+            z-index: 20;
+        }
+
+        /* Reloj Digital Durante el Partido */
+        .match-timer {
+            font-size: 68px;
+            font-weight: 900;
+            font-style: normal;
+            letter-spacing: 2px;
+            color: #FFFFFF;
+            line-height: 1;
+
+            text-shadow:
+                3px 3px 0 #000,
+                -2px -2px 0 #000,
+                2px -2px 0 #000,
+                -2px 2px 0 #000,
+                0 5px 16px rgba(0, 0, 0, 0.95);
+            transition: color 0.3s ease, transform 0.2s ease;
+        }
+
+        /* Modo Snipe Últimos 10 Segundos */
+        .snipe-mode {
+            color: #FF2A2A !important;
+            animation: snipePulse 0.4s infinite alternate ease-in-out;
+            text-shadow:
+                0 0 25px rgba(255, 42, 42, 0.9),
+                3px 3px 0 #000 !important;
+        }
+
+        @keyframes snipePulse {
+            0% {
+                transform: scale(1);
+            }
+
+            100% {
+                transform: scale(1.14);
+            }
+        }
+
+        /* Título de Celebración "WIN" - Forzado a Montserrat 900 para que la letra N sea completa y perfecta */
+        .celebracion-win {
+            font-family: 'Montserrat', sans-serif !important;
+            font-size: 88px;
+            font-weight: 900;
+            font-style: italic;
+            letter-spacing: 6px;
+            line-height: 1;
+            text-transform: uppercase;
+            text-align: center;
+            white-space: nowrap;
+            padding: 10px 30px;
+            overflow: visible;
+            background: linear-gradient(180deg, #FFF982 0%, #FFB300 45%, #E67E00 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            filter:
+                drop-shadow(3px 3px 0 #000000) drop-shadow(-2px -2px 0 #000000) drop-shadow(2px -2px 0 #000000) drop-shadow(-2px 2px 0 #000000) drop-shadow(0 6px 18px rgba(0, 0, 0, 0.95)) drop-shadow(0 0 35px rgba(255, 184, 0, 0.7));
+            animation: bounceInCelebration 0.65s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            display: none;
+        }
+
+        /* Título de Celebración "¡EMPATE!" */
+        .celebracion-empate {
+            font-family: 'Montserrat', sans-serif !important;
+            font-size: 78px;
+            font-weight: 900;
+            font-style: italic;
+            letter-spacing: 3px;
+            line-height: 1;
+            text-transform: uppercase;
+            text-align: center;
+            white-space: nowrap;
+            padding: 10px 30px;
+            overflow: visible;
+            background: linear-gradient(180deg, #FFFFFF 0%, #D4DCE4 50%, #9DAAB8 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            filter:
+                drop-shadow(3px 3px 0 #000000) drop-shadow(-2px -2px 0 #000000) drop-shadow(2px -2px 0 #000000) drop-shadow(-2px 2px 0 #000000) drop-shadow(0 6px 16px rgba(0, 0, 0, 0.95));
+            animation: bounceInCelebration 0.65s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            display: none;
+        }
+
+        @keyframes bounceInCelebration {
+            0% {
+                transform: scale(0.3) translateY(20px);
+                opacity: 0;
+            }
+
+            70% {
+                transform: scale(1.14) translateY(-4px);
+                opacity: 1;
+            }
+
+            100% {
+                transform: scale(1) translateY(0);
+                opacity: 1;
+            }
+        }
+
+        /* ── SOLO LAS BARRITAS (SIN FONDO NEGRO) ── */
+        .hud-capsule {
+            width: 100%;
+            height: auto;
+            background: transparent !important;
+            border: none !important;
+            border-radius: 0 !important;
+            position: relative;
+            display: flex;
+            align-items: center;
+            box-shadow: none !important;
+        }
+
+        /* ── AVATARES CIRCULARES ANCLADOS EN LOS EXTREMOS ── */
+        .avatar-anchor {
+            position: absolute;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 122px;
+            height: 122px;
+            z-index: 25;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        .avatar-anchor-left {
+            left: -22px;
+        }
+
+        .avatar-anchor-right {
+            right: -22px;
+        }
+
+        /* Anillo Exterior Metálico 3D Dorado (Barsa) */
+        .avatar-ring-gold {
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            padding: 6px;
+            background: linear-gradient(135deg, #FFEAA7 0%, #E5B842 30%, #8A6414 70%, #F7D568 100%);
+            box-shadow:
+                0 10px 30px rgba(0, 0, 0, 0.9),
+                inset 0 2px 4px rgba(255, 255, 255, 0.8),
+                inset 0 -3px 6px rgba(0, 0, 0, 0.8);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        /* Anillo Exterior Metálico 3D Plateado (Real) */
+        .avatar-ring-silver {
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            padding: 6px;
+            background: linear-gradient(135deg, #FFFFFF 0%, #D4DCE4 35%, #7D8897 70%, #ECEFF2 100%);
+            box-shadow:
+                0 10px 30px rgba(0, 0, 0, 0.9),
+                inset 0 2px 4px rgba(255, 255, 255, 0.9),
+                inset 0 -3px 6px rgba(0, 0, 0, 0.7);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .avatar-inner {
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            overflow: hidden;
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: 3.5px solid #14171D;
+            box-shadow: inset 0 0 14px rgba(0, 0, 0, 0.9);
+        }
+
+        /* Franjas Barça */
+        .avatar-bg-barsa {
+            background: repeating-linear-gradient(90deg,
+                    #004D98 0px,
+                    #004D98 18px,
+                    #A50044 18px,
+                    #A50044 36px);
+        }
+
+        /* Franjas Real Madrid */
+        .avatar-bg-real {
+            background: repeating-linear-gradient(90deg,
+                    #FFFFFF 0px,
+                    #FFFFFF 18px,
+                    #CBD3DC 18px,
+                    #CBD3DC 36px);
+        }
+
+        .avatar-img-custom {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            position: absolute;
+            top: 0;
+            left: 0;
+            display: none;
+            z-index: 2;
+        }
+
+        .avatar-silhouette-svg {
+            width: 76%;
+            height: 76%;
+            fill: #FFFFFF;
+            filter: drop-shadow(0 3px 6px rgba(0, 0, 0, 0.45));
+            z-index: 1;
+            margin-top: 10px;
+        }
+
+        /* ── MEDALLÓN DORADO DE VICTORIA EN EL AVATAR ── */
+        .winner-score-badge {
+            position: absolute;
+            width: 44px;
+            height: 44px;
+            border-radius: 50%;
+            background: radial-gradient(circle, #1E1F24 0%, #0A0B0E 100%);
+            border: 3.5px solid #FFD700;
+            box-shadow:
+                0 6px 18px rgba(0, 0, 0, 0.9),
+                0 0 15px rgba(255, 215, 0, 0.75),
+                inset 0 1px 3px rgba(255, 255, 255, 0.5);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            font-weight: 900;
+            font-style: italic;
+            color: #FFD700;
+            z-index: 35;
+            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.8);
+            transform-origin: center center;
+            animation: popMedal 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+        }
+
+        .badge-left {
+            bottom: -4px;
+            left: 12px;
+        }
+
+        .badge-right {
+            bottom: -4px;
+            right: 12px;
+        }
+
+        @keyframes popMedal {
+            0% {
+                transform: scale(0);
+                opacity: 0;
+            }
+
+            80% {
+                transform: scale(1.2);
+                opacity: 1;
+            }
+
+            100% {
+                transform: scale(1);
+                opacity: 1;
+            }
+        }
+
+        /* ── CONTADOR "WIN x <n>" SOBRE LOS AVATARES ── */
+        .team-win-header {
+            position: absolute;
+            top: -34px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            white-space: nowrap;
+            font-family: 'Montserrat', sans-serif !important;
+            font-size: 22px;
+            font-weight: 900;
+            line-height: 1;
+            z-index: 30;
+            text-shadow:
+                2px 2px 0 #000,
+                -1px -1px 0 #000,
+                1px -1px 0 #000,
+                -1px 1px 0 #000,
+                0 4px 10px rgba(0, 0, 0, 0.95);
+        }
+
+        .win-tag {
+            color: #FFD700;
+            letter-spacing: 1px;
+        }
+
+        .win-count {
+            color: #FFFFFF;
+        }
+
+
+        /* Halo / Aura Solar de Victoria para el Avatar Ganador */
+        .winner-aura {
+            z-index: 30 !important;
+        }
+
+        .winner-aura::before {
+            content: '';
+            position: absolute;
+            top: -24px;
+            left: -24px;
+            right: -24px;
+            bottom: -24px;
+            border-radius: 50%;
+            background: radial-gradient(circle, rgba(255, 215, 0, 0.85) 0%, rgba(255, 175, 0, 0.4) 45%, transparent 72%);
+            z-index: -1;
+            animation: auraPulse 1.8s infinite alternate ease-in-out;
+            filter: drop-shadow(0 0 25px #FFD700) drop-shadow(0 0 45px rgba(255, 215, 0, 0.8));
+            pointer-events: none;
+        }
+
+        @keyframes auraPulse {
+            0% {
+                transform: scale(0.96);
+                opacity: 0.8;
+            }
+
+            100% {
+                transform: scale(1.18);
+                opacity: 1;
+                filter: drop-shadow(0 0 40px #FFD700);
+            }
+        }
+
+        /* ── CONTENIDO CENTRAL (SOLO BARRITAS Y TEXTO) ── */
+        .hud-center-content {
+            flex: 1;
+            margin: 0 74px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            z-index: 15;
+            position: relative;
+        }
+
+        /* Fila Superior: Nombres de Equipos (Despejados de los círculos de los avatares) */
+        .teams-names-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-end;
+            margin-bottom: 5px;
+            padding: 0 54px;
+        }
+
+        .team-name {
+            font-family: 'Montserrat', sans-serif !important;
+            font-size: 20px;
+            font-weight: 900;
+            text-transform: uppercase;
+            letter-spacing: 0.8px;
+            color: #FFFFFF;
+            line-height: 1;
+            -webkit-text-stroke: 0;
+            text-shadow:
+                2px 2px 0 #000,
+                -1px -1px 0 #000,
+                1px -1px 0 #000,
+                -1px 1px 0 #000,
+                0 4px 10px rgba(0, 0, 0, 0.95);
+            transition: color 0.3s ease;
+        }
+
+        .team-name-left {
+            text-align: left;
+        }
+
+        .team-name-right {
+            text-align: right;
+        }
+
+        /* Fila Central: Barra de Duelo Tug-of-War (Las Barritas) */
+        .duel-bar-container {
+            width: 100%;
+            height: 34px;
+            border-radius: 4px;
+            display: flex;
+            position: relative;
+            overflow: hidden;
+            background: #141619;
+            box-shadow:
+                0 6px 20px rgba(0, 0, 0, 0.85),
+                0 2px 6px rgba(0, 0, 0, 0.7);
+        }
+
+        .duel-bar-half {
+            height: 100%;
+            transition: width 0.7s cubic-bezier(0.25, 1, 0.5, 1);
+            position: relative;
+            display: flex;
+            align-items: center;
+            overflow: hidden;
+        }
+
+        /* Mitad Izquierda (Rosa Neón / Barsa) */
+        .duel-bar-left {
+            width: 50%;
+            background: #FF2A5F;
+            justify-content: flex-start;
+            padding-left: 48px;
+        }
+
+        /* Mitad Derecha (Cian Eléctrico / Real) */
+        .duel-bar-right {
+            width: 50%;
+            background: #00E5FF;
+            justify-content: flex-end;
+            padding-right: 48px;
+        }
+
+        /* Divisor Vertical Blanco Puro */
+        .duel-divider {
+            width: 4px;
+            height: 100%;
+            background: #FFFFFF;
+            box-shadow: 0 0 8px rgba(255, 255, 255, 0.95);
+            flex-shrink: 0;
+            z-index: 5;
+            position: relative;
+        }
+
+        /* Marcadores Dentro de la Barra */
+        .score-in-bar {
+            font-size: 22px;
+            font-weight: 900;
+            line-height: 1;
+            z-index: 6;
+            transition: transform 0.2s ease;
+        }
+
+        .score-left {
+            color: #FFFFFF;
+            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
+        }
+
+        .score-right {
+            color: #ffffff;
+            text-shadow: 0 1px 2px rgba(255, 255, 255, 0.3);
+        }
+
+        /* Estela de Brillo y Stardust en la Barra Ganadora */
+        .bar-sparkle-layer {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.5s ease;
+            z-index: 4;
+        }
+
+        .sparkle-active {
+            opacity: 1;
+        }
+
+        /* Chispas Mágicas en Barra Rosa */
+        .sparkle-pink {
+            background:
+                radial-gradient(circle at 20% 50%, rgba(255, 255, 255, 0.9) 0%, transparent 20%),
+                radial-gradient(circle at 50% 40%, rgba(255, 215, 0, 0.8) 0%, transparent 25%),
+                radial-gradient(circle at 80% 60%, rgba(255, 255, 255, 0.9) 0%, transparent 18%),
+                linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.4), transparent);
+            animation: stardustFlow 1.8s infinite linear;
+        }
+
+        /* Chispas Mágicas en Barra Cian */
+        .sparkle-cyan {
+            background:
+                radial-gradient(circle at 25% 50%, rgba(255, 255, 255, 0.95) 0%, transparent 20%),
+                radial-gradient(circle at 60% 40%, rgba(255, 255, 255, 0.85) 0%, transparent 25%),
+                radial-gradient(circle at 85% 60%, rgba(255, 255, 255, 0.9) 0%, transparent 18%),
+                linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.4), transparent);
+            animation: stardustFlow 1.8s infinite linear;
+        }
+
+        @keyframes stardustFlow {
+            0% {
+                transform: translateX(-100%);
+            }
+
+            100% {
+                transform: translateX(100%);
+            }
+        }
+
+        /* Fila Inferior: Nombres de Integrantes (Despejados de los círculos de los avatares) */
+        .members-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-top: 6px;
+            padding: 0 54px;
+            width: 100%;
+        }
+
+        .members-text {
+            font-family: 'Montserrat', sans-serif !important;
+            font-size: 18px;
+            font-weight: 900;
+            letter-spacing: 0.8px;
+            text-transform: uppercase;
+            color: #FFFFFF;
+            line-height: 1;
+            white-space: nowrap;
+            overflow: visible;
+            text-overflow: clip;
+            max-width: none;
+            flex-shrink: 0;
+            -webkit-text-stroke: 0;
+            text-shadow:
+                2px 2px 0 #000,
+                -1px -1px 0 #000,
+                1px -1px 0 #000,
+                -1px 1px 0 #000,
+                0 4px 10px rgba(0, 0, 0, 0.95);
+        }
+
+        .members-left {
+            text-align: left;
+        }
+
+        .members-right {
+            text-align: right;
+        }
+
+        /* ── CÁPSULAS INFERIORES DE DONADORES MVP ── */
+        .donors-bottom-container {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            width: 100%;
+            padding: 0 40px;
+            margin-top: 48px;
+            position: relative;
+            z-index: 20;
+        }
+
+        .team-donors-capsule {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+            padding: 8px 16px;
+            border-radius: 999px;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.65);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+            transition: transform 0.3s ease;
+        }
+
+        /* Cápsula Lado Izquierdo (Barsa - Fondo Burdeos Oscuro) */
+        .capsule-barsa {
+            background: rgba(58, 14, 38, 0.85);
+            border: 1.5px solid rgba(217, 27, 92, 0.35);
+        }
+
+        /* Cápsula Lado Derecho (Real - Fondo Azul Marino Petróleo) */
+        .capsule-real {
+            background: rgba(14, 52, 78, 0.85);
+            border: 1.5px solid rgba(0, 180, 216, 0.35);
+        }
+
+        /* Asientos Circulares Individuales */
+        .donor-circle {
+            width: 48px;
+            height: 48px;
+            border-radius: 50%;
+            border: 3px solid #FFFFFF;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.45);
+            position: relative;
+            color: #FFFFFF;
+            transition: transform 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        /* Relleno Rosa Vibrante (Barsa) */
+        .circle-barsa {
+            background: #D91B5C;
+        }
+
+        /* Relleno Cian Vibrante (Real) */
+        .circle-real {
+            background: #00B4D8;
+        }
+
+        .donor-circle .armchair-icon {
+            width: 28px;
+            height: 28px;
+            fill: #FFFFFF;
+        }
+
+        .donor-circle img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            border-radius: 50%;
+        }
+
+        .donor-circle.seat-filled {
+            animation: seatPop 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        @keyframes seatPop {
+            0% {
+                transform: scale(0.65);
+            }
+
+            60% {
+                transform: scale(1.15);
+            }
+
+            100% {
+                transform: scale(1);
+            }
+        }
+
+        /* ── BALÓN DE GOL Y ANIMACIONES DE IMPACTO ── */
+        .balon-gol {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%) scale(0);
+            font-size: 130px;
+            opacity: 0;
+            z-index: 100;
+            pointer-events: none;
+            filter:
+                drop-shadow(0 0 25px rgba(255, 255, 255, 0.95)) drop-shadow(0 15px 25px rgba(0, 0, 0, 0.9));
+        }
+
+        @keyframes strikeGoal {
+            0% {
+                transform: translate(-50%, -50%) scale(3.5) rotate(-180deg);
+                opacity: 0;
+            }
+
+            20% {
+                transform: translate(-50%, -50%) scale(1.4) rotate(-45deg);
+                opacity: 1;
+                filter: drop-shadow(0 0 35px #FFF);
+            }
+
+            45% {
+                transform: translate(-50%, -50%) scale(0.9) rotate(15deg);
+                opacity: 1;
+            }
+
+            65% {
+                transform: translate(-50%, -50%) scale(1.15) rotate(0deg);
+                opacity: 1;
+            }
+
+            100% {
+                transform: translate(-50%, -50%) scale(0);
+                opacity: 0;
+            }
+        }
+
+        .disparar-gol {
+            animation: strikeGoal 0.9s cubic-bezier(0.25, 1, 0.5, 1) forwards;
+        }
+
+        .vibrar-impacto {
+            animation: shakeImpact 0.55s cubic-bezier(.36, .07, .19, .97) both;
+        }
+
+        @keyframes shakeImpact {
+
+            10%,
+            90% {
+                transform: translate3d(-3px, -2px, 0) scale(1.04);
+            }
+
+            20%,
+            80% {
+                transform: translate3d(5px, 2px, 0) scale(1.06);
+            }
+
+            30%,
+            50%,
+            70% {
+                transform: translate3d(-6px, -3px, 0) scale(1.08);
+            }
+
+            40%,
+            60% {
+                transform: translate3d(6px, 3px, 0) scale(1.05);
+            }
+        }
+
+        .flash-glow {
+            animation: flashHighlight 0.6s ease-out;
+        }
+
+        @keyframes flashHighlight {
+            0% {
+                filter: brightness(1);
+            }
+
+            35% {
+                filter: brightness(1.7) drop-shadow(0 0 25px #FFFFFF);
+            }
+
+            100% {
+                filter: brightness(1);
+            }
+        }
+
+        /* ── CONFETI FOCALIZADO ALREDEDOR DEL GANADOR ── */
+        .celebration-particles-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            overflow: hidden;
+            pointer-events: none;
+            z-index: 5;
+        }
+
+        .confetti-flake {
+            position: absolute;
+            border-radius: 2px;
+            opacity: 0.9;
+        }
+
+        @keyframes fallFlake {
+            0% {
+                transform: translateY(0) rotate(0deg);
+                opacity: 1;
+            }
+
+            100% {
+                transform: translateY(120px) rotate(720deg);
+                opacity: 0;
+            }
+        }
+
+        /* ── MODALES: TARJETAS DE ÁRBITRO (AMARILLA / ROJA) ── */
+        .notif-tarjeta {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            z-index: 50000;
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            background: rgba(0, 0, 0, 0.82);
+            backdrop-filter: blur(14px);
+            -webkit-backdrop-filter: blur(14px);
+            animation: fadeIn 0.3s ease-out;
+        }
+
+        .tarjeta-img {
+            width: 230px;
+            height: 330px;
+            border-radius: 22px;
+            border: 8px solid #FFFFFF;
+            box-shadow:
+                0 25px 60px rgba(0, 0, 0, 0.95),
+                0 0 45px rgba(255, 255, 255, 0.35);
+            transform: rotate(-6deg);
+            margin-bottom: 25px;
+            animation: cardReveal 0.65s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+            transform-origin: center bottom;
+        }
+
+        @keyframes cardReveal {
+            0% {
+                transform: translateY(180px) rotate(25deg) scale(0.5);
+                opacity: 0;
+            }
+
+            100% {
+                transform: translateY(0) rotate(-6deg) scale(1);
+                opacity: 1;
+            }
+        }
+
+        .tarjeta-texto {
+            font-size: 50px;
+            font-weight: 900;
+            font-style: italic;
+            text-transform: uppercase;
+            background: rgba(0, 0, 0, 0.95);
+            color: #FFFFFF;
+            padding: 12px 42px;
+            border-radius: 20px;
+            border: 4px solid #FFFFFF;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.7);
+        }
+
+        .amarilla-bg {
+            background: rgba(255, 215, 0, 0.35);
+        }
+
+        .roja-bg {
+            background: rgba(255, 0, 0, 0.35);
+        }
+
+        .amarilla-card {
+            background: linear-gradient(135deg, #FFE066 0%, #FFD700 100%);
+        }
+
+        .roja-card {
+            background: linear-gradient(135deg, #FF3B30 0%, #D80000 100%);
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+            }
+
+            to {
+                opacity: 1;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <!-- Contenedor para lluvia y explosión de confeti -->
+    <div class="celebration-particles-container" id="celebration-particles"></div>
+
+    <!-- HUD Broadcast Wrapper -->
+    <div class="hud-wrapper">
+
+        <!-- ── CENTRO SUPERIOR: RELOJ / EMPATE / WIN ── -->
+        <div class="hud-top-display">
+            <div class="match-timer" id="reloj">00:00</div>
+            <div class="celebracion-win" id="celebracion-win">WIN</div>
+            <div class="celebracion-empate" id="celebracion-empate">¡EMPATE!</div>
+        </div>
+
+        <!-- ── CÁPSULA HORIZONTAL UNIFICADA ── -->
+        <div class="hud-capsule">
+
+            <!-- Avatar Equipo 1 (Izquierda) -->
+            <div class="avatar-anchor avatar-anchor-left" id="wrap-avatar-eq1">
+                <!-- Contador WIN Superior -->
+                <div class="team-win-header" id="win-header-eq1"><span class="win-tag">WIN</span> <span
+                        class="win-count" id="win-count-eq1">x 1</span></div>
+
+                <div class="avatar-ring-gold" id="border-avatar-eq1">
+                    <div class="avatar-inner avatar-bg-barsa" id="inner-avatar-eq1">
+                        <img class="avatar-img-custom" id="img-avatar-eq1" alt="Equipo 1">
+                        <!-- SVG Silueta de Jugador -->
+                        <svg class="avatar-silhouette-svg" viewBox="0 0 24 24" id="svg-avatar-eq1">
+                            <path
+                                d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z" />
+                        </svg>
+                    </div>
+                </div>
+
+                <!-- Medallón Dorado de Victoria con Puntuación -->
+                <div class="winner-score-badge badge-left" id="badge-score-eq1">0</div>
+                <!-- Balón de Gol Flotante -->
+                <div class="balon-gol" id="balon-eq1">⚽</div>
+            </div>
+
+            <!-- Contenido Central: Nombres, Barra con Scores y Miembros -->
+            <div class="hud-center-content">
+
+                <!-- Fila Superior: Nombres de Equipos -->
+                <div class="teams-names-row">
+                    <div class="team-name team-name-left" id="nombre-eq1">BARSA</div>
+                    <div class="team-name team-name-right" id="nombre-eq2">REAL</div>
+                </div>
+
+                <!-- Fila Central: Barra de Duelo con Marcadores Integrados -->
+                <div class="duel-bar-container">
+                    <div class="duel-bar-half duel-bar-left" id="barra-eq1">
+                        <span class="score-in-bar score-left" id="pts-eq1">0</span>
+                        <div class="bar-sparkle-layer sparkle-pink" id="sparkle-eq1"></div>
+                    </div>
+                    <div class="duel-divider" id="bar-divider"></div>
+                    <div class="duel-bar-half duel-bar-right" id="barra-eq2">
+                        <span class="score-in-bar score-right" id="pts-eq2">0</span>
+                        <div class="bar-sparkle-layer sparkle-cyan" id="sparkle-eq2"></div>
+                    </div>
+                </div>
+
+                <!-- Fila Inferior: Miembros / Creadores (Completos sin corte) -->
+                <div class="members-row">
+                    <div class="members-text members-left" id="miembros-eq1">ALASKA & VENUS & CAMI</div>
+                    <div class="members-text members-right" id="miembros-eq2">RAY & NAT</div>
+                </div>
+
+            </div>
+
+            <!-- Avatar Equipo 2 (Derecha) -->
+            <div class="avatar-anchor avatar-anchor-right" id="wrap-avatar-eq2">
+                <!-- Contador WIN Superior -->
+                <div class="team-win-header" id="win-header-eq2"><span class="win-tag">WIN</span> <span
+                        class="win-count" id="win-count-eq2">x 0</span></div>
+
+                <div class="avatar-ring-silver" id="border-avatar-eq2">
+                    <div class="avatar-inner avatar-bg-real" id="inner-avatar-eq2">
+                        <img class="avatar-img-custom" id="img-avatar-eq2" alt="Equipo 2">
+                        <!-- SVG Silueta de Jugador -->
+                        <svg class="avatar-silhouette-svg" viewBox="0 0 24 24" id="svg-avatar-eq2">
+                            <path
+                                d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z" />
+                        </svg>
+                    </div>
+                </div>
+
+                <!-- Medallón Dorado de Victoria con Puntuación -->
+                <div class="winner-score-badge badge-right" id="badge-score-eq2">0</div>
+                <!-- Balón de Gol Flotante -->
+                <div class="balon-gol" id="balon-eq2">⚽</div>
+            </div>
+
+        </div>
+
+        <!-- ── CÁPSULAS INFERIORES DE DONADORES MVP ── -->
+        <div class="donors-bottom-container">
+            <!-- Lado Izquierdo (Barsa) -->
+            <div class="team-donors-capsule capsule-barsa" id="capsule-donors-eq1">
+                <div class="donor-circle circle-barsa" id="seat-eq1-0">
+                    <svg class="armchair-icon" viewBox="0 0 24 24">
+                        <path fill="currentColor"
+                            d="M20 10.5V14c0 .83-.67 1.5-1.5 1.5H18v2c0 .55-.45 1-1 1s-1-.45-1-1v-2H8v2c0 .55-.45 1-1 1s-1-.45-1-1v-2h-.5C4.67 15.5 4 14.83 4 14v-3.5C4 9.67 4.67 9 5.5 9H6V6c0-1.66 1.34-3 3-3h6c1.66 0 3 1.34 3 3v3h.5c.83 0 1.5.67 1.5 1.5zM8 6v3h8V6c0-.55-.45-1-1-1H9c-.55 0-1 .45-1 1zm9 6H7c-.55 0-1 .45-1 1s.45 1 1 1h10c.55 0 1-.45 1-1s-.45-1-1-1z" />
+                    </svg>
+                </div>
+                <div class="donor-circle circle-barsa" id="seat-eq1-1">
+                    <svg class="armchair-icon" viewBox="0 0 24 24">
+                        <path fill="currentColor"
+                            d="M20 10.5V14c0 .83-.67 1.5-1.5 1.5H18v2c0 .55-.45 1-1 1s-1-.45-1-1v-2H8v2c0 .55-.45 1-1 1s-1-.45-1-1v-2h-.5C4.67 15.5 4 14.83 4 14v-3.5C4 9.67 4.67 9 5.5 9H6V6c0-1.66 1.34-3 3-3h6c1.66 0 3 1.34 3 3v3h.5c.83 0 1.5.67 1.5 1.5zM8 6v3h8V6c0-.55-.45-1-1-1H9c-.55 0-1 .45-1 1zm9 6H7c-.55 0-1 .45-1 1s.45 1 1 1h10c.55 0 1-.45 1-1s-.45-1-1-1z" />
+                    </svg>
+                </div>
+                <div class="donor-circle circle-barsa" id="seat-eq1-2">
+                    <svg class="armchair-icon" viewBox="0 0 24 24">
+                        <path fill="currentColor"
+                            d="M20 10.5V14c0 .83-.67 1.5-1.5 1.5H18v2c0 .55-.45 1-1 1s-1-.45-1-1v-2H8v2c0 .55-.45 1-1 1s-1-.45-1-1v-2h-.5C4.67 15.5 4 14.83 4 14v-3.5C4 9.67 4.67 9 5.5 9H6V6c0-1.66 1.34-3 3-3h6c1.66 0 3 1.34 3 3v3h.5c.83 0 1.5.67 1.5 1.5zM8 6v3h8V6c0-.55-.45-1-1-1H9c-.55 0-1 .45-1 1zm9 6H7c-.55 0-1 .45-1 1s.45 1 1 1h10c.55 0 1-.45 1-1s-.45-1-1-1z" />
+                    </svg>
+                </div>
+            </div>
+
+            <!-- Lado Derecho (Real) -->
+            <div class="team-donors-capsule capsule-real" id="capsule-donors-eq2">
+                <div class="donor-circle circle-real" id="seat-eq2-0">
+                    <svg class="armchair-icon" viewBox="0 0 24 24">
+                        <path fill="currentColor"
+                            d="M20 10.5V14c0 .83-.67 1.5-1.5 1.5H18v2c0 .55-.45 1-1 1s-1-.45-1-1v-2H8v2c0 .55-.45 1-1 1s-1-.45-1-1v-2h-.5C4.67 15.5 4 14.83 4 14v-3.5C4 9.67 4.67 9 5.5 9H6V6c0-1.66 1.34-3 3-3h6c1.66 0 3 1.34 3 3v3h.5c.83 0 1.5.67 1.5 1.5zM8 6v3h8V6c0-.55-.45-1-1-1H9c-.55 0-1 .45-1 1zm9 6H7c-.55 0-1 .45-1 1s.45 1 1 1h10c.55 0 1-.45 1-1s-.45-1-1-1z" />
+                    </svg>
+                </div>
+                <div class="donor-circle circle-real" id="seat-eq2-1">
+                    <svg class="armchair-icon" viewBox="0 0 24 24">
+                        <path fill="currentColor"
+                            d="M20 10.5V14c0 .83-.67 1.5-1.5 1.5H18v2c0 .55-.45 1-1 1s-1-.45-1-1v-2H8v2c0 .55-.45 1-1 1s-1-.45-1-1v-2h-.5C4.67 15.5 4 14.83 4 14v-3.5C4 9.67 4.67 9 5.5 9H6V6c0-1.66 1.34-3 3-3h6c1.66 0 3 1.34 3 3v3h.5c.83 0 1.5.67 1.5 1.5zM8 6v3h8V6c0-.55-.45-1-1-1H9c-.55 0-1 .45-1 1zm9 6H7c-.55 0-1 .45-1 1s.45 1 1 1h10c.55 0 1-.45 1-1s-.45-1-1-1z" />
+                    </svg>
+                </div>
+                <div class="donor-circle circle-real" id="seat-eq2-2">
+                    <svg class="armchair-icon" viewBox="0 0 24 24">
+                        <path fill="currentColor"
+                            d="M20 10.5V14c0 .83-.67 1.5-1.5 1.5H18v2c0 .55-.45 1-1 1s-1-.45-1-1v-2H8v2c0 .55-.45 1-1 1s-1-.45-1-1v-2h-.5C4.67 15.5 4 14.83 4 14v-3.5C4 9.67 4.67 9 5.5 9H6V6c0-1.66 1.34-3 3-3h6c1.66 0 3 1.34 3 3v3h.5c.83 0 1.5.67 1.5 1.5zM8 6v3h8V6c0-.55-.45-1-1-1H9c-.55 0-1 .45-1 1zm9 6H7c-.55 0-1 .45-1 1s.45 1 1 1h10c.55 0 1-.45 1-1s-.45-1-1-1z" />
+                    </svg>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- ── OVERLAY DE TARJETAS DE ÁRBITRO ── -->
+    <div id="pantalla-tarjeta" class="notif-tarjeta">
+        <div class="tarjeta-img" id="color-tarjeta"></div>
+        <div class="tarjeta-texto" id="texto-tarjeta">¡FALTA!</div>
+    </div>
+
+    <!-- Logotipo de la Agencia Flotante -->
+    <div id="agency-logo-container"
+        style="position: absolute; top: 20px; right: 20px; z-index: 9999; pointer-events: none; transition: all 0.5s ease; opacity: 0; transform: scale(0.8);">
+        <img id="agency-logo" src=""
+            style="max-height: 80px; max-width: 150px; object-fit: contain; filter: drop-shadow(0 0 10px rgba(0,0,0,0.5));">
+    </div>
+
+    <script src="/js/iframe-bridge.js"></script>
+    <script src="/socket.io/socket.io.js"></script>
+    <script>
+        const socket = window.__iframeBridgeSocket || io();
+
+        // Elementos DOM
+        const nombreEq1 = document.getElementById('nombre-eq1');
+        const miembrosEq1 = document.getElementById('miembros-eq1');
+        const ptsEq1 = document.getElementById('pts-eq1');
+        const barraEq1 = document.getElementById('barra-eq1');
+        const balonEq1 = document.getElementById('balon-eq1');
+        const wrapAvatarEq1 = document.getElementById('wrap-avatar-eq1');
+        const innerAvatarEq1 = document.getElementById('inner-avatar-eq1');
+        const badgeScoreEq1 = document.getElementById('badge-score-eq1');
+        const sparkleEq1 = document.getElementById('sparkle-eq1');
+
+        const nombreEq2 = document.getElementById('nombre-eq2');
+        const miembrosEq2 = document.getElementById('miembros-eq2');
+        const ptsEq2 = document.getElementById('pts-eq2');
+        const barraEq2 = document.getElementById('barra-eq2');
+        const balonEq2 = document.getElementById('balon-eq2');
+        const wrapAvatarEq2 = document.getElementById('wrap-avatar-eq2');
+        const innerAvatarEq2 = document.getElementById('inner-avatar-eq2');
+        const badgeScoreEq2 = document.getElementById('badge-score-eq2');
+        const sparkleEq2 = document.getElementById('sparkle-eq2');
+
+        const reloj = document.getElementById('reloj');
+        const celebracionWin = document.getElementById('celebracion-win');
+        const celebracionEmpate = document.getElementById('celebracion-empate');
+        const particlesContainer = document.getElementById('celebration-particles');
+
+        let celebracionInterval = null;
+
+        // ── ESTADO DE VICTORIAS Y DONADORES MVP ──
+        let teamWins = { eq1: 1, eq2: 0 };
+        const winCountEq1 = document.getElementById('win-count-eq1');
+        const winCountEq2 = document.getElementById('win-count-eq2');
+
+        function actualizarMarcadoresWin(victorias) {
+            if (victorias && typeof victorias === 'object') {
+                let w1 = 0, w2 = 0;
+                const m1 = (futbolConfig.equipo1 && futbolConfig.equipo1.miembros) || [];
+                const m2 = (futbolConfig.equipo2 && futbolConfig.equipo2.miembros) || [];
+                m1.forEach(m => { w1 += (victorias[m] || 0); });
+                m2.forEach(m => { w2 += (victorias[m] || 0); });
+                teamWins.eq1 = w1;
+                teamWins.eq2 = w2;
+            }
+            if (winCountEq1) winCountEq1.innerText = `x ${teamWins.eq1}`;
+            if (winCountEq2) winCountEq2.innerText = `x ${teamWins.eq2}`;
+        }
+
+        const EMPTY_ARMCHAIR_SVG = `<svg class="armchair-icon" viewBox="0 0 24 24"><path fill="currentColor" d="M20 10.5V14c0 .83-.67 1.5-1.5 1.5H18v2c0 .55-.45 1-1 1s-1-.45-1-1v-2H8v2c0 .55-.45 1-1 1s-1-.45-1-1v-2h-.5C4.67 15.5 4 14.83 4 14v-3.5C4 9.67 4.67 9 5.5 9H6V6c0-1.66 1.34-3 3-3h6c1.66 0 3 1.34 3 3v3h.5c.83 0 1.5.67 1.5 1.5zM8 6v3h8V6c0-.55-.45-1-1-1H9c-.55 0-1 .45-1 1zm9 6H7c-.55 0-1 .45-1 1s.45 1 1 1h10c.55 0 1-.45 1-1s-.45-1-1-1z"/></svg>`;
+        let teamDonors = { eq1: {}, eq2: {} };
+
+        function renderTeamDonors() {
+            ['eq1', 'eq2'].forEach(lado => {
+                const donorsList = Object.values(teamDonors[lado] || {}).sort((a, b) => b.coins - a.coins);
+                for (let i = 0; i < 3; i++) {
+                    const seatEl = document.getElementById(`seat-${lado}-${i}`);
+                    if (!seatEl) continue;
+                    const donor = donorsList[i];
+                    if (donor && donor.avatar) {
+                        seatEl.innerHTML = `<img src="${donor.avatar}" alt="${donor.viewer}" title="${donor.viewer} (${donor.coins} pts)">`;
+                        seatEl.classList.add('seat-filled');
+                    } else if (donor) {
+                        const initial = donor.viewer ? donor.viewer.slice(0, 1).toUpperCase() : '?';
+                        seatEl.innerHTML = `<span style="font-size: 20px; font-weight: 900; line-height: 1;">${initial}</span>`;
+                        seatEl.classList.add('seat-filled');
+                    } else {
+                        seatEl.innerHTML = EMPTY_ARMCHAIR_SVG;
+                        seatEl.classList.remove('seat-filled');
+                    }
+                }
+            });
+        }
+
+        // Listener en tiempo real de regalos de TikTok / Socket para sillas de donadores
+        socket.on('nuevoRegalo', (data) => {
+            if (!data || !data.viewer) return;
+            const eq1M = (futbolConfig.equipo1 && futbolConfig.equipo1.miembros) || [];
+            const eq2M = (futbolConfig.equipo2 && futbolConfig.equipo2.miembros) || [];
+            let lado = null;
+            if (eq1M.includes(data.nombre)) lado = 'eq1';
+            else if (eq2M.includes(data.nombre)) lado = 'eq2';
+
+            if (lado) {
+                if (!teamDonors[lado][data.viewer]) {
+                    teamDonors[lado][data.viewer] = { viewer: data.viewer, avatar: data.avatar || '', coins: 0 };
+                }
+                if (data.avatar) teamDonors[lado][data.viewer].avatar = data.avatar;
+                teamDonors[lado][data.viewer].coins += (data.coins || 1);
+                renderTeamDonors();
+            }
+        });
+
+        let futbolConfig = {
+            equipo1: { nombre: 'BARSA', color1: '#FF2A5F', color2: '#FF2A5F', miembros: ['ALASKA', 'VENUS', 'CAMI'] },
+            equipo2: { nombre: 'REAL', color1: '#00E5FF', color2: '#00E5FF', miembros: ['RAY', 'NAT'] }
+        };
+
+        function formatearGoles(pts) {
+            return (pts || 0).toString();
+        }
+
+        function aplicarConfiguracion(config) {
+            if (!config) return;
+            futbolConfig = config;
+
+            const name1 = (config.equipo1 && config.equipo1.nombre) ? config.equipo1.nombre : 'BARSA';
+            const name2 = (config.equipo2 && config.equipo2.nombre) ? config.equipo2.nombre : 'REAL';
+            nombreEq1.innerText = name1;
+            nombreEq2.innerText = name2;
+
+            const m1 = (config.equipo1 && config.equipo1.miembros && config.equipo1.miembros.length > 0)
+                ? config.equipo1.miembros.join(' & ')
+                : 'ALASKA & VENUS & CAMI';
+            const m2 = (config.equipo2 && config.equipo2.miembros && config.equipo2.miembros.length > 0)
+                ? config.equipo2.miembros.join(' & ')
+                : 'RAY & NAT';
+            miembrosEq1.innerText = m1;
+            miembrosEq2.innerText = m2;
+
+            const c1_1 = (config.equipo1 && config.equipo1.color1);
+            const c1_2 = (config.equipo1 && config.equipo1.color2);
+            const c2_1 = (config.equipo2 && config.equipo2.color1);
+            const c2_2 = (config.equipo2 && config.equipo2.color2);
+
+            // Si se configuraron colores explícitos personalizados distintos a los clásicos
+            if (c1_1 && c1_2 && (c1_1.toLowerCase() !== '#004d98' || c1_2.toLowerCase() !== '#a50044')) {
+                barraEq1.style.background = `linear-gradient(90deg, ${c1_1}, ${c1_2})`;
+                innerAvatarEq1.className = 'avatar-inner';
+                innerAvatarEq1.style.background = `linear-gradient(135deg, ${c1_1}, ${c1_2})`;
+            } else {
+                barraEq1.style.background = '#FF2A5F';
+                innerAvatarEq1.className = 'avatar-inner avatar-bg-barsa';
+                innerAvatarEq1.style.background = '';
+            }
+
+            if (c2_1 && c2_2 && !c2_1.toLowerCase().includes('fff') && !c2_2.toLowerCase().includes('ccc')) {
+                barraEq2.style.background = `linear-gradient(90deg, ${c2_1}, ${c2_2})`;
+                innerAvatarEq2.className = 'avatar-inner';
+                innerAvatarEq2.style.background = `linear-gradient(135deg, ${c2_1}, ${c2_2})`;
+            } else {
+                barraEq2.style.background = '#00E5FF';
+                innerAvatarEq2.className = 'avatar-inner avatar-bg-real';
+                innerAvatarEq2.style.background = '';
+            }
+        }
+
+        fetch('/api/futbol/config')
+            .then(r => r.json())
+            .then(data => {
+                if (data && (data.equipo1 || data.equipo2)) aplicarConfiguracion(data);
+            })
+            .catch(() => { });
+
+        socket.on('futbolConfigActualizada', (config) => {
+            aplicarConfiguracion(config);
+            calcularPuntos(lastPuntosReales);
+        });
+
+        let lastPoints = { eq1: 0, eq2: 0 };
+        let lastPuntosReales = {};
+
+        function calcularPuntos(puntos) {
+            lastPuntosReales = puntos || {};
+            let eq1 = 0;
+            if (futbolConfig && futbolConfig.equipo1 && futbolConfig.equipo1.miembros) {
+                futbolConfig.equipo1.miembros.forEach(m => eq1 += (puntos[m] || 0));
+            }
+
+            let eq2 = 0;
+            if (futbolConfig && futbolConfig.equipo2 && futbolConfig.equipo2.miembros) {
+                futbolConfig.equipo2.miembros.forEach(m => eq2 += (puntos[m] || 0));
+            }
+
+            let totalPuntos = eq1 + eq2;
+            let pct1 = totalPuntos === 0 ? 50 : Math.min(92, Math.max(8, (eq1 / totalPuntos) * 100));
+            let pct2 = 100 - pct1;
+
+            barraEq1.style.width = pct1 + '%';
+            barraEq2.style.width = pct2 + '%';
+
+            if (eq1 > lastPoints.eq1) {
+                wrapAvatarEq1.classList.add('vibrar-impacto', 'flash-glow');
+                ptsEq1.classList.add('vibrar-impacto');
+                balonEq1.classList.remove('disparar-gol');
+                void balonEq1.offsetWidth;
+                balonEq1.classList.add('disparar-gol');
+
+                setTimeout(() => {
+                    wrapAvatarEq1.classList.remove('vibrar-impacto', 'flash-glow');
+                    ptsEq1.classList.remove('vibrar-impacto');
+                }, 600);
+            }
+
+            if (eq2 > lastPoints.eq2) {
+                wrapAvatarEq2.classList.add('vibrar-impacto', 'flash-glow');
+                ptsEq2.classList.add('vibrar-impacto');
+                balonEq2.classList.remove('disparar-gol');
+                void balonEq2.offsetWidth;
+                balonEq2.classList.add('disparar-gol');
+
+                setTimeout(() => {
+                    wrapAvatarEq2.classList.remove('vibrar-impacto', 'flash-glow');
+                    ptsEq2.classList.remove('vibrar-impacto');
+                }, 600);
+            }
+
+            lastPoints = { eq1, eq2 };
+            ptsEq1.innerText = formatearGoles(eq1);
+            ptsEq2.innerText = formatearGoles(eq2);
+        }
+
+        function resetearCelebracion() {
+            if (celebracionInterval) {
+                clearInterval(celebracionInterval);
+                celebracionInterval = null;
+            }
+            particlesContainer.innerHTML = '';
+            reloj.style.display = 'block';
+            celebracionWin.style.display = 'none';
+            celebracionEmpate.style.display = 'none';
+            wrapAvatarEq1.classList.remove('winner-aura');
+            wrapAvatarEq2.classList.remove('winner-aura');
+            badgeScoreEq1.style.display = 'none';
+            badgeScoreEq2.style.display = 'none';
+            sparkleEq1.classList.remove('sparkle-active');
+            sparkleEq2.classList.remove('sparkle-active');
+        }
+
+        // ── LANZADOR DE CONFETI FOCALIZADO EN EL AVATAR GANADOR ──
+        function lanzarParticulasGanador(lado) {
+            particlesContainer.innerHTML = '';
+            if (celebracionInterval) clearInterval(celebracionInterval);
+
+            const isEq1 = (lado === 'eq1');
+            const coloresFlakes = isEq1
+                ? ['#FFD700', '#FF2A5F', '#004D98', '#FFFFFF', '#FFA726', '#00E5FF']
+                : ['#FFD700', '#00E5FF', '#FFFFFF', '#CBD3DC', '#002060', '#FF2A5F'];
+
+            const rectAvatar = isEq1
+                ? wrapAvatarEq1.getBoundingClientRect()
+                : wrapAvatarEq2.getBoundingClientRect();
+
+            const origenX = rectAvatar.left + rectAvatar.width / 2;
+            const origenY = rectAvatar.top + rectAvatar.height / 2;
+
+            function spawnExplosion() {
+                for (let i = 0; i < 28; i++) {
+                    const flake = document.createElement('div');
+                    flake.className = 'confetti-flake';
+
+                    const angle = Math.random() * Math.PI * 2;
+                    const distance = 40 + Math.random() * 110;
+                    const destX = origenX + Math.cos(angle) * distance;
+                    const destY = origenY + Math.sin(angle) * distance;
+
+                    flake.style.left = origenX + 'px';
+                    flake.style.top = origenY + 'px';
+                    flake.style.backgroundColor = coloresFlakes[Math.floor(Math.random() * coloresFlakes.length)];
+                    flake.style.width = (6 + Math.random() * 7) + 'px';
+                    flake.style.height = (6 + Math.random() * 8) + 'px';
+                    flake.style.transition = 'all 1.2s cubic-bezier(0.25, 1, 0.5, 1)';
+                    flake.style.transform = `rotate(${Math.random() * 360}deg)`;
+
+                    particlesContainer.appendChild(flake);
+
+                    requestAnimationFrame(() => {
+                        flake.style.left = destX + 'px';
+                        flake.style.top = destY + (20 + Math.random() * 40) + 'px';
+                        flake.style.opacity = '0';
+                        flake.style.transform = `rotate(${Math.random() * 720}deg) scale(${0.4 + Math.random() * 0.8})`;
+                    });
+
+                    setTimeout(() => flake.remove(), 1300);
+                }
+            }
+
+            spawnExplosion();
+            celebracionInterval = setInterval(spawnExplosion, 550);
+        }
+
+        // ── DISPARAR LA CELEBRACIÓN EXACTA: 'WIN' O '¡EMPATE!' ──
+        function activarCelebracion(ganador) {
+            resetearCelebracion();
+            reloj.style.display = 'none';
+            reloj.classList.remove('snipe-mode');
+
+            if (ganador === 'eq1') {
+                // GANA BARSA / EQUIPO 1
+                celebracionWin.style.display = 'block';
+                wrapAvatarEq1.classList.add('winner-aura');
+
+                // Estela Stardust en la barra rosa
+                sparkleEq1.classList.add('sparkle-active');
+
+                // Confeti focalizado
+                lanzarParticulasGanador('eq1');
+            } else if (ganador === 'eq2') {
+                // GANA REAL / EQUIPO 2
+                celebracionWin.style.display = 'block';
+                wrapAvatarEq2.classList.add('winner-aura');
+
+                // Estela Stardust en la barra cian
+                sparkleEq2.classList.add('sparkle-active');
+
+                // Confeti focalizado
+                lanzarParticulasGanador('eq2');
+            } else {
+                // EMPATE
+                celebracionEmpate.style.display = 'block';
+            }
+        }
+
+        // Helper global para pruebas directas en consola o atajos de teclado
+        window.testCelebracion = function (tipo) {
+            if (tipo === 'eq1' || tipo === 1 || tipo === 'barsa') {
+                activarCelebracion('eq1');
+            } else if (tipo === 'eq2' || tipo === 2 || tipo === 'real') {
+                activarCelebracion('eq2');
+            } else if (tipo === 'empate' || tipo === 0 || tipo === 'draw') {
+                activarCelebracion('empate');
+            } else {
+                resetearCelebracion();
+            }
+        };
+
+        // Atajos de teclado para pruebas instantáneas (Presiona 1, 2, 0 o R)
+        window.addEventListener('keydown', (e) => {
+            if (e.key === '1') {
+                if (lastPoints.eq1 === 0 && lastPoints.eq2 === 0) lastPoints.eq1 = 3;
+                ptsEq1.innerText = formatearGoles(lastPoints.eq1);
+                teamWins.eq1++;
+                actualizarMarcadoresWin();
+                window.testCelebracion('eq1');
+            }
+            if (e.key === '2') {
+                if (lastPoints.eq1 === 0 && lastPoints.eq2 === 0) lastPoints.eq2 = 3;
+                ptsEq2.innerText = formatearGoles(lastPoints.eq2);
+                teamWins.eq2++;
+                actualizarMarcadoresWin();
+                window.testCelebracion('eq2');
+            }
+            if (e.key === '0' || e.key === '3') {
+                lastPoints.eq1 = 0;
+                lastPoints.eq2 = 0;
+                ptsEq1.innerText = "0";
+                ptsEq2.innerText = "0";
+                barraEq1.style.width = '50%';
+                barraEq2.style.width = '50%';
+                window.testCelebracion('empate');
+            }
+            if (e.key.toLowerCase() === 'r' || e.key === 'Escape') {
+                teamWins = { eq1: 1, eq2: 0 };
+                actualizarMarcadoresWin();
+                window.testCelebracion('reset');
+            }
+        });
+
+        // Helper para agregar donadores de prueba en cualquier momento
+        window.testAddDonor = function (lado, viewer, coins, avatar) {
+            lado = (lado === 1 || lado === 'eq1') ? 'eq1' : 'eq2';
+            viewer = viewer || ('Donador_' + Math.floor(Math.random() * 100));
+            coins = coins || 50;
+            if (!teamDonors[lado][viewer]) {
+                teamDonors[lado][viewer] = { viewer, avatar: avatar || '', coins: 0 };
+            }
+            teamDonors[lado][viewer].coins += coins;
+            renderTeamDonors();
+        };
+
+        socket.on('batallaInicio', (data) => {
+            resetearCelebracion();
+            document.getElementById('pantalla-tarjeta').style.display = 'none';
+            reloj.innerText = "00:00";
+            reloj.classList.remove('snipe-mode');
+            if (data.victorias) actualizarMarcadoresWin(data.victorias);
+            calcularPuntos(data.puntos || {});
+        });
+
+        socket.on('batallaTick', (t) => {
+            let m = Math.floor(t / 60).toString().padStart(2, '0');
+            let s = (t % 60).toString().padStart(2, '0');
+            reloj.innerText = `${m}:${s}`;
+
+            if (t <= 10 && t > 0) {
+                reloj.classList.add('snipe-mode');
+            } else {
+                reloj.classList.remove('snipe-mode');
+            }
+        });
+
+        socket.on('batallaPuntos', calcularPuntos);
+
+        socket.on('batallaFin', (data) => {
+            let ganador = 'empate';
+            if (lastPoints.eq1 > lastPoints.eq2) {
+                ganador = 'eq1';
+            } else if (lastPoints.eq2 > lastPoints.eq1) {
+                ganador = 'eq2';
+            }
+
+            if (data.victorias) actualizarMarcadoresWin(data.victorias);
+            activarCelebracion(ganador);
+
+            if (data.reporteTarjetas && data.reporteTarjetas.length > 0) {
+                setTimeout(() => { mostrarTarjetasGigantes(data.reporteTarjetas); }, 2500);
+            }
+        });
+
+        function mostrarTarjetasGigantes(lista) {
+            const overlay = document.getElementById('pantalla-tarjeta');
+            const colorDiv = document.getElementById('color-tarjeta');
+            const textoDiv = document.getElementById('texto-tarjeta');
+            let i = 0;
+
+            function siguiente() {
+                if (i >= lista.length) {
+                    overlay.style.display = 'none';
+                    return;
+                }
+
+                const t = lista[i];
+                const eq1Members = (futbolConfig.equipo1 && futbolConfig.equipo1.miembros) || [];
+                const equipo = eq1Members.includes(t.chica) ? futbolConfig.equipo1.nombre : futbolConfig.equipo2.nombre;
+
+                overlay.className = 'notif-tarjeta ' + (t.tipo === 'AMARILLA' ? 'amarilla-bg' : 'roja-bg');
+                colorDiv.className = 'tarjeta-img ' + (t.tipo === 'AMARILLA' ? 'amarilla-card' : 'roja-card');
+                textoDiv.innerText = `${equipo}: ¡${t.tipo}!`;
+
+                overlay.style.display = 'flex';
+
+                setTimeout(() => {
+                    overlay.style.display = 'none';
+                    i++;
+                    setTimeout(siguiente, 500);
+                }, 4000);
+            }
+            siguiente();
+        }
+
+        socket.on('batallaCancelada', () => {
+            resetearCelebracion();
+            document.getElementById('pantalla-tarjeta').style.display = 'none';
+            reloj.innerText = "00:00";
+            reloj.classList.remove('snipe-mode');
+        });
+
+        // ── SOPORTE PARA BRAND MANAGER ──
+        function loadGoogleFont(fontName) {
+            if (!fontName) return;
+            const fontId = 'custom-google-font';
+            let link = document.getElementById(fontId);
+            if (!link) {
+                link = document.createElement('link');
+                link.id = fontId;
+                link.rel = 'stylesheet';
+                document.head.appendChild(link);
+            }
+            link.href = `https://fonts.googleapis.com/css2?family=${encodeURIComponent(fontName)}:wght@400;700;800;900&display=swap`;
+            document.body.style.fontFamily = `'${fontName}', sans-serif`;
+        }
+
+        function aplicarMarca(config) {
+            if (!config) return;
+            if (config.fontFamily) loadGoogleFont(config.fontFamily);
+            const logoContainer = document.getElementById('agency-logo-container');
+            const logoImg = document.getElementById('agency-logo');
+            if (logoContainer && logoImg) {
+                if (config.logoUrl) {
+                    logoImg.src = config.logoUrl;
+                    logoContainer.style.opacity = '1';
+                    logoContainer.style.transform = 'scale(1)';
+                } else {
+                    logoContainer.style.opacity = '0';
+                    logoContainer.style.transform = 'scale(0.8)';
+                }
+            }
+            document.body.classList.remove('neon-none', 'neon-low', 'neon-high');
+            if (config.neonIntensity && config.neonIntensity !== 'normal') {
+                document.body.classList.add('neon-' + config.neonIntensity);
+            }
+        }
+
+        socket.on('marcaCambiado', aplicarMarca);
+    </script>
+</body>
+
+</html>

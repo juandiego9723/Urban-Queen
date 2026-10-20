@@ -116,6 +116,17 @@
                 } catch(e) {}
             }
             forwardToIframe('connect', { connected: true });
+
+            // Fallback: Si el iframe sigue en about:blank tras conectar, cargar ranking por defecto
+            setTimeout(function() {
+                if (!ultimaVista || !frame.src || frame.src === 'about:blank' || frame.src.endsWith('about:blank')) {
+                    let defaultVista = userParam ? `/${userParam}/ranking` : '/ranking';
+                    if (userParam && !defaultVista.includes('user=')) {
+                        defaultVista += `?user=${userParam}`;
+                    }
+                    frame.src = defaultVista;
+                }
+            }, 400);
         });
         socket.on('disconnect', function() {
             if (frame && frame.contentWindow) {
@@ -131,7 +142,7 @@
         // ══════════════════════════════════════════════════════════════
         socket.on('cambioVistaAcumulados', (vista) => {
             if (!vista) return;
-            if (vista === ultimaVista) return;
+            if (vista === ultimaVista && frame.src && !frame.src.endsWith('about:blank')) return;
             ultimaVista = vista;
 
             // Resetear estado del iframe

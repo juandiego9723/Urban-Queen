@@ -1122,6 +1122,7 @@
                 <a class="topbar-link" href="/cosmic/batalla" target="_blank">⚔️ Batalla</a>
                 <a class="topbar-link" href="/cosmic/batalla-vs" target="_blank">⚔️ Batalla VS</a>
                 <a class="topbar-link" href="/cosmic/batalla-futbol" target="_blank">⚽ Clásico</a>
+                <a class="topbar-link" href="/cosmic/batalla-futbol-hud" target="_blank">⚽ HUD Clásico</a>
                 <a class="topbar-link" href="/cosmic/batalla-pk" target="_blank">⚡ Batalla PK</a>
                 <a class="topbar-link" href="/cosmic/timer" target="_blank">💃 Timer</a>
                 <a class="topbar-link" href="/cosmic/conociendo" target="_blank">👑 Conociendo</a>
@@ -1553,6 +1554,10 @@
                                 <button class="btn btn-danger btn-full" onclick="hacerFetch('/batalla/stop')">⏹
                                     Detener</button>
                             </div>
+                            <div class="row-2" style="margin-top:8px">
+                                <button class="btn btn-primary btn-full" style="background: linear-gradient(135deg, #FF2A5F, #00E5FF); border: none; font-weight: 700;" onclick="cambiarVistaUniversal('/batalla-futbol-hud')">🔮 Proyectar HUD Clásico</button>
+                                <a class="btn btn-ghost btn-full" href="/cosmic/batalla-futbol-hud" target="_blank" style="text-align:center;text-decoration:none;display:flex;align-items:center;justify-content:center;">🔗 Abrir HUD Clásico</a>
+                            </div>
                         </div>
                     </div>
 
@@ -1843,6 +1848,7 @@
                                 <button class="btn btn-primary" onclick="cambiarVistaUniversal('/batalla-vs')" id="btn-view-batalla-vs" style="transition: all 0.3s ease; text-align: left; padding: 12px 16px;">⚔️ Batalla VS (TikTok LIVE)</button>
                                 <button class="btn btn-primary" onclick="cambiarVistaUniversal('/revivir')" id="btn-view-revivir" style="transition: all 0.3s ease; text-align: left; padding: 12px 16px;">🔥 Dinámica Revivir</button>
                                 <button class="btn btn-primary" onclick="cambiarVistaUniversal('/batalla-futbol')" id="btn-view-batalla-futbol" style="transition: all 0.3s ease; text-align: left; padding: 12px 16px;">⚽ El Clásico (Fútbol)</button>
+                                <button class="btn btn-primary" onclick="cambiarVistaUniversal('/batalla-futbol-hud')" id="btn-view-batalla-futbol-hud" style="transition: all 0.3s ease; text-align: left; padding: 12px 16px;">⚽ HUD Clásico (Fútbol)</button>
                                 <button class="btn btn-primary" onclick="cambiarVistaUniversal('/timer')" id="btn-view-timer" style="transition: all 0.3s ease; text-align: left; padding: 12px 16px;">💃 Timer de Baile</button>
                                 <button class="btn btn-primary" onclick="cambiarVistaUniversal('/conociendo')" id="btn-view-conociendo" style="transition: all 0.3s ease; text-align: left; padding: 12px 16px;">👑 Conociendo a mi Bailarina</button>
                                 <button class="btn btn-primary" onclick="cambiarVistaUniversal('/lista-regalos')" id="btn-view-lista-regalos" style="transition: all 0.3s ease; text-align: left; padding: 12px 16px;">🎁 Lista Regalos</button>
@@ -2621,6 +2627,7 @@
                 { emoji: '🏆', nombre: 'Ranking', url: '/', desc: 'Clasificación semanal y mensual. Pón esto en OBS como fuente de navegador.' },
                 { emoji: '⚔️', nombre: 'Batalla Normal', url: '/batalla', desc: 'Modo batalla con barra de puntos, timer y ganadora. Hasta 4 bailarinas.' },
                 { emoji: '⚽', nombre: 'El Clásico', url: '/batalla-futbol', desc: 'Modo fútbol con equipos, tarjetas amarilla/roja y goles.' },
+                { emoji: '⚽', nombre: 'HUD El Clásico', url: '/batalla-futbol-hud', desc: 'Modo fútbol HUD broadcast con avatares circulares, barra duel tug-of-war, marcadores integrados y reloj.' },
                 { emoji: '⚡', nombre: 'Batalla PK', url: '/batalla-pk', desc: 'Modo Batalla 1vs1 (o Team A vs Team B) con barra PK, rayo divisor neón y efecto de congelación Icy Clash.' },
                 { emoji: '💃', nombre: 'Timer de Baile', url: '/timer', desc: 'Turno automático entre bailarinas. Cada regalo extiende el tiempo.' },
                 { emoji: '👑', nombre: 'Conociendo a mi Bailarina', url: '/conociendo', desc: 'Meta de puntos por bailarina con barra de progreso.' },
@@ -4468,6 +4475,7 @@
                     '/batalla-vs': 'btn-view-batalla-vs',
                     '/batalla-pk': 'btn-view-batalla-pk',
                     '/batalla-futbol': 'btn-view-batalla-futbol',
+                    '/batalla-futbol-hud': 'btn-view-batalla-futbol-hud',
                     '/timer': 'btn-view-timer',
                     '/conociendo': 'btn-view-conociendo',
                     '/lista-regalos': 'btn-view-lista-regalos',
@@ -6242,7 +6250,7 @@
                         return alert('No hay miembros configurados en los equipos.');
                     }
                     const m = document.getElementById('tiempoBatalla') ? document.getElementById('tiempoBatalla').value : 3;
-                    hacerFetch(`/batalla/start?m=${m}&p=${miembros.join(',')}`);
+                    hacerFetch(`/batalla/start?tipo=futbol&m=${m}&p=${miembros.join(',')}`);
                 } catch (e) {
                     alert('Error al iniciar el Clásico.');
                 }

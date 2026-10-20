@@ -21,7 +21,10 @@ function setupBatallaDynamics(app, io, requireSession) {
         s.puntosBatalla = {};
         s.participantesActuales.forEach(p => s.puntosBatalla[p] = 0);
         s.estadoBatalla = 'activa';
-        s.esBatallaVS = (req.query.tipo === 'vs' || req.query.modo === 'vs' || s.vistaActiva === '/batalla-vs');
+        const tipoSolicitado = req.query.tipo || req.query.modo;
+        s.esBatallaVS = tipoSolicitado
+            ? (tipoSolicitado === 'vs')
+            : (s.vistaActiva === '/batalla-vs');
         
         if (s.esBatallaVS) {
             if (isCosmic) {
@@ -70,6 +73,8 @@ function setupBatallaDynamics(app, io, requireSession) {
                 if (tiempoExtraSnipe <= 0) {
                     clearInterval(s.timerBatalla);
                     s.estadoBatalla = 'finalizada';
+                    s.batalla2X = false;
+                    s.batalla2XTiempo = 0;
                     let maxPts = 0;
                     s.participantesActuales.forEach(p => { if (s.puntosBatalla[p] > maxPts) maxPts = s.puntosBatalla[p]; });
                     let ganadoras = s.participantesActuales.filter(c => s.puntosBatalla[c] === maxPts);

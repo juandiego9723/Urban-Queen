@@ -289,6 +289,7 @@ app.get('/ranking',       (req, res) => res.sendFile(pub('ranking.html')));
 app.get('/ranking-clasico',(req, res) => res.sendFile(pub('ranking-clasico.html')));
 app.get('/batalla',       (req, res) => res.sendFile(pub('batalla.html')));
 app.get('/batalla-futbol',(req, res) => res.sendFile(pub('batalla-futbol.html')));
+app.get('/batalla-futbol-hud',(req, res) => res.sendFile(pub('batalla-futbol-hud.html')));
 app.get('/batalla-pk',    (req, res) => res.sendFile(pub('batalla-pk.html')));
 app.get('/batalla-vs',    (req, res) => res.sendFile(pub('batalla-vs.html')));
 app.get('/timer',         (req, res) => res.sendFile(pub('timer.html')));
@@ -400,7 +401,7 @@ function getSocketUserLocal(socket) {
         try {
             const urlObj = new URL(referer);
             const userFromQuery = urlObj.searchParams.get('user');
-            if (userFromQuery && activeSessions[userFromQuery]) {
+            if (userFromQuery) {
                 return userFromQuery;
             }
             const pathParts = urlObj.pathname.split('/').filter(Boolean);
@@ -409,8 +410,24 @@ function getSocketUserLocal(socket) {
                 if (activeSessions[firstPart]) {
                     return firstPart;
                 }
+                // Si firstPart es el slug de una agencia (ej. 'cosmic'), asociar a un usuario activo de esa agencia
+                const matchingUser = Object.keys(activeSessions).find(u => {
+                    const s = activeSessions[u];
+                    return (s && s.agencySlug && s.agencySlug.toLowerCase() === firstPart.toLowerCase()) ||
+                           (u.toLowerCase().includes(firstPart.toLowerCase()));
+                });
+                if (matchingUser) return matchingUser;
+                if (firstPart.toLowerCase() === 'cosmic' && activeSessions['cosmic_admin']) {
+                    return 'cosmic_admin';
+                }
             }
         } catch (e) {}
+    }
+
+    // Fallback 2: Si solo hay una única sesión activa en todo el sistema, asociar a esa
+    const activeKeys = Object.keys(activeSessions);
+    if (activeKeys.length === 1) {
+        return activeKeys[0];
     }
 
     return null;

@@ -144,6 +144,19 @@
                 } catch(e) {}
             }
             forwardToIframe('connect', { connected: true });
+
+            // Fallback: Si el iframe sigue en about:blank tras conectar, cargar vista por defecto
+            setTimeout(function() {
+                if (!ultimaVista || !frame.src || frame.src === 'about:blank' || frame.src.endsWith('about:blank')) {
+                    const pathParts = window.location.pathname.split('/').filter(Boolean);
+                    const agencySlug = (pathParts.length > 0 && !pathParts[0].includes('.')) ? pathParts[0] : 'cosmic';
+                    let defaultVista = `/${agencySlug}/batalla`;
+                    if (userParam && !defaultVista.includes('user=')) {
+                        defaultVista += `?user=${encodeURIComponent(userParam)}`;
+                    }
+                    frame.src = defaultVista;
+                }
+            }, 400);
         });
         socket.on('disconnect', function() {
             if (frame && frame.contentWindow) {
@@ -159,7 +172,7 @@
         // ══════════════════════════════════════════════════════════════
         socket.on('cambioVista', (vista) => {
             if (!vista) return;
-            if (vista === ultimaVista) return;
+            if (vista === ultimaVista && frame.src && !frame.src.endsWith('about:blank')) return;
             ultimaVista = vista;
 
             iframeReady = false;
