@@ -47,8 +47,12 @@
     <title>HUD El Clásico - Batalla de Fútbol</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Montserrat:ital,wght@1,800;1,900&family=Teko:wght@700&family=Bangers&display=swap" rel="stylesheet">
+    <link
+        href="https://fonts.googleapis.com/css2?family=TikTok+Sans:ital,wght@0,300..900;1,300..900&family=Montserrat:ital,wght@1,800;1,900&family=Teko:wght@700&family=Bangers&display=swap"
+        rel="stylesheet">
     <style>
+        @import url('https://fonts.googleapis.com/css2?family=TikTok+Sans:ital,wght@0,300..900;1,300..900&display=swap');
+
         * {
             box-sizing: border-box;
             margin: 0;
@@ -58,8 +62,9 @@
 
         body {
             background: transparent;
-            font-family: 'Montserrat', 'Bangers', sans-serif;
+            font-family: 'TikTok Sans', -apple-system, BlinkMacSystemFont, sans-serif;
             margin: 0;
+            padding: 0 16px;
             overflow: hidden;
             width: 100vw;
             height: 100vh;
@@ -79,15 +84,15 @@
             text-shadow: 0 0 4px currentColor !important;
         }
 
-        /* ── GRID PRINCIPAL DEL HUD (ALINEACIÓN EXACTA) ── */
+        /* ── GRID PRINCIPAL DEL HUD (ALINEACIÓN EXACTA Y BLINDADA) ── */
         .hud-grid {
             display: grid;
-            grid-template-columns: 240px 1fr 240px;
+            grid-template-columns: clamp(170px, 20vw, 210px) minmax(0, 1fr) clamp(170px, 20vw, 210px);
             grid-template-rows: auto auto auto auto;
             align-items: center;
             justify-items: center;
-            width: 92vw;
-            max-width: 980px;
+            width: 94vw;
+            max-width: 940px;
             position: relative;
             filter: drop-shadow(0 15px 35px rgba(0, 0, 0, 0.75));
             z-index: 10;
@@ -95,15 +100,15 @@
 
         /* ── FILA 1: NOMBRES DE EQUIPOS ── */
         .team-title {
-            font-size: 52px;
+            font-family: 'TikTok Sans', -apple-system, BlinkMacSystemFont, sans-serif !important;
+            font-size: clamp(34px, 4.5vw, 48px);
             font-weight: 900;
             font-style: italic;
             text-transform: uppercase;
-            letter-spacing: 2px;
+            letter-spacing: 1.5px;
             color: #FFFFFF;
             line-height: 1;
-            -webkit-text-stroke: 2.5px #000000;
-            text-shadow: 
+            text-shadow:
                 3px 3px 0 #000,
                 -2px -2px 0 #000,
                 2px -2px 0 #000,
@@ -111,6 +116,10 @@
                 0 5px 12px rgba(0, 0, 0, 0.9);
             transition: all 0.3s ease;
             text-align: center;
+            max-width: 100%;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
         }
 
         .title-eq1 {
@@ -125,20 +134,21 @@
 
         /* ── FILA 2: PÍLDORAS DE INTEGRANTES Y RELOJ CENTRAL ── */
         .team-pill-badge {
+            font-family: 'TikTok Sans', -apple-system, BlinkMacSystemFont, sans-serif !important;
             margin-top: 5px;
             margin-bottom: 12px;
-            padding: 5px 20px;
+            padding: 5px 16px;
             border-radius: 20px;
-            font-size: 13.5px;
+            font-size: 13px;
             font-weight: 900;
             font-style: italic;
-            letter-spacing: 1.1px;
+            letter-spacing: 1px;
             text-transform: uppercase;
             display: inline-flex;
             align-items: center;
             justify-content: center;
             white-space: nowrap;
-            max-width: 250px;
+            max-width: 100%;
             overflow: hidden;
             text-overflow: ellipsis;
             box-shadow: 0 4px 12px rgba(0, 0, 0, 0.6);
@@ -171,24 +181,22 @@
             align-items: center;
             justify-content: center;
             min-height: 70px;
+            width: 100%;
             position: relative;
+            overflow: visible;
         }
 
         .match-timer {
-            font-family: 'Montserrat', sans-serif;
-            font-size: 64px;
-            font-weight: 900;
-            font-style: italic;
-            letter-spacing: 2px;
+            font-family: 'TikTok Sans', -apple-system, BlinkMacSystemFont, sans-serif !important;
+            font-size: clamp(48px, 6.2vw, 68px);
+            font-weight: 800;
+            font-style: normal;
+            letter-spacing: -1px;
             color: #FFFFFF;
             line-height: 1;
-            -webkit-text-stroke: 2.5px #000000;
-            text-shadow: 
-                3px 3px 0 #000,
-                -2px -2px 0 #000,
-                2px -2px 0 #000,
-                -2px 2px 0 #000,
-                0 5px 16px rgba(0, 0, 0, 0.95);
+            -webkit-text-stroke: 2px #000000;
+            paint-order: stroke fill;
+            text-shadow: 0 4px 12px rgba(0, 0, 0, 0.65), 0 2px 4px rgba(0, 0, 0, 0.5);
             transition: color 0.3s ease, transform 0.2s ease;
         }
 
@@ -196,27 +204,35 @@
         .snipe-mode {
             color: #FF2A2A !important;
             animation: snipePulse 0.4s infinite alternate ease-in-out;
-            text-shadow: 
-                0 0 25px rgba(255, 42, 42, 0.85),
-                3px 3px 0 #000 !important;
+            -webkit-text-stroke: 2px #000000 !important;
+            paint-order: stroke fill;
+            text-shadow:
+                0 0 25px rgba(255, 42, 42, 0.9),
+                0 4px 12px rgba(0, 0, 0, 0.8) !important;
         }
 
         @keyframes snipePulse {
-            0% { transform: scale(1); }
-            100% { transform: scale(1.14); }
+            0% {
+                transform: scale(1);
+            }
+
+            100% {
+                transform: scale(1.14);
+            }
         }
 
         /* ── CELEBRACIÓN SUPERIOR (¡VICTORIA! / ¡EMPATE!) ── */
         .celebracion-top {
-            font-family: 'Montserrat', 'Bangers', sans-serif;
-            font-size: 74px;
+            font-family: 'TikTok Sans', -apple-system, BlinkMacSystemFont, sans-serif !important;
+            font-size: clamp(34px, 4.8vw, 52px);
             font-weight: 900;
             font-style: italic;
             letter-spacing: 2px;
-            line-height: 0.95;
+            line-height: 1;
             text-transform: uppercase;
             text-align: center;
             white-space: nowrap;
+            max-width: 100%;
             animation: bounceInCelebration 0.65s cubic-bezier(0.175, 0.885, 0.32, 1.275);
         }
 
@@ -224,24 +240,16 @@
             background: linear-gradient(180deg, #FFF982 0%, #FFB300 45%, #E67E00 100%);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
-            filter: 
-                drop-shadow(3px 3px 0 #000000)
-                drop-shadow(-2px -2px 0 #000000)
-                drop-shadow(2px -2px 0 #000000)
-                drop-shadow(-2px 2px 0 #000000)
-                drop-shadow(0 6px 15px rgba(0, 0, 0, 0.95));
+            filter:
+                drop-shadow(3px 3px 0 #000000) drop-shadow(-2px -2px 0 #000000) drop-shadow(2px -2px 0 #000000) drop-shadow(-2px 2px 0 #000000) drop-shadow(0 6px 15px rgba(0, 0, 0, 0.95));
         }
 
         .celebracion-top.empate-style {
             background: linear-gradient(180deg, #FFFFFF 0%, #D4DCE4 50%, #A2B0BC 100%);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
-            filter: 
-                drop-shadow(3px 3px 0 #000000)
-                drop-shadow(-2px -2px 0 #000000)
-                drop-shadow(2px -2px 0 #000000)
-                drop-shadow(-2px 2px 0 #000000)
-                drop-shadow(0 6px 15px rgba(0, 0, 0, 0.95));
+            filter:
+                drop-shadow(3px 3px 0 #000000) drop-shadow(-2px -2px 0 #000000) drop-shadow(2px -2px 0 #000000) drop-shadow(-2px 2px 0 #000000) drop-shadow(0 6px 15px rgba(0, 0, 0, 0.95));
         }
 
         /* ── CELEBRACIÓN INFERIOR (¡SIUUU! / ¡ANDÁ PA' ALLÁ!) ── */
@@ -249,44 +257,33 @@
             grid-column: 2;
             grid-row: 4;
             align-self: start;
-            margin-top: 10px;
-            font-family: 'Montserrat', 'Bangers', sans-serif;
+            margin-top: 8px;
+            font-family: 'TikTok Sans', -apple-system, BlinkMacSystemFont, sans-serif !important;
             font-weight: 900;
             font-style: italic;
-            line-height: 0.9;
+            line-height: 0.95;
             text-transform: uppercase;
             text-align: center;
             white-space: nowrap;
+            max-width: 100%;
             animation: popInCelebration 0.7s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            background: linear-gradient(180deg, #FFF982 0%, #FFB300 45%, #E67E00 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            filter:
+                drop-shadow(3px 3px 0 #000000) drop-shadow(-2px -2px 0 #000000) drop-shadow(2px -2px 0 #000000) drop-shadow(-2px 2px 0 #000000) drop-shadow(0 6px 16px rgba(0, 0, 0, 0.95));
         }
 
         /* ¡SIUUU! (Real Madrid) */
         .celebracion-bottom.siuuu-style {
-            font-size: 76px;
+            font-size: clamp(38px, 5.5vw, 56px);
             letter-spacing: 2px;
-            background: linear-gradient(180deg, #FFFFFF 0%, #CFD6DF 50%, #9DAAB8 100%);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            filter: 
-                drop-shadow(3px 3px 0 #000000)
-                drop-shadow(-2px -2px 0 #000000)
-                drop-shadow(2px -2px 0 #000000)
-                drop-shadow(-2px 2px 0 #000000)
-                drop-shadow(0 6px 16px rgba(0, 0, 0, 0.95));
         }
 
         /* ¡ANDÁ PA' ALLÁ! (Barcelona) */
         .celebracion-bottom.anda-style {
-            font-size: 58px;
+            font-size: clamp(26px, 3.8vw, 38px);
             letter-spacing: 1.5px;
-            color: #FFFFFF;
-            -webkit-text-stroke: 3.5px #000000;
-            text-shadow: 
-                3px 3px 0 #000,
-                -2px -2px 0 #000,
-                2px -2px 0 #000,
-                -2px 2px 0 #000,
-                0 6px 18px rgba(0, 0, 0, 0.95);
         }
 
         /* ── FILA 3: AVATARES Y BARRA TUG-OF-WAR ── */
@@ -319,21 +316,29 @@
         .winner-aura::before {
             content: '';
             position: absolute;
-            top: -26px;
-            left: -26px;
-            right: -26px;
-            bottom: -26px;
+            top: -16px;
+            left: -16px;
+            right: -16px;
+            bottom: -16px;
             border-radius: 50%;
             background: radial-gradient(circle, rgba(255, 215, 0, 0.85) 0%, rgba(255, 175, 0, 0.45) 45%, transparent 72%);
             z-index: -1;
             animation: auraPulse 1.8s infinite alternate ease-in-out;
-            filter: drop-shadow(0 0 25px #FFD700) drop-shadow(0 0 45px rgba(255, 215, 0, 0.8));
+            filter: drop-shadow(0 0 18px #FFD700) drop-shadow(0 0 30px rgba(255, 215, 0, 0.75));
             pointer-events: none;
         }
 
         @keyframes auraPulse {
-            0% { transform: scale(0.96); opacity: 0.8; }
-            100% { transform: scale(1.18); opacity: 1; filter: drop-shadow(0 0 40px #FFD700); }
+            0% {
+                transform: scale(0.96);
+                opacity: 0.8;
+            }
+
+            100% {
+                transform: scale(1.08);
+                opacity: 1;
+                filter: drop-shadow(0 0 28px #FFD700);
+            }
         }
 
         /* Anillo Exterior Metálico 3D Equipo 1 (Dorado / Bronce) */
@@ -343,7 +348,7 @@
             border-radius: 50%;
             padding: 6px;
             background: linear-gradient(135deg, #FFDF73 0%, #D4AF37 35%, #8B6508 70%, #F5D061 100%);
-            box-shadow: 
+            box-shadow:
                 0 8px 25px rgba(0, 0, 0, 0.85),
                 inset 0 2px 4px rgba(255, 255, 255, 0.6),
                 inset 0 -3px 6px rgba(0, 0, 0, 0.7);
@@ -359,7 +364,7 @@
             border-radius: 50%;
             padding: 6px;
             background: linear-gradient(135deg, #FFFFFF 0%, #D9DFE5 35%, #8A95A5 70%, #EFEFEF 100%);
-            box-shadow: 
+            box-shadow:
                 0 8px 25px rgba(0, 0, 0, 0.85),
                 inset 0 2px 4px rgba(255, 255, 255, 0.8),
                 inset 0 -3px 6px rgba(0, 0, 0, 0.6);
@@ -383,40 +388,35 @@
 
         /* Franjas Barça */
         .avatar-bg-barsa {
-            background: repeating-linear-gradient(
-                90deg,
-                #004D98 0px,
-                #004D98 22px,
-                #A50044 22px,
-                #A50044 44px
-            ) !important;
+            background: repeating-linear-gradient(90deg,
+                    #004D98 0px,
+                    #004D98 22px,
+                    #A50044 22px,
+                    #A50044 44px) !important;
         }
 
         /* Fondo Real Madrid */
         .avatar-bg-real {
-            background: repeating-linear-gradient(
-                90deg,
-                #FFFFFF 0px,
-                #FFFFFF 22px,
-                #CBD3DC 22px,
-                #CBD3DC 44px
-            ) !important;
+            background: repeating-linear-gradient(90deg,
+                    #FFFFFF 0px,
+                    #FFFFFF 22px,
+                    #CBD3DC 22px,
+                    #CBD3DC 44px) !important;
         }
 
         /* Franja Central PSG (Banda Hechter) */
         .avatar-bg-psg {
             background: linear-gradient(90deg,
-                #001C3D 0%,
-                #001C3D calc(50% - 16px),
-                #FFFFFF calc(50% - 16px),
-                #FFFFFF calc(50% - 12px),
-                #DA291C calc(50% - 12px),
-                #DA291C calc(50% + 12px),
-                #FFFFFF calc(50% + 12px),
-                #FFFFFF calc(50% + 16px),
-                #001C3D calc(50% + 16px),
-                #001C3D 100%
-            ) !important;
+                    #001C3D 0%,
+                    #001C3D calc(50% - 16px),
+                    #FFFFFF calc(50% - 16px),
+                    #FFFFFF calc(50% - 12px),
+                    #DA291C calc(50% - 12px),
+                    #DA291C calc(50% + 12px),
+                    #FFFFFF calc(50% + 12px),
+                    #FFFFFF calc(50% + 16px),
+                    #001C3D calc(50% + 16px),
+                    #001C3D 100%) !important;
         }
 
         .avatar-img-custom {
@@ -443,15 +443,15 @@
         .tug-track {
             grid-column: 2;
             grid-row: 3;
-            width: calc(100% + 80px);
-            margin: 0 -40px;
+            width: calc(100% + 60px);
+            margin: 0 -30px;
             height: 48px;
             border-radius: 26px;
             background: #000000;
             padding: 3.5px;
             display: flex;
             position: relative;
-            box-shadow: 
+            box-shadow:
                 0 10px 30px rgba(0, 0, 0, 0.85),
                 0 0 0 3px #1e2022,
                 inset 0 4px 10px rgba(0, 0, 0, 0.9);
@@ -528,22 +528,31 @@
         }
 
         @keyframes sweepLight {
-            0% { left: -160%; }
-            45% { left: 160%; }
-            100% { left: 160%; }
+            0% {
+                left: -160%;
+            }
+
+            45% {
+                left: 160%;
+            }
+
+            100% {
+                left: 160%;
+            }
         }
 
         /* ── FILA 4: MARCADORES GIGANTES (GOLES) ── */
         .score-num {
-            font-family: 'Montserrat', 'Teko', sans-serif;
-            font-size: 88px;
+            font-family: 'TikTok Sans', -apple-system, BlinkMacSystemFont, sans-serif !important;
+            font-size: clamp(52px, 7.5vw, 82px);
             font-weight: 900;
             font-style: italic;
             line-height: 0.85;
-            letter-spacing: 2px;
-            margin-top: 10px;
+            letter-spacing: -1px;
+            margin-top: 8px;
             transition: all 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275);
             text-align: center;
+            white-space: nowrap;
         }
 
         .score-eq1 {
@@ -551,7 +560,7 @@
             grid-row: 4;
             color: #FFFFFF;
             -webkit-text-stroke: 3.5px #000000;
-            text-shadow: 
+            text-shadow:
                 4px 4px 0 #000,
                 -2px -2px 0 #000,
                 2px -2px 0 #000,
@@ -564,7 +573,7 @@
             grid-row: 4;
             color: #000000;
             -webkit-text-stroke: 2.5px #FFFFFF;
-            text-shadow: 
+            text-shadow:
                 0 0 15px rgba(255, 255, 255, 0.65),
                 3px 3px 0 rgba(0, 0, 0, 0.9);
         }
@@ -573,26 +582,48 @@
         .score-winner {
             color: #FFB800 !important;
             -webkit-text-stroke: 3.5px #000000 !important;
-            text-shadow: 
+            text-shadow:
                 4px 4px 0 #000,
                 -2px -2px 0 #000,
                 2px -2px 0 #000,
                 -2px 2px 0 #000,
                 0 0 30px rgba(255, 184, 0, 0.95) !important;
-            transform: scale(1.1);
+            transform: scale(1.06);
         }
 
         /* ── ANIMACIONES DE CELEBRACIÓN ── */
         @keyframes bounceInCelebration {
-            0% { transform: scale(0.3) translateY(20px); opacity: 0; }
-            70% { transform: scale(1.14) translateY(-4px); opacity: 1; }
-            100% { transform: scale(1) translateY(0); opacity: 1; }
+            0% {
+                transform: scale(0.3) translateY(20px);
+                opacity: 0;
+            }
+
+            70% {
+                transform: scale(1.06) translateY(-4px);
+                opacity: 1;
+            }
+
+            100% {
+                transform: scale(1) translateY(0);
+                opacity: 1;
+            }
         }
 
         @keyframes popInCelebration {
-            0% { transform: scale(0.35) translateY(-20px); opacity: 0; }
-            70% { transform: scale(1.12) translateY(3px); opacity: 1; }
-            100% { transform: scale(1) translateY(0); opacity: 1; }
+            0% {
+                transform: scale(0.35) translateY(-20px);
+                opacity: 0;
+            }
+
+            70% {
+                transform: scale(1.06) translateY(3px);
+                opacity: 1;
+            }
+
+            100% {
+                transform: scale(1) translateY(0);
+                opacity: 1;
+            }
         }
 
         /* ── ANIMACIONES DE GOL Y DISPARO DE BALÓN ── */
@@ -605,9 +636,8 @@
             opacity: 0;
             z-index: 100;
             pointer-events: none;
-            filter: 
-                drop-shadow(0 0 25px rgba(255, 255, 255, 0.95))
-                drop-shadow(0 20px 25px rgba(0, 0, 0, 0.9));
+            filter:
+                drop-shadow(0 0 25px rgba(255, 255, 255, 0.95)) drop-shadow(0 20px 25px rgba(0, 0, 0, 0.9));
         }
 
         @keyframes strikeGoal {
@@ -615,19 +645,23 @@
                 transform: translate(-50%, -50%) scale(3.5) rotate(-180deg);
                 opacity: 0;
             }
+
             20% {
                 transform: translate(-50%, -50%) scale(1.4) rotate(-45deg);
                 opacity: 1;
                 filter: drop-shadow(0 0 35px #FFF);
             }
+
             45% {
                 transform: translate(-50%, -50%) scale(0.9) rotate(15deg);
                 opacity: 1;
             }
+
             65% {
                 transform: translate(-50%, -50%) scale(1.15) rotate(0deg);
                 opacity: 1;
             }
+
             100% {
                 transform: translate(-50%, -50%) scale(0);
                 opacity: 0;
@@ -644,10 +678,27 @@
         }
 
         @keyframes shakeImpact {
-            10%, 90% { transform: translate3d(-3px, -2px, 0) scale(1.04); }
-            20%, 80% { transform: translate3d(5px, 2px, 0) scale(1.06); }
-            30%, 50%, 70% { transform: translate3d(-6px, -3px, 0) scale(1.08); }
-            40%, 60% { transform: translate3d(6px, 3px, 0) scale(1.05); }
+
+            10%,
+            90% {
+                transform: translate3d(-3px, -2px, 0) scale(1.04);
+            }
+
+            20%,
+            80% {
+                transform: translate3d(5px, 2px, 0) scale(1.06);
+            }
+
+            30%,
+            50%,
+            70% {
+                transform: translate3d(-6px, -3px, 0) scale(1.08);
+            }
+
+            40%,
+            60% {
+                transform: translate3d(6px, 3px, 0) scale(1.05);
+            }
         }
 
         .flash-glow {
@@ -655,9 +706,17 @@
         }
 
         @keyframes flashHighlight {
-            0% { filter: brightness(1); }
-            35% { filter: brightness(1.8) drop-shadow(0 0 25px #FFFFFF); }
-            100% { filter: brightness(1); }
+            0% {
+                filter: brightness(1);
+            }
+
+            35% {
+                filter: brightness(1.8) drop-shadow(0 0 25px #FFFFFF);
+            }
+
+            100% {
+                filter: brightness(1);
+            }
         }
 
         /* ── MODALES: TARJETAS DE ÁRBITRO (AMARILLA / ROJA) ── */
@@ -683,7 +742,7 @@
             height: 330px;
             border-radius: 22px;
             border: 8px solid #FFFFFF;
-            box-shadow: 
+            box-shadow:
                 0 25px 60px rgba(0, 0, 0, 0.95),
                 0 0 45px rgba(255, 255, 255, 0.35);
             transform: rotate(-6deg);
@@ -693,8 +752,15 @@
         }
 
         @keyframes cardReveal {
-            0% { transform: translateY(180px) rotate(25deg) scale(0.5); opacity: 0; }
-            100% { transform: translateY(0) rotate(-6deg) scale(1); opacity: 1; }
+            0% {
+                transform: translateY(180px) rotate(25deg) scale(0.5);
+                opacity: 0;
+            }
+
+            100% {
+                transform: translateY(0) rotate(-6deg) scale(1);
+                opacity: 1;
+            }
         }
 
         .tarjeta-texto {
@@ -710,10 +776,21 @@
             box-shadow: 0 10px 30px rgba(0, 0, 0, 0.7);
         }
 
-        .amarilla-bg { background: rgba(255, 215, 0, 0.35); }
-        .roja-bg { background: rgba(255, 0, 0, 0.35); }
-        .amarilla-card { background: linear-gradient(135deg, #FFE066 0%, #FFD700 100%); }
-        .roja-card { background: linear-gradient(135deg, #FF3B30 0%, #D80000 100%); }
+        .amarilla-bg {
+            background: rgba(255, 215, 0, 0.35);
+        }
+
+        .roja-bg {
+            background: rgba(255, 0, 0, 0.35);
+        }
+
+        .amarilla-card {
+            background: linear-gradient(135deg, #FFE066 0%, #FFD700 100%);
+        }
+
+        .roja-card {
+            background: linear-gradient(135deg, #FF3B30 0%, #D80000 100%);
+        }
 
         /* ── CONTENEDOR DE CONFETI Y SERPENTINAS LATERALES ── */
         .celebration-particles-container {
@@ -739,6 +816,7 @@
                 transform: translateY(0) rotate(0deg);
                 opacity: 1;
             }
+
             100% {
                 top: 105vh;
                 transform: translateY(100px) rotate(720deg);
@@ -759,9 +837,11 @@
                 transform: rotateY(0deg) rotateZ(-12deg);
                 opacity: 1;
             }
+
             50% {
                 transform: rotateY(180deg) rotateZ(12deg);
             }
+
             100% {
                 top: 105vh;
                 transform: rotateY(360deg) rotateZ(-12deg);
@@ -770,8 +850,13 @@
         }
 
         @keyframes fadeIn {
-            from { opacity: 0; }
-            to { opacity: 1; }
+            from {
+                opacity: 0;
+            }
+
+            to {
+                opacity: 1;
+            }
         }
     </style>
 </head>
@@ -806,7 +891,8 @@
                     <img class="avatar-img-custom" id="img-avatar-eq1" alt="Equipo 1">
                     <!-- SVG Silueta de Jugador / Avatar -->
                     <svg class="avatar-silhouette-svg" viewBox="0 0 24 24" id="svg-avatar-eq1">
-                        <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
+                        <path
+                            d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z" />
                     </svg>
                 </div>
             </div>
@@ -830,7 +916,8 @@
                     <img class="avatar-img-custom" id="img-avatar-eq2" alt="Equipo 2">
                     <!-- SVG Silueta de Jugador / Avatar -->
                     <svg class="avatar-silhouette-svg" viewBox="0 0 24 24" id="svg-avatar-eq2">
-                        <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
+                        <path
+                            d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z" />
                     </svg>
                 </div>
             </div>
@@ -1030,7 +1117,7 @@
             .then(data => {
                 if (data && (data.equipo1 || data.equipo2)) aplicarConfiguracion(data);
             })
-            .catch(() => {});
+            .catch(() => { });
 
         socket.on('futbolConfigActualizada', (config) => {
             aplicarConfiguracion(config);
@@ -1111,8 +1198,8 @@
             if (celebracionInterval) clearInterval(celebracionInterval);
 
             const isEq1 = (lado === 'eq1');
-            const coloresFlakes = isEq1 
-                ? ['#FFD700', '#004D98', '#A50044', '#FFFFFF', '#FFA726'] 
+            const coloresFlakes = isEq1
+                ? ['#FFD700', '#004D98', '#A50044', '#FFFFFF', '#FFA726']
                 : ['#FFD700', '#CBD2D9', '#FFFFFF', '#002060', '#F5A623'];
 
             const coloresStreamers = isEq1
@@ -1171,40 +1258,53 @@
             celebracionInterval = setInterval(spawnWave, 650);
         }
 
+        // ── DETECTAR LEMA EXCLUSIVO (BARÇA / REAL MADRID) ──
+        function obtenerLemaEquipo(equipoConfig) {
+            if (!equipoConfig) return null;
+            const diseno = (equipoConfig.diseno || 'auto').trim().toLowerCase();
+            if (diseno === 'barsa') return { texto: "¡ANDÁ PA' ALLÁ!", estilo: 'anda-style' };
+            if (diseno === 'real') return { texto: '¡SIUUU!', estilo: 'siuuu-style' };
+
+            const nombre = (equipoConfig.nombre || '').trim().toLowerCase().replace(/\./g, '');
+            if (/bar[csç]a|barcelona|fcb/i.test(nombre)) {
+                return { texto: "¡ANDÁ PA' ALLÁ!", estilo: 'anda-style' };
+            }
+            if (/(^|\s|\b)(real(\s*madrid)?|madrid|rmadrid)(\b|\s|$)/i.test(nombre) || nombre.includes('madrid') || nombre === 'real') {
+                return { texto: '¡SIUUU!', estilo: 'siuuu-style' };
+            }
+
+            return null;
+        }
+
         // ── DISPARAR LA CELEBRACIÓN EXACTA SEGÚN EL GANADOR ──
         function activarCelebracion(ganador) {
             resetearCelebracion();
             reloj.style.display = 'none';
             reloj.classList.remove('snipe-mode');
 
-            if (ganador === 'eq1') {
-                // GANA BARSA / EQUIPO 1
+            if (ganador === 'eq1' || ganador === 'eq2') {
+                const isEq1 = (ganador === 'eq1');
+                const equipoGanador = isEq1 ? futbolConfig.equipo1 : futbolConfig.equipo2;
+                const wrapAvatar = isEq1 ? wrapAvatarEq1 : wrapAvatarEq2;
+                const ptsEl = isEq1 ? ptsEq1 : ptsEq2;
+
                 celebracionTop.className = 'celebracion-top victoria-style';
                 celebracionTop.innerText = '¡VICTORIA!';
                 celebracionTop.style.display = 'block';
 
-                celebracionBottom.className = 'celebracion-bottom anda-style';
-                celebracionBottom.innerText = "¡ANDÁ PA' ALLÁ!";
-                celebracionBottom.style.display = 'block';
+                const lema = obtenerLemaEquipo(equipoGanador);
+                if (lema) {
+                    celebracionBottom.className = 'celebracion-bottom ' + lema.estilo;
+                    celebracionBottom.innerText = lema.texto;
+                    celebracionBottom.style.display = 'block';
+                } else {
+                    celebracionBottom.style.display = 'none';
+                }
 
-                wrapAvatarEq1.classList.add('winner-aura');
-                ptsEq1.classList.add('score-winner');
+                wrapAvatar.classList.add('winner-aura');
+                ptsEl.classList.add('score-winner');
 
-                lanzarParticulasGanador('eq1');
-            } else if (ganador === 'eq2') {
-                // GANA REAL / EQUIPO 2
-                celebracionTop.className = 'celebracion-top victoria-style';
-                celebracionTop.innerText = '¡VICTORIA!';
-                celebracionTop.style.display = 'block';
-
-                celebracionBottom.className = 'celebracion-bottom siuuu-style';
-                celebracionBottom.innerText = '¡SIUUU!';
-                celebracionBottom.style.display = 'block';
-
-                wrapAvatarEq2.classList.add('winner-aura');
-                ptsEq2.classList.add('score-winner');
-
-                lanzarParticulasGanador('eq2');
+                lanzarParticulasGanador(ganador);
             } else {
                 // EMPATE
                 celebracionTop.className = 'celebracion-top empate-style';
