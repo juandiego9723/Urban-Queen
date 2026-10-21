@@ -1,0 +1,423 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <!-- Inyección de multi-cuenta -->
+    <script>
+        (function () {
+            const urlParams = new URLSearchParams(window.location.search);
+            const user = urlParams.get('user');
+            if (user) {
+                const originalFetch = window.fetch;
+                window.fetch = function (url, options) {
+                    if (typeof url === 'string' && !url.includes('user=')) {
+                        const sep = url.includes('?') ? '&' : '?';
+                        url = url + sep + 'user=' + encodeURIComponent(user);
+                    }
+                    return originalFetch(url, options);
+                };
+                let _io = undefined;
+                Object.defineProperty(window, 'io', {
+                    get: function () { return _io; },
+                    set: function (val) {
+                        _io = function (opts) {
+                            opts = opts || {};
+                            opts.query = opts.query || {};
+                            opts.query.user = user;
+                            return val(opts);
+                        };
+                    },
+                    configurable: true
+                });
+            }
+        })();
+    </script>
+
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Overlay de penalti: un balón vuela a izquierda, centro o derecha al recibir un regalo.">
+    <title>Overlay Penalti - Urban Queens</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:ital,wght@1,800;1,900&display=swap" rel="stylesheet">
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; }
+
+        html, body {
+            background: transparent;
+            width: 100vw;
+            height: 100vh;
+            overflow: hidden;
+            font-family: 'Montserrat', sans-serif;
+        }
+
+        .stage { position: fixed; inset: 0; pointer-events: none; }
+
+        /* ── Zonas de destino (X en vw, Y en vh) ── */
+        .shot {
+            position: absolute;
+            left: 0; top: 0; width: 100%; height: 100%;
+            --dest-x: 50vw;
+            --dest-y: 40vh;
+        }
+        .shot.izquierda { --dest-x: 20vw; }
+        .shot.centro    { --dest-x: 50vw; }
+        .shot.derecha   { --dest-x: 80vw; }
+
+        /* Contenedor que se mueve en X (linea casi recta) */
+        .ball-x {
+            position: absolute;
+            left: 50vw; top: 0;
+            width: 0; height: 0;
+            animation: moveX 0.95s cubic-bezier(.25, .6, .3, 1) forwards;
+        }
+        /* Contenedor que se mueve en Y con arco (sube rápido, frena al llegar) */
+        .ball-y {
+            position: absolute;
+            left: 0; top: 92vh;
+            width: 0; height: 0;
+            animation: moveY 0.95s cubic-bezier(.15, .75, .3, 1) forwards;
+        }
+        .ball {
+            position: absolute;
+            width: 210px; height: 210px;
+            margin: -105px 0 0 -105px;
+            filter: drop-shadow(0 18px 18px rgba(0, 0, 0, 0.55));
+            animation: shrinkSpin 0.95s cubic-bezier(.2, .7, .3, 1) forwards;
+        }
+        .ball svg { width: 100%; height: 100%; display: block; }
+
+        @keyframes moveX {
+            from { transform: translateX(0); }
+            to   { transform: translateX(calc(var(--dest-x) - 50vw)); }
+        }
+        @keyframes moveY {
+            from { transform: translateY(0); }
+            to   { transform: translateY(calc(var(--dest-y) - 92vh)); }
+        }
+        @keyframes shrinkSpin {
+            0%   { transform: scale(1.5) rotate(0deg); }
+            100% { transform: scale(0.72) rotate(900deg); }
+        }
+
+        /* Estela del balón */
+        .trail {
+            position: absolute;
+            width: 90px; height: 90px;
+            margin: -45px 0 0 -45px;
+            border-radius: 50%;
+            background: radial-gradient(circle, rgba(255, 255, 255, 0.55), rgba(255, 255, 255, 0) 70%);
+            opacity: 0;
+            animation: trailFade 0.7s ease-out forwards;
+        }
+        @keyframes trailFade {
+            0%   { opacity: 0.8; transform: scale(1.6); }
+            100% { opacity: 0; transform: scale(0.3); }
+        }
+
+        /* Marca de la zona de impacto */
+        .target {
+            position: absolute;
+            left: var(--dest-x); top: var(--dest-y);
+            width: 0; height: 0;
+            opacity: 0;
+            animation: targetIn 0.35s ease-out 0.85s forwards;
+        }
+        .ring {
+            position: absolute;
+            width: 270px; height: 270px;
+            margin: -135px 0 0 -135px;
+            border-radius: 50%;
+            border: 7px solid #FFD700;
+            box-shadow: 0 0 30px rgba(255, 215, 0, 0.85), inset 0 0 30px rgba(255, 215, 0, 0.5);
+            animation: ringPulse 0.9s ease-in-out infinite alternate;
+        }
+        @keyframes ringPulse {
+            from { transform: scale(0.88); opacity: 0.75; }
+            to   { transform: scale(1.12); opacity: 1; }
+        }
+        @keyframes targetIn { to { opacity: 1; } }
+
+        .tag {
+            position: absolute;
+            top: 150px;
+            left: 0;
+            transform: translateX(-50%);
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 8px 22px 8px 8px;
+            border-radius: 40px;
+            background: rgba(0, 0, 0, 0.88);
+            border: 3px solid #FFD700;
+            box-shadow: 0 8px 22px rgba(0, 0, 0, 0.65);
+            white-space: nowrap;
+        }
+        .tag-avatar {
+            width: 48px; height: 48px;
+            border-radius: 50%;
+            object-fit: cover;
+            background: linear-gradient(135deg, #FF2A5F, #00E5FF);
+            display: flex; align-items: center; justify-content: center;
+            color: #fff; font-weight: 900; font-size: 22px;
+        }
+        .tag-text { display: flex; flex-direction: column; line-height: 1.1; }
+        .tag-name { color: #fff; font-size: 22px; font-weight: 900; font-style: italic; text-transform: uppercase; }
+        .tag-dir  { color: #FFD700; font-size: 15px; font-weight: 800; font-style: italic; letter-spacing: 1px; }
+
+        /* Banner de resultado */
+        .banner {
+            position: fixed;
+            left: 50%; top: 18vh;
+            transform: translate(-50%, 0) scale(0.2);
+            font-size: 150px;
+            font-weight: 900;
+            font-style: italic;
+            text-transform: uppercase;
+            letter-spacing: 3px;
+            color: #fff;
+            -webkit-text-stroke: 5px #000;
+            paint-order: stroke fill;
+            text-shadow: 6px 6px 0 #000, 0 12px 30px rgba(0, 0, 0, 0.9);
+            opacity: 0;
+            white-space: nowrap;
+        }
+        .banner.gol     { color: #FFD700; text-shadow: 6px 6px 0 #000, 0 0 50px rgba(255, 215, 0, 0.9); }
+        .banner.atajada { color: #00E5FF; text-shadow: 6px 6px 0 #000, 0 0 50px rgba(0, 229, 255, 0.9); }
+        .banner.show { animation: bannerPop 3.6s cubic-bezier(.2, 1.4, .4, 1) forwards; }
+        .banner-pts {
+            display: block;
+            text-align: center;
+            font-size: 52px;
+            margin-top: -8px;
+            color: #fff;
+        }
+        @keyframes bannerPop {
+            0%   { opacity: 0; transform: translate(-50%, 0) scale(0.2) rotate(-6deg); }
+            12%  { opacity: 1; transform: translate(-50%, 0) scale(1.08) rotate(2deg); }
+            22%  { transform: translate(-50%, 0) scale(1) rotate(0deg); }
+            85%  { opacity: 1; transform: translate(-50%, 0) scale(1); }
+            100% { opacity: 0; transform: translate(-50%, -20px) scale(0.9); }
+        }
+
+        /* Salida suave del tiro */
+        .shot.fade { animation: shotFade 0.5s ease-in forwards; }
+        @keyframes shotFade { to { opacity: 0; } }
+
+        /* Confeti */
+        .confetti {
+            position: fixed; top: -30px;
+            border-radius: 2px;
+            animation: fall linear forwards;
+        }
+        @keyframes fall {
+            to { top: 105vh; transform: translateX(var(--drift)) rotate(720deg); opacity: 0.2; }
+        }
+    </style>
+</head>
+
+<body>
+    <main class="stage" id="stage" aria-label="Overlay de penalti"></main>
+    <div class="banner" id="banner"></div>
+
+    <script src="/js/iframe-bridge.js"></script>
+    <script src="/socket.io/socket.io.js"></script>
+    <script>
+        const urlParams = new URLSearchParams(window.location.search);
+        let userParam = urlParams.get('user') || '';
+        const socket = window.__iframeBridgeSocket || io({ query: userParam ? { user: userParam } : {} });
+
+        const stage = document.getElementById('stage');
+        const banner = document.getElementById('banner');
+        const SVG_NS = 'http://www.w3.org/2000/svg';
+        const DIR_LABEL = { izquierda: '⬅ IZQUIERDA', centro: '⬆ CENTRO', derecha: 'DERECHA ➡' };
+
+        let tiroActual = null;
+        let limpiarTimer = null;
+
+        // Polígono regular: devuelve los puntos "x,y ..." con centro (cx,cy), radio r y rotación inicial
+        function poligono(cx, cy, r, rotDeg, lados) {
+            const pts = [];
+            for (let i = 0; i < lados; i++) {
+                const a = (rotDeg + (360 / lados) * i) * Math.PI / 180;
+                pts.push((cx + r * Math.cos(a)).toFixed(2) + ',' + (cy + r * Math.sin(a)).toFixed(2));
+            }
+            return pts.join(' ');
+        }
+
+        function crearBalon() {
+            const svg = document.createElementNS(SVG_NS, 'svg');
+            svg.setAttribute('viewBox', '-50 -50 100 100');
+            const uid = 'b' + Math.floor(Math.random() * 1e6);
+            svg.innerHTML = `
+                <defs>
+                    <radialGradient id="${uid}g" cx="35%" cy="30%" r="75%">
+                        <stop offset="0%" stop-color="#ffffff"/>
+                        <stop offset="70%" stop-color="#e8e8ee"/>
+                        <stop offset="100%" stop-color="#9a9aa8"/>
+                    </radialGradient>
+                    <clipPath id="${uid}c"><circle r="48"/></clipPath>
+                </defs>
+                <circle r="48" fill="url(#${uid}g)" stroke="#2a2a33" stroke-width="2"/>
+                <g clip-path="url(#${uid}c)" fill="#1b1b22" stroke="#1b1b22" stroke-width="1.6" stroke-linejoin="round">
+                    <polygon points="${poligono(0, 0, 15, -90, 5)}"/>
+                    ${[0, 1, 2, 3, 4].map(i => {
+                        const ang = (-90 + 72 * i) * Math.PI / 180;
+                        const x1 = 15 * Math.cos(ang), y1 = 15 * Math.sin(ang);
+                        const x2 = 33 * Math.cos(ang), y2 = 33 * Math.sin(ang);
+                        const cx = 49 * Math.cos(ang), cy = 49 * Math.sin(ang);
+                        return `<line x1="${x1.toFixed(2)}" y1="${y1.toFixed(2)}" x2="${x2.toFixed(2)}" y2="${y2.toFixed(2)}"/>` +
+                               `<polygon points="${poligono(cx, cy, 15, -90 + 72 * i + 180, 5)}"/>`;
+                    }).join('')}
+                </g>
+                <ellipse cx="-17" cy="-24" rx="14" ry="7" fill="#fff" opacity="0.5" transform="rotate(-35 -17 -24)"/>`;
+            return svg;
+        }
+
+        function limpiarEscena() {
+            clearTimeout(limpiarTimer);
+            stage.innerHTML = '';
+            banner.className = 'banner';
+            banner.innerHTML = '';
+            tiroActual = null;
+        }
+
+        function lanzarPenalti(data) {
+            limpiarEscena();
+            tiroActual = data;
+            const dir = ['izquierda', 'centro', 'derecha'].includes(data.direccion) ? data.direccion : 'centro';
+
+            const shot = document.createElement('div');
+            shot.className = 'shot ' + dir;
+            shot.id = 'shot-' + data.id;
+
+            // Estelas
+            for (let i = 0; i < 4; i++) {
+                const wrapX = document.createElement('div');
+                wrapX.className = 'ball-x';
+                wrapX.style.animationDelay = (i * 0.04) + 's';
+                const wrapY = document.createElement('div');
+                wrapY.className = 'ball-y';
+                wrapY.style.animationDelay = (i * 0.04) + 's';
+                const t = document.createElement('div');
+                t.className = 'trail';
+                t.style.animationDelay = (i * 0.04) + 's';
+                wrapY.appendChild(t);
+                wrapX.appendChild(wrapY);
+                shot.appendChild(wrapX);
+            }
+
+            // Balón
+            const bx = document.createElement('div');
+            bx.className = 'ball-x';
+            const by = document.createElement('div');
+            by.className = 'ball-y';
+            const ball = document.createElement('div');
+            ball.className = 'ball';
+            ball.appendChild(crearBalon());
+            by.appendChild(ball);
+            bx.appendChild(by);
+            shot.appendChild(bx);
+
+            // Marca de zona + etiqueta del viewer
+            const target = document.createElement('div');
+            target.className = 'target';
+            const ring = document.createElement('div');
+            ring.className = 'ring';
+            target.appendChild(ring);
+
+            const tag = document.createElement('div');
+            tag.className = 'tag';
+            const nombre = (data.viewer || 'Penalti').toString();
+            if (data.avatar) {
+                const img = document.createElement('img');
+                img.className = 'tag-avatar';
+                img.src = data.avatar;
+                img.alt = nombre;
+                img.onerror = () => { img.replaceWith(avatarInicial(nombre)); };
+                tag.appendChild(img);
+            } else {
+                tag.appendChild(avatarInicial(nombre));
+            }
+            const txt = document.createElement('div');
+            txt.className = 'tag-text';
+            const n = document.createElement('span');
+            n.className = 'tag-name';
+            n.textContent = nombre;
+            const d = document.createElement('span');
+            d.className = 'tag-dir';
+            d.textContent = DIR_LABEL[dir];
+            txt.appendChild(n);
+            txt.appendChild(d);
+            tag.appendChild(txt);
+            target.appendChild(tag);
+            shot.appendChild(target);
+
+            stage.appendChild(shot);
+        }
+
+        function avatarInicial(nombre) {
+            const el = document.createElement('div');
+            el.className = 'tag-avatar';
+            el.textContent = (nombre.trim()[0] || '⚽').toUpperCase();
+            return el;
+        }
+
+        function mostrarResultado(data) {
+            const shot = tiroActual ? document.getElementById('shot-' + tiroActual.id) : null;
+
+            if (data.resultado === 'descartado') {
+                if (shot) shot.classList.add('fade');
+                limpiarTimer = setTimeout(limpiarEscena, 600);
+                return;
+            }
+
+            const esGol = data.resultado === 'gol';
+            banner.className = 'banner ' + (esGol ? 'gol' : 'atajada');
+            banner.innerHTML = (esGol ? '¡GOL!' : '¡ATAJADA!') +
+                (data.puntos > 0 ? `<span class="banner-pts">+${data.puntos} PTS${data.destino ? ' · ' + escapeHtml(data.destino) : ''}</span>` : '');
+            void banner.offsetWidth;
+            banner.classList.add('show');
+
+            if (esGol) lanzarConfeti();
+            if (shot) setTimeout(() => shot.classList.add('fade'), 2800);
+            limpiarTimer = setTimeout(limpiarEscena, 3700);
+        }
+
+        function escapeHtml(s) {
+            return String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+        }
+
+        function lanzarConfeti() {
+            const colores = ['#FFD700', '#FF2A5F', '#00E5FF', '#FFFFFF', '#7CFF6B'];
+            for (let i = 0; i < 70; i++) {
+                const c = document.createElement('div');
+                c.className = 'confetti';
+                c.style.left = Math.random() * 100 + 'vw';
+                c.style.width = 8 + Math.random() * 8 + 'px';
+                c.style.height = 10 + Math.random() * 12 + 'px';
+                c.style.background = colores[Math.floor(Math.random() * colores.length)];
+                c.style.setProperty('--drift', (Math.random() * 160 - 80) + 'px');
+                c.style.animationDuration = 2 + Math.random() * 2 + 's';
+                c.style.animationDelay = Math.random() * 0.6 + 's';
+                document.body.appendChild(c);
+                setTimeout(() => c.remove(), 5000);
+            }
+        }
+
+        socket.on('penaltiLanzado', lanzarPenalti);
+        socket.on('penaltiResultado', mostrarResultado);
+
+        // Pruebas locales: 1 = izquierda, 2 = centro, 3 = derecha, G = gol, A = atajada, R = limpiar
+        window.addEventListener('keydown', (e) => {
+            const k = e.key.toLowerCase();
+            const dirs = { '1': 'izquierda', '2': 'centro', '3': 'derecha' };
+            if (dirs[k]) lanzarPenalti({ id: 'demo-' + Date.now(), direccion: dirs[k], viewer: 'Demo', avatar: '' });
+            if (k === 'g') mostrarResultado({ resultado: 'gol', puntos: 10, destino: 'Alaska' });
+            if (k === 'a') mostrarResultado({ resultado: 'atajada', puntos: 5, destino: 'Venus' });
+            if (k === 'r' || k === 'escape') limpiarEscena();
+        });
+    </script>
+</body>
+
+</html>

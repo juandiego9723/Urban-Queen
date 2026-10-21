@@ -34,6 +34,7 @@ const setupRevivirDynamics     = require('./src/dynamics/revivir');
 const setupBatallaDynamics     = require('./src/dynamics/batalla');
 const setupFutbolDynamics      = require('./src/dynamics/futbol');
 const setupCustomDynamics      = require('./src/dynamics/customDynamics');
+const setupPenaltiDynamics     = require('./src/dynamics/penalti');
 
 const setupQueensRoutes        = require('./src/routes/queensRoutes');
 const setupAgencyRoutes        = require('./src/routes/agencyRoutes');
@@ -104,9 +105,10 @@ app.use(express.urlencoded({ limit: '50mb', extended: true }));
 const timerHandlers      = setupTimerDynamics(app, io, requireSession, activeSessions);
 const conociendoHandlers = setupConociendoDynamics(app, io, requireSession, activeSessions);
 const revivirHandlers    = setupRevivirDynamics(app, io, requireSession, activeSessions);
+const penaltiHandlers     = setupPenaltiDynamics(app, io, requireSession, activeSessions);
 
 const { procesarRegaloTikTok, procesarPuntosEnLote } = createPointsProcessor(
-    io, activeSessions, resolverNombre, timerHandlers, conociendoHandlers, revivirHandlers
+    io, activeSessions, resolverNombre, timerHandlers, conociendoHandlers, revivirHandlers, penaltiHandlers
 );
 
 const _getUserSessionOriginal = getUserSession;
@@ -290,6 +292,7 @@ app.get('/ranking-clasico',(req, res) => res.sendFile(pub('ranking-clasico.html'
 app.get('/batalla',       (req, res) => res.sendFile(pub('batalla.html')));
 app.get('/batalla-futbol',(req, res) => res.sendFile(pub('batalla-futbol.html')));
 app.get('/batalla-futbol-hud',(req, res) => res.sendFile(pub('batalla-futbol-hud.html')));
+app.get('/penalti',       (req, res) => res.sendFile(pub('penalti.html')));
 app.get('/batalla-pk',    (req, res) => res.sendFile(pub('batalla-pk.html')));
 app.get('/batalla-vs',    (req, res) => res.sendFile(pub('batalla-vs.html')));
 app.get('/timer',         (req, res) => res.sendFile(pub('timer.html')));

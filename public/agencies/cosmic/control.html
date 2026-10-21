@@ -1595,6 +1595,56 @@
                         </div>
                     </div>
 
+                    <div class="card" id="card-penalti">
+                        <div class="card-title">
+                            🥅 <span class="card-title-accent">Penalti</span>
+                        </div>
+                        <div class="col">
+                            <div class="info-box">
+                                <div class="label">Regalo que lanza el balón (nombre o ID):</div>
+                                <input type="text" id="penaltiRegalo" class="input" placeholder="Ej. Rose o 5655" style="margin-top:6px;">
+                                <div class="row" style="gap:12px;flex-wrap:nowrap;margin-top:8px;align-items:center;">
+                                    <span>⚽ Pts gol:</span>
+                                    <input type="number" id="penaltiPtsGol" value="10" min="0" class="input input-num">
+                                    <span>🧤 Pts atajada:</span>
+                                    <input type="number" id="penaltiPtsAtajada" value="5" min="0" class="input input-num">
+                                </div>
+                                <div class="row" style="gap:12px;flex-wrap:nowrap;margin-top:8px;align-items:center;">
+                                    <span>🔁 Máx. combo:</span>
+                                    <input type="number" id="penaltiMaxRep" value="5" min="1" max="20" class="input input-num">
+                                    <span>⏱ Auto-descartar (s):</span>
+                                    <input type="number" id="penaltiAutoSeg" value="15" min="0" class="input input-num">
+                                </div>
+                                <label style="display:flex;align-items:center;gap:6px;margin-top:8px;font-size:13px;cursor:pointer;">
+                                    <input type="checkbox" id="penaltiActivo" checked> Dinámica activa
+                                </label>
+                            </div>
+                            <div class="row-2">
+                                <button class="btn btn-success btn-full" onclick="guardarPenaltiConfig()">💾 Guardar penalti</button>
+                                <a class="btn btn-ghost btn-full" href="/cosmic/penalti" target="_blank" style="text-align:center;text-decoration:none;display:flex;align-items:center;justify-content:center;">🔗 Abrir overlay</a>
+                            </div>
+                            <div class="label" style="margin-top:4px;">Probar tiro:</div>
+                            <div class="row-3">
+                                <button class="btn btn-primary btn-full" onclick="probarPenalti('izquierda')">⬅ Izq</button>
+                                <button class="btn btn-primary btn-full" onclick="probarPenalti('centro')">⬆ Centro</button>
+                                <button class="btn btn-primary btn-full" onclick="probarPenalti('derecha')">Der ➡</button>
+                            </div>
+                            <div id="penaltiPendiente" class="info-box" style="display:none;border:2px solid #FFD700;">
+                                <div style="font-weight:800;">🥅 Tiro en juego: <span id="penaltiPendienteDir"></span></div>
+                                <div id="penaltiPendienteViewer" style="font-size:12px;color:var(--muted);margin-top:2px;"></div>
+                                <div class="row" style="margin-top:8px;align-items:center;gap:8px;">
+                                    <span class="label">Puntos para:</span>
+                                    <select id="penaltiDestino" class="input" style="flex:1;padding:4px 8px;"></select>
+                                </div>
+                                <div class="row-2" style="margin-top:8px;">
+                                    <button class="btn btn-warning btn-full" onclick="resolverPenalti('gol')">⚽ GOL</button>
+                                    <button class="btn btn-primary btn-full" onclick="resolverPenalti('atajada')">🧤 ATAJADA</button>
+                                </div>
+                                <button class="btn btn-ghost btn-full" style="margin-top:6px;" onclick="resolverPenalti('descartado')">✖ Descartar sin puntos</button>
+                            </div>
+                        </div>
+                    </div>
+
                     <div class="card">
                         <div class="card-title">
                             ⚖️ <span class="card-title-accent">Reglas del Partido</span>
@@ -3834,6 +3884,88 @@
                 }
             }
 
+            // ── PENALTI ──
+            const PENALTI_DIR_LABEL = { izquierda: '⬅ IZQUIERDA', centro: '⬆ CENTRO', derecha: 'DERECHA ➡' };
+            let penaltiActual = null;
+
+            async function cargarPenaltiConfig() {
+                try {
+                    const res = await fetch('/api/penalti/config');
+                    if (!res.ok) return;
+                    const c = await res.json();
+                    document.getElementById('penaltiRegalo').value = c.regalo || '';
+                    document.getElementById('penaltiPtsGol').value = c.puntosGol;
+                    document.getElementById('penaltiPtsAtajada').value = c.puntosAtajada;
+                    document.getElementById('penaltiMaxRep').value = c.maxRepeticiones;
+                    document.getElementById('penaltiAutoSeg').value = c.autoDescartarSeg;
+                    document.getElementById('penaltiActivo').checked = c.activo !== false;
+                    const resEst = await fetch('/api/penalti/estado');
+                    if (resEst.ok) {
+                        const est = await resEst.json();
+                        if (est.actual) mostrarPenaltiPendiente(est.actual); else ocultarPenaltiPendiente();
+                    }
+                } catch (e) {
+                    console.error('Error al cargar config de penalti:', e);
+                }
+            }
+
+            async function guardarPenaltiConfig() {
+                const config = {
+                    activo: document.getElementById('penaltiActivo').checked,
+                    regalo: document.getElementById('penaltiRegalo').value.trim(),
+                    puntosGol: parseInt(document.getElementById('penaltiPtsGol').value) || 0,
+                    puntosAtajada: parseInt(document.getElementById('penaltiPtsAtajada').value) || 0,
+                    maxRepeticiones: parseInt(document.getElementById('penaltiMaxRep').value) || 5,
+                    autoDescartarSeg: parseInt(document.getElementById('penaltiAutoSeg').value) || 0
+                };
+                try {
+                    const res = await fetch('/api/penalti/config', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(config)
+                    });
+                    if (!res.ok) throw new Error(await res.text());
+                    alert('✅ Configuración de penalti guardada');
+                } catch (e) {
+                    alert('Error al guardar penalti.');
+                }
+            }
+
+            function probarPenalti(dir) {
+                hacerFetch('/penalti/probar?dir=' + encodeURIComponent(dir));
+            }
+
+            function mostrarPenaltiPendiente(tiro) {
+                penaltiActual = tiro;
+                const sel = document.getElementById('penaltiDestino');
+                const previo = sel.value;
+                sel.innerHTML = (QUEENS || []).map(q => `<option value="${q}">${q}</option>`).join('');
+                if (previo && (QUEENS || []).includes(previo)) sel.value = previo;
+                document.getElementById('penaltiPendienteDir').textContent = PENALTI_DIR_LABEL[tiro.direccion] || tiro.direccion;
+                const extra = tiro.pendientes ? ` · ${tiro.pendientes} en cola` : '';
+                document.getElementById('penaltiPendienteViewer').textContent = (tiro.viewer ? 'Viewer: ' + tiro.viewer : '') + extra;
+                document.getElementById('penaltiPendiente').style.display = 'block';
+            }
+
+            function ocultarPenaltiPendiente() {
+                penaltiActual = null;
+                document.getElementById('penaltiPendiente').style.display = 'none';
+            }
+
+            function resolverPenalti(resultado) {
+                if (!penaltiActual) return;
+                const destino = document.getElementById('penaltiDestino').value;
+                const url = '/penalti/resolver?id=' + encodeURIComponent(penaltiActual.id) +
+                    '&resultado=' + resultado +
+                    (resultado !== 'descartado' && destino ? '&destino=' + encodeURIComponent(destino) : '');
+                hacerFetch(url);
+            }
+
+            socket.on('penaltiLanzado', mostrarPenaltiPendiente);
+            socket.on('penaltiResultado', (r) => {
+                if (penaltiActual && penaltiActual.id === r.id) ocultarPenaltiPendiente();
+            });
+
             async function init() {
                 await fetchMe();
                 const res = await fetch('/api/queens');
@@ -3850,6 +3982,7 @@
                 cargarSonidos();
                 cargarBailarinas();
                 cargarFutbolConfig();
+                cargarPenaltiConfig();
                 cargarDinamicas();
                 cargarTikTokPanel();
                 cargarMarca();

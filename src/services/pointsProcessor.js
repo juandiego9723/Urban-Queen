@@ -1,4 +1,4 @@
-function createPointsProcessor(io, activeSessions, resolverNombreFn, timerHandlers, conociendoHandlers, revivirHandlers) {
+function createPointsProcessor(io, activeSessions, resolverNombreFn, timerHandlers, conociendoHandlers, revivirHandlers, penaltiHandlers) {
 
     function buscarEnMapa(mapaObj, nombreRegalo, diamondUnit = 1, giftId = null) {
         if (!mapaObj || !nombreRegalo) return null;
@@ -261,6 +261,15 @@ function createPointsProcessor(io, activeSessions, resolverNombreFn, timerHandle
                 img = '/regalos/' + img;
             }
             return img;
+        }
+
+        // Dinámica Penalti: si el regalo coincide con el configurado, lanza el balón en el overlay
+        if (penaltiHandlers && typeof penaltiHandlers.onGift === 'function') {
+            try {
+                penaltiHandlers.onGift(username, { giftName, giftId: data.giftId, viewer, avatar, repeat: deltaRepeat, giftImg: giftImgSrc });
+            } catch (e) {
+                console.error('Error en dinámica Penalti:', e);
+            }
         }
 
         const coins = diamondUnit * deltaRepeat;

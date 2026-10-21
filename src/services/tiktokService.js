@@ -369,7 +369,7 @@ function createTikTokService(app, io, requireSession, activeSessions, procesarRe
             repeatCount: repeat,
             groupCount: group,
             giftType: (diamonds <= 1 && giftName.toLowerCase().includes('rose')) ? 1 : 0,
-            giftPictureUrl: giftPic
+            giftPictureUrl: req.query.giftPic || req.query.pic || ''
         };
         if (destName) {
             fakeData.toUser = {
