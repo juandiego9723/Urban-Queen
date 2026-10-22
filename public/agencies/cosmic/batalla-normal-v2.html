@@ -1,0 +1,994 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta name="referrer" content="no-referrer">
+    <!-- Inyección de multi-cuenta -->
+    <script>
+        (function () {
+            const urlParams = new URLSearchParams(window.location.search);
+            const user = urlParams.get('user');
+            if (user) {
+                const originalFetch = window.fetch;
+                window.fetch = function (url, options) {
+                    if (typeof url === 'string' && !url.includes('user=')) {
+                        const sep = url.includes('?') ? '&' : '?';
+                        url = url + sep + 'user=' + encodeURIComponent(user);
+                    }
+                    return originalFetch(url, options);
+                };
+                const originalIo = window.io;
+                if (originalIo) {
+                    window.io = function (opts) {
+                        opts = opts || {};
+                        opts.query = opts.query || {};
+                        opts.query.user = user;
+                        return originalIo(opts);
+                    };
+                } else {
+                    let _io = undefined;
+                    Object.defineProperty(window, 'io', {
+                        get: function () { return _io; },
+                        set: function (val) {
+                            _io = function (opts) {
+                                opts = opts || {};
+                                opts.query = opts.query || {};
+                                opts.query.user = user;
+                                return val(opts);
+                            };
+                        },
+                        configurable: true
+                    });
+                }
+            }
+        })();
+    </script>
+
+    <meta charset="UTF-8">
+    <title>Batalla Normal V2 — Cosmic Agency</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=TikTok+Sans:ital,wght@0,300..900;1,300..900&family=Montserrat:ital,wght@0,500;0,700;1,500&display=swap" rel="stylesheet">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=TikTok+Sans:ital,wght@0,300..900;1,300..900&display=swap');
+
+        *, *::before, *::after {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'TikTok Sans', 'Proxima Nova', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
+            font-weight: 500 !important;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+        }
+
+        body {
+            background: transparent;
+            font-family: 'TikTok Sans', 'Proxima Nova', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
+            font-weight: 500 !important;
+            overflow: hidden;
+            width: 100vw;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: flex-end;
+            padding-bottom: 24px;
+            user-select: none;
+        }
+
+        /* ── WRAPPER PRINCIPAL DEL MODO BATALLA ── */
+        #batalla-activadores-wrap,
+        #batalla-activadores-wrap * {
+            font-family: 'TikTok Sans', 'Proxima Nova', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
+            font-weight: 500 !important;
+        }
+
+        #batalla-activadores-wrap {
+            width: 94%;
+            max-width: 960px;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            filter: drop-shadow(0 10px 24px rgba(0, 0, 0, 0.55));
+            position: relative;
+            z-index: 2;
+        }
+
+        /* ── 1. FILA DE NOMBRES Y CORONA (ARRIBA) ── */
+        #names-row {
+            display: flex;
+            width: 100%;
+            position: relative;
+            align-items: flex-end;
+            height: 48px;
+        }
+
+        .queen-name-slot {
+            display: flex;
+            justify-content: flex-start;
+            align-items: center;
+            position: relative;
+            transition: width 0.6s cubic-bezier(0.25, 1, 0.5, 1);
+            min-width: 12%;
+            padding-left: 4px;
+        }
+
+        .queen-name-slot:first-child {
+            padding-left: 14px;
+        }
+
+        .queen-name-capsule {
+            background: rgba(22, 22, 28, 0.85);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            border: 1.5px solid rgba(255, 255, 255, 0.16);
+            border-radius: 9999px;
+            padding: 6px 18px 6px 12px;
+            display: inline-flex;
+            align-items: center;
+            gap: 9px;
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.5);
+            position: relative;
+            max-width: 95%;
+            transition: all 0.3s ease;
+        }
+
+        .queen-name-capsule.leader-capsule {
+            border-color: rgba(255, 255, 255, 0.4);
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.65), 0 0 14px var(--leader-color-glow, rgba(255, 42, 133, 0.5));
+        }
+
+        .queen-color-indicator {
+            width: 5px;
+            height: 20px;
+            border-radius: 3px;
+            background: #fff;
+            flex-shrink: 0;
+            box-shadow: 0 0 8px currentColor;
+        }
+
+        /* Nombre de la bailarina con font-weight: 500 */
+        .queen-name-text {
+            font-size: 21px;
+            font-weight: 500 !important;
+            color: #FFFFFF;
+            letter-spacing: 0.4px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            text-shadow: 0 1px 4px rgba(0, 0, 0, 0.9);
+            line-height: 1.1;
+        }
+
+        /* Corona 3D sobre la líder */
+        .leader-crown {
+            position: absolute;
+            top: -18px;
+            right: -8px;
+            font-size: 24px;
+            line-height: 1;
+            filter: drop-shadow(0 2px 6px rgba(255, 215, 0, 0.95)) drop-shadow(0 0 8px rgba(255, 180, 0, 0.7));
+            animation: crown-float 2.4s ease-in-out infinite alternate;
+            pointer-events: none;
+            z-index: 10;
+        }
+
+        @keyframes crown-float {
+            0% {
+                transform: rotate(8deg) translateY(0);
+            }
+            100% {
+                transform: rotate(18deg) translateY(-3px) scale(1.08);
+            }
+        }
+
+        /* ── 2. BARRA HORIZONTAL CONTINUA SEGMENTADA (MEDIO) ── */
+        #bar-outer {
+            width: 100%;
+            height: 48px;
+            border-radius: 9999px;
+            overflow: visible;
+            display: flex;
+            background: rgba(12, 12, 16, 0.75);
+            backdrop-filter: blur(14px);
+            -webkit-backdrop-filter: blur(14px);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6), inset 0 2px 6px rgba(0, 0, 0, 0.6);
+            border: 2.5px solid rgba(255, 255, 255, 0.1);
+            position: relative;
+        }
+
+        .queen-segment {
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            transition: width 0.6s cubic-bezier(0.25, 1, 0.5, 1), background 0.4s ease;
+            min-width: 12%;
+            background-size: 200% 100%;
+        }
+
+        .queen-segment:first-child {
+            border-top-left-radius: 9999px;
+            border-bottom-left-radius: 9999px;
+        }
+
+        .queen-segment:last-child {
+            border-top-right-radius: 9999px;
+            border-bottom-right-radius: 9999px;
+        }
+
+        .queen-segment::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 42%;
+            background: linear-gradient(180deg, rgba(255, 255, 255, 0.25) 0%, transparent 100%);
+            pointer-events: none;
+            z-index: 2;
+        }
+
+        .segment-pts {
+            font-size: 21px;
+            font-weight: 500 !important;
+            color: #FFFFFF;
+            text-shadow: 0 1px 4px rgba(0, 0, 0, 0.9), 0 0 8px rgba(0, 0, 0, 0.5);
+            position: relative;
+            z-index: 3;
+            letter-spacing: 0.5px;
+            transition: transform 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        .segment-pts.pop {
+            transform: scale(1.3);
+        }
+
+        /* ESTILO DESTACADO DE LA LÍDER (№1) SEGÚN LA IMAGEN */
+        .queen-segment.is-leader {
+            z-index: 5;
+            box-shadow: 0 0 22px var(--leader-glow, rgba(255, 42, 133, 0.85)), inset 0 0 10px rgba(255, 255, 255, 0.45);
+            border: 2.8px solid #FFFFFF;
+            border-radius: 9999px;
+            margin-top: -1.5px;
+            margin-bottom: -1.5px;
+            height: calc(100% + 3px);
+        }
+
+        .leader-badge-text {
+            display: inline-flex;
+            align-items: center;
+            font-size: 21px;
+            font-weight: 500 !important;
+            color: #FFFFFF;
+            text-shadow: 0 0 8px rgba(255, 255, 255, 0.8), 0 2px 4px rgba(0, 0, 0, 0.8);
+            letter-spacing: 0.5px;
+        }
+
+        .divider-sparkle {
+            position: absolute;
+            right: -8px;
+            top: 50%;
+            transform: translateY(-50%);
+            font-size: 20px;
+            color: #FFFFFF;
+            text-shadow: 0 0 10px #FFFFFF, 0 0 22px #FFFFFF, 0 0 35px var(--leader-glow, #FF2A85);
+            pointer-events: none;
+            z-index: 10;
+            animation: sparkle-pulse 1.4s ease-in-out infinite alternate;
+        }
+
+        @keyframes sparkle-pulse {
+            0% {
+                transform: translateY(-50%) scale(0.9) rotate(0deg);
+                opacity: 0.85;
+            }
+            100% {
+                transform: translateY(-50%) scale(1.3) rotate(35deg);
+                opacity: 1;
+            }
+        }
+
+        /* ── 3. REGALOS ACTIVADORES Y MVPS (ABAJO DE CADA BARRA) ── */
+        #gifts-row {
+            display: flex;
+            width: 100%;
+            position: relative;
+            align-items: flex-start;
+            min-height: 44px;
+        }
+
+        .queen-gift-slot {
+            display: flex;
+            justify-content: flex-start;
+            align-items: center;
+            position: relative;
+            transition: width 0.6s cubic-bezier(0.25, 1, 0.5, 1);
+            min-width: 12%;
+            padding-left: 8px;
+        }
+
+        .queen-gift-slot:first-child {
+            padding-left: 18px;
+        }
+
+        .gift-mvp-container {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .gift-activator-box {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+        }
+
+        .gift-img {
+            width: 36px;
+            height: 36px;
+            object-fit: contain;
+            filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.7));
+            transition: transform 0.25s ease;
+        }
+
+        .gift-img.bounce {
+            animation: gift-bounce-activator 0.55s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        @keyframes gift-bounce-activator {
+            0% {
+                transform: scale(1) rotate(0deg);
+            }
+            30% {
+                transform: scale(1.55) rotate(-10deg);
+            }
+            60% {
+                transform: scale(0.85) rotate(6deg);
+            }
+            80% {
+                transform: scale(1.15) rotate(-3deg);
+            }
+            100% {
+                transform: scale(1) rotate(0deg);
+            }
+        }
+
+        /* ── MVPS (APARICIÓN PROGRESIVA DINÁMICA) ── */
+        .mvp-avatar-stack {
+            display: flex;
+            align-items: center;
+        }
+
+        @keyframes mvp-pop-in {
+            0% {
+                transform: scale(0) rotate(-20deg);
+                opacity: 0;
+            }
+            70% {
+                transform: scale(1.22) rotate(4deg);
+                opacity: 1;
+            }
+            100% {
+                transform: scale(1) rotate(0deg);
+                opacity: 1;
+            }
+        }
+
+        .mvp-avatar {
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            border: 1.8px solid #FFD700;
+            object-fit: cover;
+            margin-left: -7px;
+            background: #1e1e24;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.65);
+            transition: transform 0.2s ease;
+            position: relative;
+            animation: mvp-pop-in 0.35s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+        }
+
+        .mvp-avatar:first-child {
+            margin-left: 0;
+            z-index: 3;
+        }
+
+        .mvp-avatar:nth-child(2) {
+            z-index: 2;
+        }
+
+        .mvp-avatar:nth-child(3) {
+            z-index: 1;
+        }
+
+        .mvp-initial {
+            font-size: 13px;
+            font-weight: 500 !important;
+            color: #fff;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 100%;
+            height: 100%;
+        }
+
+        /* Notificación flotante de puntos "+XX" al recibir regalo */
+        .points-floating-tag {
+            position: absolute;
+            top: -12px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 14px;
+            font-weight: 500 !important;
+            color: #FFEA00;
+            text-shadow: 0 0 8px rgba(0, 0, 0, 0.9), 1px 1px 0 #000;
+            pointer-events: none;
+            animation: float-pts-up 0.9s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+            z-index: 15;
+            white-space: nowrap;
+        }
+
+        @keyframes float-pts-up {
+            0% {
+                opacity: 0;
+                transform: translate(-50%, 10px) scale(0.6);
+            }
+            20% {
+                opacity: 1;
+                transform: translate(-50%, 0) scale(1.2);
+            }
+            100% {
+                opacity: 0;
+                transform: translate(-50%, -28px) scale(1);
+            }
+        }
+
+        /* ── 4. TEMPORIZADOR CENTRADO EN CÁPSULA (ABAJO DEL TODO) ── */
+        #timer-pill-container {
+            display: flex;
+            justify-content: center;
+            width: 100%;
+            margin-top: 4px;
+        }
+
+        #timer-pill {
+            background: rgba(30, 30, 36, 0.88);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1.5px solid rgba(255, 255, 255, 0.16);
+            border-radius: 9999px;
+            padding: 6px 26px;
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.55), inset 0 1px 3px rgba(255, 255, 255, 0.1);
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            color: #FFFFFF;
+            font-size: 24px;
+            font-weight: 500 !important;
+            letter-spacing: 1.2px;
+            line-height: 1;
+            transition: all 0.3s ease;
+            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.8);
+        }
+
+        #timer-pill.urgente {
+            background: rgba(220, 38, 38, 0.92);
+            border-color: #f87171;
+            box-shadow: 0 0 25px rgba(239, 68, 68, 0.85);
+            animation: timer-urgente-pulse 0.7s infinite alternate;
+        }
+
+        @keyframes timer-urgente-pulse {
+            0% {
+                transform: scale(1);
+                box-shadow: 0 0 15px rgba(239, 68, 68, 0.6);
+            }
+            100% {
+                transform: scale(1.08);
+                box-shadow: 0 0 30px rgba(239, 68, 68, 0.95);
+            }
+        }
+
+        #timer-pill.finalizado {
+            background: linear-gradient(135deg, #059669, #10b981);
+            border-color: #6ee7b7;
+            font-size: 19px;
+            font-weight: 500 !important;
+            padding: 8px 28px;
+            box-shadow: 0 0 25px rgba(16, 185, 129, 0.7);
+        }
+
+        /* ── CONFETI DE VICTORIA ── */
+        .confetti-container {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            pointer-events: none;
+            z-index: 1;
+        }
+
+        .confetti-particle {
+            position: absolute;
+            opacity: 0.9;
+            border-radius: 2px;
+        }
+
+        @keyframes fall-confetti {
+            0% {
+                top: -20px;
+                transform: translateY(0) rotate(0deg);
+                opacity: 1;
+            }
+            100% {
+                top: 110%;
+                transform: translateY(240px) rotate(720deg);
+                opacity: 0;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div id="batalla-activadores-wrap">
+        <!-- 1. Nombres arriba con cápsulas y corona -->
+        <div id="names-row"></div>
+
+        <!-- 2. Barra horizontal continua segmentada -->
+        <div id="bar-outer"></div>
+
+        <!-- 3. Regalos activadores y MVPs abajo de cada sección -->
+        <div id="gifts-row"></div>
+
+        <!-- 4. Temporizador abajo centrado -->
+        <div id="timer-pill-container">
+            <div id="timer-pill">ESPERANDO BATALLA...</div>
+        </div>
+    </div>
+
+    <div class="confetti-container"></div>
+
+    <script src="/js/iframe-bridge.js"></script>
+    <script src="/socket.io/socket.io.js"></script>
+    <script>
+        const urlParams = new URLSearchParams(window.location.search);
+        const userParam = urlParams.get('user') || '';
+
+        const socket = window.__iframeBridgeSocket || io({ query: userParam ? { user: userParam } : {} });
+
+        let participantesActivos = [];
+        let equiposInfo = {};
+        let APODOS = {};
+        let puntosActuales = {};
+        let victoriasActuales = {};
+        let donorStats = {};
+        let timerSegundos = 0;
+        let batallaEnCurso = false;
+
+        const namesRow = document.getElementById('names-row');
+        const barOuter = document.getElementById('bar-outer');
+        const giftsRow = document.getElementById('gifts-row');
+        const timerPill = document.getElementById('timer-pill');
+
+        function lightenColor(hex, amount = 40) {
+            try {
+                let col = hex.replace('#', '');
+                if (col.length === 3) col = col.split('').map(c => c + c).join('');
+                let num = parseInt(col, 16);
+                let r = Math.min(255, (num >> 16) + amount);
+                let g = Math.min(255, ((num >> 8) & 0x00FF) + amount);
+                let b = Math.min(255, (num & 0x0000FF) + amount);
+                return `rgb(${r}, ${g}, ${b})`;
+            } catch (e) {
+                return hex;
+            }
+        }
+
+        function resolverImagenRegalo(rawImg) {
+            if (!rawImg) return '';
+            if (rawImg.startsWith('/') || rawImg.startsWith('http')) return rawImg;
+            return '/regalos/' + rawImg;
+        }
+
+        // ── RENDER COMPLETO DE PARTICIPANTES ──
+        function renderBatalla(participantes, equipos, victorias, puntos) {
+            participantesActivos = participantes || [];
+            equiposInfo = equipos || equiposInfo;
+            victoriasActuales = victorias || {};
+            puntosActuales = { ...(puntos || {}) };
+
+            if (!participantesActivos.length) {
+                namesRow.innerHTML = '';
+                barOuter.innerHTML = '';
+                giftsRow.innerHTML = '';
+                return;
+            }
+
+            const count = participantesActivos.length;
+            const defaultPct = 100 / count;
+
+            // 1. Render Fila de Nombres
+            namesRow.innerHTML = '';
+            participantesActivos.forEach(chica => {
+                const eq = equiposInfo[chica] || { nombre: chica, color: '#FF2A85' };
+                const label = APODOS[chica] || eq.nombre || chica.toUpperCase();
+
+                const slot = document.createElement('div');
+                slot.className = 'queen-name-slot';
+                slot.id = 'name-slot-' + chica;
+                slot.style.width = defaultPct + '%';
+
+                slot.innerHTML = `
+                    <div class="queen-name-capsule" id="name-capsule-${chica}">
+                        <div class="queen-color-indicator" style="background: ${eq.color}; color: ${eq.color};"></div>
+                        <span class="queen-name-text">${label}</span>
+                        <div class="leader-crown" id="crown-${chica}" style="display: none;">👑</div>
+                    </div>
+                `;
+                namesRow.appendChild(slot);
+            });
+
+            // 2. Render Barra Continua Segmentada
+            barOuter.innerHTML = '';
+            participantesActivos.forEach(chica => {
+                const eq = equiposInfo[chica] || { nombre: chica, color: '#FF2A85' };
+                const pts = puntosActuales[chica] || 0;
+                const lightCol = lightenColor(eq.color, 35);
+
+                const seg = document.createElement('div');
+                seg.className = 'queen-segment';
+                seg.id = 'seg-' + chica;
+                seg.style.width = defaultPct + '%';
+                seg.style.background = `linear-gradient(135deg, ${eq.color} 0%, ${lightCol} 100%)`;
+                seg.style.setProperty('--leader-glow', eq.color);
+
+                seg.innerHTML = `
+                    <span class="segment-pts" id="pts-label-${chica}">${pts}</span>
+                    <div class="divider-sparkle" id="sparkle-${chica}" style="display: none;">✦</div>
+                `;
+                barOuter.appendChild(seg);
+            });
+
+            // 3. Render Regalos Activadores y MVPs
+            giftsRow.innerHTML = '';
+            participantesActivos.forEach(chica => {
+                const eq = equiposInfo[chica] || { nombre: chica, color: '#fff', regalo_img: '' };
+                const rawImg = eq.regalo_img || '';
+                const imgSrc = resolverImagenRegalo(rawImg);
+
+                const slot = document.createElement('div');
+                slot.className = 'queen-gift-slot';
+                slot.id = 'gift-slot-' + chica;
+                slot.style.width = defaultPct + '%';
+
+                slot.innerHTML = `
+                    <div class="gift-mvp-container">
+                        <div class="gift-activator-box" id="gift-box-${chica}">
+                            ${imgSrc
+                                ? `<img id="gift-${chica}" class="gift-img" src="${imgSrc}" alt="${chica}" onerror="this.style.opacity='0.2'">`
+                                : `<div style="width:36px;height:36px;"></div>`
+                            }
+                        </div>
+                        <div class="mvp-avatar-stack" id="mvp-stack-${chica}"></div>
+                    </div>
+                `;
+                giftsRow.appendChild(slot);
+                renderMvps(chica);
+            });
+
+            actualizarBarras(puntosActuales);
+        }
+
+        // ── ACTUALIZACIÓN DINÁMICA DE PUNTOS Y LÍDER ──
+        function actualizarBarras(puntos) {
+            puntosActuales = { ...puntos };
+            const count = participantesActivos.length;
+            if (count === 0) return;
+
+            let total = 0;
+            let maxPts = -1;
+            let lider = null;
+
+            participantesActivos.forEach(c => {
+                const p = puntosActuales[c] || 0;
+                total += p;
+                if (p > maxPts) {
+                    maxPts = p;
+                    lider = c;
+                }
+            });
+
+            const empatadasEnCima = participantesActivos.filter(c => (puntosActuales[c] || 0) === maxPts);
+            const hayLiderClaro = (maxPts > 0 && empatadasEnCima.length === 1);
+
+            const minPct = count >= 4 ? 12 : (count === 3 ? 15 : 18);
+            const remainingPctPool = 100 - (minPct * count);
+
+            participantesActivos.forEach(chica => {
+                const pts = puntosActuales[chica] || 0;
+                let finalPct = 100 / count;
+
+                if (total > 0 && remainingPctPool > 0) {
+                    const ratio = pts / total;
+                    finalPct = minPct + (ratio * remainingPctPool);
+                }
+
+                const finalPctStr = finalPct.toFixed(2) + '%';
+
+                const nameSlot = document.getElementById('name-slot-' + chica);
+                const segEl = document.getElementById('seg-' + chica);
+                const giftSlot = document.getElementById('gift-slot-' + chica);
+
+                if (nameSlot) nameSlot.style.width = finalPctStr;
+                if (segEl) segEl.style.width = finalPctStr;
+                if (giftSlot) giftSlot.style.width = finalPctStr;
+
+                const nameCapsule = document.getElementById('name-capsule-' + chica);
+                const crownEl = document.getElementById('crown-' + chica);
+                const ptsLabel = document.getElementById('pts-label-' + chica);
+                const sparkleEl = document.getElementById('sparkle-' + chica);
+                const eq = equiposInfo[chica] || { color: '#FF2A85' };
+
+                const esEstaLider = (hayLiderClaro && chica === lider);
+
+                if (segEl && ptsLabel) {
+                    if (esEstaLider) {
+                        segEl.classList.add('is-leader');
+                        segEl.style.setProperty('--leader-glow', eq.color);
+                        ptsLabel.innerHTML = `<span class="leader-badge-text">№1(${pts})</span>`;
+                        if (sparkleEl) sparkleEl.style.display = 'block';
+                    } else {
+                        segEl.classList.remove('is-leader');
+                        ptsLabel.textContent = pts;
+                        if (sparkleEl) sparkleEl.style.display = 'none';
+                    }
+                }
+
+                if (nameCapsule && crownEl) {
+                    if (esEstaLider) {
+                        nameCapsule.classList.add('leader-capsule');
+                        nameCapsule.style.setProperty('--leader-color-glow', eq.color + '80');
+                        crownEl.style.display = 'block';
+                    } else {
+                        nameCapsule.classList.remove('leader-capsule');
+                        crownEl.style.display = 'none';
+                    }
+                }
+            });
+        }
+
+        // ── GESTIÓN DE DONADORES / MVPS DINÁMICOS PROGRESIVOS ──
+        function actualizarDonor(chica, nick, avatar, coins) {
+            if (!donorStats[chica]) donorStats[chica] = {};
+            if (!donorStats[chica][nick]) {
+                donorStats[chica][nick] = { nick, avatar: avatar || '', totalCoins: 0 };
+            }
+            donorStats[chica][nick].totalCoins += (coins || 1);
+            if (avatar) donorStats[chica][nick].avatar = avatar;
+            renderMvps(chica);
+        }
+
+        function renderMvps(chica) {
+            const stackEl = document.getElementById('mvp-stack-' + chica);
+            if (!stackEl) return;
+
+            const donors = Object.values(donorStats[chica] || {});
+            donors.sort((a, b) => b.totalCoins - a.totalCoins);
+
+            const topDonors = donors.slice(0, 3);
+            if (topDonors.length === 0) {
+                stackEl.innerHTML = '';
+                return;
+            }
+
+            let html = '';
+            for (let i = 0; i < topDonors.length; i++) {
+                const d = topDonors[i];
+                if (d && d.avatar) {
+                    html += `<img class="mvp-avatar" src="${d.avatar}" alt="${d.nick}" title="${d.nick} (${d.totalCoins}💎)" onerror="this.src='/regalos/corazon.png'">`;
+                } else if (d && d.nick) {
+                    const initial = d.nick.slice(0, 1).toUpperCase();
+                    html += `<div class="mvp-avatar" title="${d.nick} (${d.totalCoins}💎)"><span class="mvp-initial">${initial}</span></div>`;
+                }
+            }
+            stackEl.innerHTML = html;
+        }
+
+        // ── ANIMACIÓN AL RECIBIR REGALO ACTIVADOR ──
+        function animarRegalo(chica, coins) {
+            const giftEl = document.getElementById('gift-' + chica);
+            const boxEl = document.getElementById('gift-box-' + chica);
+            const ptsEl = document.getElementById('pts-label-' + chica);
+
+            if (giftEl) {
+                giftEl.classList.remove('bounce');
+                void giftEl.offsetWidth;
+                giftEl.classList.add('bounce');
+            }
+
+            if (ptsEl) {
+                ptsEl.classList.remove('pop');
+                void ptsEl.offsetWidth;
+                ptsEl.classList.add('pop');
+                setTimeout(() => ptsEl.classList.remove('pop'), 250);
+            }
+
+            if (boxEl && coins > 0) {
+                const tag = document.createElement('div');
+                tag.className = 'points-floating-tag';
+                tag.textContent = `+${coins}`;
+                boxEl.appendChild(tag);
+                setTimeout(() => tag.remove(), 900);
+            }
+        }
+
+        // ── CONFETI AL FINALIZAR ──
+        function lanzarConfeti() {
+            const container = document.querySelector('.confetti-container');
+            if (!container) return;
+            container.innerHTML = '';
+            const colores = ['#FF2A85', '#00D2FF', '#FFA500', '#A855F7', '#FFD700', '#FFFFFF'];
+            for (let i = 0; i < 70; i++) {
+                const p = document.createElement('div');
+                p.className = 'confetti-particle';
+                p.style.left = Math.random() * 100 + '%';
+                p.style.top = -10 - Math.random() * 20 + 'px';
+                p.style.backgroundColor = colores[Math.floor(Math.random() * colores.length)];
+                p.style.width = 6 + Math.random() * 8 + 'px';
+                p.style.height = 6 + Math.random() * 8 + 'px';
+                p.style.transform = `rotate(${Math.random() * 360}deg)`;
+                p.style.animation = `fall-confetti ${1.6 + Math.random() * 2}s linear infinite`;
+                p.style.animationDelay = Math.random() * 1.5 + 's';
+                container.appendChild(p);
+            }
+            setTimeout(() => { if (container) container.innerHTML = ''; }, 9000);
+        }
+
+        // ── SOCKET.IO EVENTOS EN TIEMPO REAL ──
+        socket.on('batallaInicio', (data) => {
+            batallaEnCurso = true;
+            donorStats = {};
+            timerPill.classList.remove('urgente', 'finalizado');
+            const confettiContainer = document.querySelector('.confetti-container');
+            if (confettiContainer) confettiContainer.innerHTML = '';
+
+            renderBatalla(
+                data.participantes || [],
+                data.equipos || equiposInfo,
+                data.victorias || {},
+                data.puntos || {}
+            );
+
+            if (data.tiempo !== undefined) {
+                actualizarReloj(data.tiempo);
+            }
+        });
+
+        socket.on('batallaTick', (tiempo) => {
+            timerSegundos = tiempo;
+            actualizarReloj(tiempo);
+        });
+
+        function actualizarReloj(tiempo) {
+            let m = Math.floor(tiempo / 60).toString().padStart(2, '0');
+            let s = (tiempo % 60).toString().padStart(2, '0');
+            timerPill.textContent = `${m} : ${s}`;
+
+            if (tiempo <= 10 && tiempo > 0) {
+                timerPill.classList.add('urgente');
+            } else {
+                timerPill.classList.remove('urgente');
+            }
+        }
+
+        socket.on('batallaPuntos', (puntos) => {
+            actualizarBarras(puntos);
+        });
+
+        socket.on('nuevoRegalo', (data) => {
+            if (data.nombre && participantesActivos.includes(data.nombre)) {
+                animarRegalo(data.nombre, data.coins || 0);
+                if (data.viewer) {
+                    actualizarDonor(data.nombre, data.viewer, data.avatar || '', data.coins || 1);
+                }
+            }
+        });
+
+        socket.on('batallaFin', (data) => {
+            batallaEnCurso = false;
+            timerPill.classList.remove('urgente');
+            timerPill.classList.add('finalizado');
+
+            const esEmpate = (data.ganadora === 'EMPATE' || data.ganadora === 'SIN PUNTOS');
+            const nombreDisplay = esEmpate ? data.ganadora : (APODOS[data.ganadora] || data.ganadora);
+            timerPill.textContent = esEmpate ? `🤝 ${nombreDisplay}` : `👑 ¡GANÓ ${nombreDisplay.toUpperCase()}!`;
+
+            lanzarConfeti();
+        });
+
+        socket.on('batallaCancelada', () => {
+            batallaEnCurso = false;
+            donorStats = {};
+            timerPill.classList.remove('urgente', 'finalizado');
+            timerPill.textContent = 'ESPERANDO BATALLA...';
+            const confettiContainer = document.querySelector('.confetti-container');
+            if (confettiContainer) confettiContainer.innerHTML = '';
+            participantesActivos.forEach(c => renderMvps(c));
+        });
+
+        socket.on('queensActualizadas', (data) => {
+            equiposInfo = data.equipos || equiposInfo;
+            if (data.apodos) APODOS = data.apodos;
+        });
+
+        // ── INICIALIZACIÓN Y MODO DEMO ──
+        async function init() {
+            try {
+                const res = await fetch('/api/queens/all');
+                if (res.ok) {
+                    const all = await res.json();
+                    all.forEach(q => {
+                        if (q.activo) {
+                            const display = (q.apodo && q.apodo.trim()) ? q.apodo.trim() : q.name;
+                            equiposInfo[q.name] = {
+                                nombre: display.toUpperCase(),
+                                color: q.color || '#FF2A85',
+                                regalo_img: q.regalo_img || ''
+                            };
+                        }
+                    });
+                }
+            } catch (e) {
+                console.warn('Error al cargar queens:', e);
+            }
+
+            try {
+                const apodosRes = await fetch('/api/apodos');
+                if (apodosRes.ok) {
+                    APODOS = await apodosRes.json();
+                }
+            } catch (e) {}
+
+            // MODO DEMO: demuestra la progresión (3 MVPs, 2 MVPs, 1 MVP)
+            if (urlParams.has('demo') || urlParams.has('preview')) {
+                const demoChicas = ['Малена', 'Мики', 'Кэсси'];
+                const demoEquipos = {
+                    'Малена': { nombre: 'Малена', color: '#FF2A85', regalo_img: 'Rosa.png' },
+                    'Мики': { nombre: 'Мики', color: '#00D2FF', regalo_img: 'tiktok.png' },
+                    'Кэсси': { nombre: 'Кэсси', color: '#FFA500', regalo_img: 'Ice Cream Cone.png' }
+                };
+                const demoPuntos = {
+                    'Малена': 186,
+                    'Мики': 409,
+                    'Кэсси': 470
+                };
+                donorStats = {
+                    'Малена': {
+                        'd1': { nick: 'Alex', avatar: '/regalos/avatar_48_charlott_6429fa13.jpg', totalCoins: 90 },
+                        'd2': { nick: 'Luna', avatar: '/regalos/avatar_49_mich_c03c686b.jpg', totalCoins: 60 },
+                        'd3': { nick: 'Dani', avatar: '/regalos/avatar_41_bn_c5209e78.jpg', totalCoins: 36 }
+                    },
+                    'Мики': {
+                        'd1': { nick: 'Sofia', avatar: '/regalos/avatar_42_om_7f6baeb7.jpg', totalCoins: 210 },
+                        'd2': { nick: 'Leo', avatar: '/regalos/avatar_2_ray_0e7c11cc.jpg', totalCoins: 150 }
+                    },
+                    'Кэсси': {
+                        'd1': { nick: 'Carlos', avatar: '/regalos/avatar_13_nat_f3037534.png', totalCoins: 300 }
+                    }
+                };
+                timerPill.textContent = '02 : 43';
+                renderBatalla(demoChicas, demoEquipos, {}, demoPuntos);
+            }
+        }
+
+        init();
+    </script>
+</body>
+
+</html>

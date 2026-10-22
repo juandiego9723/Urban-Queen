@@ -1121,6 +1121,7 @@
                 <a class="topbar-link" href="/cosmic" target="_blank">🏆 Ranking</a>
                 <a class="topbar-link" href="/cosmic/batalla" target="_blank">⚔️ Batalla</a>
                 <a class="topbar-link" href="/cosmic/batalla-vs" target="_blank">⚔️ Batalla VS</a>
+                <a class="topbar-link" href="/cosmic/batalla-activadores" target="_blank">⚔️ Batalla Normal V2</a>
                 <a class="topbar-link" href="/cosmic/batalla-futbol" target="_blank">⚽ Clásico</a>
                 <a class="topbar-link" href="/cosmic/batalla-futbol-hud" target="_blank">⚽ HUD Clásico</a>
                 <a class="topbar-link" href="/cosmic/batalla-pk" target="_blank">⚡ Batalla PK</a>
@@ -1195,8 +1196,7 @@
                                     </select>
                                 </div>
                                 <div style="display:flex;align-items:flex-end">
-                                    <button class="btn btn-warning btn-full" onclick="iniciarBatalla()">▶
-                                        Iniciar</button>
+                                    <button class="btn btn-warning btn-full" onclick="iniciarBatalla()">▶ Iniciar Normal</button>
                                 </div>
                             </div>
                             <div class="row-2">
@@ -1930,6 +1930,7 @@
                             <div style="display: flex; flex-direction: column; gap: 8px; margin-top: 10px;" id="universal-overlay-controls">
                                 <button class="btn btn-primary" onclick="cambiarVistaUniversal('/batalla')" id="btn-view-batalla" style="transition: all 0.3s ease; text-align: left; padding: 12px 16px;">⚔️ Batalla Normal</button>
                                 <button class="btn btn-primary" onclick="cambiarVistaUniversal('/batalla-vs')" id="btn-view-batalla-vs" style="transition: all 0.3s ease; text-align: left; padding: 12px 16px;">⚔️ Batalla VS (TikTok LIVE)</button>
+                                <button class="btn btn-primary" onclick="cambiarVistaUniversal('/batalla-activadores')" id="btn-view-batalla-activadores" style="transition: all 0.3s ease; text-align: left; padding: 12px 16px;">⚔️ Batalla Normal V2</button>
                                 <button class="btn btn-primary" onclick="cambiarVistaUniversal('/revivir')" id="btn-view-revivir" style="transition: all 0.3s ease; text-align: left; padding: 12px 16px;">🔥 Dinámica Revivir</button>
                                 <button class="btn btn-primary" onclick="cambiarVistaUniversal('/batalla-futbol')" id="btn-view-batalla-futbol" style="transition: all 0.3s ease; text-align: left; padding: 12px 16px;">⚽ El Clásico (Fútbol)</button>
                                 <button class="btn btn-primary" onclick="cambiarVistaUniversal('/batalla-futbol-hud')" id="btn-view-batalla-futbol-hud" style="transition: all 0.3s ease; text-align: left; padding: 12px 16px;">⚽ HUD Clásico (Fútbol)</button>
@@ -4687,6 +4688,7 @@
                 const ids = {
                     '/batalla': 'btn-view-batalla',
                     '/batalla-vs': 'btn-view-batalla-vs',
+                    '/batalla-activadores': 'btn-view-batalla-activadores',
                     '/batalla-pk': 'btn-view-batalla-pk',
                     '/batalla-futbol': 'btn-view-batalla-futbol',
                     '/batalla-futbol-hud': 'btn-view-batalla-futbol-hud',
@@ -4882,6 +4884,10 @@
                 const m = document.getElementById('tiempoBatalla').value;
                 const p = document.getElementById('participantesBatalla').value;
                 hacerFetch('/batalla/start?tipo=normal&agency=cosmic&m=' + m + '&p=' + p);
+            }
+
+            function iniciarBatallaActivadores() {
+                iniciarBatalla();
             }
 
             function guardarReglasFutbol() {
