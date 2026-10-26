@@ -1759,8 +1759,8 @@
                         <div class="col">
                             <div class="row" style="gap:10px; margin-bottom: 8px; align-items: center;">
                                 <span class="label" style="flex:1">Título de Dinámica:</span>
-                                <input type="text" id="tituloConociendoInput" value="CONOCIENDO A:" class="input"
-                                    style="width:160px;" placeholder="ej. CONOCIENDO A:">
+                                <input type="text" id="tituloConociendoInput" value="Conociendo a mi Queen" class="input"
+                                    style="width:220px;" placeholder="Conociendo a mi Queen">
                             </div>
                             <div class="row" style="gap:10px; margin-bottom: 8px; align-items: center;">
                                 <span class="label" style="flex:1">Tiempo (segundos):</span>
@@ -1772,11 +1772,47 @@
                                 <input type="number" id="metaConociendoInput" value="2000" class="input input-num"
                                     style="width:110px;">
                             </div>
-                            <button class="btn btn-warning btn-full" style="margin-bottom:8px;"
-                                onclick="iniciarConociendo()">▶ Iniciar Dinámica</button>
-                            <button class="btn btn-danger btn-full" onclick="hacerFetch('/conociendo/stop')">⏹
-                                Cancelar</button>
-                            <div id="btns-conociendo" class="row" style="justify-content:center"></div>
+                            <div class="row" style="gap:8px; margin-bottom:8px;">
+                                <button class="btn btn-warning" style="flex:1;"
+                                    onclick="iniciarConociendo()">▶ Iniciar Dinámica</button>
+                                <button class="btn btn-primary" style="flex:1;"
+                                    onclick="hacerFetch('/conociendo/skip')">⏭ Siguiente Bailarina</button>
+                            </div>
+                            <button class="btn btn-danger btn-full" style="margin-bottom:12px;" onclick="hacerFetch('/conociendo/stop')">⏹ Cancelar Dinámica</button>
+
+                            <!-- SECCIÓN: PROYECCIÓN A OVERLAY UNIVERSAL -->
+                            <div style="border-top:1px solid var(--border); margin: 8px 0; padding-top: 12px;">
+                                <div class="card-title" style="font-size:14px; margin-bottom:8px;">
+                                    📺 <span class="card-title-accent">Proyección en OBS (Overlays Universales)</span>
+                                </div>
+                                <div style="display:grid; grid-template-columns: 1fr 1fr; gap:8px; margin-bottom:12px;">
+                                    <button class="btn btn-ghost" style="border: 1px solid rgba(0, 229, 255, 0.4); text-align:center; padding: 10px 6px;" onclick="cambiarVistaUniversal('/conociendo')">
+                                        🔮 Proyectar Conociendo<br><small style="color:var(--text-muted)">Overlay Juegos</small>
+                                    </button>
+                                    <button class="btn btn-ghost" style="border: 1px solid rgba(168, 85, 247, 0.4); text-align:center; padding: 10px 6px;" onclick="cambiarVistaAcumulados('/ranking-conociendo')">
+                                        🏆 Proyectar Ranking<br><small style="color:var(--text-muted)">Overlay Acumulados</small>
+                                    </button>
+                                </div>
+                            </div>
+
+                            <!-- SECCIÓN: MÓDULO RANKING CONOCIENDO Y REINICIO -->
+                            <div style="border-top:1px solid var(--border); margin: 6px 0 10px 0; padding-top: 12px;">
+                                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+                                    <div class="card-title" style="font-size:14px; margin:0;">
+                                        📊 <span class="card-title-accent">Ranking de Conociendo</span>
+                                    </div>
+                                    <button class="btn btn-ghost btn-sm" onclick="window.open('/ranking-conociendo', '_blank')">
+                                        🔗 Abrir Overlay
+                                    </button>
+                                </div>
+                                <div id="btns-conociendo" class="col" style="gap:6px; margin-bottom:12px;"></div>
+                                <button class="btn btn-danger btn-full" style="background:#dc2626; color:#ffffff; font-weight:700; border:none; padding:10px;" onclick="reiniciarRankingConociendo()">
+                                    🔄 Reiniciar Ranking Conociendo
+                                </button>
+                                <p class="helper-text" style="font-size:0.75rem; color:var(--text-muted); margin-top:6px; text-align:center;">
+                                    ℹ️ Reiniciar este ranking NO afecta los puntos acumulados del día en el Ranking General.
+                                </p>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -2124,6 +2160,10 @@
                                     id="btn-view-ranking"
                                     style="transition: all 0.3s ease; text-align: left; padding: 12px 16px;">🏆 Ranking
                                     General</button>
+                                <button class="btn btn-primary" onclick="cambiarVistaAcumulados('/ranking-conociendo')"
+                                    id="btn-view-ranking-conociendo"
+                                    style="transition: all 0.3s ease; text-align: left; padding: 12px 16px;">📊 Ranking
+                                    Conociendo</button>
                                 <button class="btn btn-primary" onclick="cambiarVistaAcumulados('/overlay-top-likes')"
                                     id="btn-view-top-likes"
                                     style="transition: all 0.3s ease; text-align: left; padding: 12px 16px;">❤️ Top Likes /
@@ -4387,6 +4427,7 @@
                 renderPuntos();
                 renderBatallaOptions();
                 renderBotonesTimer();
+                await cargarEstadoConociendoRanking();
                 renderBotonesConociendo();
                 cargarGrupos();
                 cargarSonidos();
@@ -5137,6 +5178,9 @@
             function actualizarBotonVistaAcumuladosActiva(vista) {
                 const ids = {
                     '/': 'btn-view-ranking',
+                    '/ranking-conociendo': 'btn-view-ranking-conociendo',
+                    '/overlay-top-likes': 'btn-view-top-likes',
+                    '/revivir-ranking': 'btn-view-revivir-ranking',
                     '/copa': 'btn-view-copa'
                 };
                 Object.keys(ids).forEach(key => {
@@ -5299,26 +5343,84 @@
             }
 
             // ── Conociendo ──
+            let puntosConociendoRanking = {};
+
             function iniciarConociendo() {
                 const meta = document.getElementById('metaConociendoInput').value || 2000;
-                const titulo = document.getElementById('tituloConociendoInput').value;
+                const titulo = document.getElementById('tituloConociendoInput').value || 'Conociendo a mi Queen';
                 const tiempo = document.getElementById('tiempoConociendoInput').value || 300;
                 hacerFetch(`/conociendo/start?meta=${meta}&titulo=${encodeURIComponent(titulo)}&tiempo=${tiempo}`);
             }
+
+            function reiniciarRankingConociendo() {
+                const mensaje = "¿Estás seguro de que deseas reiniciar el Ranking de Conociendo a 0?\n(Tus puntos acumulados en el Ranking Diario se mantendrán intactos)";
+                const ejecutar = async () => {
+                    try {
+                        await hacerFetch('/conociendo/reset-ranking');
+                        puntosConociendoRanking = {};
+                        renderBotonesConociendo();
+                    } catch(err) {
+                        console.error("Error reiniciando ranking conociendo:", err);
+                    }
+                };
+
+                if (typeof uiConfirm === 'function') {
+                    uiConfirm(mensaje, ejecutar);
+                } else if (confirm(mensaje)) {
+                    ejecutar();
+                }
+            }
+
+            async function cargarEstadoConociendoRanking() {
+                try {
+                    const data = await (await fetch('/api/conociendo-ranking')).json();
+                    if (data && data.puntosRanking) {
+                        puntosConociendoRanking = data.puntosRanking;
+                        renderBotonesConociendo();
+                    }
+                } catch(e) {}
+            }
+
+            socket.on('conociendoRankingActualizado', (data) => {
+                if (data && data.puntosRanking) {
+                    puntosConociendoRanking = data.puntosRanking;
+                } else if (data && data.action === 'RESET_RANKING_CONOCIENDO') {
+                    puntosConociendoRanking = {};
+                }
+                renderBotonesConociendo();
+            });
+
+            function renderBotonesConociendo() {
+                const c = document.getElementById('btns-conociendo');
+                if (!c) return;
+                c.innerHTML = '';
+                if (!QUEENS || QUEENS.length === 0) {
+                    c.innerHTML = '<span class="helper-text" style="font-size:0.8rem;text-align:center;">No hay bailarinas registradas</span>';
+                    return;
+                }
+                QUEENS.forEach(q => {
+                    const col = QUEEN_COLORS[q] || '#fff';
+                    const tc = isLightColor(col) ? '#111' : '#fff';
+                    const pts = (puntosConociendoRanking[q] || 0).toLocaleString('es-ES');
+                    const apodo = (APODOS[q] || q).toUpperCase();
+
+                    const rowDiv = document.createElement('div');
+                    rowDiv.style.cssText = 'display:flex; justify-content:space-between; align-items:center; background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.06); padding:6px 10px; border-radius:6px;';
+                    rowDiv.innerHTML = `
+                        <div style="display:flex; align-items:center; gap:8px;">
+                            <button class="btn btn-sm" style="background:${col};color:${tc};font-weight:700;padding:4px 8px;" onclick="hacerFetch('/conociendo/skip?c=${q}')">👑 ${apodo}</button>
+                        </div>
+                        <div style="font-weight:800; color:#00e5ff; font-family:'Inter',sans-serif;">${pts} pts</div>
+                    `;
+                    c.appendChild(rowDiv);
+                });
+            }
+
             function iniciarRevivir() {
                 const chica = document.getElementById('revivirChicaSelect').value;
                 const tiempo = document.getElementById('tiempoRevivirInput').value || 90;
                 if (!chica) return alert('Selecciona una bailarina');
                 hacerFetch(`/api/revivir/start?chica=${encodeURIComponent(chica)}&tiempo=${tiempo}&clasificadas=1`);
-            }
-            function renderBotonesConociendo() {
-                const c = document.getElementById('btns-conociendo');
-                c.innerHTML = '';
-                QUEENS.forEach(q => {
-                    const col = QUEEN_COLORS[q] || '#fff';
-                    const tc = isLightColor(col) ? '#111' : '#fff';
-                    c.innerHTML += `<button class="btn btn-sm" style="background:${col};color:${tc}" onclick="hacerFetch('/conociendo/skip?c=${q}')">👑 ${q}</button>`;
-                });
             }
 
             // ── Bailarinas ──

@@ -9,6 +9,27 @@ function getUserId(req) {
     if (req.query && req.query.user) return req.query.user;
     if (req.body && req.body.user) return req.body.user;
     if (req.session && req.session.user) return req.session.user;
+
+    // Fallback por Referer (si la petición proviene de un iframe o una pestaña con ?user=)
+    const referer = req.headers && (req.headers.referer || req.headers.origin);
+    if (referer) {
+        try {
+            const urlObj = new URL(referer);
+            const userFromRef = urlObj.searchParams.get('user');
+            if (userFromRef) return userFromRef;
+            const pathParts = urlObj.pathname.split('/').filter(Boolean);
+            if (pathParts.length > 0 && activeSessions[pathParts[0]]) {
+                return pathParts[0];
+            }
+        } catch(e) {}
+    }
+
+    // Fallback: Si solo hay una única sesión activa en todo el sistema, asociar automáticamente
+    const activeKeys = Object.keys(activeSessions);
+    if (activeKeys.length === 1) {
+        return activeKeys[0];
+    }
+
     return null;
 }
 
@@ -85,7 +106,7 @@ async function getUserSessionAsync(username, io, procesarPuntosFn) {
             },
             intervaloTimerBaile: null,
             tiempoAcumulado: {},
-            conociendo: { activo: false, tiempo: 0, chicaActual: '', orden: [...initialQueens], estado: 'inactivo', tiempoTransicion: 0, meta: 2000, puntos: 0 },
+            conociendo: { activo: false, tiempo: 0, chicaActual: '', orden: [...initialQueens], estado: 'inactivo', tiempoTransicion: 0, meta: 2000, puntos: 0, puntosRanking: {}, eliminadas: [] },
             intervaloConociendo: null,
             revivir: { activo: false, tiempo: 0, chicaActual: '', estado: 'inactivo', meta: 5000, puntos: 0, donantes: {}, donantesAvatars: {}, regalosEnviados: {}, regalosImgs: {}, clasificadas: 2 },
             intervaloRevivir: null,
@@ -162,7 +183,7 @@ function getUserSession(username, io, procesarPuntosFn) {
             },
             intervaloTimerBaile: null,
             tiempoAcumulado: {},
-            conociendo: { activo: false, tiempo: 0, chicaActual: '', orden: [], estado: 'inactivo', tiempoTransicion: 0, meta: 2000, puntos: 0 },
+            conociendo: { activo: false, tiempo: 0, chicaActual: '', orden: [], estado: 'inactivo', tiempoTransicion: 0, meta: 2000, puntos: 0, puntosRanking: {}, eliminadas: [] },
             intervaloConociendo: null,
             revivir: { activo: false, tiempo: 0, chicaActual: '', estado: 'inactivo', meta: 5000, puntos: 0, donantes: {}, donantesAvatars: {}, regalosEnviados: {}, regalosImgs: {}, clasificadas: 2 },
             intervaloRevivir: null,

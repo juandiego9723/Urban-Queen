@@ -29,7 +29,7 @@ function setupConociendoDynamics(app, io, requireSession, activeSessions) {
         s.conociendo.orden = [...s.QUEENS];
         s.conociendo.activo = true;
         s.conociendo.meta = parseInt(req.query.meta) || 2000;
-        s.conociendo.titulo = req.query.titulo !== undefined ? req.query.titulo : 'CONOCIENDO A:';
+        s.conociendo.titulo = (req.query.titulo !== undefined && req.query.titulo !== '') ? req.query.titulo : 'Winner : Special Solo Dance';
         s.conociendo.tiempoInicial = parseInt(req.query.tiempo) > 0 ? parseInt(req.query.tiempo) : 300;
         s.conociendo.tiempo = s.conociendo.tiempoInicial;
         s.conociendo.puntos = 0;
@@ -77,7 +77,7 @@ function setupConociendoDynamics(app, io, requireSession, activeSessions) {
             s.conociendo.orden = [...s.QUEENS];
             s.conociendo.activo = true;
             s.conociendo.meta = s.conociendo.meta || 2000;
-            s.conociendo.titulo = s.conociendo.titulo !== undefined ? s.conociendo.titulo : 'CONOCIENDO A:';
+            s.conociendo.titulo = (s.conociendo.titulo !== undefined && s.conociendo.titulo !== '') ? s.conociendo.titulo : 'Winner : Special Solo Dance';
             s.conociendo.tiempoInicial = s.conociendo.tiempoInicial || 300;
             saltarConociendo(req.username, target);
             clearInterval(s.intervaloConociendo);
@@ -127,6 +127,10 @@ function setupConociendoDynamics(app, io, requireSession, activeSessions) {
             eliminadas: [],
             action: 'RESET_RANKING_CONOCIENDO'
         });
+        io.to(req.username).emit('conociendoPuntos', {
+            puntos: 0,
+            meta: s.conociendo.meta || 2000
+        });
         res.send("OK");
     });
 
@@ -134,9 +138,12 @@ function setupConociendoDynamics(app, io, requireSession, activeSessions) {
         const s = req.userSession;
         if (!s.conociendo.eliminadas) s.conociendo.eliminadas = [];
         if (!s.conociendo.puntosRanking) s.conociendo.puntosRanking = {};
+        const queensList = (s.conociendo.orden && s.conociendo.orden.length > 0) ? s.conociendo.orden : (s.QUEENS || []);
         res.json({
             puntosRanking: s.conociendo.puntosRanking,
-            eliminadas: s.conociendo.eliminadas
+            eliminadas: s.conociendo.eliminadas,
+            queens: queensList,
+            apodos: s.db.getApodosMap()
         });
     });
 

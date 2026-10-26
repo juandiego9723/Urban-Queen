@@ -300,8 +300,12 @@ app.get('/batalla-normal-v2', (req, res) => res.sendFile(pub('batalla-activadore
 app.get('/timer',         (req, res) => res.sendFile(pub('timer.html')));
 app.get('/conociendo',    (req, res) => res.sendFile(pub('conociendo.html')));
 app.get('/ranking-conociendo', (req, res) => {
-    const slug = req.session.agencySlug || (req.agency ? req.agency.slug : 'cosmic');
-    return res.sendFile(agencyPub(slug, 'ranking-conociendo.html'));
+    const userParam = req.query.user || '';
+    const agencySlug = (req.session && req.session.agencySlug) || (userParam.toLowerCase().includes('cosmic') ? 'cosmic' : null);
+    if (agencySlug && agencySlug !== 'urbanqueens') {
+        return res.sendFile(agencyPub(agencySlug, 'ranking-conociendo.html'));
+    }
+    return res.sendFile(pub('ranking-conociendo.html'));
 });
 app.get('/revivir',       (req, res) => res.sendFile(pub('revivir.html')));
 app.get('/revivir-ranking', (req, res) => res.sendFile(pub('revivir-ranking.html')));

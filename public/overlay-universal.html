@@ -113,6 +113,7 @@
         socket.on('conociendoTransicion', function(d) { forwardToIframe('conociendoTransicion', d); });
         socket.on('conociendoTransicionTick', function(d) { forwardToIframe('conociendoTransicionTick', d); });
         socket.on('conociendoCancelado', function(d) { forwardToIframe('conociendoCancelado', d); });
+        socket.on('conociendoRankingActualizado', function(d) { forwardToIframe('conociendoRankingActualizado', d); });
 
         // ── Revivir / Torneo ──
         socket.on('revivirInicio', function(d) { forwardToIframe('revivirInicio', d); });

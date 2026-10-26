@@ -88,6 +88,10 @@
         socket.on('resetMensual', function(d) { forwardToIframe('resetMensual', d); });
         socket.on('resetDiario', function(d) { forwardToIframe('resetDiario', d); });
 
+        // ── Conociendo Ranking ──
+        socket.on('conociendoRankingActualizado', function(d) { forwardToIframe('conociendoRankingActualizado', d); });
+        socket.on('conociendoPuntos', function(d) { forwardToIframe('conociendoPuntos', d); });
+
         // ── Copa ──
         socket.on('actualizarCopa', function(d) { forwardToIframe('actualizarCopa', d); });
         socket.on('futbolConfigActualizada', function(d) { forwardToIframe('futbolConfigActualizada', d); });
