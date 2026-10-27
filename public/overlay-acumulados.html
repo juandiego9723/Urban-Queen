@@ -30,7 +30,13 @@
     <script src="/socket.io/socket.io.js"></script>
     <script>
         const urlParams = new URLSearchParams(window.location.search);
-        const userParam = urlParams.get('user') || '';
+        let userParam = urlParams.get('user') || '';
+        if (!userParam) {
+            const pathParts = window.location.pathname.split('/').filter(Boolean);
+            if (pathParts.length > 0 && !pathParts[0].includes('overlay')) {
+                userParam = pathParts[0];
+            }
+        }
 
         // Conectar a Socket.io pasando el usuario en el query param para OBS
         const socket = io({ query: userParam ? { user: userParam } : {} });

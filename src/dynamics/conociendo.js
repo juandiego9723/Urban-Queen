@@ -21,6 +21,14 @@ function setupConociendoDynamics(app, io, requireSession, activeSessions) {
             puntos: session.conociendo.puntos, 
             titulo: session.conociendo.titulo 
         });
+        io.to(username).emit('conociendoPuntos', {
+            puntos: session.conociendo.puntos,
+            meta: session.conociendo.meta
+        });
+        io.to(username).emit('conociendoRankingActualizado', {
+            puntosRanking: session.conociendo.puntosRanking || {},
+            eliminadas: session.conociendo.eliminadas || []
+        });
     }
 
     app.all('/conociendo/start', requireSession, (req, res) => {
@@ -35,6 +43,8 @@ function setupConociendoDynamics(app, io, requireSession, activeSessions) {
         s.conociendo.puntos = 0;
         s.conociendo.chicaActual = s.QUEENS[0] || '';
         s.conociendo.estado = 'activo';
+        if (!s.conociendo.puntosRanking) s.conociendo.puntosRanking = {};
+        if (!s.conociendo.eliminadas) s.conociendo.eliminadas = [];
         
         clearInterval(s.intervaloConociendo);
         
@@ -44,6 +54,14 @@ function setupConociendoDynamics(app, io, requireSession, activeSessions) {
             meta: s.conociendo.meta, 
             puntos: s.conociendo.puntos, 
             titulo: s.conociendo.titulo 
+        });
+        io.to(user).emit('conociendoPuntos', {
+            puntos: s.conociendo.puntos,
+            meta: s.conociendo.meta
+        });
+        io.to(user).emit('conociendoRankingActualizado', {
+            puntosRanking: s.conociendo.puntosRanking,
+            eliminadas: s.conociendo.eliminadas
         });
         
         s.intervaloConociendo = setInterval(() => {
@@ -132,6 +150,53 @@ function setupConociendoDynamics(app, io, requireSession, activeSessions) {
             meta: s.conociendo.meta || 2000
         });
         res.send("OK");
+    });
+
+    app.all('/conociendo/sumar-puntos', requireSession, (req, res) => {
+        const s = req.userSession;
+        const chica = (req.query.c || (req.body && req.body.c) || '').trim();
+        const puntos = parseInt(req.query.pts || (req.body && req.body.pts)) || 0;
+        if (!chica || puntos === 0) return res.status(400).send("Parámetros c y pts requeridos");
+        if (!s.conociendo.puntosRanking) s.conociendo.puntosRanking = {};
+        if (!s.conociendo.eliminadas) s.conociendo.eliminadas = [];
+
+        s.conociendo.puntosRanking[chica] = Math.max(0, (s.conociendo.puntosRanking[chica] || 0) + puntos);
+        if (s.conociendo.chicaActual === chica) {
+            s.conociendo.puntos = Math.max(0, (s.conociendo.puntos || 0) + puntos);
+            io.to(req.username).emit('conociendoPuntos', {
+                puntos: s.conociendo.puntos,
+                meta: s.conociendo.meta || 2000
+            });
+        }
+
+        io.to(req.username).emit('conociendoRankingActualizado', {
+            puntosRanking: s.conociendo.puntosRanking,
+            eliminadas: s.conociendo.eliminadas
+        });
+
+        res.json({
+            status: "OK",
+            chica,
+            puntosActuales: s.conociendo.puntosRanking[chica],
+            puntosRanking: s.conociendo.puntosRanking
+        });
+    });
+
+    app.get('/api/conociendo-estado', requireSession, (req, res) => {
+        const s = req.userSession;
+        if (!s.conociendo.eliminadas) s.conociendo.eliminadas = [];
+        if (!s.conociendo.puntosRanking) s.conociendo.puntosRanking = {};
+        res.json({
+            activo: !!s.conociendo.activo,
+            estado: s.conociendo.estado || 'inactivo',
+            chicaActual: s.conociendo.chicaActual || '',
+            tiempo: s.conociendo.tiempo !== undefined ? s.conociendo.tiempo : 300,
+            meta: s.conociendo.meta || 2000,
+            puntos: s.conociendo.puntos || 0,
+            titulo: s.conociendo.titulo || 'Conociendo a mi Queen',
+            puntosRanking: s.conociendo.puntosRanking,
+            eliminadas: s.conociendo.eliminadas
+        });
     });
 
     app.get('/api/conociendo-ranking', requireSession, (req, res) => {

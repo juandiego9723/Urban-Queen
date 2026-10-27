@@ -484,14 +484,24 @@ io.on('connection', (socket) => {
             });
         }
 
-        if (session.conociendo && session.conociendo.activo) {
-            socket.emit('conociendoInicio', {
-                chica: session.conociendo.chicaActual,
-                tiempo: session.conociendo.tiempo,
-                meta: session.conociendo.meta,
-                puntos: session.conociendo.puntos,
-                titulo: session.conociendo.titulo
+        if (session.conociendo) {
+            socket.emit('conociendoRankingActualizado', {
+                puntosRanking: session.conociendo.puntosRanking || {},
+                eliminadas: session.conociendo.eliminadas || []
             });
+            if (session.conociendo.activo) {
+                socket.emit('conociendoInicio', {
+                    chica: session.conociendo.chicaActual,
+                    tiempo: session.conociendo.tiempo,
+                    meta: session.conociendo.meta,
+                    puntos: session.conociendo.puntos,
+                    titulo: session.conociendo.titulo
+                });
+                socket.emit('conociendoPuntos', {
+                    puntos: session.conociendo.puntos,
+                    meta: session.conociendo.meta
+                });
+            }
         }
 
         if (session.revivir && session.revivir.activo) {

@@ -306,6 +306,14 @@
         function reordenarTabla() {
             const todasQueens = [...new Set([...QUEENS, ...Object.keys(puntosConociendo)])];
 
+            const container = document.getElementById('ranking-rows');
+            if (!container) return;
+            const filasExistentes = container.querySelectorAll('.rank-row').length;
+            if (todasQueens.length > 0 && (filasExistentes === 0 || filasExistentes !== todasQueens.length)) {
+                crearFilas();
+                return;
+            }
+
             const filas = todasQueens.map(q => ({
                 name: q,
                 pts: puntosConociendo[q] || 0
@@ -397,7 +405,7 @@
         //  SOCKET.IO LISTENERS
         // ══════════════════════════════════════════════════════════════
         socket.on('conociendoRankingActualizado', (data) => {
-            if (data && data.puntosRanking) {
+            if (data && data.puntosRanking !== undefined) {
                 puntosConociendo = data.puntosRanking;
                 reordenarTabla();
             } else if (data && data.action === 'RESET_RANKING_CONOCIENDO') {

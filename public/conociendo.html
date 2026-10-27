@@ -169,8 +169,8 @@
             height: 100%;
             display: flex;
             align-items: center;
-            justify-content: flex-start;
-            padding-left: 14px;
+            justify-content: space-between;
+            padding: 0 16px;
             z-index: 2;
             pointer-events: none;
         }
@@ -181,6 +181,15 @@
             font-size: 15px;
             color: #ffffff;
             text-shadow: 0 1px 3px rgba(0, 0, 0, 0.9), 0 0 6px rgba(0, 0, 0, 0.7);
+            letter-spacing: 0.5px;
+        }
+
+        .meta-target {
+            font-family: 'Inter', sans-serif;
+            font-weight: 800;
+            font-size: 14px;
+            color: #e4e4e7;
+            text-shadow: 0 1px 3px rgba(0, 0, 0, 0.9), 0 0 8px rgba(0, 229, 255, 0.4);
             letter-spacing: 0.5px;
         }
 
@@ -209,11 +218,12 @@
             <!-- Reloj digital cuenta regresiva -->
             <div class="digital-timer" id="timer-display">00:00</div>
 
-            <!-- Barra de progreso cian con puntos dentro -->
+            <!-- Barra de progreso cian con puntos dentro y meta visible -->
             <div class="progress-bar-wrapper">
                 <div class="progress-fill" id="barra-meta"></div>
                 <div class="points-label-overlay">
                     <span class="points-inside" id="puntos-actuales">0</span>
+                    <span class="meta-target" id="meta-total">META: 2,000</span>
                 </div>
             </div>
 
@@ -243,6 +253,7 @@
         const nombreBailando = document.getElementById('nombre-bailando');
         const barraMeta = document.getElementById('barra-meta');
         const txtPuntos = document.getElementById('puntos-actuales');
+        const txtMeta = document.getElementById('meta-total');
         const badgeLogrado = document.getElementById('badge-logrado');
 
         function formatearTiempo(segundos) {
@@ -255,7 +266,12 @@
         function actualizarBarra(puntos, meta) {
             const pts = parseInt(puntos) || 0;
             const m = parseInt(meta) || 2000;
+            currentPuntos = pts;
+            currentMeta = m;
             txtPuntos.innerText = pts.toLocaleString('es-ES');
+            if (txtMeta) {
+                txtMeta.innerText = `META: ${m.toLocaleString('es-ES')}`;
+            }
 
             let porcentaje = m === 0 ? 0 : (pts / m) * 100;
             if (porcentaje > 100) porcentaje = 100;
@@ -282,6 +298,25 @@
             currentChica = chica || '';
             const nombreDisplay = (APODOS[chica] || chica || 'EN ESPERA').trim().toUpperCase();
             nombreBailando.innerText = nombreDisplay;
+        }
+
+        async function syncEstadoConociendo() {
+            try {
+                const res = await fetch('/api/conociendo-estado');
+                if (res.ok) {
+                    const data = await res.json();
+                    if (data) {
+                        currentMeta = data.meta !== undefined ? data.meta : 2000;
+                        currentPuntos = data.puntos !== undefined ? data.puntos : 0;
+                        currentTiempo = data.tiempo !== undefined ? data.tiempo : 300;
+                        if (data.activo && data.chicaActual) {
+                            actualizarBailarina(data.chicaActual);
+                            displayReloj.innerText = formatearTiempo(currentTiempo);
+                        }
+                        actualizarBarra(currentPuntos, currentMeta);
+                    }
+                }
+            } catch(e) {}
         }
 
         // Cargar apodos iniciales
@@ -320,8 +355,8 @@
         });
 
         socket.on('conociendoPuntos', (data) => {
-            currentPuntos = data.puntos || 0;
-            currentMeta = data.meta || currentMeta;
+            currentPuntos = data.puntos !== undefined ? data.puntos : currentPuntos;
+            currentMeta = data.meta !== undefined ? data.meta : currentMeta;
             actualizarBarra(currentPuntos, currentMeta);
         });
 
@@ -340,6 +375,13 @@
                 if (currentChica) actualizarBailarina(currentChica);
             }
         });
+
+        socket.on('connect', () => {
+            syncEstadoConociendo();
+        });
+
+        // Sincronizar inmediatamente al cargar el documento
+        syncEstadoConociendo();
     </script>
 </body>
 </html>

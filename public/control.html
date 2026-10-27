@@ -1801,9 +1801,14 @@
                                     <div class="card-title" style="font-size:14px; margin:0;">
                                         📊 <span class="card-title-accent">Ranking de Conociendo</span>
                                     </div>
-                                    <button class="btn btn-ghost btn-sm" onclick="window.open('/ranking-conociendo', '_blank')">
-                                        🔗 Abrir Overlay
-                                    </button>
+                                    <div style="display:flex; gap:6px;">
+                                        <button class="btn btn-ghost btn-sm" onclick="copiarRankingConociendoUrl()" title="Copiar URL para OBS / TikTok Studio">
+                                            📋 Copiar URL
+                                        </button>
+                                        <button class="btn btn-ghost btn-sm" onclick="abrirRankingConociendo()">
+                                            🔗 Abrir Overlay
+                                        </button>
+                                    </div>
                                 </div>
                                 <div id="btns-conociendo" class="col" style="gap:6px; margin-bottom:12px;"></div>
                                 <button class="btn btn-danger btn-full" style="background:#dc2626; color:#ffffff; font-weight:700; border:none; padding:10px;" onclick="reiniciarRankingConociendo()">
@@ -5381,8 +5386,36 @@
                 } catch(e) {}
             }
 
+            function obtenerUrlRankingConociendo() {
+                const slug = getAgencySlug();
+                const agencyPrefix = slug ? `/${slug}` : '';
+                const userParam = currentUsername ? `?user=${encodeURIComponent(currentUsername)}` : '';
+                return `${window.location.origin}${agencyPrefix}/ranking-conociendo${userParam}`;
+            }
+
+            function abrirRankingConociendo() {
+                window.open(obtenerUrlRankingConociendo(), '_blank');
+            }
+
+            function copiarRankingConociendoUrl() {
+                const url = obtenerUrlRankingConociendo();
+                navigator.clipboard.writeText(url).then(() => {
+                    if (typeof mostrarNotificacion === 'function') {
+                        mostrarNotificacion('URL de Ranking Conociendo copiada');
+                    } else {
+                        alert('URL copiada para OBS / TikTok Studio:\n' + url);
+                    }
+                }).catch(() => {
+                    prompt('Copia esta URL para OBS / TikTok Studio:', url);
+                });
+            }
+
+            function sumarPuntosConociendo(chica, pts) {
+                hacerFetch(`/conociendo/sumar-puntos?c=${encodeURIComponent(chica)}&pts=${pts}`);
+            }
+
             socket.on('conociendoRankingActualizado', (data) => {
-                if (data && data.puntosRanking) {
+                if (data && data.puntosRanking !== undefined) {
                     puntosConociendoRanking = data.puntosRanking;
                 } else if (data && data.action === 'RESET_RANKING_CONOCIENDO') {
                     puntosConociendoRanking = {};
@@ -5405,12 +5438,14 @@
                     const apodo = (APODOS[q] || q).toUpperCase();
 
                     const rowDiv = document.createElement('div');
-                    rowDiv.style.cssText = 'display:flex; justify-content:space-between; align-items:center; background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.06); padding:6px 10px; border-radius:6px;';
+                    rowDiv.style.cssText = 'display:flex; justify-content:space-between; align-items:center; background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.06); padding:6px 10px; border-radius:6px; gap:8px;';
                     rowDiv.innerHTML = `
-                        <div style="display:flex; align-items:center; gap:8px;">
-                            <button class="btn btn-sm" style="background:${col};color:${tc};font-weight:700;padding:4px 8px;" onclick="hacerFetch('/conociendo/skip?c=${q}')">👑 ${apodo}</button>
+                        <div style="display:flex; align-items:center; gap:6px; flex-wrap:wrap;">
+                            <button class="btn btn-sm" style="background:${col};color:${tc};font-weight:700;padding:4px 8px;" onclick="hacerFetch('/conociendo/skip?c=${encodeURIComponent(q)}')">👑 ${apodo}</button>
+                            <button class="btn btn-ghost btn-sm" style="padding:2px 7px; font-size:11px; border:1px solid rgba(255,255,255,0.15);" onclick="sumarPuntosConociendo('${q}', 100)">+100</button>
+                            <button class="btn btn-ghost btn-sm" style="padding:2px 7px; font-size:11px; border:1px solid rgba(255,255,255,0.15);" onclick="sumarPuntosConociendo('${q}', 500)">+500</button>
                         </div>
-                        <div style="font-weight:800; color:#00e5ff; font-family:'Inter',sans-serif;">${pts} pts</div>
+                        <div style="font-weight:800; color:#00e5ff; font-family:'Inter',sans-serif; white-space:nowrap;">${pts} pts</div>
                     `;
                     c.appendChild(rowDiv);
                 });
