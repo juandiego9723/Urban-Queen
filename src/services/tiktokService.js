@@ -393,10 +393,10 @@ function createTikTokService(app, io, requireSession, activeSessions, procesarRe
         res.json(v ? JSON.parse(v) : {});
     });
 
-    app.post('/api/tiktok/mapa', requireSession, (req, res) => {
+    app.post('/api/tiktok/mapa', requireSession, async (req, res) => {
         const s = req.userSession;
         const mapa = req.body.mapa || req.body;
-        s.db.setConfigVal('tiktok_regalo_mapa', JSON.stringify(mapa));
+        await s.db.setConfigVal('tiktok_regalo_mapa', JSON.stringify(mapa));
         io.to(req.username).emit('mapaRegalosCambiado', mapa);
         res.send('OK');
     });
@@ -406,10 +406,10 @@ function createTikTokService(app, io, requireSession, activeSessions, procesarRe
         res.json(v ? JSON.parse(v) : {});
     });
 
-    app.post('/api/tiktok/timer_mapa', requireSession, (req, res) => {
+    app.post('/api/tiktok/timer_mapa', requireSession, async (req, res) => {
         const s = req.userSession;
         const mapa = req.body.mapa || req.body;
-        s.db.setConfigVal('tiktok_timer_mapa', JSON.stringify(mapa));
+        await s.db.setConfigVal('tiktok_timer_mapa', JSON.stringify(mapa));
         io.to(req.username).emit('mapaTimerCambiado', mapa);
         res.send('OK');
     });

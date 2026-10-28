@@ -139,7 +139,6 @@ class DBInstance {
         const uId = await this.ensureUserId();
         if (!uId) return;
         try {
-            var q = this.cacheQueens.find(item => item.name.toLowerCase() === name.toLowerCase());
             await query(`
                 INSERT INTO queens (user_id, name, color, apodo, regalo_img, regalo_pts, avatar_img, nombre_img, activo)
                 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 1)
@@ -680,10 +679,10 @@ class DBInstance {
     }
 
     async setConfigVal(clave, valor) {
+        this.cacheConfig[clave] = String(valor);
         const uId = await this.ensureUserId();
         if (!uId) return;
         try {
-            var q = this.cacheQueens.find(item => item.name.toLowerCase() === name.toLowerCase());
             await query(`
                 INSERT INTO config (user_id, clave, valor) VALUES ($1, $2, $3)
                 ON CONFLICT (user_id, clave) DO UPDATE SET valor = EXCLUDED.valor
