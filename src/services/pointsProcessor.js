@@ -315,21 +315,22 @@ function createPointsProcessor(io, activeSessions, resolverNombreFn, timerHandle
             }
         }
         
-        // Si no tiene un destinatario explícito por uniqueId, y NO hay batalla en curso ni Dinámica Personalizada activa, aplicar redirecciones automáticas por dinámicas individuales:
+        // Si NO hay batalla en curso ni Dinámica Personalizada activa, aplicar redirecciones automáticas por dinámicas individuales:
         const hayBatallaActiva = session.estadoBatalla !== 'inactiva';
         const hayDinamicaPersonalizadaActiva = !!session.dinamicaActiva;
-        if (!queenActivadora && !hayBatallaActiva && !hayDinamicaPersonalizadaActiva) {
-            // SI LA DINÁMICA REVIVIR ESTÁ ACTIVA: Forzar que cualquier regalo vaya a la bailarina en salvación
-            if (session.revivir.activo && session.revivir.estado === 'activo' && session.revivir.chicaActual) {
-                queenActivadora = session.revivir.chicaActual;
-            }
-            // SI EL TIMER DE BAILE ESTÁ ACTIVO: Forzar que cualquier regalo vaya a la bailarina actual (incluyendo durante la intro del turno en modo torneo)
-            else if (session.timerBaile.activo && (session.timerBaile.estado === 'bailando' || (session.timerBaile.modoTorneo && session.timerBaile.estado === 'intro')) && session.timerBaile.chicaActual) {
-                queenActivadora = session.timerBaile.chicaActual;
-            }
-            // SI LA DINÁMICA CONOCIENDO ESTÁ ACTIVA: Forzar que cualquier regalo vaya a la bailarina actual
-            else if (session.conociendo.activo && session.conociendo.estado === 'activo' && session.conociendo.chicaActual) {
+        if (!hayBatallaActiva && !hayDinamicaPersonalizadaActiva) {
+            // SI LA DINÁMICA CONOCIENDO ESTÁ ACTIVA: Forzar SIEMPRE que cualquier regalo (incluso los mapeados en batallas) vaya a la bailarina activa
+            if (session.conociendo.activo && session.conociendo.estado === 'activo' && session.conociendo.chicaActual) {
                 queenActivadora = session.conociendo.chicaActual;
+            } else if (!queenActivadora) {
+                // SI LA DINÁMICA REVIVIR ESTÁ ACTIVA: Forzar que cualquier regalo vaya a la bailarina en salvación
+                if (session.revivir.activo && session.revivir.estado === 'activo' && session.revivir.chicaActual) {
+                    queenActivadora = session.revivir.chicaActual;
+                }
+                // SI EL TIMER DE BAILE ESTÁ ACTIVO: Forzar que cualquier regalo vaya a la bailarina actual (incluyendo durante la intro del turno en modo torneo)
+                else if (session.timerBaile.activo && (session.timerBaile.estado === 'bailando' || (session.timerBaile.modoTorneo && session.timerBaile.estado === 'intro')) && session.timerBaile.chicaActual) {
+                    queenActivadora = session.timerBaile.chicaActual;
+                }
             }
         }
         
@@ -450,9 +451,14 @@ function createPointsProcessor(io, activeSessions, resolverNombreFn, timerHandle
         let pointsDinamicaDelta = {};
         let saltaTurnoPara = null;
         
+        const forzarChicaConociendo = (session.conociendo && session.conociendo.activo && session.conociendo.estado === 'activo' && session.conociendo.chicaActual && session.estadoBatalla === 'inactiva' && !session.dinamicaActiva)
+            ? session.conociendo.chicaActual
+            : null;
+
         temp.forEach(item => {
-            if (item.nombre) {
-                sumas[item.nombre] = (sumas[item.nombre] || 0) + item.puntos;
+            const nombreEfectivo = forzarChicaConociendo || item.nombre;
+            if (nombreEfectivo) {
+                sumas[nombreEfectivo] = (sumas[nombreEfectivo] || 0) + item.puntos;
                 if (session.estadoBatalla === 'activa' && session.participantesActuales.includes(item.nombre)) {
                     const multBatalla = (session.esBatallaVS && session.batalla2X) ? 2 : 1;
                     pointsBatallaDelta[item.nombre] = (pointsBatallaDelta[item.nombre] || 0) + (item.puntos * multBatalla);
@@ -611,6 +617,7 @@ function createPointsProcessor(io, activeSessions, resolverNombreFn, timerHandle
                 session.conociendo.puntosRanking[chicaActual] = (session.conociendo.puntosRanking[chicaActual] || 0) + nuevosPuntos;
                 io.to(username).emit('conociendoPuntos', { puntos: session.conociendo.puntos, meta: session.conociendo.meta });
                 io.to(username).emit('conociendoRankingActualizado', {
+                    chicaActual: session.conociendo.chicaActual || '',
                     puntosRanking: session.conociendo.puntosRanking,
                     eliminadas: session.conociendo.eliminadas || []
                 });
@@ -684,9 +691,7 @@ function createPointsProcessor(io, activeSessions, resolverNombreFn, timerHandle
             if (session.timerBaile.activo && timerHandlers && timerHandlers.saltarSiguienteChica) {
                 timerHandlers.saltarSiguienteChica(username, saltaTurnoPara);
             }
-            if (session.conociendo.activo && conociendoHandlers && conociendoHandlers.saltarConociendo) {
-                conociendoHandlers.saltarConociendo(username, saltaTurnoPara);
-            }
+            // En Conociendo NO se salta de turno automáticamente por regalo: solo avanza cuando el operador presiona Siguiente (/conociendo/skip)
         }
     }
 

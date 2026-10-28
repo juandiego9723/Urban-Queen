@@ -26,6 +26,7 @@ function setupConociendoDynamics(app, io, requireSession, activeSessions) {
             meta: session.conociendo.meta
         });
         io.to(username).emit('conociendoRankingActualizado', {
+            chicaActual: session.conociendo.chicaActual || '',
             puntosRanking: session.conociendo.puntosRanking || {},
             eliminadas: session.conociendo.eliminadas || []
         });
@@ -60,6 +61,7 @@ function setupConociendoDynamics(app, io, requireSession, activeSessions) {
             meta: s.conociendo.meta
         });
         io.to(user).emit('conociendoRankingActualizado', {
+            chicaActual: s.conociendo.chicaActual || '',
             puntosRanking: s.conociendo.puntosRanking,
             eliminadas: s.conociendo.eliminadas
         });
@@ -128,6 +130,7 @@ function setupConociendoDynamics(app, io, requireSession, activeSessions) {
         }
 
         io.to(req.username).emit('conociendoRankingActualizado', {
+            chicaActual: s.conociendo.chicaActual || '',
             puntosRanking: s.conociendo.puntosRanking,
             eliminadas: s.conociendo.eliminadas
         });
@@ -141,6 +144,7 @@ function setupConociendoDynamics(app, io, requireSession, activeSessions) {
         s.conociendo.puntos = 0;
 
         io.to(req.username).emit('conociendoRankingActualizado', {
+            chicaActual: s.conociendo.chicaActual || '',
             puntosRanking: {},
             eliminadas: [],
             action: 'RESET_RANKING_CONOCIENDO'
@@ -170,6 +174,7 @@ function setupConociendoDynamics(app, io, requireSession, activeSessions) {
         }
 
         io.to(req.username).emit('conociendoRankingActualizado', {
+            chicaActual: s.conociendo.chicaActual || '',
             puntosRanking: s.conociendo.puntosRanking,
             eliminadas: s.conociendo.eliminadas
         });
@@ -205,6 +210,8 @@ function setupConociendoDynamics(app, io, requireSession, activeSessions) {
         if (!s.conociendo.puntosRanking) s.conociendo.puntosRanking = {};
         const queensList = (s.conociendo.orden && s.conociendo.orden.length > 0) ? s.conociendo.orden : (s.QUEENS || []);
         res.json({
+            activo: !!s.conociendo.activo,
+            chicaActual: s.conociendo.chicaActual || '',
             puntosRanking: s.conociendo.puntosRanking,
             eliminadas: s.conociendo.eliminadas,
             queens: queensList,
