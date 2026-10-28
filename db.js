@@ -139,6 +139,7 @@ class DBInstance {
         const uId = await this.ensureUserId();
         if (!uId) return;
         try {
+            var q = this.cacheQueens.find(item => item.name.toLowerCase() === name.toLowerCase());
             await query(`
                 INSERT INTO queens (user_id, name, color, apodo, regalo_img, regalo_pts, avatar_img, nombre_img, activo)
                 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 1)
@@ -315,16 +316,24 @@ class DBInstance {
     }
 
     async sumarPuntos(name, puntos) {
+        const qCache = this.cacheQueens.find(item => item.name.toLowerCase() === name.toLowerCase());
+        if (qCache) {
+            qCache.ranking_semanal = Math.max(0, (qCache.ranking_semanal || 0) + puntos);
+            qCache.ranking_mensual = Math.max(0, (qCache.ranking_mensual || 0) + puntos);
+            qCache.ranking_diario  = Math.max(0, (qCache.ranking_diario || 0) + puntos);
+            qCache.copa            = Math.max(0, (qCache.copa || 0) + puntos);
+        }
         const uId = await this.ensureUserId();
         if (!uId) return;
         try {
-            const q = this.cacheQueens.find(item => item.name.toLowerCase() === name.toLowerCase());
+            var q = this.cacheQueens.find(item => item.name.toLowerCase() === name.toLowerCase());
             if (q) {
-                q.ranking_semanal = Math.max(0, (q.ranking_semanal || 0) + puntos);
-                q.ranking_mensual = Math.max(0, (q.ranking_mensual || 0) + puntos);
-                q.ranking_diario  = Math.max(0, (q.ranking_diario || 0) + puntos);
-                q.copa            = Math.max(0, (q.copa || 0) + puntos);
+        // actualizado en cacheQueens de forma síncrona arriba
+        // fin cacheQueens
+        // diario cacheQueens
+        // copa cacheQueens
             }
+            var q = this.cacheQueens.find(item => item.name.toLowerCase() === name.toLowerCase());
             await query(`
                 UPDATE queens 
                 SET ranking_semanal = GREATEST(0, ranking_semanal + $1),
@@ -342,7 +351,7 @@ class DBInstance {
         const uId = await this.ensureUserId();
         if (!uId) return;
         try {
-            const q = this.cacheQueens.find(item => item.name.toLowerCase() === name.toLowerCase());
+            var q = this.cacheQueens.find(item => item.name.toLowerCase() === name.toLowerCase());
             if (q) q.victorias = (q.victorias || 0) + 1;
             await query('UPDATE queens SET victorias = victorias + 1 WHERE user_id = $1 AND LOWER(name) = LOWER($2)', [uId, name]);
         } catch (e) {
@@ -354,7 +363,7 @@ class DBInstance {
         const uId = await this.ensureUserId();
         if (!uId) return;
         try {
-            const q = this.cacheQueens.find(item => item.name.toLowerCase() === name.toLowerCase());
+            var q = this.cacheQueens.find(item => item.name.toLowerCase() === name.toLowerCase());
             if (q) q.empates = (q.empates || 0) + 1;
             await query('UPDATE queens SET empates = empates + 1 WHERE user_id = $1 AND LOWER(name) = LOWER($2)', [uId, name]);
         } catch (e) {
@@ -366,7 +375,7 @@ class DBInstance {
         const uId = await this.ensureUserId();
         if (!uId) return;
         try {
-            const q = this.cacheQueens.find(item => item.name.toLowerCase() === name.toLowerCase());
+            var q = this.cacheQueens.find(item => item.name.toLowerCase() === name.toLowerCase());
             if (q) q.derrotas = (q.derrotas || 0) + 1;
             await query('UPDATE queens SET derrotas = derrotas + 1 WHERE user_id = $1 AND LOWER(name) = LOWER($2)', [uId, name]);
         } catch (e) {
@@ -674,6 +683,7 @@ class DBInstance {
         const uId = await this.ensureUserId();
         if (!uId) return;
         try {
+            var q = this.cacheQueens.find(item => item.name.toLowerCase() === name.toLowerCase());
             await query(`
                 INSERT INTO config (user_id, clave, valor) VALUES ($1, $2, $3)
                 ON CONFLICT (user_id, clave) DO UPDATE SET valor = EXCLUDED.valor

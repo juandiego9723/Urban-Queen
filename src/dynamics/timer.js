@@ -78,13 +78,24 @@ function setupTimerDynamics(app, io, requireSession, activeSessions) {
                 rondaActual: s.timerBaile.rondaActual,
                 rondasTotales: s.timerBaile.rondasTotales,
                 clasificadas: s.timerBaile.clasificadas,
+                participantesActivas: s.timerBaile.participantesActivas,
+                puntosTorneo: s.timerBaile.puntosTorneo,
+                eliminadas: s.timerBaile.eliminadas || [],
+                salvadas: s.timerBaile.salvadas || [],
+                enRiesgo: s.timerBaile.enRiesgo || [],
                 regalosEnviados: {},
                 regalosImgs: {},
                 topDonantes: []
             });
 
             clearTimeout(s.introTimeoutTorneo);
-            s.introTimeoutTorneo = setTimeout(() => {
+            io.to(username).emit('torneoPuntosActualizados', {
+            puntosTorneo: s.timerBaile.puntosTorneo,
+            puntosTurnoActual: 0,
+            chicaActual: s.timerBaile.chicaActual
+        });
+
+        s.introTimeoutTorneo = setTimeout(() => {
                 if (s.timerBaile && s.timerBaile.modoTorneo && s.timerBaile.estado === 'intro') {
                     s.timerBaile.estado = 'bailando';
                 }
@@ -195,6 +206,7 @@ function setupTimerDynamics(app, io, requireSession, activeSessions) {
             const debeEstarActivo = participantes.includes(q.name);
             const estadoActual = q.activo === 1;
             if (debeEstarActivo !== estadoActual) {
+                q.activo = debeEstarActivo ? 1 : 0;
                 s.db.toggleQueenActivo(q.name);
             }
         });
@@ -241,6 +253,8 @@ function setupTimerDynamics(app, io, requireSession, activeSessions) {
         s.timerBaile.regalosImgsTorneo = {};
 
         participantes.forEach(q => s.timerBaile.puntosTorneo[q] = 0);
+        reconstruirQueens(s);
+        io.to(user).emit('queensActualizadas', { queens: s.QUEENS, equipos: s.equipos, apodos: s.db.getApodosMap() });
 
         // Cambiar automáticamente la vista en los overlays universal y de acumulados
         s.vistaActiva = '/revivir';
@@ -261,9 +275,20 @@ function setupTimerDynamics(app, io, requireSession, activeSessions) {
             rondaActual: s.timerBaile.rondaActual,
             rondasTotales: s.timerBaile.rondasTotales,
             clasificadas: clasificadas,
+            participantesActivas: s.timerBaile.participantesActivas,
+            puntosTorneo: s.timerBaile.puntosTorneo,
+            eliminadas: s.timerBaile.eliminadas,
+            salvadas: s.timerBaile.salvadas,
+            enRiesgo: s.timerBaile.enRiesgo,
             regalosEnviados: {},
             regalosImgs: {},
             topDonantes: []
+        });
+
+        io.to(user).emit('torneoPuntosActualizados', {
+            puntosTorneo: s.timerBaile.puntosTorneo,
+            puntosTurnoActual: 0,
+            chicaActual: s.timerBaile.chicaActual
         });
 
         s.introTimeoutTorneo = setTimeout(() => {
@@ -340,7 +365,7 @@ function setupTimerDynamics(app, io, requireSession, activeSessions) {
 
         s.revivir.chicaActual = chica;
         s.revivir.meta = metaFinal;
-        if (s.timerBaile) s.timerBaile.metaTurnoActual = metaFinal;
+        if (s.timerBaile) { s.timerBaile.metaTurnoActual = metaFinal; if (s.timerBaile.activo) s.timerBaile.estado = 'salvacion'; } clearTimeout(s.introTimeoutTimerBaile); clearInterval(s.intervaloTimerBaile);
         s.revivir.tiempo = tiempo;
         s.revivir.puntos = 0;
         s.revivir.donantes = {};
@@ -563,10 +588,18 @@ function setupTimerDynamics(app, io, requireSession, activeSessions) {
             clasificadas: s.timerBaile.clasificadas,
             participantesActivas: s.timerBaile.participantesActivas,
             salvadas: [],
+            puntosTorneo: s.timerBaile.puntosTorneo,
+            eliminadas: s.timerBaile.eliminadas || [],
             enRiesgo: [],
             regalosEnviados: {},
             regalosImgs: {},
             topDonantes: []
+        });
+
+        io.to(user).emit('torneoPuntosActualizados', {
+            puntosTorneo: s.timerBaile.puntosTorneo,
+            puntosTurnoActual: 0,
+            chicaActual: s.timerBaile.chicaActual
         });
 
         s.introTimeoutTorneo = setTimeout(() => {

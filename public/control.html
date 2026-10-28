@@ -5945,6 +5945,8 @@
                     datosRondaTorneoActual.salvadas = data.salvadas || [];
                     datosRondaTorneoActual.enRiesgo = data.enRiesgo || [];
                     if (data.participantesActivas) datosRondaTorneoActual.participantesActivas = data.participantesActivas;
+                    if (data.puntosTorneo) datosRondaTorneoActual.puntosTorneo = data.puntosTorneo;
+                    if (data.eliminadas) datosRondaTorneoActual.eliminadas = data.eliminadas;
                     datosRondaTorneoActual.estado = 'bailando';
                     renderizarTorneoTablaActiva();
 

@@ -164,70 +164,75 @@ function createPointsProcessor(io, activeSessions, resolverNombreFn, timerHandle
             diamondUnit = 1;
         }
 
-        // Manejo universal de ráfagas/combos para CUALQUIER regalo de TikTok:
-        // En TikTok, cuando un usuario envía regalos en ráfaga o combo, cada evento emite
-        // el conteo acumulado actual (repeatCount: 1, luego 2, 3, etc.).
-        // Debemos calcular SIEMPRE la diferencia neta (deltaRepeat) para evitar duplicar
-        // o cuadruplicar puntos en combos rápidos.
-        if (!session.giftStreaks) session.giftStreaks = {};
-        const streakKey = `${viewer}_${giftName}_${data.giftId || 'g'}`;
-        const previousStreak = session.giftStreaks[streakKey];
-
-        const currentRepeat = Math.max(0, repeatCountRaw, comboCountRaw);
-        const currentGroup = groupCountRaw > 1 ? groupCountRaw : 0;
-        let deltaRepeat = 1;
-
-        if (currentRepeat > 1 || (!data.repeatEnd && previousStreak)) {
-            // Ráfaga o combo en progreso
-            const effectiveCount = currentRepeat > 0 ? currentRepeat : (previousStreak ? previousStreak.count + 1 : 1);
-            if (previousStreak && (now - previousStreak.lastTime < 8000)) {
-                if (effectiveCount > previousStreak.count) {
-                    deltaRepeat = effectiveCount - previousStreak.count;
-                } else {
-                    deltaRepeat = 0; // Paquete duplicado o retransmitido fuera de orden
-                }
-            } else {
-                deltaRepeat = effectiveCount;
-            }
-
-            if (data.repeatEnd) {
-                delete session.giftStreaks[streakKey];
-            } else {
-                session.giftStreaks[streakKey] = { count: effectiveCount, lastTime: now };
-            }
-
-            if (deltaRepeat <= 0) return;
-        } else if (currentGroup > 1) {
-            // Envío en lote explícito (ej. paquete de 5 o 10 regalos enviados de una sola vez)
-            deltaRepeat = currentGroup;
-            delete session.giftStreaks[streakKey];
-        } else {
-            // Regalo unitario normal (repeatCount <= 1 y groupCount <= 1)
-            deltaRepeat = 1;
-            if (data.repeatEnd || (previousStreak && (now - previousStreak.lastTime > 4000))) {
-                delete session.giftStreaks[streakKey];
-            } else if (!data.repeatEnd && currentRepeat === 1) {
-                // Posible inicio de ráfaga (primer regalo de combo)
-                session.giftStreaks[streakKey] = { count: 1, lastTime: now };
-            }
-        }
-
         // 1. Desduplicación por identificador único de mensaje (evita retransmisiones duplicadas de red)
         if (!session.processedGiftIds) session.processedGiftIds = new Map();
         for (const [id, ts] of session.processedGiftIds.entries()) {
             if (now - ts > 30000) session.processedGiftIds.delete(id);
         }
 
+        const currentRepeat = Math.max(0, repeatCountRaw, comboCountRaw);
+        const currentGroup = groupCountRaw > 1 ? groupCountRaw : 0;
+
         const rawMsgId = data.msgId || data.id || data.orderId;
         const msgId = rawMsgId ? (typeof rawMsgId === 'object' && rawMsgId.toString ? rawMsgId.toString() : String(rawMsgId)) : null;
 
         if (msgId) {
             const uniqueEventKey = `${msgId}_${currentRepeat || 1}_${data.repeatEnd ? 'end' : 'mid'}`;
-            
             if (session.processedGiftIds.has(uniqueEventKey)) {
                 return; // Evento duplicado ignorado (retransmisión de red)
             }
             session.processedGiftIds.set(uniqueEventKey, now);
+        }
+
+        // Manejo universal de ráfagas/combos para CUALQUIER regalo de TikTok:
+        // En TikTok, cuando un usuario envía regalos en ráfaga o combo, cada evento emite
+        // el conteo acumulado actual (repeatCount: 1, luego 2, 3, etc.) y finalmente un paquete
+        // de cierre con repeatEnd: true. Calculamos siempre la diferencia neta (deltaRepeat)
+        // para evitar duplicar puntos en cierres de combo o perder regalos individuales en ráfaga.
+        if (!session.giftStreaks) session.giftStreaks = {};
+        const streakKey = `${viewer}_${giftName}_${data.giftId || 'g'}`;
+        const previousStreak = session.giftStreaks[streakKey];
+
+        let deltaRepeat = 1;
+
+        if (currentRepeat > 1) {
+            // Ráfaga o combo acumulado (repeatCount >= 2)
+            if (previousStreak && (now - previousStreak.lastTime < 8000)) {
+                if (!previousStreak.ended) {
+                    if (currentRepeat > previousStreak.count) {
+                        deltaRepeat = currentRepeat - previousStreak.count;
+                    } else {
+                        deltaRepeat = 0; // Cierre de combo (repeatEnd: true) o paquete fuera de orden
+                    }
+                } else if (data.repeatEnd && currentRepeat === previousStreak.count) {
+                    deltaRepeat = 0; // Retransmisión duplicada del cierre de combo
+                } else {
+                    deltaRepeat = currentRepeat;
+                }
+            } else {
+                deltaRepeat = currentRepeat;
+            }
+
+            session.giftStreaks[streakKey] = {
+                count: Math.max(currentRepeat, previousStreak && !previousStreak.ended ? previousStreak.count : 0),
+                lastTime: now,
+                ended: !!data.repeatEnd
+            };
+
+            if (deltaRepeat <= 0) return;
+        } else if (currentGroup > 1) {
+            // Envío en lote explícito (ej. paquete de 5 o 10 regalos enviados de una sola vez)
+            deltaRepeat = currentGroup;
+            session.giftStreaks[streakKey] = { count: currentGroup, lastTime: now, ended: true };
+        } else {
+            // Regalo unitario o primer toque de combo (currentRepeat <= 1 y currentGroup <= 1)
+            if (data.repeatEnd && previousStreak && !previousStreak.ended && (now - previousStreak.lastTime < 8000)) {
+                // Evento de cierre (repeatEnd: true) de un combo de 1 solo toque que ya fue sumado al iniciar
+                session.giftStreaks[streakKey] = { count: previousStreak.count, lastTime: now, ended: true };
+                return;
+            }
+            deltaRepeat = 1;
+            session.giftStreaks[streakKey] = { count: 1, lastTime: now, ended: !!data.repeatEnd };
         }
 
         const MAPA_REGALOS_RESPALDO = {
@@ -314,17 +319,17 @@ function createPointsProcessor(io, activeSessions, resolverNombreFn, timerHandle
         const hayBatallaActiva = session.estadoBatalla !== 'inactiva';
         const hayDinamicaPersonalizadaActiva = !!session.dinamicaActiva;
         if (!queenActivadora && !hayBatallaActiva && !hayDinamicaPersonalizadaActiva) {
-            // SI EL TIMER DE BAILE ESTÁ ACTIVO: Forzar que cualquier regalo vaya a la bailarina actual
-            if (session.timerBaile.activo && session.timerBaile.estado === 'bailando' && session.timerBaile.chicaActual) {
+            // SI LA DINÁMICA REVIVIR ESTÁ ACTIVA: Forzar que cualquier regalo vaya a la bailarina en salvación
+            if (session.revivir.activo && session.revivir.estado === 'activo' && session.revivir.chicaActual) {
+                queenActivadora = session.revivir.chicaActual;
+            }
+            // SI EL TIMER DE BAILE ESTÁ ACTIVO: Forzar que cualquier regalo vaya a la bailarina actual (incluyendo durante la intro del turno en modo torneo)
+            else if (session.timerBaile.activo && (session.timerBaile.estado === 'bailando' || (session.timerBaile.modoTorneo && session.timerBaile.estado === 'intro')) && session.timerBaile.chicaActual) {
                 queenActivadora = session.timerBaile.chicaActual;
             }
             // SI LA DINÁMICA CONOCIENDO ESTÁ ACTIVA: Forzar que cualquier regalo vaya a la bailarina actual
             else if (session.conociendo.activo && session.conociendo.estado === 'activo' && session.conociendo.chicaActual) {
                 queenActivadora = session.conociendo.chicaActual;
-            }
-            // SI LA DINÁMICA REVIVIR ESTÁ ACTIVA: Forzar que cualquier regalo vaya a la bailarina actual
-            else if (session.revivir.activo && session.revivir.estado === 'activo' && session.revivir.chicaActual) {
-                queenActivadora = session.revivir.chicaActual;
             }
         }
         
@@ -502,9 +507,9 @@ function createPointsProcessor(io, activeSessions, resolverNombreFn, timerHandle
             }
         }
         
-        // Si el timer de baile está activo y en estado de baile, sumar segundos configurados por cada punto recibido por la chica actual
-        // Si el timer de baile está activo y en estado de baile
-        if (session.timerBaile.activo && session.timerBaile.estado === 'bailando') {
+        // Si el timer de baile está activo y en estado de baile (o en intro dentro del modo torneo), y no hay reto de salvación superpuesto
+        const revivirEnCurso = session.revivir && session.revivir.activo && session.revivir.estado === 'activo';
+        if (session.timerBaile.activo && !revivirEnCurso && (session.timerBaile.estado === 'bailando' || (session.timerBaile.modoTorneo && session.timerBaile.estado === 'intro'))) {
             const chicaActual = session.timerBaile.chicaActual;
             
             // Si NO es modo torneo, acumular tiempo según los segundos por moneda/punto

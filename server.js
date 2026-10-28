@@ -541,7 +541,33 @@ io.on('connection', (socket) => {
                 puntos: session.revivir.puntos,
                 clasificadas: session.revivir.clasificadas,
                 modoTorneo: session.timerBaile ? session.timerBaile.modoTorneo : false,
-                rondaActual: session.timerBaile ? session.timerBaile.rondaActual : 1
+                rondaActual: session.timerBaile ? session.timerBaile.rondaActual : 1,
+                participantesActivas: session.timerBaile ? session.timerBaile.participantesActivas : [],
+                puntosTorneo: session.timerBaile ? session.timerBaile.puntosTorneo : {},
+                eliminadas: session.timerBaile ? (session.timerBaile.eliminadas || []) : [],
+                salvadas: session.timerBaile ? (session.timerBaile.salvadas || []) : [],
+                enRiesgo: session.timerBaile ? (session.timerBaile.enRiesgo || []) : []
+            });
+        } else if (session.timerBaile && session.timerBaile.activo && session.timerBaile.modoTorneo) {
+            socket.emit('revivirInicio', {
+                chica: session.timerBaile.chicaActual,
+                tiempo: session.timerBaile.tiempo,
+                meta: session.timerBaile.metaTurnoActual,
+                puntos: session.timerBaile.puntosTurnoActual || 0,
+                clasificadas: session.timerBaile.clasificadas || 1,
+                modoTorneo: true,
+                rondaActual: session.timerBaile.rondaActual || 1,
+                rondasTotales: session.timerBaile.rondasTotales || 0,
+                participantesActivas: session.timerBaile.participantesActivas || [],
+                puntosTorneo: session.timerBaile.puntosTorneo || {},
+                eliminadas: session.timerBaile.eliminadas || [],
+                salvadas: session.timerBaile.salvadas || [],
+                enRiesgo: session.timerBaile.enRiesgo || []
+            });
+            socket.emit('torneoPuntosActualizados', {
+                puntosTorneo: session.timerBaile.puntosTorneo || {},
+                puntosTurnoActual: session.timerBaile.puntosTurnoActual || 0,
+                chicaActual: session.timerBaile.chicaActual
             });
         }
 
