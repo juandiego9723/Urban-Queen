@@ -50,9 +50,13 @@ app.use((req, res, next) => {
     res.header("Access-Control-Allow-Origin", "*");
     res.header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
     res.header("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept");
-    res.header("Cache-Control", "no-cache, no-store, must-revalidate");
-    res.header("Pragma", "no-cache");
-    res.header("Expires", "0");
+    // Solo forzar no-cache en APIs y navegación dinámica, permitiendo que estáticos (imágenes, fuentes, audios) se guarden en caché
+    const isStaticAsset = req.path.match(/\.(png|jpg|jpeg|gif|webp|svg|ico|woff2?|ttf|mp3|ogg|css|js)$/i);
+    if (!isStaticAsset) {
+        res.header("Cache-Control", "no-cache, no-store, must-revalidate");
+        res.header("Pragma", "no-cache");
+        res.header("Expires", "0");
+    }
     if (req.method === 'OPTIONS') return res.status(200).end();
     next();
 });
@@ -268,22 +272,47 @@ app.get('/api/me', requireSession, (req, res) => {
     });
 });
 
-// Archivos estáticos
-app.use('/regalos', express.static(path.join(__dirname, 'public', 'regalos')));
-app.use('/assets', express.static(path.join(__dirname, 'public', 'assets')));
-app.get('/logo-tikdance-horizontal.png', (req, res) => res.sendFile(path.join(__dirname, 'public', 'assets', 'logo-tikdance-horizontal.png')));
-app.get('/logo-tikdance.jpg', (req, res) => res.sendFile(path.join(__dirname, 'public', 'assets', 'logo-tikdance.jpg')));
-app.get('/app-icon.ico', (req, res) => res.sendFile(path.join(__dirname, 'public', 'assets', 'app-icon.ico')));
+// Archivos estáticos con caché optimizada (7 días para imágenes/assets)
+const staticCacheOpts = {
+    maxAge: '7d',
+    immutable: true,
+    setHeaders: (res) => {
+        res.setHeader('Cache-Control', 'public, max-age=604800, immutable');
+    }
+};
+
+app.use('/regalos', express.static(path.join(__dirname, 'public', 'regalos'), staticCacheOpts));
+app.use('/assets', express.static(path.join(__dirname, 'public', 'assets'), staticCacheOpts));
+app.get('/logo-tikdance-horizontal.png', (req, res) => {
+    res.setHeader('Cache-Control', 'public, max-age=604800, immutable');
+    res.sendFile(path.join(__dirname, 'public', 'assets', 'logo-tikdance-horizontal.png'));
+});
+app.get('/logo-tikdance.jpg', (req, res) => {
+    res.setHeader('Cache-Control', 'public, max-age=604800, immutable');
+    res.sendFile(path.join(__dirname, 'public', 'assets', 'logo-tikdance.jpg'));
+});
+app.get('/app-icon.ico', (req, res) => {
+    res.setHeader('Cache-Control', 'public, max-age=604800, immutable');
+    res.sendFile(path.join(__dirname, 'public', 'assets', 'app-icon.ico'));
+});
 app.get('/custom_:file', (req, res) => {
     const file = `custom_${req.params.file}`;
     const regalosPath = path.join(__dirname, 'public', 'regalos', file);
+    res.setHeader('Cache-Control', 'public, max-age=604800, immutable');
     if (fs.existsSync(regalosPath)) {
         res.sendFile(regalosPath);
     } else {
         res.sendFile(path.join(__dirname, 'public', file));
     }
 });
-app.use(express.static(path.join(__dirname, 'public')));
+app.use(express.static(path.join(__dirname, 'public'), {
+    maxAge: '1h',
+    setHeaders: (res, filePath) => {
+        if (filePath.match(/\.(png|jpg|jpeg|gif|webp|svg|ico|woff2?|ttf|mp3|ogg)$/i)) {
+            res.setHeader('Cache-Control', 'public, max-age=604800, immutable');
+        }
+    }
+}));
 
 // Rutas de pantallas
 app.get('/',              (req, res) => res.sendFile(pub('ranking.html')));

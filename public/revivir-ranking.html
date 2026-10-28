@@ -321,8 +321,26 @@
             actualizarRankingUI();
         });
 
-        socket.on('rankingActualizado', () => {
+        let revivirThrottleTimer = null;
+        let lastRevivirTime = 0;
+        function throttledActualizarRankingUI() {
+            const now = Date.now();
+            if (now - lastRevivirTime < 2000) {
+                if (!revivirThrottleTimer) {
+                    revivirThrottleTimer = setTimeout(() => {
+                        revivirThrottleTimer = null;
+                        lastRevivirTime = Date.now();
+                        actualizarRankingUI();
+                    }, 2000 - (now - lastRevivirTime));
+                }
+                return;
+            }
+            lastRevivirTime = now;
             actualizarRankingUI();
+        }
+
+        socket.on('rankingActualizado', () => {
+            throttledActualizarRankingUI();
         });
 
         async function actualizarRankingUI() {

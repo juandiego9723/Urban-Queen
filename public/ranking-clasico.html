@@ -395,12 +395,38 @@
                 actualizarTituloUI();
                 crearFilas();
                 reordenarTabla();
+
+                // Precargar imágenes de regalos en RAM para evitar peticiones repetidas
+                Object.values(REGALOS_IMGS_MAP).forEach(imgName => {
+                    if (imgName) {
+                        const preImg = new Image();
+                        preImg.src = `/regalos/${encodeURIComponent(imgName)}`;
+                    }
+                });
             } catch(e) {
                 console.log("Cargado sin datos previos", e);
             }
         }
 
         init();
+
+        let initThrottleTimer = null;
+        let lastInitTimestamp = 0;
+        function throttledInit() {
+            const now = Date.now();
+            if (now - lastInitTimestamp < 2500) {
+                if (!initThrottleTimer) {
+                    initThrottleTimer = setTimeout(() => {
+                        initThrottleTimer = null;
+                        lastInitTimestamp = Date.now();
+                        init();
+                    }, 2500 - (now - lastInitTimestamp));
+                }
+                return;
+            }
+            lastInitTimestamp = now;
+            init();
+        }
 
         socket.on('rankingTitulosActualizados', (titulosData) => {
             if (titulosData) {
@@ -428,8 +454,15 @@
             reordenarTabla();
         });
 
-        socket.on('rankingActualizado', () => {
-            init();
+        socket.on('rankingActualizado', (data) => {
+            if (data && data.semanal) {
+                dataSemanal = data.semanal;
+                if (data.mensual) dataMensual = data.mensual;
+                if (data.diario)  dataDiario  = data.diario;
+                reordenarTabla();
+            } else {
+                throttledInit();
+            }
         });
 
         socket.on('actualizarRanking', (data) => {

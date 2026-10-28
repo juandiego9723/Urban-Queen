@@ -164,45 +164,55 @@ function createPointsProcessor(io, activeSessions, resolverNombreFn, timerHandle
             diamondUnit = 1;
         }
 
-        // Determinar si es un regalo de ráfaga (streak continuo):
-        // En TikTok, SOLO los regalos de 1 diamante (ej. Rosas, GG, TikTok) con giftType === 1 son ráfagas incrementales.
-        // Los regalos caros (como los de 100 puntos / diamantes) NUNCA son de ráfaga.
-        const isStreakGift = (data.giftType === 1 || (data.gift && data.gift.gift_type === 1)) && diamondUnit <= 1;
+        // Manejo universal de ráfagas/combos para CUALQUIER regalo de TikTok:
+        // En TikTok, cuando un usuario envía regalos en ráfaga o combo, cada evento emite
+        // el conteo acumulado actual (repeatCount: 1, luego 2, 3, etc.).
+        // Debemos calcular SIEMPRE la diferencia neta (deltaRepeat) para evitar duplicar
+        // o cuadruplicar puntos en combos rápidos.
+        if (!session.giftStreaks) session.giftStreaks = {};
+        const streakKey = `${viewer}_${giftName}_${data.giftId || 'g'}`;
+        const previousStreak = session.giftStreaks[streakKey];
 
-        const repeat = Math.max(1, repeatCountRaw, groupCountRaw);
+        const currentRepeat = Math.max(0, repeatCountRaw, comboCountRaw);
+        const currentGroup = groupCountRaw > 1 ? groupCountRaw : 0;
         let deltaRepeat = 1;
 
-        if (isStreakGift) {
-            // Manejo de ráfaga incremental para regalos de 1 diamante (Rosas):
-            if (!session.giftStreaks) session.giftStreaks = {};
-            const streakKey = `${viewer}_${giftName}`;
-            const previousStreak = session.giftStreaks[streakKey];
-
-            deltaRepeat = repeat;
-            if (previousStreak && (now - previousStreak.lastTime < 6000)) {
-                if (repeat > previousStreak.count) {
-                    deltaRepeat = repeat - previousStreak.count;
+        if (currentRepeat > 1 || (!data.repeatEnd && previousStreak)) {
+            // Ráfaga o combo en progreso
+            const effectiveCount = currentRepeat > 0 ? currentRepeat : (previousStreak ? previousStreak.count + 1 : 1);
+            if (previousStreak && (now - previousStreak.lastTime < 8000)) {
+                if (effectiveCount > previousStreak.count) {
+                    deltaRepeat = effectiveCount - previousStreak.count;
                 } else {
-                    deltaRepeat = 0;
+                    deltaRepeat = 0; // Paquete duplicado o retransmitido fuera de orden
                 }
+            } else {
+                deltaRepeat = effectiveCount;
             }
 
             if (data.repeatEnd) {
                 delete session.giftStreaks[streakKey];
             } else {
-                session.giftStreaks[streakKey] = { count: repeat, lastTime: now };
+                session.giftStreaks[streakKey] = { count: effectiveCount, lastTime: now };
             }
 
             if (deltaRepeat <= 0) return;
+        } else if (currentGroup > 1) {
+            // Envío en lote explícito (ej. paquete de 5 o 10 regalos enviados de una sola vez)
+            deltaRepeat = currentGroup;
+            delete session.giftStreaks[streakKey];
         } else {
-            // Para regalos caros o unitarios (ej. 100 puntos / diamantes):
-            // Cada evento representa un regalo individual o un lote/combo con multiplicador (groupCount / comboCount).
-            // NO se suprimen como ráfagas y NO se bloquean entre sí si se envían rápidamente.
-            const cantidad = Math.max(1, groupCountRaw, comboCountRaw, repeatCountRaw);
-            deltaRepeat = cantidad;
+            // Regalo unitario normal (repeatCount <= 1 y groupCount <= 1)
+            deltaRepeat = 1;
+            if (data.repeatEnd || (previousStreak && (now - previousStreak.lastTime > 4000))) {
+                delete session.giftStreaks[streakKey];
+            } else if (!data.repeatEnd && currentRepeat === 1) {
+                // Posible inicio de ráfaga (primer regalo de combo)
+                session.giftStreaks[streakKey] = { count: 1, lastTime: now };
+            }
         }
 
-        // 1. Desduplicación por identificador único de mensaje (solo contra retransmisiones duplicadas de red)
+        // 1. Desduplicación por identificador único de mensaje (evita retransmisiones duplicadas de red)
         if (!session.processedGiftIds) session.processedGiftIds = new Map();
         for (const [id, ts] of session.processedGiftIds.entries()) {
             if (now - ts > 30000) session.processedGiftIds.delete(id);
@@ -212,9 +222,7 @@ function createPointsProcessor(io, activeSessions, resolverNombreFn, timerHandle
         const msgId = rawMsgId ? (typeof rawMsgId === 'object' && rawMsgId.toString ? rawMsgId.toString() : String(rawMsgId)) : null;
 
         if (msgId) {
-            const uniqueEventKey = isStreakGift 
-                ? `${msgId}_${repeat}_${data.repeatEnd ? 'end' : 'mid'}`
-                : `${msgId}`;
+            const uniqueEventKey = `${msgId}_${currentRepeat || 1}_${data.repeatEnd ? 'end' : 'mid'}`;
             
             if (session.processedGiftIds.has(uniqueEventKey)) {
                 return; // Evento duplicado ignorado (retransmisión de red)
@@ -457,7 +465,19 @@ function createPointsProcessor(io, activeSessions, resolverNombreFn, timerHandle
             session.db.sumarPuntos(queen, sumas[queen]);
         }
         
-        io.to(username).emit('rankingActualizado');
+        let rankingPayload = null;
+        if (session.db) {
+            try {
+                rankingPayload = {
+                    semanal: typeof session.db.getRanking === 'function' ? session.db.getRanking() : {},
+                    mensual: typeof session.db.getRankingMensual === 'function' ? session.db.getRankingMensual() : {},
+                    diario: typeof session.db.getRankingDiario === 'function' ? session.db.getRankingDiario() : {}
+                };
+            } catch (e) {
+                console.error('Error generando payload de ranking:', e);
+            }
+        }
+        io.to(username).emit('rankingActualizado', rankingPayload);
         io.to(username).emit('actualizarCopa', session.db.getCopa());
         
         if (session.estadoBatalla === 'activa') {

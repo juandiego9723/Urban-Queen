@@ -305,19 +305,50 @@
             }
         }
 
-        async function fetchRanking() {
-            try {
-                // Obtener acumulados en tiempo real
-                const res = await fetch('/api/ranking');
-                if (!res.ok) return;
-                const ranking = await res.json();
-                
+        function aplicarPuntosRanking(ranking) {
+            if (!ranking) return;
+            if (Array.isArray(ranking)) {
                 ranking.forEach(item => {
                     const valEl = document.getElementById(`score-${item.name}`);
                     if (valEl) {
                         valEl.textContent = item.puntos || 0;
                     }
                 });
+            } else if (typeof ranking === 'object') {
+                Object.keys(ranking).forEach(name => {
+                    const valEl = document.getElementById(`score-${name}`);
+                    if (valEl) {
+                        valEl.textContent = ranking[name] || 0;
+                    }
+                });
+            }
+        }
+
+        let fetchRankingThrottleTimer = null;
+        let lastFetchRankingTime = 0;
+        function throttledFetchRanking() {
+            const now = Date.now();
+            if (now - lastFetchRankingTime < 2500) {
+                if (!fetchRankingThrottleTimer) {
+                    fetchRankingThrottleTimer = setTimeout(() => {
+                        fetchRankingThrottleTimer = null;
+                        lastFetchRankingTime = Date.now();
+                        fetchRanking();
+                    }, 2500 - (now - lastFetchRankingTime));
+                }
+                return;
+            }
+            lastFetchRankingTime = now;
+            fetchRanking();
+        }
+
+        async function fetchRanking() {
+            try {
+                // Obtener acumulados en tiempo real
+                const res = await fetch('/api/ranking');
+                if (!res.ok) return;
+                const ranking = await res.json();
+                aplicarPuntosRanking(ranking);
             } catch(e) {}
         }
 
@@ -399,11 +430,15 @@
             if (data.nombre) {
                 triggerGiftAlert(data.nombre, data.viewer, data.giftName, data.coins, data.giftImg);
             }
-            fetchRanking();
+            // No llamar a fetchRanking() aquí para evitar ráfagas HTTP durante rachas de regalos
         });
 
-        socket.on('rankingActualizado', () => {
-            fetchRanking();
+        socket.on('rankingActualizado', (data) => {
+            if (data && data.semanal) {
+                aplicarPuntosRanking(data.semanal);
+            } else {
+                throttledFetchRanking();
+            }
         });
 
         socket.on('queensActualizadas', () => {
