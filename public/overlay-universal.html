@@ -137,6 +137,9 @@
         // ── Copa / Fútbol ──
         socket.on('actualizarCopa', function(d) { forwardToIframe('actualizarCopa', d); });
         socket.on('futbolConfigActualizada', function(d) { forwardToIframe('futbolConfigActualizada', d); });
+        socket.on('penaltiLanzado', function(d) { forwardToIframe('penaltiLanzado', d); });
+        socket.on('penaltiResultado', function(d) { forwardToIframe('penaltiResultado', d); });
+        socket.on('penaltiConfigActualizada', function(d) { forwardToIframe('penaltiConfigActualizada', d); });
 
         // ── Ranking ──
         socket.on('rankingActualizado', function(d) { forwardToIframe('rankingActualizado', d); });

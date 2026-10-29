@@ -3,10 +3,9 @@ const DIRECCIONES = ['izquierda', 'centro', 'derecha'];
 const CONFIG_DEFAULT = {
     activo: true,
     regalo: '',
-    puntosGol: 10,
-    puntosAtajada: 5,
+    regaloPts: 0,
     maxRepeticiones: 5,
-    autoDescartarSeg: 15
+    autoDescartarSeg: 30
 };
 
 function setupPenaltiDynamics(app, io, requireSession, activeSessions) {
@@ -30,7 +29,7 @@ function setupPenaltiDynamics(app, io, requireSession, activeSessions) {
         const nombre = String(giftName || '').trim().toLowerCase();
         const gid = giftId ? String(giftId).trim() : '';
         return (nombre && nombre === objetivo) ||
-               (gid && (gid === objetivo || `id:${gid}` === objetivo));
+            (gid && (gid === objetivo || `id:${gid}` === objetivo));
     }
 
     function lanzarSiguiente(username) {
@@ -64,20 +63,39 @@ function setupPenaltiDynamics(app, io, requireSession, activeSessions) {
         let puntos = 0;
         if (resultado === 'gol' || resultado === 'atajada') {
             const config = leerConfig(session);
-            puntos = parseInt(resultado === 'gol' ? config.puntosGol : config.puntosAtajada) || 0;
+            // Gol y atajada valen lo mismo que el regalo configurado (no editable)
+            puntos = parseInt(tiro.puntos) || parseInt(config.regaloPts) || 0;
             if (puntos > 0 && destino && session.QUEENS.includes(destino)) {
                 const eq = session.equipos[destino] || {};
-                session.queueUpdate.push({
-                    nombre: destino,
-                    puntos,
-                    saltaTurno: null,
-                    viewer: tiro.viewer,
-                    avatar: tiro.avatar,
-                    giftName: `Penalti (${resultado})`,
-                    giftImg: tiro.giftImg || eq.regalo_img || '',
-                    repeat: 1
-                });
-                try { session.db.registrarRegalo(destino, `Penalti (${resultado})`, puntos, tiro.viewer || 'Penalti'); } catch (e) {}
+
+                // 1. Sumar a rankings generales y persistir en base de datos
+                if (session.db && typeof session.db.sumarPuntos === 'function') {
+                    session.db.sumarPuntos(destino, puntos);
+                }
+                try {
+                    if (session.db && typeof session.db.registrarRegalo === 'function') {
+                        session.db.registrarRegalo(destino, `Penalti (${resultado})`, puntos, tiro.viewer || 'Penalti');
+                    }
+                } catch (e) { }
+
+                // 2. Sumar directamente al marcador de El Clásico (Batalla de Fútbol)
+                if (!session.puntosBatalla) session.puntosBatalla = {};
+                session.puntosBatalla[destino] = (session.puntosBatalla[destino] || 0) + puntos;
+
+                // 3. Emitir actualización inmediata a los overlays de El Clásico y ranking general
+                io.to(username).emit('batallaPuntos', session.puntosBatalla);
+                if (session.db && typeof session.db.getCopa === 'function') {
+                    io.to(username).emit('actualizarCopa', session.db.getCopa());
+                }
+                if (session.db) {
+                    try {
+                        io.to(username).emit('rankingActualizado', {
+                            semanal: typeof session.db.getRanking === 'function' ? session.db.getRanking() : {},
+                            mensual: typeof session.db.getRankingMensual === 'function' ? session.db.getRankingMensual() : {},
+                            diario: typeof session.db.getRankingDiario === 'function' ? session.db.getRankingDiario() : {}
+                        });
+                    } catch (e) { }
+                }
             } else {
                 puntos = 0;
             }
@@ -103,7 +121,8 @@ function setupPenaltiDynamics(app, io, requireSession, activeSessions) {
                 direccion: datos.direccion || DIRECCIONES[Math.floor(Math.random() * DIRECCIONES.length)],
                 viewer: datos.viewer || '',
                 avatar: datos.avatar || '',
-                giftImg: datos.giftImg || ''
+                giftImg: datos.giftImg || '',
+                puntos: parseInt(datos.puntos) || 0
             });
         }
         lanzarSiguiente(username);
@@ -111,12 +130,12 @@ function setupPenaltiDynamics(app, io, requireSession, activeSessions) {
     }
 
     // Llamado desde pointsProcessor por cada regalo recibido
-    function onGift(username, { giftName, giftId, viewer, avatar, repeat, giftImg }) {
+    function onGift(username, { giftName, giftId, viewer, avatar, repeat, giftImg, diamondUnit }) {
         const session = activeSessions[username];
         if (!session) return;
         const config = leerConfig(session);
         if (!config.activo || !coincideRegalo(config, giftName, giftId)) return;
-        encolar(username, { viewer, avatar, giftImg }, repeat);
+        encolar(username, { viewer, avatar, giftImg, puntos: diamondUnit }, repeat);
     }
 
     app.get('/api/penalti/config', requireSession, (req, res) => {
@@ -129,8 +148,7 @@ function setupPenaltiDynamics(app, io, requireSession, activeSessions) {
         const config = {
             activo: body.activo !== false,
             regalo: String(body.regalo || '').trim(),
-            puntosGol: Math.max(0, parseInt(body.puntosGol) || 0),
-            puntosAtajada: Math.max(0, parseInt(body.puntosAtajada) || 0),
+            regaloPts: Math.max(0, parseInt(body.regaloPts) || 0),
             maxRepeticiones: Math.min(20, Math.max(1, parseInt(body.maxRepeticiones) || CONFIG_DEFAULT.maxRepeticiones)),
             autoDescartarSeg: Math.max(0, parseInt(body.autoDescartarSeg) || 0)
         };

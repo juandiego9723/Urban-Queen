@@ -279,7 +279,7 @@ function createPointsProcessor(io, activeSessions, resolverNombreFn, timerHandle
         // Dinámica Penalti: si el regalo coincide con el configurado, lanza el balón en el overlay
         if (penaltiHandlers && typeof penaltiHandlers.onGift === 'function') {
             try {
-                penaltiHandlers.onGift(username, { giftName, giftId: data.giftId, viewer, avatar, repeat: deltaRepeat, giftImg: giftImgSrc });
+                penaltiHandlers.onGift(username, { giftName, giftId: data.giftId, viewer, avatar, repeat: deltaRepeat, giftImg: giftImgSrc, diamondUnit });
             } catch (e) {
                 console.error('Error en dinámica Penalti:', e);
             }

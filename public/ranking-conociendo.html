@@ -270,6 +270,7 @@
         let APODOS = {};
         let puntosConociendo = {};
         let currentChicaActiva = '';
+        let eliminadasConociendo = [];
 
         // SVGs de Coronas con número incrustado
         const CROWN_SVGS = {
@@ -322,7 +323,9 @@
             container.innerHTML = '';
 
             // Asegurar que si hay puntos de una reina no listada en QUEENS, se agregue
-            const todasQueens = [...new Set([...QUEENS, ...Object.keys(puntosConociendo)])];
+            // Y excluir a las bailarinas eliminadas para que no aparezcan en el ranking
+            const todasQueens = [...new Set([...QUEENS, ...Object.keys(puntosConociendo)])]
+                .filter(q => !eliminadasConociendo.includes(q));
 
             if (todasQueens.length === 0) {
                 container.innerHTML = '<div style="color: rgba(255,255,255,0.4); font-size: 0.9rem; text-align: center; padding: 10px;">Esperando dinámica...</div>';
@@ -350,12 +353,13 @@
         }
 
         function reordenarTabla() {
-            const todasQueens = [...new Set([...QUEENS, ...Object.keys(puntosConociendo)])];
+            const todasQueens = [...new Set([...QUEENS, ...Object.keys(puntosConociendo)])]
+                .filter(q => !eliminadasConociendo.includes(q));
 
             const container = document.getElementById('ranking-rows');
             if (!container) return;
             const filasExistentes = container.querySelectorAll('.rank-row').length;
-            if (todasQueens.length > 0 && (filasExistentes === 0 || filasExistentes !== todasQueens.length)) {
+            if (filasExistentes !== todasQueens.length) {
                 crearFilas();
                 return;
             }
@@ -421,6 +425,9 @@
                     if (resR.ok) {
                         const dataR = await resR.json();
                         puntosConociendo = dataR.puntosRanking || {};
+                        if (dataR.eliminadas && Array.isArray(dataR.eliminadas)) {
+                            eliminadasConociendo = dataR.eliminadas;
+                        }
                         if (dataR.chicaActual !== undefined) {
                             currentChicaActiva = dataR.chicaActual || '';
                         }
@@ -466,6 +473,10 @@
                     puntosConociendo = data.puntosRanking;
                 } else if (data.action === 'RESET_RANKING_CONOCIENDO') {
                     puntosConociendo = {};
+                    eliminadasConociendo = [];
+                }
+                if (data.eliminadas !== undefined) {
+                    eliminadasConociendo = Array.isArray(data.eliminadas) ? data.eliminadas : [];
                 }
                 reordenarTabla();
             }
