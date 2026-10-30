@@ -30,6 +30,7 @@ const createTikTokService      = require('./src/services/tiktokService');
 
 const setupTimerDynamics       = require('./src/dynamics/timer');
 const setupConociendoDynamics  = require('./src/dynamics/conociendo');
+const setupPodioDynamics       = require('./src/dynamics/podio');
 const setupRevivirDynamics     = require('./src/dynamics/revivir');
 const setupBatallaDynamics     = require('./src/dynamics/batalla');
 const setupFutbolDynamics      = require('./src/dynamics/futbol');
@@ -108,6 +109,7 @@ app.use(express.urlencoded({ limit: '50mb', extended: true }));
 // ── Inicializar módulos de dinámicas (obtener handlers) ─────────
 const timerHandlers      = setupTimerDynamics(app, io, requireSession, activeSessions);
 const conociendoHandlers = setupConociendoDynamics(app, io, requireSession, activeSessions);
+const podioHandlers      = setupPodioDynamics(app, io, requireSession, activeSessions);
 const revivirHandlers    = setupRevivirDynamics(app, io, requireSession, activeSessions);
 const penaltiHandlers     = setupPenaltiDynamics(app, io, requireSession, activeSessions);
 
@@ -328,6 +330,7 @@ app.get('/batalla-activadores', (req, res) => res.sendFile(pub('batalla-activado
 app.get('/batalla-normal-v2', (req, res) => res.sendFile(pub('batalla-activadores.html')));
 app.get('/timer',         (req, res) => res.sendFile(pub('timer.html')));
 app.get('/conociendo',    (req, res) => res.sendFile(pub('conociendo.html')));
+app.get('/podio',         (req, res) => res.sendFile(pub('podio.html')));
 app.get('/ranking-conociendo', (req, res) => {
     const userParam = req.query.user || '';
     const agencySlug = (req.session && req.session.agencySlug) || (userParam.toLowerCase().includes('cosmic') ? 'cosmic' : null);
@@ -335,6 +338,14 @@ app.get('/ranking-conociendo', (req, res) => {
         return res.sendFile(agencyPub(agencySlug, 'ranking-conociendo.html'));
     }
     return res.sendFile(pub('ranking-conociendo.html'));
+});
+app.get('/ranking-podio', (req, res) => {
+    const userParam = req.query.user || '';
+    const agencySlug = (req.session && req.session.agencySlug) || (userParam.toLowerCase().includes('cosmic') ? 'cosmic' : null);
+    if (agencySlug && agencySlug !== 'urbanqueens') {
+        return res.sendFile(agencyPub(agencySlug, 'ranking-podio.html'));
+    }
+    return res.sendFile(pub('ranking-podio.html'));
 });
 app.get('/revivir',       (req, res) => res.sendFile(pub('revivir.html')));
 app.get('/revivir-ranking', (req, res) => res.sendFile(pub('revivir-ranking.html')));
@@ -513,6 +524,26 @@ io.on('connection', (socket) => {
             });
         }
 
+        if (session.podio) {
+            socket.emit('podioRankingActualizado', {
+                chicaActual: session.podio.chicaActual || '',
+                puntosRanking: session.podio.puntosRanking || {},
+                eliminadas: session.podio.eliminadas || []
+            });
+            if (session.podio.activo) {
+                socket.emit('podioInicio', {
+                    chica: session.podio.chicaActual,
+                    tiempo: session.podio.tiempo,
+                    meta: session.podio.meta,
+                    puntos: session.podio.puntos,
+                    titulo: session.podio.titulo
+                });
+                socket.emit('podioPuntos', {
+                    puntos: session.podio.puntos,
+                    meta: session.podio.meta
+                });
+            }
+        }
         if (session.conociendo) {
             socket.emit('conociendoRankingActualizado', {
                 puntosRanking: session.conociendo.puntosRanking || {},

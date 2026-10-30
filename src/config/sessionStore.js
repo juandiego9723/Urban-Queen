@@ -108,6 +108,8 @@ async function getUserSessionAsync(username, io, procesarPuntosFn) {
             tiempoAcumulado: {},
             conociendo: { activo: false, tiempo: 0, chicaActual: '', orden: [...initialQueens], estado: 'inactivo', tiempoTransicion: 0, meta: 2000, puntos: 0, puntosRanking: {}, eliminadas: [] },
             intervaloConociendo: null,
+            podio: { activo: false, tiempo: 0, chicaActual: '', orden: (typeof initialQueens !== 'undefined' ? [...initialQueens] : []), estado: 'inactivo', tiempoTransicion: 0, meta: 2000, puntos: 0, puntosRanking: {}, eliminadas: [] },
+            intervaloPodio: null,
             revivir: { activo: false, tiempo: 0, chicaActual: '', estado: 'inactivo', meta: 5000, puntos: 0, donantes: {}, donantesAvatars: {}, regalosEnviados: {}, regalosImgs: {}, clasificadas: 2 },
             intervaloRevivir: null,
             lealtadUsuarios: {},
@@ -185,6 +187,8 @@ function getUserSession(username, io, procesarPuntosFn) {
             tiempoAcumulado: {},
             conociendo: { activo: false, tiempo: 0, chicaActual: '', orden: [], estado: 'inactivo', tiempoTransicion: 0, meta: 2000, puntos: 0, puntosRanking: {}, eliminadas: [] },
             intervaloConociendo: null,
+            podio: { activo: false, tiempo: 0, chicaActual: '', orden: (typeof initialQueens !== 'undefined' ? [...initialQueens] : []), estado: 'inactivo', tiempoTransicion: 0, meta: 2000, puntos: 0, puntosRanking: {}, eliminadas: [] },
+            intervaloPodio: null,
             revivir: { activo: false, tiempo: 0, chicaActual: '', estado: 'inactivo', meta: 5000, puntos: 0, donantes: {}, donantesAvatars: {}, regalosEnviados: {}, regalosImgs: {}, clasificadas: 2 },
             intervaloRevivir: null,
             lealtadUsuarios: {},
@@ -218,6 +222,7 @@ function getUserSession(username, io, procesarPuntosFn) {
             session.participantesActuales = [...session.QUEENS];
             session.timerBaile.orden = [...session.QUEENS];
             session.conociendo.orden = [...session.QUEENS];
+            if (session.podio) session.podio.orden = [...session.QUEENS];
             if (io) {
                 io.to(username).emit('queensActualizadas', { queens: session.QUEENS, equipos: session.equipos, apodos: session.db.getApodosMap() });
             }
@@ -291,6 +296,7 @@ function cleanupUserSession(session, io = null, username = null) {
     if (session.intervaloConociendo) {
         clearInterval(session.intervaloConociendo);
         session.intervaloConociendo = null;
+        if (session.intervaloPodio) { clearInterval(session.intervaloPodio); session.intervaloPodio = null; }
     }
     if (session.intervaloRevivir) {
         clearInterval(session.intervaloRevivir);
@@ -310,6 +316,7 @@ function cleanupUserSession(session, io = null, username = null) {
     session.tiempoBatalla = 0;
     if (session.timerBaile) session.timerBaile.activo = false;
     if (session.conociendo) session.conociendo.activo = false;
+    if (session.podio) session.podio.activo = false;
     if (session.revivir) session.revivir.activo = false;
     session.dinamicaActiva = null;
 

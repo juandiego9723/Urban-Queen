@@ -165,8 +165,10 @@ function setupTimerDynamics(app, io, requireSession, activeSessions) {
                 io.to(user).emit('timerAcumulado', s.tiempoAcumulado);
                 if (s.timerBaile.tiempo > 3) {
                     s.timerBaile.tiempo--;
+                    snipeBaile = 3;
                     io.to(user).emit('timerTick', s.timerBaile.tiempo);
                 } else if (s.timerBaile.tiempo > 0) {
+                    snipeBaile = 3;
                     subTickBaile++;
                     if (subTickBaile >= 2) {
                         s.timerBaile.tiempo--;

@@ -320,15 +320,17 @@ function createPointsProcessor(io, activeSessions, resolverNombreFn, timerHandle
         const hayDinamicaPersonalizadaActiva = !!session.dinamicaActiva;
         if (!hayBatallaActiva && !hayDinamicaPersonalizadaActiva) {
             // SI LA DINÁMICA CONOCIENDO ESTÁ ACTIVA: Forzar SIEMPRE que cualquier regalo (incluso los mapeados en batallas) vaya a la bailarina activa
-            if (session.conociendo.activo && session.conociendo.estado === 'activo' && session.conociendo.chicaActual) {
+            if (session.conociendo && session.conociendo.activo && session.conociendo.estado === 'activo' && session.conociendo.chicaActual) {
                 queenActivadora = session.conociendo.chicaActual;
-            } else if (!queenActivadora) {
+            } else if (session.podio && session.podio.activo && session.podio.estado === 'activo' && session.podio.chicaActual) {
+                queenActivadora = session.podio.chicaActual;
+            } else if (session.revivir && session.revivir.activo && session.revivir.estado === 'activo' && session.revivir.chicaActual) {
                 // SI LA DINÁMICA REVIVIR ESTÁ ACTIVA: Forzar que cualquier regalo vaya a la bailarina en salvación
-                if (session.revivir.activo && session.revivir.estado === 'activo' && session.revivir.chicaActual) {
-                    queenActivadora = session.revivir.chicaActual;
-                }
-                // SI EL TIMER DE BAILE ESTÁ ACTIVO: Forzar que cualquier regalo vaya a la bailarina actual (incluyendo durante la intro del turno en modo torneo)
-                else if (session.timerBaile.activo && (session.timerBaile.estado === 'bailando' || (session.timerBaile.modoTorneo && session.timerBaile.estado === 'intro')) && session.timerBaile.chicaActual) {
+                queenActivadora = session.revivir.chicaActual;
+            } else if (session.timerBaile && session.timerBaile.activo && session.timerBaile.chicaActual) {
+                // SI EL TIMER DE BAILE ESTÁ ACTIVO: Forzar que CUALQUIER regalo recibido vaya a la bailarina activa
+                // (a menos que sea un regalo exclusivo de salto configurado para otra bailarina)
+                if (!queenSalto || queenSalto.trim().toLowerCase() === session.timerBaile.chicaActual.trim().toLowerCase()) {
                     queenActivadora = session.timerBaile.chicaActual;
                 }
             }
@@ -454,9 +456,18 @@ function createPointsProcessor(io, activeSessions, resolverNombreFn, timerHandle
         const forzarChicaConociendo = (session.conociendo && session.conociendo.activo && session.conociendo.estado === 'activo' && session.conociendo.chicaActual && session.estadoBatalla === 'inactiva' && !session.dinamicaActiva)
             ? session.conociendo.chicaActual
             : null;
+        const forzarChicaPodio = (session.podio && session.podio.activo && session.podio.estado === 'activo' && session.podio.chicaActual && session.estadoBatalla === 'inactiva' && !session.dinamicaActiva)
+            ? session.podio.chicaActual
+            : null;
+        const forzarChicaTimer = (session.timerBaile && session.timerBaile.activo && session.timerBaile.chicaActual && session.estadoBatalla === 'inactiva' && !session.dinamicaActiva && (!session.revivir || !session.revivir.activo || session.revivir.estado !== 'activo'))
+            ? session.timerBaile.chicaActual
+            : null;
 
         temp.forEach(item => {
-            const nombreEfectivo = forzarChicaConociendo || item.nombre;
+            const nombreEfectivo = forzarChicaConociendo 
+                || forzarChicaPodio 
+                || (item.saltaTurno ? item.saltaTurno : forzarChicaTimer) 
+                || item.nombre;
             if (nombreEfectivo) {
                 sumas[nombreEfectivo] = (sumas[nombreEfectivo] || 0) + item.puntos;
                 if (session.estadoBatalla === 'activa' && session.participantesActuales.includes(item.nombre)) {
@@ -513,22 +524,28 @@ function createPointsProcessor(io, activeSessions, resolverNombreFn, timerHandle
             }
         }
         
-        // Si el timer de baile está activo y en estado de baile (o en intro dentro del modo torneo), y no hay reto de salvación superpuesto
+        // Si el timer de baile está activo y en estado de baile o transición (o en intro dentro del modo torneo), y no hay reto de salvación superpuesto
         const revivirEnCurso = session.revivir && session.revivir.activo && session.revivir.estado === 'activo';
-        if (session.timerBaile.activo && !revivirEnCurso && (session.timerBaile.estado === 'bailando' || (session.timerBaile.modoTorneo && session.timerBaile.estado === 'intro'))) {
+        if (session.timerBaile && session.timerBaile.activo && !revivirEnCurso && (session.timerBaile.estado === 'bailando' || session.timerBaile.estado === 'transicion' || (session.timerBaile.modoTorneo && session.timerBaile.estado === 'intro'))) {
             const chicaActual = session.timerBaile.chicaActual;
             
-            // Si NO es modo torneo, acumular tiempo según los segundos por moneda/punto
+            // Si NO es modo torneo, acumular tiempo según los segundos por moneda/punto con CUALQUIER regalo
             if (!session.timerBaile.modoTorneo) {
                 const segs = session.timerBaile.segundosPorMoneda || 3;
                 const chicaNorm = (chicaActual || '').trim().toLowerCase();
+                let segundosSumados = 0;
                 temp.forEach(item => {
-                    const itemNorm = (item.nombre || '').trim().toLowerCase();
-                    if (itemNorm && itemNorm === chicaNorm && item.puntos > 0) {
-                        session.timerBaile.tiempo += (item.puntos * segs);
+                    const saltaA = (item.saltaTurno || '').trim().toLowerCase();
+                    // Suma tiempo con cualquier regalo recibido, a menos que sea un regalo de salto configurado para OTRA chica
+                    const esSaltoParaOtra = saltaA && saltaA !== chicaNorm;
+                    if (!esSaltoParaOtra && item.puntos > 0) {
+                        segundosSumados += (item.puntos * segs);
                     }
                 });
-                io.to(username).emit('timerTick', session.timerBaile.tiempo);
+                if (segundosSumados > 0) {
+                    session.timerBaile.tiempo += segundosSumados;
+                    io.to(username).emit('timerTick', session.timerBaile.tiempo);
+                }
             }
             
             // Si es modo torneo, procesar puntos de la ronda
@@ -603,6 +620,22 @@ function createPointsProcessor(io, activeSessions, resolverNombreFn, timerHandle
         }
 
         // Si la dinámica conociendo está activa y en estado activo, sumar todos los puntos recibidos a la bailarina activa
+        if (session.podio && session.podio.activo && session.podio.estado === 'activo') {
+            const chicaActualPodio = session.podio.chicaActual;
+            let nuevosPuntosPodio = 0;
+            temp.forEach(item => { if (item.puntos > 0) nuevosPuntosPodio += item.puntos; });
+            if (nuevosPuntosPodio > 0) {
+                session.podio.puntos += nuevosPuntosPodio;
+                if (!session.podio.puntosRanking) session.podio.puntosRanking = {};
+                session.podio.puntosRanking[chicaActualPodio] = (session.podio.puntosRanking[chicaActualPodio] || 0) + nuevosPuntosPodio;
+                io.to(username).emit('podioPuntos', { puntos: session.podio.puntos, meta: session.podio.meta });
+                io.to(username).emit('podioRankingActualizado', {
+                    chicaActual: session.podio.chicaActual || '',
+                    puntosRanking: session.podio.puntosRanking,
+                    eliminadas: session.podio.eliminadas || []
+                });
+            }
+        }
         if (session.conociendo.activo && session.conociendo.estado === 'activo') {
             const chicaActual = session.conociendo.chicaActual;
             let nuevosPuntos = 0;

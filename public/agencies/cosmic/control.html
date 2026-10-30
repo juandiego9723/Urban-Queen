@@ -1097,6 +1097,7 @@
                 <div class="menu-item tab" onclick="cambiarTab('analytics',this)">Analíticas</div>
                 <div class="menu-item tab" onclick="cambiarTab('clasico',this)">Clásico</div>
                 <div class="menu-item tab" onclick="cambiarTab('puntos',this)">Conociendo</div>
+                <div class="menu-item tab" onclick="cambiarTab('podio',this)">Podio</div>
                 <div class="menu-item tab" onclick="cambiarTab('timer',this)">Timer</div>
                 <div class="menu-item tab" onclick="cambiarTab('torneo',this)">Torneo</div>
                 <div class="menu-item tab" onclick="cambiarTab('dinamicas',this)">Dinámicas</div>
@@ -1128,6 +1129,8 @@
                 <a class="topbar-link" href="/cosmic/timer" target="_blank">💃 Timer</a>
                 <a class="topbar-link" href="/cosmic/conociendo" target="_blank">👑 Conociendo</a>
                 <a class="topbar-link" href="/cosmic/ranking-conociendo" target="_blank">📊 Ranking Conociendo</a>
+                <a class="topbar-link" href="/cosmic/podio" target="_blank">🏆 Podio</a>
+                <a class="topbar-link" href="/cosmic/ranking-podio" target="_blank">📊 Ranking Podio</a>
                 <a class="topbar-link" href="/cosmic/revivir" target="_blank">❤️ Revivir</a>
                 <a class="topbar-link" href="/cosmic/revivir-ranking" target="_blank">📊 Ranking Revivir</a>
                 <a class="topbar-link" href="/cosmic/copa" target="_blank">🥇 Copa</a>
@@ -1725,6 +1728,52 @@
                         </div>
                     </div>
                 </div>
+                <!-- ══ PODIO ══ -->
+                <div id="tab-podio" class="tab-content">
+                    <div class="card">
+                        <div class="card-title">
+                            🏆 <span class="card-title-accent">Podio — Dinámica HUD</span>
+                        </div>
+                        <div class="col">
+                            <div class="row" style="gap:10px; margin-bottom: 8px; align-items: center;">
+                                <span class="label" style="flex:1">Meta (Diamantes):</span>
+                                <div style="display:flex; gap:6px; align-items:center;">
+                                    <input type="number" id="metaPodioInput" value="2000" class="input input-num" style="width:110px;" onchange="actualizarMetaPodioEnVivo()">
+                                    <button class="btn btn-ghost btn-sm" onclick="actualizarMetaPodioEnVivo()" title="Aplicar meta inmediatamente" style="border:1px solid rgba(0,229,255,0.4); color:#00e5ff; padding:4px 8px;">💾 Aplicar</button>
+                                </div>
+                            </div>
+                            <div class="row" style="gap:10px; margin-bottom: 8px; align-items: center;">
+                                <span class="label" style="flex:1">Tiempo (Segundos):</span>
+                                <input type="number" id="tiempoPodioInput" value="300" min="10" step="10" class="input input-num" style="width:110px;">
+                            </div>
+                            <div class="row" style="gap:10px; margin-bottom: 12px; align-items: center;">
+                                <span class="label" style="flex:1">Bailarina Específica:</span>
+                                <select id="podioChicaSelect" class="select" style="width:220px;">
+                                    <option value="">-- Primera en orden --</option>
+                                </select>
+                            </div>
+                            <div class="row" style="gap:8px; margin-bottom:12px;">
+                                <button class="btn btn-warning" style="flex:1;" onclick="iniciarPodio()">▶ Iniciar Podio</button>
+                                <button class="btn btn-primary" style="flex:1;" onclick="saltarSiguientePodio()">⏭ Siguiente Bailarina</button>
+                            </div>
+                            <button class="btn btn-danger btn-full" style="margin-bottom:12px;" onclick="hacerFetch('/podio/stop')">⏹ Cancelar Podio</button>
+                            <div style="border-top:1px solid var(--border); margin: 14px 0 10px 0; padding-top: 14px;">
+                                <div class="card-title" style="font-size:14px; margin-bottom:10px; display:flex; justify-content:space-between; align-items:center;">
+                                    <div>📊 <span class="card-title-accent">Ranking de Podio</span></div>
+                                    <div style="display:flex; gap:6px;">
+                                        <button class="btn btn-ghost btn-sm" onclick="copiarRankingPodioUrl()" style="font-size:11px; padding:4px 8px;">📋 Copiar URL</button>
+                                        <button class="btn btn-ghost btn-sm" onclick="abrirRankingPodio()" style="font-size:11px; padding:4px 8px;">🔗 Abrir</button>
+                                    </div>
+                                </div>
+                                <div id="btns-podio" class="col" style="gap:8px; margin-bottom:14px;"></div>
+                                <button class="btn btn-danger btn-full" style="background:#dc2626; color:#ffffff; font-weight:700; border:none; padding:10px;" onclick="reiniciarRankingPodio()">
+                                    🔄 Reiniciar Ranking Podio
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
                 <!-- ══ TIMER ══ -->
                 <div id="tab-timer" class="tab-content">
                     <div class="card">
@@ -1960,6 +2009,7 @@
                                 <button class="btn btn-primary" onclick="cambiarVistaUniversal('/batalla-futbol-hud')" id="btn-view-batalla-futbol-hud" style="transition: all 0.3s ease; text-align: left; padding: 12px 16px;">⚽ HUD Clásico (Fútbol)</button>
                                 <button class="btn btn-primary" onclick="cambiarVistaUniversal('/timer')" id="btn-view-timer" style="transition: all 0.3s ease; text-align: left; padding: 12px 16px;">💃 Timer de Baile</button>
                                 <button class="btn btn-primary" onclick="cambiarVistaUniversal('/conociendo')" id="btn-view-conociendo" style="transition: all 0.3s ease; text-align: left; padding: 12px 16px;">👑 Conociendo a mi Bailarina</button>
+                                <button class="btn btn-primary" onclick="cambiarVistaUniversal('/podio')" id="btn-view-podio" style="transition: all 0.3s ease; text-align: left; padding: 12px 16px;">🏆 Podio HUD</button>
                                 <button class="btn btn-primary" onclick="cambiarVistaUniversal('/lista-regalos')" id="btn-view-lista-regalos" style="transition: all 0.3s ease; text-align: left; padding: 12px 16px;">🎁 Lista Regalos</button>
                                 <button class="btn btn-primary" onclick="cambiarVistaUniversal('/dinamica')" id="btn-view-dinamica" style="transition: all 0.3s ease; text-align: left; padding: 12px 16px;">⚡ Dinámica Personalizada</button>
                                 <button class="btn btn-primary" onclick="cambiarVistaUniversal('/gestor-regalos')" id="btn-view-gestor-regalos" style="transition: all 0.3s ease; text-align: left; padding: 12px 16px;">🎁 Overlay Custom (Gestor de Regalos)</button>
@@ -1980,6 +2030,7 @@
                                 <button class="btn btn-primary" onclick="cambiarVistaAcumulados('/copa')" id="btn-view-copa" style="transition: all 0.3s ease; text-align: left; padding: 12px 16px;">🥇 Copa del Día</button>
                                 <button class="btn btn-primary" onclick="cambiarVistaAcumulados('/revivir-ranking')" id="btn-view-revivir-ranking" style="transition: all 0.3s ease; text-align: left; padding: 12px 16px;">👑 Ranking de Revivir</button>
                                 <button class="btn btn-primary" onclick="cambiarVistaAcumulados('/ranking-conociendo')" id="btn-view-ranking-conociendo" style="transition: all 0.3s ease; text-align: left; padding: 12px 16px;">📊 Ranking Conociendo</button>
+                                <button class="btn btn-primary" onclick="cambiarVistaAcumulados('/ranking-podio')" id="btn-view-ranking-podio" style="transition: all 0.3s ease; text-align: left; padding: 12px 16px;">📊 Ranking Podio</button>
                             </div>
                         </div>
                     </div>
@@ -4067,6 +4118,8 @@
                 renderBotonesTimer();
                 await cargarEstadoConociendoRanking();
                 renderBotonesConociendo();
+                await cargarEstadoPodioRanking();
+                renderBotonesPodio();
                 cargarGrupos();
                 cargarSonidos();
                 cargarBailarinas();
@@ -4784,6 +4837,7 @@
                     '/batalla-futbol-hud': 'btn-view-batalla-futbol-hud',
                     '/timer': 'btn-view-timer',
                     '/conociendo': 'btn-view-conociendo',
+                    '/podio': 'btn-view-podio',
                     '/lista-regalos': 'btn-view-lista-regalos',
                     '/multicam': 'btn-view-multicam',
                     '/dinamica': 'btn-view-dinamica',
@@ -4840,7 +4894,8 @@
                     '/': 'btn-view-ranking',
                     '/copa': 'btn-view-copa',
                     '/revivir-ranking': 'btn-view-revivir-ranking',
-                    '/ranking-conociendo': 'btn-view-ranking-conociendo'
+                    '/ranking-conociendo': 'btn-view-ranking-conociendo',
+                    '/ranking-podio': 'btn-view-ranking-podio'
                 };
                 Object.keys(ids).forEach(key => {
                     const btn = document.getElementById(ids[key]);
@@ -5372,6 +5427,159 @@
                 renderBotonesTimer(); renderBotonesConociendo();
             }
 
+            // ── Podio (Nueva Dinámica) ──
+            let eliminadasPodio = [];
+            let puntosPodioRanking = {};
+
+            function iniciarPodio() {
+                const meta = document.getElementById('metaPodioInput')?.value || 2000;
+                const tiempo = document.getElementById('tiempoPodioInput')?.value || 300;
+                const chica = document.getElementById('podioChicaSelect')?.value || '';
+                let url = `/podio/start?meta=${encodeURIComponent(meta)}&tiempo=${encodeURIComponent(tiempo)}`;
+                if (chica) url += `&c=${encodeURIComponent(chica)}`;
+                hacerFetch(url);
+            }
+
+            function seleccionarChicaPodio(chica) {
+                const meta = document.getElementById('metaPodioInput')?.value || 2000;
+                const tiempo = document.getElementById('tiempoPodioInput')?.value || 300;
+                const sel = document.getElementById('podioChicaSelect');
+                if (sel) sel.value = chica;
+                hacerFetch(`/podio/skip?c=${encodeURIComponent(chica)}&meta=${encodeURIComponent(meta)}&tiempo=${encodeURIComponent(tiempo)}`);
+            }
+
+            function saltarSiguientePodio() {
+                const meta = document.getElementById('metaPodioInput')?.value || 2000;
+                const tiempo = document.getElementById('tiempoPodioInput')?.value || 300;
+                hacerFetch(`/podio/skip?meta=${encodeURIComponent(meta)}&tiempo=${encodeURIComponent(tiempo)}`);
+            }
+
+            function actualizarMetaPodioEnVivo() {
+                const meta = document.getElementById('metaPodioInput')?.value;
+                if (meta && parseInt(meta) > 0) {
+                    hacerFetch(`/podio/update-meta?meta=${encodeURIComponent(meta)}`);
+                    showToast(`Meta de Podio actualizada a ${parseInt(meta).toLocaleString()}`, 'success');
+                }
+            }
+
+            async function toggleOutPodio(chica) {
+                await hacerFetch(`/podio/toggle-out?c=${encodeURIComponent(chica)}`);
+            }
+
+            async function sumarPuntosPodio(chica, pts) {
+                try {
+                    const res = await fetch(`/podio/sumar-puntos?c=${encodeURIComponent(chica)}&pts=${pts}`);
+                    if (res.ok) {
+                        showToast(`+${pts} sumados a ${chica} en Podio`, 'success');
+                    }
+                } catch(e) { console.error('Error sumando puntos a podio:', e); }
+            }
+
+            function reiniciarRankingPodio() {
+                const mensaje = "¿Estás seguro de que deseas reiniciar todos los puntos del Ranking de Podio?";
+                const ejecutar = async () => {
+                    try {
+                        await hacerFetch('/podio/reset-ranking');
+                        eliminadasPodio = [];
+                        puntosPodioRanking = {};
+                        renderBotonesPodio();
+                        showToast('Ranking de Podio reiniciado correctamente', 'success');
+                    } catch(err) {
+                        console.error("Error reiniciando ranking podio:", err);
+                    }
+                };
+
+                if (typeof uiConfirm === 'function') {
+                    uiConfirm(mensaje, ejecutar);
+                } else if (confirm(mensaje)) {
+                    ejecutar();
+                }
+            }
+
+            function obtenerUrlRankingPodio() {
+                const slug = getAgencySlug();
+                const port = window.location.port ? ':' + window.location.port : '';
+                const path = (slug && slug !== 'urbanqueens') ? `/${slug}/ranking-podio` : '/ranking-podio';
+                const userParam = (window.currentUserSession || (typeof user !== 'undefined' ? user : ''));
+                const query = userParam ? `?user=${encodeURIComponent(userParam)}` : '';
+                return `${window.location.protocol}//${window.location.hostname}${port}${path}${query}`;
+            }
+
+            function abrirRankingPodio() {
+                window.open(obtenerUrlRankingPodio(), '_blank');
+            }
+
+            function copiarRankingPodioUrl() {
+                const url = obtenerUrlRankingPodio();
+                navigator.clipboard.writeText(url).then(() => {
+                    showToast('¡URL del Ranking de Podio copiada!', 'success');
+                }).catch(err => {
+                    prompt('Copia este enlace para OBS:', url);
+                });
+            }
+
+            socket.on('podioRankingActualizado', (data) => {
+                if (data) {
+                    if (data.eliminadas !== undefined) eliminadasPodio = data.eliminadas;
+                    if (data.puntosRanking !== undefined) puntosPodioRanking = data.puntosRanking;
+                    renderBotonesPodio();
+                }
+            });
+
+            async function cargarEstadoPodioRanking() {
+                try {
+                    const res = await fetch('/api/podio-ranking');
+                    if (res.ok) {
+                        const data = await res.json();
+                        if (data) {
+                            if (data.eliminadas) eliminadasPodio = data.eliminadas;
+                            if (data.puntosRanking) puntosPodioRanking = data.puntosRanking;
+                        }
+                    }
+                } catch(e) {}
+            }
+
+            function renderBotonesPodio() {
+                const c = document.getElementById('btns-podio');
+                if (!c) return;
+                c.innerHTML = '';
+
+                // Rellenar select de chica específica para Podio
+                const sel = document.getElementById('podioChicaSelect');
+                if (sel) {
+                    const currentVal = sel.value;
+                    sel.innerHTML = '<option value="">-- Primera en orden --</option>' +
+                        QUEENS.map(q => `<option value="${q}">${(APODOS[q] || q).toUpperCase()}</option>`).join('');
+                    if (currentVal && QUEENS.includes(currentVal)) sel.value = currentVal;
+                }
+
+                QUEENS.forEach(q => {
+                    const col = QUEEN_COLORS[q] || '#fff';
+                    const tc = isLightColor(col) ? '#111' : '#fff';
+                    const isOut = eliminadasPodio.includes(q);
+                    const pts = (puntosPodioRanking[q] || 0).toLocaleString();
+
+                    const rowDiv = document.createElement('div');
+                    rowDiv.className = 'row';
+                    rowDiv.style.cssText = 'gap:8px; align-items:center; width:100%; background:rgba(255,255,255,0.03); padding:6px 10px; border-radius:8px; border:1px solid var(--border);';
+                    rowDiv.innerHTML = `
+                        <button class="btn btn-sm" style="flex:1.4; background:${col}; color:${tc}; text-align:left; font-weight:700;" onclick="seleccionarChicaPodio('${q}')" title="Presentar esta bailarina en Podio">
+                            👑 Presentar ${APODOS[q] || q}
+                        </button>
+                        <span style="font-size:12px; font-weight:800; min-width:60px; text-align:right; color:#00e5ff;">${pts} 💎</span>
+                        <div style="display:flex; gap:4px;">
+                            <button class="btn btn-ghost btn-sm" style="padding:4px 6px; font-size:11px;" onclick="sumarPuntosPodio('${q}', 100)" title="Sumar 100">+100</button>
+                            <button class="btn btn-ghost btn-sm" style="padding:4px 6px; font-size:11px;" onclick="sumarPuntosPodio('${q}', 500)" title="Sumar 500">+500</button>
+                        </div>
+                        <button class="btn btn-sm ${isOut ? 'btn-danger' : 'btn-outline'}" style="${isOut ? 'background:#ff3b30;color:#fff;' : 'border:1.5px solid #ff3b30;color:#ff3b30;'} padding:4px 8px; font-size:11px;" onclick="toggleOutPodio('${q}')">
+                            ${isOut ? '🔴 OUT' : '🚫 QUITAR'}
+                        </button>
+                    `;
+                    c.appendChild(rowDiv);
+                });
+            }
+
+
             function eliminarBailarina(nombre) {
                 uiConfirm('¿Eliminar a "' + nombre + '"? Se borrarán todos sus puntos y victorias.', async () => {
                     await fetch('/api/queens/eliminar?nombre=' + encodeURIComponent(nombre));
@@ -5446,7 +5654,7 @@
                 btn.innerText = data.activo ? '✅ Activa' : '⏸ Inactiva';
                 QUEENS = await (await fetch('/api/queens')).json();
                 renderPuntos(); renderBatallaOptions(); renderBotonesTimer();
-                renderBotonesConociendo(); cargarBailarinas();
+                renderBotonesConociendo(); renderBotonesPodio(); cargarBailarinas();
             }
 
             socket.on('queensActualizadas', async (data) => {
@@ -5454,7 +5662,7 @@
                 if (data.equipos) Object.keys(data.equipos).forEach(n => { QUEEN_COLORS[n] = data.equipos[n].color; });
                 if (data.apodos) APODOS = data.apodos;
                 renderPuntos(); renderBatallaOptions(); renderBotonesTimer();
-                renderBotonesConociendo(); cargarBailarinas();
+                renderBotonesConociendo(); renderBotonesPodio(); cargarBailarinas();
             });
 
             // ── Sockets del Torneo de Rondas ──

@@ -1109,7 +1109,7 @@
                 <div class="menu-item tab active" onclick="cambiarTab('batallas',this)">Batallas</div>
                 <div class="menu-item tab" onclick="cambiarTab('analytics',this)">Analíticas</div>
                 <div class="menu-item tab" onclick="cambiarTab('clasico',this)">Clásico</div>
-                <div class="menu-item tab" onclick="cambiarTab('puntos',this)">Conociendo</div>
+                <div class="menu-item tab" onclick="cambiarTab('puntos',this)">Podio</div>
                 <div class="menu-item tab" onclick="cambiarTab('timer',this)">Timer</div>
                 <div class="menu-item tab" onclick="cambiarTab('torneo',this)">Torneo</div>
                 <div class="menu-item tab" onclick="cambiarTab('dinamicas',this)">Dinámicas</div>
@@ -1140,7 +1140,8 @@
                 <a class="topbar-link" href="/batalla-futbol-hud" target="_blank">⚽ HUD Clásico</a>
                 <a class="topbar-link" href="/revivir" target="_blank">❤️ Revivir</a>
                 <a class="topbar-link" href="/timer" target="_blank">💃 Timer & Regalos</a>
-                <a class="topbar-link" href="/conociendo" target="_blank">👑 Conociendo</a>
+                <a class="topbar-link" href="/podio" target="_blank">🏆 Podio</a>
+                <a class="topbar-link" href="/ranking-podio" target="_blank">📊 Ranking Podio</a>
                 <a class="topbar-link" href="/revivir-ranking" target="_blank">📊 Ranking Revivir</a>
                 <a class="topbar-link" href="/copa" target="_blank">🥇 Copa</a>
                 <a class="topbar-link" href="/dinamica" target="_blank">⚡ Dinámica</a>
@@ -1769,13 +1770,13 @@
                 <div id="tab-puntos" class="tab-content">
                     <div class="card">
                         <div class="card-title">
-                            👑 <span class="card-title-accent">Conociendo a mi Queen</span>
+                            🏆 <span class="card-title-accent">Podio</span>
                         </div>
                         <div class="col">
                             <div class="row" style="gap:10px; margin-bottom: 8px; align-items: center;">
                                 <span class="label" style="flex:1">Título de Dinámica:</span>
-                                <input type="text" id="tituloConociendoInput" value="Conociendo a mi Queen" class="input"
-                                    style="width:220px;" placeholder="Conociendo a mi Queen">
+                                <input type="text" id="tituloConociendoInput" value="Podio" class="input"
+                                    style="width:220px;" placeholder="Podio">
                             </div>
                             <div class="row" style="gap:10px; margin-bottom: 8px; align-items: center;">
                                 <span class="label" style="flex:1">Tiempo (segundos):</span>
@@ -1798,11 +1799,11 @@
                             </div>
                             <div class="row" style="gap:8px; margin-bottom:8px;">
                                 <button class="btn btn-warning" style="flex:1;"
-                                    onclick="iniciarConociendo()">▶ Iniciar Dinámica</button>
+                                    onclick="iniciarConociendo()">▶ Iniciar Podio</button>
                                 <button class="btn btn-primary" style="flex:1;"
                                     onclick="saltarSiguienteConociendo()">⏭ Siguiente Bailarina</button>
                             </div>
-                            <button class="btn btn-danger btn-full" style="margin-bottom:12px;" onclick="hacerFetch('/conociendo/stop')">⏹ Cancelar Dinámica</button>
+                            <button class="btn btn-danger btn-full" style="margin-bottom:12px;" onclick="hacerFetch('/podio/stop')">⏹ Cancelar Dinámica</button>
 
                             <!-- SECCIÓN: PROYECCIÓN A OVERLAY UNIVERSAL -->
                             <div style="border-top:1px solid var(--border); margin: 8px 0; padding-top: 12px;">
@@ -1810,11 +1811,11 @@
                                     📺 <span class="card-title-accent">Proyección en OBS (Overlays Universales)</span>
                                 </div>
                                 <div style="display:grid; grid-template-columns: 1fr 1fr; gap:8px; margin-bottom:12px;">
-                                    <button class="btn btn-ghost" style="border: 1px solid rgba(0, 229, 255, 0.4); text-align:center; padding: 10px 6px;" onclick="cambiarVistaUniversal('/conociendo')">
-                                        🔮 Proyectar Conociendo<br><small style="color:var(--text-muted)">Overlay Juegos</small>
+                                    <button class="btn btn-ghost" style="border: 1px solid rgba(0, 229, 255, 0.4); text-align:center; padding: 10px 6px;" onclick="cambiarVistaUniversal('/podio')">
+                                        🔮 Proyectar Podio<br><small style="color:var(--text-muted)">Overlay Juegos</small>
                                     </button>
-                                    <button class="btn btn-ghost" style="border: 1px solid rgba(168, 85, 247, 0.4); text-align:center; padding: 10px 6px;" onclick="cambiarVistaAcumulados('/ranking-conociendo')">
-                                        🏆 Proyectar Ranking<br><small style="color:var(--text-muted)">Overlay Acumulados</small>
+                                    <button class="btn btn-ghost" style="border: 1px solid rgba(168, 85, 247, 0.4); text-align:center; padding: 10px 6px;" onclick="cambiarVistaAcumulados('/ranking-podio')">
+                                        🏆 Proyectar Ranking Podio<br><small style="color:var(--text-muted)">Overlay Acumulados</small>
                                     </button>
                                 </div>
                             </div>
@@ -1823,7 +1824,7 @@
                             <div style="border-top:1px solid var(--border); margin: 6px 0 10px 0; padding-top: 12px;">
                                 <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
                                     <div class="card-title" style="font-size:14px; margin:0;">
-                                        📊 <span class="card-title-accent">Ranking de Conociendo</span>
+                                        📊 <span class="card-title-accent">Ranking de Podio</span>
                                     </div>
                                     <div style="display:flex; gap:6px;">
                                         <button class="btn btn-ghost btn-sm" onclick="copiarRankingConociendoUrl()" title="Copiar URL para OBS / TikTok Studio">
@@ -1836,7 +1837,7 @@
                                 </div>
                                 <div id="btns-conociendo" class="col" style="gap:6px; margin-bottom:12px;"></div>
                                 <button class="btn btn-danger btn-full" style="background:#dc2626; color:#ffffff; font-weight:700; border:none; padding:10px;" onclick="reiniciarRankingConociendo()">
-                                    🔄 Reiniciar Ranking Conociendo
+                                    🔄 Reiniciar Ranking Podio
                                 </button>
                                 <p class="helper-text" style="font-size:0.75rem; color:var(--text-muted); margin-top:6px; text-align:center;">
                                     ℹ️ Reiniciar este ranking NO afecta los puntos acumulados del día en el Ranking General.
@@ -2160,10 +2161,10 @@
                                 <button class="btn btn-primary" onclick="cambiarVistaUniversal('/timer')"
                                     id="btn-view-timer"
                                     style="transition: all 0.3s ease; text-align: left; padding: 12px 16px;">💃 Timer & Salta Turno</button>
-                                <button class="btn btn-primary" onclick="cambiarVistaUniversal('/conociendo')"
-                                    id="btn-view-conociendo"
-                                    style="transition: all 0.3s ease; text-align: left; padding: 12px 16px;">👑
-                                    Conociendo a mi Queen</button>
+                                <button class="btn btn-primary" onclick="cambiarVistaUniversal('/podio')"
+                                    id="btn-view-podio"
+                                    style="transition: all 0.3s ease; text-align: left; padding: 12px 16px;">🏆
+                                    Podio</button>
                                 <button class="btn btn-primary" onclick="cambiarVistaUniversal('/dinamica')"
                                     id="btn-view-dinamica"
                                     style="transition: all 0.3s ease; text-align: left; padding: 12px 16px;">⚡ Dinámica
@@ -2191,8 +2192,7 @@
                                     General</button>
                                 <button class="btn btn-primary" onclick="cambiarVistaAcumulados('/ranking-conociendo')"
                                     id="btn-view-ranking-conociendo"
-                                    style="transition: all 0.3s ease; text-align: left; padding: 12px 16px;">📊 Ranking
-                                    Conociendo</button>
+                                    style="transition: all 0.3s ease; text-align: left; padding: 12px 16px;">📊 Ranking Podio</button>
                                 <button class="btn btn-primary" onclick="cambiarVistaAcumulados('/overlay-top-likes')"
                                     id="btn-view-top-likes"
                                     style="transition: all 0.3s ease; text-align: left; padding: 12px 16px;">❤️ Top Likes /
@@ -2938,7 +2938,8 @@
                 { emoji: '⚽', nombre: 'HUD El Clásico', url: '/batalla-futbol-hud', desc: 'Modo fútbol HUD broadcast con avatares circulares, barra tug-of-war, marcadores gigantes y reloj.' },
                 { emoji: '❤️', nombre: 'Dinámica Revivir', url: '/revivir', desc: 'Dinámica de eliminación y revivir por meta de puntos.' },
                 { emoji: '💃', nombre: 'Timer & Salta Turno', url: '/timer', desc: 'Overlay unificado: Turno automático entre bailarinas con lista de regalos para saltar turno y extensión de tiempo.' },
-                { emoji: '👑', nombre: 'Conociendo a mi Queen', url: '/conociendo', desc: 'Meta de puntos por bailarina con barra de progreso.' },
+                { emoji: '🏆', nombre: 'Podio', url: '/podio', desc: 'HUD Podio con meta de puntos por bailarina y barra de progreso.' },
+                { emoji: '📊', nombre: 'Ranking Podio', url: '/ranking-podio', desc: 'Ranking list de Podio con coronas 1-3 y bailarina activa.' },
                 { emoji: '🥇', nombre: 'Copa del Día', url: '/copa', desc: 'Acumulado del día en El Clásico. Muestra el equipo líder.' },
                 { emoji: '⚡', nombre: 'Dinámica', url: '/dinamica', desc: 'Overlay genérico para dinámicas personalizadas creadas desde el Constructor.' },
                 { emoji: '📺', nombre: 'Grid Multi-cámara (Zukaa)', url: '/multicam', desc: 'Overlay de rejilla multi-pantalla transparente con marcos neón reactivos para OBS.' },
@@ -5220,7 +5221,8 @@
                     '/batalla-futbol': 'btn-view-batalla-futbol',
                     '/batalla-futbol-hud': 'btn-view-batalla-futbol-hud',
                     '/timer': 'btn-view-timer',
-                    '/conociendo': 'btn-view-conociendo',
+                    '/podio': 'btn-view-podio',
+                    '/conociendo': 'btn-view-podio',
                     '/multicam': 'btn-view-multicam',
                     '/dinamica': 'btn-view-dinamica',
                     '/gestor-regalos': 'btn-view-gestor-regalos'
@@ -5273,7 +5275,8 @@
             function actualizarBotonVistaAcumuladosActiva(vista) {
                 const ids = {
                     '/': 'btn-view-ranking',
-                    '/ranking-conociendo': 'btn-view-ranking-conociendo',
+                    '/ranking-podio': 'btn-view-ranking-podio',
+                    '/ranking-conociendo': 'btn-view-ranking-podio',
                     '/overlay-top-likes': 'btn-view-top-likes',
                     '/revivir-ranking': 'btn-view-revivir-ranking',
                     '/copa': 'btn-view-copa'
@@ -5443,24 +5446,24 @@
 
             function iniciarConociendo() {
                 const meta = document.getElementById('metaConociendoInput').value || 2000;
-                const titulo = document.getElementById('tituloConociendoInput').value || 'Conociendo a mi Queen';
+                const titulo = document.getElementById('tituloConociendoInput').value || 'Podio';
                 const tiempo = document.getElementById('tiempoConociendoInput').value || 300;
                 const chica = document.getElementById('conociendoChicaSelect')?.value || '';
-                let url = `/conociendo/start?meta=${encodeURIComponent(meta)}&titulo=${encodeURIComponent(titulo)}&tiempo=${encodeURIComponent(tiempo)}`;
+                let url = `/podio/start?meta=${encodeURIComponent(meta)}&titulo=${encodeURIComponent(titulo)}&tiempo=${encodeURIComponent(tiempo)}`;
                 if (chica) url += `&c=${encodeURIComponent(chica)}`;
                 hacerFetch(url);
             }
 
             async function seleccionarChicaConociendo(chica) {
                 if (eliminadasConociendo.includes(chica)) {
-                    await hacerFetch(`/conociendo/toggle-out?c=${encodeURIComponent(chica)}`);
+                    await hacerFetch(`/podio/toggle-out?c=${encodeURIComponent(chica)}`);
                 }
                 const meta = document.getElementById('metaConociendoInput')?.value || 2000;
                 const tiempo = document.getElementById('tiempoConociendoInput')?.value || 300;
-                const titulo = document.getElementById('tituloConociendoInput')?.value || 'Conociendo a mi Queen';
+                const titulo = document.getElementById('tituloConociendoInput')?.value || 'Podio';
                 const sel = document.getElementById('conociendoChicaSelect');
                 if (sel) sel.value = chica;
-                hacerFetch(`/conociendo/skip?c=${encodeURIComponent(chica)}&meta=${encodeURIComponent(meta)}&tiempo=${encodeURIComponent(tiempo)}&titulo=${encodeURIComponent(titulo)}`);
+                hacerFetch(`/podio/skip?c=${encodeURIComponent(chica)}&meta=${encodeURIComponent(meta)}&tiempo=${encodeURIComponent(tiempo)}&titulo=${encodeURIComponent(titulo)}`);
             }
 
             async function toggleOutConociendo(chica) {
@@ -5470,27 +5473,27 @@
             function saltarSiguienteConociendo() {
                 const meta = document.getElementById('metaConociendoInput')?.value || 2000;
                 const tiempo = document.getElementById('tiempoConociendoInput')?.value || 300;
-                const titulo = document.getElementById('tituloConociendoInput')?.value || 'Conociendo a mi Queen';
-                hacerFetch(`/conociendo/skip?meta=${encodeURIComponent(meta)}&tiempo=${encodeURIComponent(tiempo)}&titulo=${encodeURIComponent(titulo)}`);
+                const titulo = document.getElementById('tituloConociendoInput')?.value || 'Podio';
+                hacerFetch(`/podio/skip?meta=${encodeURIComponent(meta)}&tiempo=${encodeURIComponent(tiempo)}&titulo=${encodeURIComponent(titulo)}`);
             }
 
             function actualizarMetaConociendoEnVivo() {
                 const meta = document.getElementById('metaConociendoInput')?.value;
                 if (meta && parseInt(meta) > 0) {
-                    hacerFetch(`/conociendo/update-meta?meta=${encodeURIComponent(meta)}`);
+                    hacerFetch(`/podio/update-meta?meta=${encodeURIComponent(meta)}`);
                     if (typeof mostrarNotificacion === 'function') {
-                        mostrarNotificacion(`Meta de Conociendo actualizada a ${parseInt(meta).toLocaleString()} diamantes`);
+                        mostrarNotificacion(`Meta de Podio actualizada a ${parseInt(meta).toLocaleString()} diamantes`);
                     } else if (typeof showToast === 'function') {
-                        showToast(`Meta de Conociendo actualizada a ${parseInt(meta).toLocaleString()}`, 'success');
+                        showToast(`Meta de Podio actualizada a ${parseInt(meta).toLocaleString()}`, 'success');
                     }
                 }
             }
 
             function reiniciarRankingConociendo() {
-                const mensaje = "¿Estás seguro de que deseas reiniciar el Ranking de Conociendo a 0?\n(Tus puntos acumulados en el Ranking Diario se mantendrán intactos)";
+                const mensaje = "¿Estás seguro de que deseas reiniciar el Ranking de Podio a 0?\n(Tus puntos acumulados en el Ranking Diario se mantendrán intactos)";
                 const ejecutar = async () => {
                     try {
-                        await hacerFetch('/conociendo/reset-ranking');
+                        await hacerFetch('/podio/reset-ranking');
                         puntosConociendoRanking = {};
                         renderBotonesConociendo();
                     } catch(err) {
@@ -5507,13 +5510,13 @@
 
             async function cargarEstadoConociendoRanking() {
                 try {
-                    const data = await (await fetch('/api/conociendo-ranking')).json();
+                    const data = await (await fetch('/api/podio-ranking')).json();
                     if (data) {
                         if (data.puntosRanking) puntosConociendoRanking = data.puntosRanking;
                         if (data.eliminadas) eliminadasConociendo = data.eliminadas;
                         renderBotonesConociendo();
                     }
-                    const resEst = await fetch('/api/conociendo-estado');
+                    const resEst = await fetch('/api/podio-estado');
                     if (resEst.ok) {
                         const st = await resEst.json();
                         if (st) {
@@ -5538,7 +5541,7 @@
                 const slug = getAgencySlug();
                 const agencyPrefix = slug ? `/${slug}` : '';
                 const userParam = currentUsername ? `?user=${encodeURIComponent(currentUsername)}` : '';
-                return `${window.location.origin}${agencyPrefix}/ranking-conociendo${userParam}`;
+                return `${window.location.origin}${agencyPrefix}/ranking-podio${userParam}`;
             }
 
             function abrirRankingConociendo() {
@@ -5549,7 +5552,7 @@
                 const url = obtenerUrlRankingConociendo();
                 navigator.clipboard.writeText(url).then(() => {
                     if (typeof mostrarNotificacion === 'function') {
-                        mostrarNotificacion('URL de Ranking Conociendo copiada');
+                        mostrarNotificacion('URL de Ranking Podio copiada');
                     } else {
                         alert('URL copiada para OBS / TikTok Studio:\n' + url);
                     }
@@ -5559,10 +5562,10 @@
             }
 
             function sumarPuntosConociendo(chica, pts) {
-                hacerFetch(`/conociendo/sumar-puntos?c=${encodeURIComponent(chica)}&pts=${pts}`);
+                hacerFetch(`/podio/sumar-puntos?c=${encodeURIComponent(chica)}&pts=${pts}`);
             }
 
-            socket.on('conociendoRankingActualizado', (data) => {
+            socket.on('podioRankingActualizado', (data) => {
                 if (data && data.puntosRanking !== undefined) {
                     puntosConociendoRanking = data.puntosRanking;
                 } else if (data && data.action === 'RESET_RANKING_CONOCIENDO') {

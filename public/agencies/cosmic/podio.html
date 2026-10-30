@@ -1,0 +1,512 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <!-- Inyección de multi-cuenta -->
+    <script>
+        (function() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const user = urlParams.get('user');
+            if (user) {
+                const originalFetch = window.fetch;
+                window.fetch = function(url, options) {
+                    if (typeof url === 'string' && !url.includes('user=')) {
+                        const sep = url.includes('?') ? '&' : '?';
+                        url = url + sep + 'user=' + encodeURIComponent(user);
+                    }
+                    return originalFetch(url, options);
+                };
+                const originalIo = window.io;
+                if (originalIo) {
+                    window.io = function(opts) {
+                        opts = opts || {};
+                        opts.query = opts.query || {};
+                        opts.query.user = user;
+                        return originalIo(opts);
+                    };
+                } else {
+                    let _io = undefined;
+                    Object.defineProperty(window, 'io', {
+                        get: function() { return _io; },
+                        set: function(val) {
+                            _io = function(opts) {
+                                opts = opts || {};
+                                opts.query = opts.query || {};
+                                opts.query.user = user;
+                                return val(opts);
+                            };
+                        },
+                        configurable: true
+                    });
+                }
+            }
+        })();
+    </script>
+
+    <meta charset="UTF-8">
+    <title>HUD Podio — Cosmic</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=TikTok+Sans:ital,wght@0,300..900;1,300..900&family=Montserrat:ital,wght@0,500;0,700;1,500&display=swap" rel="stylesheet">
+    
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=TikTok+Sans:ital,wght@0,300..900;1,300..900&display=swap');
+
+        *, *::before, *::after {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            user-select: none;
+            font-family: 'TikTok Sans', 'Proxima Nova', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+        }
+
+        body {
+            font-family: 'TikTok Sans', 'Proxima Nova', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
+            text-align: center;
+            overflow: hidden;
+            background: transparent;
+            color: #ffffff;
+            margin: 0;
+            padding: 16px;
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            min-height: 100vh;
+        }
+
+        /* ═══ CONTENEDOR PRINCIPAL DEL WIDGET (ANCHO EXPANDIDO) ═══ */
+        .conociendo-widget {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            width: 480px;
+            min-width: 440px;
+            position: relative;
+            animation: fadeIn 0.35s ease-out;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(-8px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* ── TARJETA CUERPO NEGRO GRAFITO (ESTILO DINÁMICA PERSONALIZADA) ── */
+        .card-body {
+            width: 100%;
+            background: rgba(18, 18, 20, 0.96);
+            border: 2px solid #2e2e33;
+            border-radius: 20px;
+            padding: 18px 24px 20px 24px;
+            box-shadow: 0 14px 40px rgba(0, 0, 0, 0.85), inset 0 1px 1px rgba(255, 255, 255, 0.08);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            position: relative;
+            transition: border-color 0.35s ease, box-shadow 0.35s ease, transform 0.25s ease;
+        }
+
+        /* ── ILUMINACIÓN MULTICOLOR DINÁMICA AL ALCANZAR O PASARSE DE LA META ── */
+        .card-body.goal-reached {
+            border-color: #ffee00;
+            animation: cardRainbowGlow 2.4s linear infinite;
+        }
+
+        @keyframes cardRainbowGlow {
+            0% {
+                border-color: #ff007f;
+                box-shadow: 0 14px 40px rgba(0, 0, 0, 0.85), 0 0 26px rgba(255, 0, 127, 0.85), 0 0 50px rgba(255, 238, 0, 0.45), inset 0 0 18px rgba(255, 0, 127, 0.28);
+            }
+            25% {
+                border-color: #ffee00;
+                box-shadow: 0 14px 40px rgba(0, 0, 0, 0.85), 0 0 28px rgba(255, 238, 0, 0.9), 0 0 52px rgba(0, 242, 254, 0.5), inset 0 0 18px rgba(255, 238, 0, 0.28);
+            }
+            50% {
+                border-color: #00f2fe;
+                box-shadow: 0 14px 40px rgba(0, 0, 0, 0.85), 0 0 28px rgba(0, 242, 254, 0.9), 0 0 52px rgba(16, 185, 129, 0.5), inset 0 0 18px rgba(0, 242, 254, 0.28);
+            }
+            75% {
+                border-color: #a855f7;
+                box-shadow: 0 14px 40px rgba(0, 0, 0, 0.85), 0 0 28px rgba(168, 85, 247, 0.9), 0 0 52px rgba(255, 0, 127, 0.5), inset 0 0 18px rgba(168, 85, 247, 0.28);
+            }
+            100% {
+                border-color: #ff007f;
+                box-shadow: 0 14px 40px rgba(0, 0, 0, 0.85), 0 0 26px rgba(255, 0, 127, 0.85), 0 0 50px rgba(255, 238, 0, 0.45), inset 0 0 18px rgba(255, 0, 127, 0.28);
+            }
+        }
+
+        /* ── ENCABEZADO CON EL NOMBRE DE LA QUEEN EN GRANDE Y DESTACADO ── */
+        .queen-name-header {
+            background: rgba(255, 255, 255, 0.07);
+            border: 1.5px solid rgba(255, 255, 255, 0.14);
+            border-radius: 12px;
+            padding: 6px 30px;
+            margin-bottom: 6px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+            transition: all 0.3s ease;
+        }
+
+        .card-body.goal-reached .queen-name-header {
+            background: linear-gradient(135deg, rgba(255, 0, 127, 0.28), rgba(0, 242, 254, 0.25));
+            border-color: rgba(255, 238, 0, 0.85);
+            box-shadow: 0 0 18px rgba(255, 238, 0, 0.65), 0 4px 14px rgba(0, 0, 0, 0.6);
+        }
+
+        .queen-name-header span {
+            font-weight: 800;
+            font-size: 1.75rem;
+            color: #ffffff;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            text-shadow: 0 2px 8px rgba(0, 0, 0, 0.75);
+        }
+
+        /* ── RELOJ DIGITAL DE GRAN TAMAÑO Y CENTRADO ── */
+        .digital-timer {
+            font-size: 3.85rem;
+            font-weight: 800;
+            color: #ffffff;
+            letter-spacing: 2px;
+            line-height: 1.05;
+            margin: 6px 0 16px 0;
+            text-shadow: 0 3px 14px rgba(0, 0, 0, 0.75);
+            transition: text-shadow 0.3s ease, transform 0.3s ease;
+        }
+
+        .card-body.goal-reached .digital-timer {
+            text-shadow: 0 0 16px rgba(255, 255, 255, 0.95), 0 0 32px rgba(0, 242, 254, 0.8), 0 3px 14px rgba(0, 0, 0, 0.85);
+        }
+
+        /* ── BARRA DE PROGRESO CIAN ANCHA (PUNTOS DENTRO) ── */
+        .progress-bar-wrapper {
+            width: 100%;
+            height: 36px;
+            background: #252529;
+            border: 1.5px solid rgba(255, 255, 255, 0.12);
+            border-radius: 10px;
+            overflow: hidden;
+            position: relative;
+            box-shadow: inset 0 2px 5px rgba(0, 0, 0, 0.7);
+            display: flex;
+            align-items: center;
+            transition: border-color 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .card-body.goal-reached .progress-bar-wrapper {
+            border-color: #ffffff;
+            box-shadow: 0 0 20px rgba(255, 238, 0, 0.75), 0 0 32px rgba(255, 0, 127, 0.55), inset 0 0 10px rgba(255, 255, 255, 0.35);
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #00c6ff, #00e5ff, #72f5ff);
+            min-width: 0%;
+            max-width: 100%;
+            width: 0%;
+            transition: width 0.4s cubic-bezier(0.25, 1, 0.5, 1), background 0.3s ease;
+            position: absolute;
+            left: 0;
+            top: 0;
+            border-radius: 8px 0 0 8px;
+            box-shadow: 0 0 14px rgba(0, 229, 255, 0.65);
+        }
+
+        .progress-fill::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 44%;
+            background: linear-gradient(180deg, rgba(255, 255, 255, 0.28) 0%, transparent 100%);
+            pointer-events: none;
+        }
+
+        /* MODO MULTICOLOR ARCOÍRIS CUANDO LLEGA O SE PASA DE LA META */
+        .progress-fill.rainbow-active {
+            border-radius: 8px;
+            background: linear-gradient(270deg, #ff007f, #ffee00, #00f2fe, #10b981, #a855f7, #ff007f) !important;
+            background-size: 400% 400% !important;
+            animation: rainbowCelebrationBar 1.8s linear infinite !important;
+            box-shadow: 0 0 20px rgba(255, 238, 0, 0.9), 0 0 32px rgba(0, 242, 254, 0.75) !important;
+        }
+
+        @keyframes rainbowCelebrationBar {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+
+        .points-label-overlay {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 16px;
+            z-index: 2;
+            pointer-events: none;
+        }
+
+        .points-inside {
+            font-weight: 700;
+            font-size: 16px;
+            color: #ffffff;
+            text-shadow: 0 1px 4px rgba(0, 0, 0, 0.95), 0 0 8px rgba(0, 0, 0, 0.75);
+            letter-spacing: 0.5px;
+            transition: transform 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        .meta-target {
+            font-weight: 700;
+            font-size: 15px;
+            color: #e4e4e7;
+            text-shadow: 0 1px 4px rgba(0, 0, 0, 0.95), 0 0 8px rgba(0, 229, 255, 0.5);
+            letter-spacing: 0.5px;
+            transition: transform 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275), color 0.3s ease;
+        }
+
+        .card-body.goal-reached .meta-target {
+            color: #ffee00;
+            text-shadow: 0 1px 4px rgba(0, 0, 0, 0.95), 0 0 12px rgba(255, 238, 0, 0.95);
+        }
+
+        .pop-anim {
+            transform: scale(1.26);
+        }
+
+        /* Estado completado al alcanzar o superar la meta */
+        .badge-logrado {
+            display: none;
+            color: #ffee00;
+            font-weight: 800;
+            font-size: 16px;
+            letter-spacing: 1px;
+            margin-top: 10px;
+            text-shadow: 0 0 12px rgba(255, 238, 0, 0.9), 0 0 24px rgba(255, 0, 127, 0.7);
+            animation: badgePulse 1s ease-in-out infinite alternate;
+        }
+
+        @keyframes badgePulse {
+            from { transform: scale(1); }
+            to { transform: scale(1.06); }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="conociendo-widget" id="contenedor-principal">
+        <!-- Cuerpo de tarjeta negro grafito -->
+        <div class="card-body" id="caja-reloj">
+            <!-- Nombre de la Queen arriba directamente -->
+            <div class="queen-name-header">
+                <span id="nombre-bailando">EN ESPERA</span>
+            </div>
+
+            <!-- Reloj digital cuenta regresiva -->
+            <div class="digital-timer" id="timer-display">00:00</div>
+
+            <!-- Barra de progreso cian con puntos dentro y meta visible -->
+            <div class="progress-bar-wrapper">
+                <div class="progress-fill" id="barra-meta"></div>
+                <div class="points-label-overlay">
+                    <span class="points-inside" id="puntos-actuales">0</span>
+                    <span class="meta-target" id="meta-total">META: 2,000</span>
+                </div>
+            </div>
+
+            <div class="badge-logrado" id="badge-logrado">¡META LOGRADA!</div>
+        </div>
+    </div>
+
+    <!-- PUENTES Y SOCKET.IO -->
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.2/dist/confetti.browser.min.js"></script>
+    <script src="/js/iframe-bridge.js"></script>
+    <script src="/socket.io/socket.io.js"></script>
+
+    <script>
+        const urlParams = new URLSearchParams(window.location.search);
+        const userParam = urlParams.get('user') || '';
+        const socket = window.__iframeBridgeSocket || io({ query: userParam ? { user: userParam } : {} });
+
+        let APODOS = {};
+        let currentChica = '';
+        let currentMeta = 2000;
+        let currentPuntos = 0;
+        let currentTiempo = 300;
+        let currentTitulo = 'Podio';
+        let confetiDisparado = false;
+
+        const cajaReloj = document.getElementById('caja-reloj');
+        const displayReloj = document.getElementById('timer-display');
+        const nombreBailando = document.getElementById('nombre-bailando');
+        const barraMeta = document.getElementById('barra-meta');
+        const txtPuntos = document.getElementById('puntos-actuales');
+        const txtMeta = document.getElementById('meta-total');
+        const badgeLogrado = document.getElementById('badge-logrado');
+        let prevPuntos = 0;
+
+        function formatearTiempo(segundos) {
+            const seg = Math.max(0, parseInt(segundos) || 0);
+            const m = Math.floor(seg / 60).toString().padStart(2, '0');
+            const s = (seg % 60).toString().padStart(2, '0');
+            return `${m}:${s}`;
+        }
+
+        function animarPop(el) {
+            if (!el) return;
+            el.classList.remove('pop-anim');
+            void el.offsetWidth;
+            el.classList.add('pop-anim');
+            setTimeout(() => el.classList.remove('pop-anim'), 220);
+        }
+
+        function actualizarBarra(puntos, meta) {
+            const pts = parseInt(puntos) || 0;
+            const m = parseInt(meta) || 2000;
+            const subioPuntos = pts !== prevPuntos;
+            prevPuntos = pts;
+            currentPuntos = pts;
+            currentMeta = m;
+
+            txtPuntos.innerText = pts.toLocaleString('es-ES');
+
+            const faltan = Math.max(0, m - pts);
+            if (txtMeta) {
+                if (pts >= m && m > 0) {
+                    const extra = pts - m;
+                    txtMeta.innerText = extra > 0
+                        ? `META: 0 (+${extra.toLocaleString('es-ES')})`
+                        : `META: 0`;
+                } else {
+                    txtMeta.innerText = `META: ${faltan.toLocaleString('es-ES')}`;
+                }
+            }
+
+            if (subioPuntos) {
+                animarPop(txtPuntos);
+                animarPop(txtMeta);
+            }
+
+            let porcentaje = m === 0 ? 0 : (pts / m) * 100;
+            if (porcentaje > 100) porcentaje = 100;
+
+            barraMeta.style.width = porcentaje + '%';
+
+            if (pts >= m && m > 0) {
+                if (cajaReloj) cajaReloj.classList.add('goal-reached');
+                barraMeta.classList.add('rainbow-active');
+                badgeLogrado.innerText = pts > m ? '¡META SUPERADA! 🔥' : '¡META LOGRADA! ✨';
+                badgeLogrado.style.display = 'block';
+                if ((!confetiDisparado || subioPuntos) && typeof confetti === 'function') {
+                    confetti({
+                        particleCount: confetiDisparado ? 35 : 80,
+                        spread: 80,
+                        origin: { y: 0.3 },
+                        colors: ['#ff0055', '#ffbe0b', '#00f5d4', '#00bbf9', '#9b5de5', '#ffffff']
+                    });
+                    confetiDisparado = true;
+                }
+            } else {
+                if (cajaReloj) cajaReloj.classList.remove('goal-reached');
+                barraMeta.classList.remove('rainbow-active');
+                badgeLogrado.style.display = 'none';
+            }
+        }
+
+        function actualizarBailarina(chica) {
+            currentChica = chica || '';
+            const nombreDisplay = (APODOS[chica] || chica || 'EN ESPERA').trim().toUpperCase();
+            nombreBailando.innerText = nombreDisplay;
+        }
+
+        async function syncEstadoConociendo() {
+            try {
+                const res = await fetch('/api/podio-estado');
+                if (res.ok) {
+                    const data = await res.json();
+                    if (data) {
+                        currentMeta = data.meta !== undefined ? data.meta : 2000;
+                        currentPuntos = data.puntos !== undefined ? data.puntos : 0;
+                        currentTiempo = data.tiempo !== undefined ? data.tiempo : 300;
+                        if (data.activo && data.chicaActual) {
+                            actualizarBailarina(data.chicaActual);
+                            displayReloj.innerText = formatearTiempo(currentTiempo);
+                        }
+                        actualizarBarra(currentPuntos, currentMeta);
+                    }
+                }
+            } catch(e) {}
+        }
+
+        // Cargar apodos iniciales
+        fetch('/api/apodos')
+            .then(r => r.json())
+            .then(map => {
+                APODOS = map || {};
+                if (currentChica) actualizarBailarina(currentChica);
+            })
+            .catch(() => {});
+
+        // ══════════════════════════════════════════════════════════════
+        //  SOCKET.IO LISTENERS
+        // ══════════════════════════════════════════════════════════════
+        socket.on('podioInicio', (data) => {
+            confetiDisparado = false;
+            if (data.titulo !== undefined && data.titulo !== '') {
+                currentTitulo = data.titulo;
+            }
+
+            if (data.chica) {
+                actualizarBailarina(data.chica);
+            }
+
+            currentTiempo = data.tiempo !== undefined ? data.tiempo : 300;
+            currentMeta = data.meta !== undefined ? data.meta : 2000;
+            currentPuntos = data.puntos !== undefined ? data.puntos : 0;
+
+            displayReloj.innerText = formatearTiempo(currentTiempo);
+            actualizarBarra(currentPuntos, currentMeta);
+        });
+
+        socket.on('podioTick', (tiempo) => {
+            currentTiempo = tiempo;
+            displayReloj.innerText = formatearTiempo(tiempo);
+        });
+
+        socket.on('podioPuntos', (data) => {
+            currentPuntos = data.puntos !== undefined ? data.puntos : currentPuntos;
+            currentMeta = data.meta !== undefined ? data.meta : currentMeta;
+            actualizarBarra(currentPuntos, currentMeta);
+        });
+
+        socket.on('podioCancelado', () => {
+            confetiDisparado = false;
+            currentPuntos = 0;
+            currentTiempo = 0;
+            displayReloj.innerText = '00:00';
+            actualizarBailarina('');
+            actualizarBarra(0, currentMeta);
+        });
+
+        socket.on('queensActualizadas', (data) => {
+            if (data && data.apodos) {
+                APODOS = data.apodos;
+                if (currentChica) actualizarBailarina(currentChica);
+            }
+        });
+
+        socket.on('connect', () => {
+            syncEstadoConociendo();
+        });
+
+        // Sincronizar inmediatamente al cargar el documento
+        syncEstadoConociendo();
+    </script>
+</body>
+</html>
+

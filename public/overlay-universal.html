@@ -114,6 +114,11 @@
         socket.on('conociendoTransicionTick', function(d) { forwardToIframe('conociendoTransicionTick', d); });
         socket.on('conociendoCancelado', function(d) { forwardToIframe('conociendoCancelado', d); });
         socket.on('conociendoRankingActualizado', function(d) { forwardToIframe('conociendoRankingActualizado', d); });
+        socket.on('podioInicio', function(d) { forwardToIframe('podioInicio', d); });
+        socket.on('podioTick', function(d) { forwardToIframe('podioTick', d); });
+        socket.on('podioPuntos', function(d) { forwardToIframe('podioPuntos', d); });
+        socket.on('podioCancelado', function(d) { forwardToIframe('podioCancelado', d); });
+        socket.on('podioRankingActualizado', function(d) { forwardToIframe('podioRankingActualizado', d); });
 
         // ── Revivir / Torneo ──
         socket.on('revivirInicio', function(d) { forwardToIframe('revivirInicio', d); });

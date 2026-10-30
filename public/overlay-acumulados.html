@@ -96,7 +96,13 @@
 
         // ── Conociendo Ranking ──
         socket.on('conociendoRankingActualizado', function(d) { forwardToIframe('conociendoRankingActualizado', d); });
+        socket.on('conociendoInicio', function(d) { forwardToIframe('conociendoInicio', d); });
+        socket.on('conociendoCancelado', function(d) { forwardToIframe('conociendoCancelado', d); });
         socket.on('conociendoPuntos', function(d) { forwardToIframe('conociendoPuntos', d); });
+        socket.on('podioRankingActualizado', function(d) { forwardToIframe('podioRankingActualizado', d); });
+        socket.on('podioInicio', function(d) { forwardToIframe('podioInicio', d); });
+        socket.on('podioCancelado', function(d) { forwardToIframe('podioCancelado', d); });
+        socket.on('podioPuntos', function(d) { forwardToIframe('podioPuntos', d); });
 
         // ── Copa ──
         socket.on('actualizarCopa', function(d) { forwardToIframe('actualizarCopa', d); });

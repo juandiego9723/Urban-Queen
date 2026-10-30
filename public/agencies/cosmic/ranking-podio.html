@@ -1,0 +1,529 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <!-- Inyección de multi-cuenta -->
+    <script>
+        (function() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const user = urlParams.get('user');
+            if (user) {
+                const originalFetch = window.fetch;
+                window.fetch = function(url, options) {
+                    if (typeof url === 'string' && !url.includes('user=')) {
+                        const sep = url.includes('?') ? '&' : '?';
+                        url = url + sep + 'user=' + encodeURIComponent(user);
+                    }
+                    return originalFetch(url, options);
+                };
+                const originalIo = window.io;
+                if (originalIo) {
+                    window.io = function(opts) {
+                        opts = opts || {};
+                        opts.query = opts.query || {};
+                        opts.query.user = user;
+                        return originalIo(opts);
+                    };
+                } else {
+                    let _io = undefined;
+                    Object.defineProperty(window, 'io', {
+                        get: function() { return _io; },
+                        set: function(val) {
+                            _io = function(opts) {
+                                opts = opts || {};
+                                opts.query = opts.query || {};
+                                opts.query.user = user;
+                                return val(opts);
+                            };
+                        },
+                        configurable: true
+                    });
+                }
+            }
+        })();
+    </script>
+    <meta charset="UTF-8">
+    <title>Ranking List — Podio</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800;900&family=Montserrat:wght@700;800;900&family=TikTok+Sans:opsz,wght@12..36,400..900&display=swap" rel="stylesheet">
+    
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            user-select: none;
+            font-family: 'TikTok Sans', 'Proxima Nova', 'Inter', -apple-system, BlinkMacSystemFont, sans-serif !important;
+        }
+
+        body {
+            background-color: transparent;
+            color: #ffffff;
+            margin: 0;
+            padding: 16px;
+            display: flex;
+            justify-content: flex-start;
+            align-items: flex-start;
+            overflow: hidden;
+        }
+
+        /* ═══ TARJETA NEGRO GRAFITO COMPACTA ═══ */
+        .ranking-card {
+            width: fit-content;
+            min-width: 265px;
+            max-width: 325px;
+            background: rgba(18, 18, 20, 0.96);
+            border: 2px solid #2e2e33;
+            border-radius: 18px;
+            padding: 16px 16px 14px 16px;
+            box-shadow: 0 14px 40px rgba(0, 0, 0, 0.85), inset 0 1px 1px rgba(255, 255, 255, 0.08);
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            position: relative;
+        }
+
+        /* Título superior "Ranking list" */
+        .ranking-title {
+            font-size: 1.25rem;
+            font-weight: 900;
+            color: #ffffff;
+            margin-bottom: 6px;
+            padding-left: 2px;
+            letter-spacing: -0.3px;
+        }
+
+        /* Contenedor de filas */
+        .ranking-rows {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        /* ═══ FILA DE CADA BAILARINA ═══ */
+        .rank-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 14px;
+            padding: 8px 12px;
+            border-radius: 9px;
+            transition: all 0.35s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            background: rgba(255, 255, 255, 0.025);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            position: relative;
+            overflow: hidden;
+        }
+
+        /* ═══ ILUMINACIÓN DORADA EN LA BAILARINA ACTIVA ═══ */
+        @keyframes goldPulseGlow {
+            0%, 100% {
+                box-shadow: 0 0 12px rgba(255, 204, 0, 0.55),
+                            0 0 24px rgba(245, 158, 11, 0.35),
+                            inset 0 0 10px rgba(255, 240, 150, 0.3);
+                border-color: rgba(255, 232, 117, 0.9);
+            }
+            50% {
+                box-shadow: 0 0 20px rgba(255, 225, 65, 0.95),
+                            0 0 36px rgba(245, 158, 11, 0.65),
+                            inset 0 0 16px rgba(255, 248, 180, 0.55);
+                border-color: #ffffff;
+            }
+        }
+
+        @keyframes goldBgShift {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+
+        @keyframes goldSheenSweep {
+            0% { transform: translateX(-140%) skewX(-22deg); }
+            100% { transform: translateX(260%) skewX(-22deg); }
+        }
+
+        .rank-row.is-active-dancer {
+            background: linear-gradient(90deg, #b45309 0%, #f59e0b 35%, #d97706 70%, #fbbf24 100%);
+            background-size: 220% 220%;
+            border: 1.5px solid #ffe875;
+            animation: goldPulseGlow 1.9s infinite ease-in-out, goldBgShift 3.5s infinite ease-in-out;
+            transform: scale(1.02);
+            z-index: 2;
+        }
+
+        .rank-row.is-active-dancer::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 45%;
+            height: 100%;
+            background: linear-gradient(90deg, rgba(255,255,255,0) 0%, rgba(255,255,255,0.28) 50%, rgba(255,255,255,0) 100%);
+            animation: goldSheenSweep 2.6s infinite ease-in-out;
+            pointer-events: none;
+        }
+
+        .row-left {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex-grow: 1;
+            min-width: 0;
+            position: relative;
+            z-index: 1;
+        }
+
+        /* Insignia / Corona de Ranking */
+        .rank-badge {
+            width: 24px;
+            height: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+
+        .crown-svg {
+            width: 24px;
+            height: 21px;
+            display: block;
+            filter: drop-shadow(0 1px 3px rgba(0, 0, 0, 0.7));
+        }
+
+        /* Número plano para puestos 4+ */
+        .rank-plain-num {
+            font-size: 1.15rem;
+            font-weight: 900;
+            color: #ffffff;
+            width: 24px;
+            text-align: center;
+            line-height: 1;
+        }
+
+        /* Nombre de la Queen */
+        .queen-name {
+            font-size: 1.18rem;
+            font-weight: 800;
+            color: #ffffff;
+            letter-spacing: 0.4px;
+            text-transform: uppercase;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .rank-row.is-active-dancer .queen-name {
+            color: #ffffff;
+            font-weight: 900;
+            text-shadow: 0 1px 4px rgba(0, 0, 0, 0.8), 0 0 10px rgba(255, 240, 150, 0.5);
+        }
+
+        /* Puntaje en la derecha */
+        .queen-points {
+            font-size: 1.25rem;
+            font-weight: 900;
+            font-variant-numeric: tabular-nums;
+            color: #ffffff;
+            text-align: right;
+            padding-left: 4px;
+            letter-spacing: 0.2px;
+            position: relative;
+            z-index: 1;
+        }
+
+        .rank-row.is-active-dancer .queen-points {
+            color: #fff6a9;
+            text-shadow: 0 1px 5px rgba(0, 0, 0, 0.85), 0 0 10px rgba(255, 230, 100, 0.65);
+        }
+
+        /* Animación suave al actualizar puntos */
+        @keyframes pulsePoints {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.12); filter: brightness(1.3); }
+            100% { transform: scale(1); }
+        }
+        .anim-update {
+            display: inline-block;
+            animation: pulsePoints 0.35s ease-out;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="ranking-card" id="ranking-card">
+        <div class="ranking-title">Ranking list</div>
+        <div class="ranking-rows" id="ranking-rows">
+            <div style="color: rgba(255,255,255,0.4); font-size: 0.9rem; text-align: center; padding: 10px;">Cargando lista...</div>
+        </div>
+    </div>
+
+    <!-- PUENTE IFRAME Y SOCKET.IO DE TIKDANCE -->
+    <script src="/js/iframe-bridge.js"></script>
+    <script src="/socket.io/socket.io.js"></script>
+
+    <script>
+        const urlParams = new URLSearchParams(window.location.search);
+        const userParam = urlParams.get('user') || '';
+        const socket = window.__iframeBridgeSocket || io({ query: userParam ? { user: userParam } : {} });
+
+        let QUEENS = [];
+        let APODOS = {};
+        let puntosConociendo = {};
+        let currentChicaActiva = '';
+        let eliminadasConociendo = [];
+
+        // SVGs de Coronas con número incrustado
+        const CROWN_SVGS = {
+            1: `
+                <svg class="crown-svg" viewBox="0 0 28 22" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M2.5 17.5L0.5 4.5L7.5 10.5L14 1.5L20.5 10.5L27.5 4.5L25.5 17.5H2.5Z" fill="url(#goldGrad)" stroke="#FFE875" stroke-width="0.8"/>
+                    <rect x="2.5" y="17.5" width="23" height="3" rx="1" fill="#F59E0B" stroke="#FFE875" stroke-width="0.6"/>
+                    <text x="14" y="15" fill="#FFFFFF" font-family="'Inter', sans-serif" font-weight="900" font-size="8.5" text-anchor="middle">1</text>
+                    <defs>
+                        <linearGradient id="goldGrad" x1="14" y1="1.5" x2="14" y2="17.5" gradientUnits="userSpaceOnUse">
+                            <stop stop-color="#FFE066"/>
+                            <stop offset="0.6" stop-color="#F59E0B"/>
+                            <stop offset="1" stop-color="#D97706"/>
+                        </linearGradient>
+                    </defs>
+                </svg>
+            `,
+            2: `
+                <svg class="crown-svg" viewBox="0 0 28 22" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M2.5 17.5L0.5 4.5L7.5 10.5L14 1.5L20.5 10.5L27.5 4.5L25.5 17.5H2.5Z" fill="url(#silverGrad)" stroke="#E2E8F0" stroke-width="0.8"/>
+                    <rect x="2.5" y="17.5" width="23" height="3" rx="1" fill="#94A3B8" stroke="#E2E8F0" stroke-width="0.6"/>
+                    <text x="14" y="15" fill="#FFFFFF" font-family="'Inter', sans-serif" font-weight="900" font-size="8.5" text-anchor="middle">2</text>
+                    <defs>
+                        <linearGradient id="silverGrad" x1="14" y1="1.5" x2="14" y2="17.5" gradientUnits="userSpaceOnUse">
+                            <stop stop-color="#FFFFFF"/>
+                            <stop offset="0.5" stop-color="#BAE6FD"/>
+                            <stop offset="1" stop-color="#7DD3FC"/>
+                        </linearGradient>
+                    </defs>
+                </svg>
+            `,
+            3: `
+                <svg class="crown-svg" viewBox="0 0 28 22" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M2.5 17.5L0.5 4.5L7.5 10.5L14 1.5L20.5 10.5L27.5 4.5L25.5 17.5H2.5Z" fill="url(#bronzeGrad)" stroke="#FFD8D8" stroke-width="0.8"/>
+                    <rect x="2.5" y="17.5" width="23" height="3" rx="1" fill="#C2410C" stroke="#FFD8D8" stroke-width="0.6"/>
+                    <text x="14" y="15" fill="#FFFFFF" font-family="'Inter', sans-serif" font-weight="900" font-size="8.5" text-anchor="middle">3</text>
+                    <defs>
+                        <linearGradient id="bronzeGrad" x1="14" y1="1.5" x2="14" y2="17.5" gradientUnits="userSpaceOnUse">
+                            <stop stop-color="#FCA5A5"/>
+                            <stop offset="0.6" stop-color="#EA580C"/>
+                            <stop offset="1" stop-color="#9A3412"/>
+                        </linearGradient>
+                    </defs>
+                </svg>
+            `
+        };
+
+        function crearFilas() {
+            const container = document.getElementById('ranking-rows');
+            container.innerHTML = '';
+
+            // Asegurar que si hay puntos de una reina no listada en QUEENS, se agregue
+            // Y excluir a las bailarinas eliminadas para que no aparezcan en el ranking
+            const todasQueens = [...new Set([...QUEENS, ...Object.keys(puntosConociendo)])]
+                .filter(q => !eliminadasConociendo.includes(q));
+
+            if (todasQueens.length === 0) {
+                container.innerHTML = '<div style="color: rgba(255,255,255,0.4); font-size: 0.9rem; text-align: center; padding: 10px;">Esperando dinámica...</div>';
+                return;
+            }
+
+            todasQueens.forEach(q => {
+                const row = document.createElement('div');
+                row.className = 'rank-row';
+                row.id = 'row-' + q;
+
+                const nombreDisplay = (APODOS[q] || q).trim().toUpperCase();
+
+                row.innerHTML = `
+                    <div class="row-left">
+                        <div class="rank-badge" id="badge-${q}"></div>
+                        <span class="queen-name">${nombreDisplay}</span>
+                    </div>
+                    <span class="queen-points" id="pts-${q}">0</span>
+                `;
+                container.appendChild(row);
+            });
+
+            reordenarTabla();
+        }
+
+        function reordenarTabla() {
+            const todasQueens = [...new Set([...QUEENS, ...Object.keys(puntosConociendo)])]
+                .filter(q => !eliminadasConociendo.includes(q));
+
+            const container = document.getElementById('ranking-rows');
+            if (!container) return;
+            const filasExistentes = container.querySelectorAll('.rank-row').length;
+            if (filasExistentes !== todasQueens.length) {
+                crearFilas();
+                return;
+            }
+
+            const filas = todasQueens.map(q => ({
+                name: q,
+                pts: puntosConociendo[q] || 0
+            }));
+
+            // Ordenar de mayor a menor puntaje
+            filas.sort((a, b) => b.pts - a.pts);
+
+            filas.forEach((fila, index) => {
+                const rowEl = document.getElementById('row-' + fila.name);
+                const ptsEl = document.getElementById('pts-' + fila.name);
+                const badgeEl = document.getElementById('badge-' + fila.name);
+                if (!rowEl || !ptsEl || !badgeEl) return;
+
+                rowEl.style.order = index;
+
+                // Actualizar puntos con animación si cambió
+                const puntosTexto = (fila.pts || 0).toLocaleString('es-ES');
+                if (ptsEl.innerText !== puntosTexto) {
+                    ptsEl.innerText = puntosTexto;
+                    ptsEl.classList.remove('anim-update');
+                    void ptsEl.offsetWidth;
+                    ptsEl.classList.add('anim-update');
+                }
+
+                const puesto = index + 1;
+
+                // Resaltar e iluminar en dorado a la bailarina activa en turno (o puesto 1 si aún no hay bailarina activa)
+                const esBailarinaActiva = currentChicaActiva
+                    ? (fila.name === currentChicaActiva)
+                    : (puesto === 1);
+
+                if (esBailarinaActiva) {
+                    rowEl.classList.add('is-active-dancer');
+                } else {
+                    rowEl.classList.remove('is-active-dancer');
+                }
+
+                // Asignar corona o número
+                if (puesto <= 3 && CROWN_SVGS[puesto]) {
+                    badgeEl.innerHTML = CROWN_SVGS[puesto];
+                } else {
+                    badgeEl.innerHTML = `<span class="rank-plain-num">${puesto}</span>`;
+                }
+            });
+        }
+
+        async function cargarDatosIniciales() {
+            try {
+                // 1. Obtener apodos
+                try {
+                    const resA = await fetch('/api/apodos');
+                    if (resA.ok) APODOS = await resA.json();
+                } catch(e) {}
+
+                // 2. Obtener estado del ranking de conociendo
+                try {
+                    const resR = await fetch('/api/podio-ranking');
+                    if (resR.ok) {
+                        const dataR = await resR.json();
+                        puntosConociendo = dataR.puntosRanking || {};
+                        if (dataR.eliminadas && Array.isArray(dataR.eliminadas)) {
+                            eliminadasConociendo = dataR.eliminadas;
+                        }
+                        if (dataR.chicaActual !== undefined) {
+                            currentChicaActiva = dataR.chicaActual || '';
+                        }
+                        if (dataR.queens && Array.isArray(dataR.queens) && dataR.queens.length > 0) {
+                            QUEENS = dataR.queens;
+                        }
+                        if (dataR.apodos) {
+                            APODOS = Object.assign({}, APODOS, dataR.apodos);
+                        }
+                    }
+                } catch(e) {}
+
+                // 3. Fallback: Si no tenemos QUEENS aún, consultar /api/queens
+                if (!QUEENS || QUEENS.length === 0) {
+                    try {
+                        const resQ = await fetch('/api/queens');
+                        if (resQ.ok) {
+                            const dataQ = await resQ.json();
+                            if (Array.isArray(dataQ)) {
+                                QUEENS = dataQ;
+                            } else if (dataQ && Array.isArray(dataQ.queens)) {
+                                QUEENS = dataQ.queens;
+                            }
+                        }
+                    } catch(e) {}
+                }
+
+                crearFilas();
+            } catch (e) {
+                console.error('Error cargando ranking de podio:', e);
+            }
+        }
+
+        // ══════════════════════════════════════════════════════════════
+        //  SOCKET.IO LISTENERS
+        // ══════════════════════════════════════════════════════════════
+        socket.on('podioRankingActualizado', (data) => {
+            if (data) {
+                if (data.chicaActual !== undefined) {
+                    currentChicaActiva = data.chicaActual || '';
+                }
+                if (data.puntosRanking !== undefined) {
+                    puntosConociendo = data.puntosRanking;
+                } else if (data.action === 'RESET_RANKING_PODIO') {
+                    puntosConociendo = {};
+                    eliminadasConociendo = [];
+                }
+                if (data.eliminadas !== undefined) {
+                    eliminadasConociendo = Array.isArray(data.eliminadas) ? data.eliminadas : [];
+                }
+                reordenarTabla();
+            }
+        });
+
+        socket.on('podioInicio', (data) => {
+            if (data && data.chica) {
+                currentChicaActiva = data.chica;
+                if (!QUEENS.includes(data.chica)) {
+                    QUEENS.push(data.chica);
+                    crearFilas();
+                } else {
+                    reordenarTabla();
+                }
+            }
+        });
+
+        socket.on('podioCancelado', () => {
+            currentChicaActiva = '';
+            reordenarTabla();
+        });
+
+        socket.on('podioPuntos', (data) => {
+            if (data && data.puntos === 0 && Object.keys(puntosConociendo).length === 0) {
+                reordenarTabla();
+            }
+        });
+
+        socket.on('queensActualizadas', (data) => {
+            if (data) {
+                if (Array.isArray(data)) {
+                    QUEENS = data;
+                } else if (data.queens && Array.isArray(data.queens)) {
+                    QUEENS = data.queens;
+                }
+                if (data.apodos) APODOS = data.apodos;
+                crearFilas();
+            }
+        });
+
+        socket.on('connect', () => {
+            cargarDatosIniciales();
+        });
+
+        // Inicializar inmediatamente
+        cargarDatosIniciales();
+    </script>
+</body>
+</html>
+

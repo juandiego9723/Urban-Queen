@@ -30,7 +30,13 @@
     <script src="/socket.io/socket.io.js"></script>
     <script>
         const urlParams = new URLSearchParams(window.location.search);
-        const userParam = urlParams.get('user') || '';
+        let userParam = urlParams.get('user') || '';
+        if (!userParam) {
+            const pathParts = window.location.pathname.split('/').filter(Boolean);
+            if (pathParts.length > 0 && !pathParts[0].includes('overlay')) {
+                userParam = pathParts[0];
+            }
+        }
 
         // Conectar a Socket.io pasando el usuario en el query param para OBS
         const socket = io({ query: userParam ? { user: userParam } : {} });
@@ -101,6 +107,12 @@
         socket.on('conociendoTransicion', function(d) { forwardToIframe('conociendoTransicion', d); });
         socket.on('conociendoTransicionTick', function(d) { forwardToIframe('conociendoTransicionTick', d); });
         socket.on('conociendoCancelado', function(d) { forwardToIframe('conociendoCancelado', d); });
+        socket.on('conociendoRankingActualizado', function(d) { forwardToIframe('conociendoRankingActualizado', d); });
+        socket.on('podioInicio', function(d) { forwardToIframe('podioInicio', d); });
+        socket.on('podioTick', function(d) { forwardToIframe('podioTick', d); });
+        socket.on('podioPuntos', function(d) { forwardToIframe('podioPuntos', d); });
+        socket.on('podioCancelado', function(d) { forwardToIframe('podioCancelado', d); });
+        socket.on('podioRankingActualizado', function(d) { forwardToIframe('podioRankingActualizado', d); });
 
         socket.on('revivirInicio', function(d) { forwardToIframe('revivirInicio', d); });
         socket.on('revivirTick', function(d) { forwardToIframe('revivirTick', d); });
