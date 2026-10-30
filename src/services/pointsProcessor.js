@@ -357,6 +357,47 @@ function createPointsProcessor(io, activeSessions, resolverNombreFn, timerHandle
                 session.db.registrarRegalo(queenActivadora, giftName, pts, viewer);
                 session.lealtadUsuarios[viewer] = queenActivadora;
                 
+                // Actualizar conteo exclusivo en Dinámica de Activadores
+                if (!session.dinamicaActivadores) {
+                    session.dinamicaActivadores = {
+                        activo: true,
+                        conteos: {},
+                        participantes: [...(session.QUEENS || [])],
+                        lider: null,
+                        maxConteo: 0
+                    };
+                }
+                if (session.dinamicaActivadores.activo) {
+                    if (!session.dinamicaActivadores.conteos) session.dinamicaActivadores.conteos = {};
+                    session.dinamicaActivadores.conteos[queenActivadora] = (session.dinamicaActivadores.conteos[queenActivadora] || 0) + deltaRepeat;
+                    
+                    let maxConteo = 0;
+                    let lider = null;
+                    const parts = (session.dinamicaActivadores.participantes && session.dinamicaActivadores.participantes.length > 0) 
+                        ? session.dinamicaActivadores.participantes 
+                        : (session.QUEENS || []);
+                    parts.forEach(p => {
+                        const c = session.dinamicaActivadores.conteos[p] || 0;
+                        if (c > maxConteo) {
+                            maxConteo = c;
+                            lider = p;
+                        }
+                    });
+                    session.dinamicaActivadores.lider = maxConteo > 0 ? lider : null;
+                    session.dinamicaActivadores.maxConteo = maxConteo;
+
+                    io.to(username).emit('activadoresUpdate', {
+                        chica: queenActivadora,
+                        delta: deltaRepeat,
+                        conteo: session.dinamicaActivadores.conteos[queenActivadora],
+                        conteos: session.dinamicaActivadores.conteos,
+                        lider: session.dinamicaActivadores.lider,
+                        maxConteo: session.dinamicaActivadores.maxConteo,
+                        giftName,
+                        giftImg: giftImgFinal
+                    });
+                }
+                
                 io.to(username).emit('nuevoRegalo', {
                     nombre: queenActivadora,
                     viewer,

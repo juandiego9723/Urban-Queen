@@ -134,6 +134,11 @@
         socket.on('dinamicaFin', function(d) { forwardToIframe('dinamicaFin', d); });
         socket.on('dinamicaCancelada', function(d) { forwardToIframe('dinamicaCancelada', d); });
 
+        // ── Dinámica Activadores ──
+        socket.on('activadoresEstado', function(d) { forwardToIframe('activadoresEstado', d); });
+        socket.on('activadoresUpdate', function(d) { forwardToIframe('activadoresUpdate', d); });
+        socket.on('activadoresReset', function(d) { forwardToIframe('activadoresReset', d); });
+
         socket.on('actualizarCopa', function(d) { forwardToIframe('actualizarCopa', d); });
         socket.on('futbolConfigActualizada', function(d) { forwardToIframe('futbolConfigActualizada', d); });
 
@@ -162,7 +167,8 @@
                 if (!ultimaVista || !frame.src || frame.src === 'about:blank' || frame.src.endsWith('about:blank')) {
                     const pathParts = window.location.pathname.split('/').filter(Boolean);
                     const agencySlug = (pathParts.length > 0 && !pathParts[0].includes('.')) ? pathParts[0] : 'cosmic';
-                    let defaultVista = `/${agencySlug}/batalla`;
+                    const vistaQuery = urlParams.get('vista');
+                    let defaultVista = vistaQuery ? (vistaQuery.startsWith('/' + agencySlug) ? vistaQuery : ('/' + agencySlug + (vistaQuery.startsWith('/') ? vistaQuery : '/' + vistaQuery))) : `/${agencySlug}/batalla`;
                     if (userParam && !defaultVista.includes('user=')) {
                         defaultVista += `?user=${encodeURIComponent(userParam)}`;
                     }

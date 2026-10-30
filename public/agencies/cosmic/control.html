@@ -1101,6 +1101,7 @@
                 <div class="menu-item tab" onclick="cambiarTab('timer',this)">Timer</div>
                 <div class="menu-item tab" onclick="cambiarTab('torneo',this)">Torneo</div>
                 <div class="menu-item tab" onclick="cambiarTab('dinamicas',this)">Dinámicas</div>
+                <div class="menu-item tab" onclick="cambiarTab('activadores',this)">HUD Activadores</div>
                 <div class="menu-item tab" onclick="cambiarTab('gestor',this)">Gestor Custom</div>
 
                 <div class="label">Configuración General</div>
@@ -2004,6 +2005,9 @@
                                 <button class="btn btn-primary" onclick="cambiarVistaUniversal('/batalla')" id="btn-view-batalla" style="transition: all 0.3s ease; text-align: left; padding: 12px 16px;">⚔️ Batalla Normal</button>
                                 <button class="btn btn-primary" onclick="cambiarVistaUniversal('/batalla-vs')" id="btn-view-batalla-vs" style="transition: all 0.3s ease; text-align: left; padding: 12px 16px;">⚔️ Batalla VS (TikTok LIVE)</button>
                                 <button class="btn btn-primary" onclick="cambiarVistaUniversal('/batalla-activadores')" id="btn-view-batalla-activadores" style="transition: all 0.3s ease; text-align: left; padding: 12px 16px;">⚔️ Batalla Normal V2</button>
+                                <button class="btn btn-primary" onclick="cambiarVistaUniversal('/dinamica-activadores')"
+                                    id="btn-view-activadores"
+                                    style="transition: all 0.3s ease; text-align: left; padding: 12px 16px;">🏆 HUD Activadores</button>
                                 <button class="btn btn-primary" onclick="cambiarVistaUniversal('/revivir')" id="btn-view-revivir" style="transition: all 0.3s ease; text-align: left; padding: 12px 16px;">🔥 Dinámica Revivir</button>
                                 <button class="btn btn-primary" onclick="cambiarVistaUniversal('/batalla-futbol')" id="btn-view-batalla-futbol" style="transition: all 0.3s ease; text-align: left; padding: 12px 16px;">⚽ El Clásico (Fútbol)</button>
                                 <button class="btn btn-primary" onclick="cambiarVistaUniversal('/batalla-futbol-hud')" id="btn-view-batalla-futbol-hud" style="transition: all 0.3s ease; text-align: left; padding: 12px 16px;">⚽ HUD Clásico (Fútbol)</button>
@@ -2549,7 +2553,55 @@
                 </div>
 
                 <!-- ══ DINÁMICAS ══ -->
-                <div id="tab-dinamicas" class="tab-content">
+                
+                <!-- ══ HUD DINÁMICA ACTIVADORES ══ -->
+                <div id="tab-activadores" class="tab-content">
+                    <div class="card">
+                        <div class="card-title">
+                            🏆 <span class="card-title-accent">Dinámica de Regalos Activadores (HUD Horizontal)</span>
+                        </div>
+                        <p class="helper-text" style="margin-bottom: 14px;">
+                            Muestra en pantalla una barra horizontal con los regalos activadores de cada chica. El contador suma <strong>únicamente</strong> cuando envían el regalo activador asignado. La bailarina que va ganando se ilumina automáticamente en <strong>amarillo activo / dorado brillante</strong>.
+                        </p>
+
+                        <!-- Botones de Acción Rápida -->
+                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px; margin-bottom: 16px;">
+                            <button class="btn btn-danger" style="font-weight: 700; height: 44px;" onclick="reiniciarConteosActivadores()">
+                                🔄 Reiniciar Conteos a Cero
+                            </button>
+                            <a href="/dinamica-activadores" target="_blank" class="btn btn-primary" style="display: flex; align-items: center; justify-content: center; gap: 6px; text-decoration: none; height: 44px;">
+                                🔗 Abrir Overlay OBS
+                            </a>
+                            <button class="btn btn-ghost" style="border: 1px solid rgba(255, 215, 0, 0.4); color: #ffd700; height: 44px;" onclick="cambiarVistaUniversal('/dinamica-activadores')">
+                                📺 Proyectar en Overlay Juegos
+                            </button>
+                            <button class="btn btn-ghost" style="border: 1px solid rgba(168, 85, 247, 0.4); color: #c084fc; height: 44px;" onclick="cambiarVistaAcumulados('/dinamica-activadores')">
+                                📺 Proyectar en Acumulados
+                            </button>
+                        </div>
+
+                        <!-- Indicador de Líder Actual -->
+                        <div id="activadores-lider-banner" style="background: rgba(255, 215, 0, 0.12); border: 1.5px solid rgba(255, 215, 0, 0.4); border-radius: 12px; padding: 12px 18px; margin-bottom: 18px; display: flex; align-items: center; justify-content: space-between;">
+                            <div style="display: flex; align-items: center; gap: 10px;">
+                                <span style="font-size: 26px;">👑</span>
+                                <div>
+                                    <div style="font-size: 11px; text-transform: uppercase; color: #ffea79; font-weight: 800; letter-spacing: 0.8px;">Líder de la Dinámica</div>
+                                    <div id="activadores-lider-nombre" style="font-size: 18px; font-weight: 800; color: #fff;">Sin líder aún</div>
+                                </div>
+                            </div>
+                            <div id="activadores-lider-conteo" style="font-size: 24px; font-weight: 900; color: #ffe600;">0 activadores</div>
+                        </div>
+
+                        <!-- Grilla de Tarjetas / Tabla en Vivo con Controles Manuales -->
+                        <div class="card-title" style="margin-bottom: 10px;">
+                            💃 <span class="card-title-accent">Bailarinas Participantes y Conteos en Vivo</span>
+                        </div>
+                        <div id="activadores-panel-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 12px;">
+                            <!-- Llenado dinámicamente -->
+                        </div>
+                    </div>
+                </div>
+<div id="tab-dinamicas" class="tab-content">
                     <div class="card">
                         <div class="card-title">
                             ⚡ <span class="card-title-accent">Mis Dinámicas</span>
@@ -3717,6 +3769,7 @@
                 document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
                 document.getElementById('tab-' + nombre).classList.add('active');
                 if (el) el.classList.add('active');
+                if (nombre === 'activadores') { cargarEstadoActivadores(); }
                 if (nombre === 'analytics') {
                     cargarStreamersAnalytics();
                     cargarOpcionesBailarinas();
@@ -4841,7 +4894,8 @@
                     '/lista-regalos': 'btn-view-lista-regalos',
                     '/multicam': 'btn-view-multicam',
                     '/dinamica': 'btn-view-dinamica',
-                    '/gestor-regalos': 'btn-view-gestor-regalos'
+                    '/gestor-regalos': 'btn-view-gestor-regalos',
+                    '/dinamica-activadores': 'btn-view-activadores'
                 };
                 Object.keys(ids).forEach(key => {
                     const btn = document.getElementById(ids[key]);
@@ -6802,7 +6856,103 @@
                     alert('Error al iniciar el Clásico.');
                 }
             }
-        </script>
+        
+            // ── HUD DINÁMICA ACTIVADORES ──
+            async function cargarEstadoActivadores() {
+                try {
+                    const res = await fetch('/api/activadores/estado');
+                    if (!res.ok) return;
+                    const data = await res.json();
+                    renderPanelActivadores(data);
+                } catch (e) {
+                    console.error('Error cargando estado de activadores:', e);
+                }
+            }
+
+            function renderPanelActivadores(data) {
+                if (!data) return;
+                const grid = document.getElementById('activadores-panel-grid');
+                const liderNom = document.getElementById('activadores-lider-nombre');
+                const liderCnt = document.getElementById('activadores-lider-conteo');
+                if (!grid) return;
+
+                if (data.lider && data.maxConteo > 0) {
+                    const eqLider = (data.equipos && data.equipos[data.lider]) || {};
+                    if (liderNom) liderNom.textContent = eqLider.nombre || data.lider;
+                    if (liderCnt) liderCnt.textContent = data.maxConteo + ' activadores';
+                } else {
+                    if (liderNom) liderNom.textContent = 'Sin líder aún (todos en 0)';
+                    if (liderCnt) liderCnt.textContent = '0 activadores';
+                }
+
+                grid.innerHTML = '';
+                const parts = data.participantes || [];
+                parts.forEach(chica => {
+                    const eq = (data.equipos && data.equipos[chica]) || {};
+                    const count = (data.conteos && data.conteos[chica]) || 0;
+                    const esLider = (data.lider && data.lider.toLowerCase() === chica.toLowerCase() && count > 0);
+                    const giftImg = eq.regalo_img || '/regalos/Rosa.png';
+
+                    const card = document.createElement('div');
+                    card.className = 'card';
+                    card.style.padding = '14px';
+                    card.style.background = esLider ? 'rgba(255, 215, 0, 0.08)' : 'var(--surface2)';
+                    card.style.border = esLider ? '2px solid #ffd700' : '1px solid var(--border)';
+                    card.style.borderRadius = '14px';
+                    card.style.display = 'flex';
+                    card.style.flexDirection = 'column';
+                    card.style.gap = '10px';
+
+                    card.innerHTML = `
+                        <div style="display:flex;align-items:center;justify-content:space-between;">
+                            <div style="display:flex;align-items:center;gap:10px;">
+                                <img src="${giftImg}" style="width:38px;height:38px;object-fit:contain;border-radius:6px;background:rgba(0,0,0,0.3);padding:2px;" onerror="this.src='/regalos/Rosa.png'">
+                                <div>
+                                    <div style="font-weight:800;font-size:16px;color:#fff;">${eq.nombre || chica}</div>
+                                    <div style="font-size:11px;color:var(--text-muted);">${eq.giftName ? 'Activador: ' + eq.giftName : 'Regalo activador'}</div>
+                                </div>
+                            </div>
+                            ${esLider ? '<span style="background:#ffd700;color:#000;font-size:11px;font-weight:800;padding:2px 8px;border-radius:99px;">👑 GANANDO</span>' : ''}
+                        </div>
+                        <div style="display:flex;align-items:center;justify-content:space-between;background:rgba(0,0,0,0.4);padding:8px 14px;border-radius:10px;">
+                            <span style="font-size:12px;color:var(--text-muted);font-weight:600;">Veces enviado:</span>
+                            <span style="font-size:24px;font-weight:900;color:#ffe600;" id="panel-count-${chica}">${count}</span>
+                        </div>
+                        <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:6px;">
+                            <button class="btn btn-ghost btn-sm" onclick="ajustarActivador('${chica}', 1)" style="font-weight:700;">+1</button>
+                            <button class="btn btn-ghost btn-sm" onclick="ajustarActivador('${chica}', 5)" style="font-weight:700;">+5</button>
+                            <button class="btn btn-ghost btn-sm" onclick="ajustarActivador('${chica}', 10)" style="font-weight:700;">+10</button>
+                            <button class="btn btn-ghost btn-sm" onclick="ajustarActivador('${chica}', -1)" style="font-weight:700;color:var(--red);">-1</button>
+                        </div>
+                    `;
+                    grid.appendChild(card);
+                });
+            }
+
+            async function ajustarActivador(chica, delta) {
+                try {
+                    await fetch('/api/activadores/ajustar?chica=' + encodeURIComponent(chica) + '&delta=' + delta, { method: 'POST' });
+                } catch (e) {
+                    console.error('Error ajustando activador:', e);
+                }
+            }
+
+            async function reiniciarConteosActivadores() {
+                if (!confirm('¿Deseas reiniciar los conteos de todos los activadores a cero?')) return;
+                try {
+                    await fetch('/api/activadores/reset', { method: 'POST' });
+                    cargarEstadoActivadores();
+                } catch (e) {
+                    console.error('Error reiniciando activadores:', e);
+                }
+            }
+
+            if (typeof socket !== 'undefined' && socket) {
+                socket.on('activadoresUpdate', () => cargarEstadoActivadores());
+                socket.on('activadoresReset', () => cargarEstadoActivadores());
+                socket.on('activadoresEstado', (data) => renderPanelActivadores(data));
+            }
+</script>
 
     <!-- MODAL DE DECISIÓN DE SALVACIÓN / ELIMINACIÓN -->
     <div id="salvacion-modal" style="display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0, 0, 0, 0.8); backdrop-filter: blur(8px); z-index: 99999; align-items: center; justify-content: center;">

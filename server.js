@@ -36,6 +36,7 @@ const setupBatallaDynamics     = require('./src/dynamics/batalla');
 const setupFutbolDynamics      = require('./src/dynamics/futbol');
 const setupCustomDynamics      = require('./src/dynamics/customDynamics');
 const setupPenaltiDynamics     = require('./src/dynamics/penalti');
+const setupActivadoresDynamics = require('./src/dynamics/activadores');
 
 const setupQueensRoutes        = require('./src/routes/queensRoutes');
 const setupAgencyRoutes        = require('./src/routes/agencyRoutes');
@@ -137,6 +138,7 @@ createTikTokService(app, io, requireSession, activeSessions, procesarRegaloTikTo
 setupBatallaDynamics(app, io, requireSession);
 setupFutbolDynamics(app, io, requireSession);
 setupCustomDynamics(app, io, requireSession, activeSessions);
+setupActivadoresDynamics(app, io, requireSession, activeSessions);
 
 // ── Rutas API ───────────────────────────────────────────────────
 setupQueensRoutes(app, io, requireSession);
@@ -328,6 +330,18 @@ app.get('/batalla-pk',    (req, res) => res.sendFile(pub('batalla-pk.html')));
 app.get('/batalla-vs',    (req, res) => res.sendFile(pub('batalla-vs.html')));
 app.get('/batalla-activadores', (req, res) => res.sendFile(pub('batalla-activadores.html')));
 app.get('/batalla-normal-v2', (req, res) => res.sendFile(pub('batalla-activadores.html')));
+app.get('/dinamica-activadores', (req, res) => {
+    const userParam = req.query.user || '';
+    const agencySlug = (req.session && req.session.agencySlug) || (userParam.toLowerCase().includes('cosmic') ? 'cosmic' : null);
+    if (agencySlug && agencySlug !== 'urbanqueens') {
+        return res.sendFile(agencyPub(agencySlug, 'dinamica-activadores.html'));
+    }
+    return res.sendFile(pub('dinamica-activadores.html'));
+});
+app.get('/activadores', (req, res) => {
+    const q = req.url.includes('?') ? req.url.substring(req.url.indexOf('?')) : '';
+    res.redirect(301, '/dinamica-activadores' + q);
+});
 app.get('/timer',         (req, res) => res.sendFile(pub('timer.html')));
 app.get('/conociendo',    (req, res) => res.sendFile(pub('conociendo.html')));
 app.get('/podio',         (req, res) => res.sendFile(pub('podio.html')));

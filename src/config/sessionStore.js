@@ -252,6 +252,11 @@ function reconstruirEquipos(session) {
 function reconstruirQueens(session) {
     session.QUEENS = session.db.getActiveQueenNames();
     reconstruirEquipos(session);
+    if (session.dinamicaActivadores) {
+        if (!session.dinamicaActivadores.participantes || session.dinamicaActivadores.participantes.length === 0) {
+            session.dinamicaActivadores.participantes = [...session.QUEENS];
+        }
+    }
 }
 
 async function requireSession(req, res, next) {
