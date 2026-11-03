@@ -216,6 +216,14 @@ function getUserSession(username, io, procesarPuntosFn) {
             try {
                 const rawGoal = session.db.getConfigVal('goal_config');
                 if (rawGoal) session.goalConfig = JSON.parse(rawGoal);
+                const rawPodioRank = session.db.getConfigVal('podio_ranking');
+                if (rawPodioRank && session.podio) {
+                    try { session.podio.puntosRanking = JSON.parse(rawPodioRank); } catch(e){}
+                }
+                const rawPodioElim = session.db.getConfigVal('podio_eliminadas');
+                if (rawPodioElim && session.podio) {
+                    try { session.podio.eliminadas = JSON.parse(rawPodioElim); } catch(e){}
+                }
                 if (dbInstance.agencySlug) session.agencySlug = dbInstance.agencySlug;
             } catch (e) {}
             reconstruirQueens(session);
@@ -301,7 +309,10 @@ function cleanupUserSession(session, io = null, username = null) {
     if (session.intervaloConociendo) {
         clearInterval(session.intervaloConociendo);
         session.intervaloConociendo = null;
-        if (session.intervaloPodio) { clearInterval(session.intervaloPodio); session.intervaloPodio = null; }
+    }
+    if (session.intervaloPodio) {
+        clearInterval(session.intervaloPodio);
+        session.intervaloPodio = null;
     }
     if (session.intervaloRevivir) {
         clearInterval(session.intervaloRevivir);

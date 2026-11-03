@@ -16,6 +16,25 @@ function setupPodioDynamics(app, io, requireSession, activeSessions) {
         }
         if (!s.podio.eliminadas) s.podio.eliminadas = [];
         if (!s.podio.puntosRanking) s.podio.puntosRanking = {};
+        if (!s.podio._loadedFromDb && s.db && typeof s.db.getConfigVal === 'function') {
+            try {
+                const savedRank = s.db.getConfigVal('podio_ranking');
+                if (savedRank) {
+                    const parsed = JSON.parse(savedRank);
+                    if (parsed && typeof parsed === 'object') {
+                        s.podio.puntosRanking = Object.assign({}, parsed, s.podio.puntosRanking || {});
+                    }
+                }
+                const savedElim = s.db.getConfigVal('podio_eliminadas');
+                if (savedElim) {
+                    const parsedElim = JSON.parse(savedElim);
+                    if (Array.isArray(parsedElim)) {
+                        s.podio.eliminadas = parsedElim;
+                    }
+                }
+                s.podio._loadedFromDb = true;
+            } catch(e) {}
+        }
     }
 
     function saltarPodio(username, chicaEspecifica = null, nuevaMeta = null, nuevoTiempo = null, nuevoTitulo = null) {
@@ -232,6 +251,9 @@ function setupPodioDynamics(app, io, requireSession, activeSessions) {
                 }
             }
         }
+        if (s.db && typeof s.db.setConfigVal === 'function') {
+            try { s.db.setConfigVal('podio_eliminadas', JSON.stringify(s.podio.eliminadas)); } catch(e){}
+        }
 
         io.to(req.username).emit('podioRankingActualizado', {
             chicaActual: s.podio.chicaActual || '',
@@ -247,6 +269,12 @@ function setupPodioDynamics(app, io, requireSession, activeSessions) {
         s.podio.puntosRanking = {};
         s.podio.eliminadas = [];
         s.podio.puntos = 0;
+        if (s.db && typeof s.db.setConfigVal === 'function') {
+            try {
+                s.db.setConfigVal('podio_ranking', '{}');
+                s.db.setConfigVal('podio_eliminadas', '[]');
+            } catch(e){}
+        }
 
         io.to(req.username).emit('podioRankingActualizado', {
             chicaActual: s.podio.chicaActual || '',
@@ -275,6 +303,9 @@ function setupPodioDynamics(app, io, requireSession, activeSessions) {
                 puntos: s.podio.puntos,
                 meta: s.podio.meta || 2000
             });
+        }
+        if (s.db && typeof s.db.setConfigVal === 'function') {
+            try { s.db.setConfigVal('podio_ranking', JSON.stringify(s.podio.puntosRanking)); } catch(e){}
         }
 
         io.to(req.username).emit('podioRankingActualizado', {

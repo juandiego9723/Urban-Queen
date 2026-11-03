@@ -42,7 +42,7 @@
         })();
     </script>
     <meta charset="UTF-8">
-    <title>Ranking List — Conociendo</title>
+    <title>Ranking List — Podio</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800;900&family=Montserrat:wght@700;800;900&family=TikTok+Sans:opsz,wght@12..36,400..900&display=swap" rel="stylesheet">
@@ -366,7 +366,18 @@
 
             const filas = todasQueens.map(q => ({
                 name: q,
-                pts: puntosConociendo[q] || 0
+                pts: (() => {
+                    if (puntosConociendo[q] !== undefined) return Number(puntosConociendo[q]) || 0;
+                    const qClean = String(q).trim().toLowerCase();
+                    const apClean = (APODOS[q] || '').trim().toLowerCase();
+                    for (const k of Object.keys(puntosConociendo)) {
+                        const kClean = String(k).trim().toLowerCase();
+                        if (kClean === qClean || (apClean && kClean === apClean)) {
+                            return Number(puntosConociendo[k]) || 0;
+                        }
+                    }
+                    return 0;
+                })()
             }));
 
             // Ordenar de mayor a menor puntaje
@@ -415,16 +426,22 @@
             try {
                 // 1. Obtener apodos
                 try {
-                    const resA = await fetch('/api/apodos');
+                    const qParam = userParam ? `?user=${encodeURIComponent(userParam)}` : '';
+                    const resA = await fetch('/api/apodos' + qParam);
                     if (resA.ok) APODOS = await resA.json();
                 } catch(e) {}
 
                 // 2. Obtener estado del ranking de conociendo
                 try {
-                    const resR = await fetch('/api/conociendo-ranking');
+                    const qParam = userParam ? `?user=${encodeURIComponent(userParam)}` : '';
+                    const resR = await fetch('/api/podio-ranking' + qParam);
                     if (resR.ok) {
                         const dataR = await resR.json();
-                        puntosConociendo = dataR.puntosRanking || {};
+                        if (dataR.puntosRanking && Object.keys(dataR.puntosRanking).length > 0) {
+                            puntosConociendo = dataR.puntosRanking;
+                        } else if (!puntosConociendo || Object.keys(puntosConociendo).length === 0) {
+                            puntosConociendo = dataR.puntosRanking || {};
+                        }
                         if (dataR.eliminadas && Array.isArray(dataR.eliminadas)) {
                             eliminadasConociendo = dataR.eliminadas;
                         }
@@ -443,7 +460,8 @@
                 // 3. Fallback: Si no tenemos QUEENS aún, consultar /api/queens
                 if (!QUEENS || QUEENS.length === 0) {
                     try {
-                        const resQ = await fetch('/api/queens');
+                        const qParam = userParam ? `?user=${encodeURIComponent(userParam)}` : '';
+                        const resQ = await fetch('/api/queens' + qParam);
                         if (resQ.ok) {
                             const dataQ = await resQ.json();
                             if (Array.isArray(dataQ)) {
@@ -457,21 +475,21 @@
 
                 crearFilas();
             } catch (e) {
-                console.error('Error cargando ranking de conociendo:', e);
+                console.error('Error cargando ranking de podio:', e);
             }
         }
 
         // ══════════════════════════════════════════════════════════════
         //  SOCKET.IO LISTENERS
         // ══════════════════════════════════════════════════════════════
-        socket.on('conociendoRankingActualizado', (data) => {
+        socket.on('podioRankingActualizado', (data) => {
             if (data) {
                 if (data.chicaActual !== undefined) {
                     currentChicaActiva = data.chicaActual || '';
                 }
                 if (data.puntosRanking !== undefined) {
                     puntosConociendo = data.puntosRanking;
-                } else if (data.action === 'RESET_RANKING_CONOCIENDO') {
+                } else if (data.action === 'RESET_RANKING_PODIO') {
                     puntosConociendo = {};
                     eliminadasConociendo = [];
                 }
@@ -482,7 +500,7 @@
             }
         });
 
-        socket.on('conociendoInicio', (data) => {
+        socket.on('podioInicio', (data) => {
             if (data && data.chica) {
                 currentChicaActiva = data.chica;
                 if (!QUEENS.includes(data.chica)) {
@@ -494,12 +512,12 @@
             }
         });
 
-        socket.on('conociendoCancelado', () => {
+        socket.on('podioCancelado', () => {
             currentChicaActiva = '';
             reordenarTabla();
         });
 
-        socket.on('conociendoPuntos', (data) => {
+        socket.on('podioPuntos', (data) => {
             if (data && data.puntos === 0 && Object.keys(puntosConociendo).length === 0) {
                 reordenarTabla();
             }
@@ -526,3 +544,4 @@
     </script>
 </body>
 </html>
+

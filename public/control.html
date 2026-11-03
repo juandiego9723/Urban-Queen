@@ -2195,8 +2195,8 @@
                                     id="btn-view-ranking"
                                     style="transition: all 0.3s ease; text-align: left; padding: 12px 16px;">🏆 Ranking
                                     General</button>
-                                <button class="btn btn-primary" onclick="cambiarVistaAcumulados('/ranking-conociendo')"
-                                    id="btn-view-ranking-conociendo"
+                                <button class="btn btn-primary" onclick="cambiarVistaAcumulados('/ranking-podio')"
+                                    id="btn-view-ranking-podio"
                                     style="transition: all 0.3s ease; text-align: left; padding: 12px 16px;">📊 Ranking Podio</button>
                                 <button class="btn btn-primary" onclick="cambiarVistaAcumulados('/overlay-top-likes')"
                                     id="btn-view-top-likes"
@@ -5522,7 +5522,7 @@
             }
 
             async function toggleOutConociendo(chica) {
-                await hacerFetch(`/conociendo/toggle-out?c=${encodeURIComponent(chica)}`);
+                await hacerFetch(`/podio/toggle-out?c=${encodeURIComponent(chica)}`);
             }
 
             function saltarSiguienteConociendo() {
@@ -5623,7 +5623,7 @@
             socket.on('podioRankingActualizado', (data) => {
                 if (data && data.puntosRanking !== undefined) {
                     puntosConociendoRanking = data.puntosRanking;
-                } else if (data && data.action === 'RESET_RANKING_CONOCIENDO') {
+                } else if (data && (data.action === 'RESET_RANKING_PODIO' || data.action === 'RESET_RANKING_CONOCIENDO')) {
                     puntosConociendoRanking = {};
                     eliminadasConociendo = [];
                 }

@@ -669,6 +669,9 @@ function createPointsProcessor(io, activeSessions, resolverNombreFn, timerHandle
                 session.podio.puntos += nuevosPuntosPodio;
                 if (!session.podio.puntosRanking) session.podio.puntosRanking = {};
                 session.podio.puntosRanking[chicaActualPodio] = (session.podio.puntosRanking[chicaActualPodio] || 0) + nuevosPuntosPodio;
+                if (session.db && typeof session.db.setConfigVal === 'function') {
+                    try { session.db.setConfigVal('podio_ranking', JSON.stringify(session.podio.puntosRanking)); } catch(e){}
+                }
                 io.to(username).emit('podioPuntos', { puntos: session.podio.puntos, meta: session.podio.meta });
                 io.to(username).emit('podioRankingActualizado', {
                     chicaActual: session.podio.chicaActual || '',

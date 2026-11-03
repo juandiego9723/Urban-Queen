@@ -194,6 +194,15 @@ function setupSystemRoutes(app, io, requireSession, activeSessions) {
         if (!vista) return res.status(400).send('Falta especificar la vista de acumulados');
         s.vistaAcumuladosActiva = vista;
         io.to(req.username).emit('cambioVistaAcumulados', vista);
+        if ((vista.includes('podio') || vista.includes('conociendo')) && s.podio) {
+            setTimeout(() => {
+                io.to(req.username).emit('podioRankingActualizado', {
+                    chicaActual: s.podio.chicaActual || '',
+                    puntosRanking: s.podio.puntosRanking || {},
+                    eliminadas: s.podio.eliminadas || []
+                });
+            }, 350);
+        }
         res.json({ status: 'OK', vistaAcumuladosActiva: vista });
     });
 
