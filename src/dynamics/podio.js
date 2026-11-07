@@ -37,10 +37,32 @@ function setupPodioDynamics(app, io, requireSession, activeSessions) {
         }
     }
 
+    function limpiarEstadosEnConflictoConPodio(s) {
+        if (!s) return;
+        s.estadoBatalla = 'inactiva';
+        if (s.timerBatalla) {
+            clearInterval(s.timerBatalla);
+            s.timerBatalla = null;
+        }
+        s.dinamicaActiva = null;
+        if (s.conociendo) {
+            s.conociendo.activo = false;
+            s.conociendo.estado = 'inactivo';
+            if (s.intervaloConociendo) {
+                clearInterval(s.intervaloConociendo);
+                s.intervaloConociendo = null;
+            }
+        }
+        if (s.timerBaile) {
+            s.timerBaile.activo = false;
+        }
+    }
+
     function saltarPodio(username, chicaEspecifica = null, nuevaMeta = null, nuevoTiempo = null, nuevoTitulo = null) {
         const session = activeSessions[username];
         if (!session) return;
         ensurePodioState(session);
+        limpiarEstadosEnConflictoConPodio(session);
         if (!session.podio.orden || session.podio.orden.length === 0) {
             session.podio.orden = [...session.QUEENS];
         }
@@ -92,6 +114,7 @@ function setupPodioDynamics(app, io, requireSession, activeSessions) {
         const s = req.userSession;
         const user = req.username;
         ensurePodioState(s);
+        limpiarEstadosEnConflictoConPodio(s);
         s.podio.orden = [...s.QUEENS];
         s.podio.activo = true;
         s.podio.meta = parseInt(req.query.meta) || 2000;

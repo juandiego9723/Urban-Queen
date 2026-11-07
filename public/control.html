@@ -2430,7 +2430,8 @@
                                 <span style="color:var(--muted);font-size:12px">Ningún regalo detectado aún. Conéctate
                                     al live y espera los primeros regalos.</span>
                             </div>
-                            <div class="row" style="margin-top:4px">
+                            <div class="row" style="margin-top:4px;gap:8px;flex-wrap:wrap">
+                                <button class="btn btn-warning btn-sm" onclick="asignarTodosDetectados()">⚡ Asignar todos a bailarina activa</button>
                                 <button class="btn btn-ghost btn-sm"
                                     onclick="hacerFetch('/api/tiktok/regalos-detectados/limpiar');document.getElementById('regalos-detectados-lista').innerHTML='<span style=\'color:var(--muted);font-size:12px\'>Lista limpiada.</span>'">🗑
                                     Limpiar lista</button>
@@ -4728,6 +4729,39 @@
                 const c = document.getElementById('regalos-detectados-lista');
                 if (c && c.querySelectorAll('.select').length === 0) {
                     c.innerHTML = `<span style="color:var(--muted);font-size:12px">Ningún regalo detectado aún. Conéctate al live y espera los primeros regalos.</span>`;
+                }
+            }
+
+            async function asignarTodosDetectados() {
+                try {
+                    const res = await fetch('/api/tiktok/regalos-detectados/asignar-todos', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({})
+                    });
+                    const data = await res.json();
+                    if (!res.ok) {
+                        alert(data.error || 'No se pudo asignar. Asegúrate de tener una bailarina activa en el podio o selecciona una.');
+                        return;
+                    }
+                    if (data.asignados > 0) {
+                        if (typeof showToast === 'function') {
+                            showToast(`✅ Se asignaron ${data.asignados} regalos (${data.totalPuntos || 0} pts) a ${data.queen}`, 'success');
+                        } else {
+                            alert(`Se asignaron ${data.asignados} regalos a ${data.queen}`);
+                        }
+                    } else {
+                        if (typeof showToast === 'function') {
+                            showToast(`ℹ️ No había regalos pendientes por asignar.`, 'info');
+                        }
+                    }
+                    const c = document.getElementById('regalos-detectados-lista');
+                    if (c) {
+                        c.innerHTML = `<span style="color:var(--muted);font-size:12px">Ningún regalo detectado aún. Conéctate al live y espera los primeros regalos.</span>`;
+                    }
+                } catch (err) {
+                    console.error('Error al asignar todos:', err);
+                    alert('Error al asignar regalos');
                 }
             }
 

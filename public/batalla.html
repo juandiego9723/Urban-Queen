@@ -48,9 +48,10 @@
     <title>Modo Batalla TikDance</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Bangers&family=Nosifer&family=Inter:wght@700;800;900&display=swap"
+    <link href="https://fonts.googleapis.com/css2?family=TikTok+Sans:ital,wght@0,300..900;1,300..900&family=Bangers&family=Inter:wght@700;800;900&display=swap"
         rel="stylesheet">
     <style>
+        @import url('https://fonts.googleapis.com/css2?family=TikTok+Sans:ital,wght@0,300..900;1,300..900&display=swap');
         * {
             box-sizing: border-box;
             margin: 0;
@@ -94,7 +95,8 @@
 
         /* ── TIMER HUD NEÓN ── */
         #timer {
-            font-family: 'Nosifer', 'Bangers', cursive;
+            font-family: 'TikTok Sans', 'Proxima Nova', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            font-weight: 900;
             font-size: 54px;
             color: #FFD700;
             text-shadow: 0 0 10px rgba(0, 0, 0, 0.9),
@@ -175,13 +177,6 @@
             }
         }
 
-        :root {
-            --orange-neon: #ff8c00;
-            --orange-bright: #ffa200;
-            --orange-glow: rgba(255, 140, 0, 0.75);
-            --purple-neon: #a855f7;
-        }
-
         /* ── BARRA DE PUNTOS GLASSMORPHISM ── */
         #bar-outer {
             height: 56px;
@@ -200,22 +195,13 @@
             transition: border-color 0.5s ease, box-shadow 0.5s ease;
         }
 
-        /* Borde Naranja Neón de Halloween */
-        body.theme-halloween #bar-outer {
-            border: 3.5px solid var(--orange-bright);
-            box-shadow: 
-                0 8px 32px rgba(0, 0, 0, 0.75),
-                0 0 18px var(--orange-glow),
-                0 0 35px rgba(255, 140, 0, 0.35),
-                inset 0 4px 12px rgba(0, 0, 0, 0.6);
-        }
-
         .queen-bar {
             height: 100%;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-family: 'Nosifer', 'Bangers', cursive;
+            font-family: 'TikTok Sans', 'Proxima Nova', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            font-weight: 900;
             font-size: 26px;
             letter-spacing: 1.5px;
             color: #fff;
@@ -290,7 +276,8 @@
         }
 
         .queen-label {
-            font-family: 'Nosifer', 'Bangers', cursive;
+            font-family: 'TikTok Sans', 'Proxima Nova', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            font-weight: 900;
             font-size: 30px;
             letter-spacing: 1.5px;
             text-shadow: 2px 2px 0px #000,
@@ -356,24 +343,6 @@
             filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.8));
         }
 
-        /* Estilo de Calabazas de Halloween */
-        body.theme-halloween .queen-vics {
-            border-color: rgba(255, 140, 0, 0.75);
-            box-shadow: 0 4px 14px rgba(0, 0, 0, 0.8),
-                0 0 12px rgba(255, 140, 0, 0.4);
-            animation: latido-vics-hw 2.8s infinite ease-in-out;
-        }
-
-        body.theme-halloween .queen-vics .vic-icon {
-            filter: drop-shadow(0 0 8px rgba(255, 140, 0, 0.95)) drop-shadow(0 2px 3px rgba(0, 0, 0, 0.8));
-        }
-
-        body.theme-halloween .queen-vics .vic-count {
-            color: #FFA500;
-            text-shadow: 0 0 10px rgba(255, 140, 0, 0.85),
-                2px 2px 0px #000;
-        }
-
         @keyframes latido-vics {
             0%, 100% {
                 transform: scale(1);
@@ -382,17 +351,6 @@
                 transform: scale(1.06);
                 box-shadow: 0 6px 18px rgba(0, 0, 0, 0.85),
                     0 0 16px rgba(255, 215, 0, 0.55);
-            }
-        }
-
-        @keyframes latido-vics-hw {
-            0%, 100% {
-                transform: scale(1);
-            }
-            50% {
-                transform: scale(1.06);
-                box-shadow: 0 6px 18px rgba(0, 0, 0, 0.85),
-                    0 0 16px rgba(255, 140, 0, 0.6);
             }
         }
 
@@ -526,44 +484,10 @@
     <script>
         const urlParams = new URLSearchParams(window.location.search);
         const userParam = urlParams.get('user') || '';
-        const themeParam = (urlParams.get('theme') || 'halloween').toLowerCase();
-        let isHalloweenTheme = (themeParam !== 'clasico' && themeParam !== 'default');
 
         function getVicHtml(count) {
-            if (isHalloweenTheme) {
-                return `<span class="vic-icon">🎃</span> <span class="vic-count">X${count}</span>`;
-            }
             return `<span class="vic-tag">WIN</span> <span class="vic-count">${count}</span>`;
         }
-
-        function aplicarTemaBatalla() {
-            if (isHalloweenTheme) {
-                document.body.classList.add('theme-halloween');
-                document.body.classList.remove('theme-clasico');
-            } else {
-                document.body.classList.remove('theme-halloween');
-                document.body.classList.add('theme-clasico');
-            }
-        }
-        aplicarTemaBatalla();
-
-        window.addEventListener('keydown', (e) => {
-            if (e.key === 'h' || e.key === 'H') {
-                isHalloweenTheme = !isHalloweenTheme;
-                aplicarTemaBatalla();
-                if (participantesActivos && participantesActivos.length) {
-                    participantesActivos.forEach(chica => {
-                        const vicEl = document.getElementById('vic-' + chica);
-                        if (vicEl) {
-                            const countMatch = vicEl.textContent.match(/\d+/);
-                            const count = countMatch ? countMatch[0] : '0';
-                            vicEl.innerHTML = getVicHtml(count);
-                        }
-                    });
-                    actualizarBarras(puntosActuales);
-                }
-            }
-        });
 
         const socket = window.__iframeBridgeSocket || io({ query: userParam ? { user: userParam } : {} });
         let participantesActivos = [];
@@ -679,13 +603,8 @@
             // Hacer brillar el marco de la barra con el color del líder activo
             if (lider && equiposInfo[lider] && maxPts > 0) {
                 const liderColor = equiposInfo[lider].color;
-                if (isHalloweenTheme) {
-                    barOuter.style.boxShadow = `0 8px 32px rgba(0, 0, 0, 0.75), 0 0 20px var(--orange-glow), 0 0 32px ${liderColor}99`;
-                    barOuter.style.borderColor = 'var(--orange-bright)';
-                } else {
-                    barOuter.style.boxShadow = `0 8px 32px rgba(0, 0, 0, 0.7), 0 0 25px ${liderColor}66`;
-                    barOuter.style.borderColor = `${liderColor}80`;
-                }
+                barOuter.style.boxShadow = `0 8px 32px rgba(0, 0, 0, 0.7), 0 0 25px ${liderColor}66`;
+                barOuter.style.borderColor = `${liderColor}80`;
             } else {
                 barOuter.style.boxShadow = '';
                 barOuter.style.borderColor = '';

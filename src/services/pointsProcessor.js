@@ -315,23 +315,24 @@ function createPointsProcessor(io, activeSessions, resolverNombreFn, timerHandle
             }
         }
         
-        // Si NO hay batalla en curso ni Dinámica Personalizada activa, aplicar redirecciones automáticas por dinámicas individuales:
-        const hayBatallaActiva = session.estadoBatalla !== 'inactiva';
-        const hayDinamicaPersonalizadaActiva = !!session.dinamicaActiva;
-        if (!hayBatallaActiva && !hayDinamicaPersonalizadaActiva) {
-            // SI LA DINÁMICA CONOCIENDO ESTÁ ACTIVA: Forzar SIEMPRE que cualquier regalo (incluso los mapeados en batallas) vaya a la bailarina activa
-            if (session.conociendo && session.conociendo.activo && session.conociendo.estado === 'activo' && session.conociendo.chicaActual) {
-                queenActivadora = session.conociendo.chicaActual;
-            } else if (session.podio && session.podio.activo && session.podio.estado === 'activo' && session.podio.chicaActual) {
-                queenActivadora = session.podio.chicaActual;
-            } else if (session.revivir && session.revivir.activo && session.revivir.estado === 'activo' && session.revivir.chicaActual) {
-                // SI LA DINÁMICA REVIVIR ESTÁ ACTIVA: Forzar que cualquier regalo vaya a la bailarina en salvación
-                queenActivadora = session.revivir.chicaActual;
-            } else if (session.timerBaile && session.timerBaile.activo && session.timerBaile.chicaActual) {
-                // SI EL TIMER DE BAILE ESTÁ ACTIVO: Forzar que CUALQUIER regalo recibido vaya a la bailarina activa
-                // (a menos que sea un regalo exclusivo de salto configurado para otra bailarina)
-                if (!queenSalto || queenSalto.trim().toLowerCase() === session.timerBaile.chicaActual.trim().toLowerCase()) {
-                    queenActivadora = session.timerBaile.chicaActual;
+        // Redirecciones automáticas por dinámicas individuales:
+        // 1. Dinámica Podio: Todo regalo recibido durante el turno va directamente a la bailarina activa de Podio
+        if (session.podio && session.podio.activo && session.podio.estado === 'activo' && session.podio.chicaActual) {
+            queenActivadora = session.podio.chicaActual;
+        } else if (session.conociendo && session.conociendo.activo && session.conociendo.estado === 'activo' && session.conociendo.chicaActual) {
+            queenActivadora = session.conociendo.chicaActual;
+        } else if (session.revivir && session.revivir.activo && session.revivir.estado === 'activo' && session.revivir.chicaActual) {
+            queenActivadora = session.revivir.chicaActual;
+        } else {
+            const hayBatallaActiva = session.estadoBatalla === 'activa';
+            const hayDinamicaPersonalizadaActiva = !!session.dinamicaActiva;
+            if (!hayBatallaActiva && !hayDinamicaPersonalizadaActiva) {
+                if (session.timerBaile && session.timerBaile.activo && session.timerBaile.chicaActual) {
+                    // SI EL TIMER DE BAILE ESTÁ ACTIVO: Forzar que CUALQUIER regalo recibido vaya a la bailarina activa
+                    // (a menos que sea un regalo exclusivo de salto configurado para otra bailarina)
+                    if (!queenSalto || queenSalto.trim().toLowerCase() === session.timerBaile.chicaActual.trim().toLowerCase()) {
+                        queenActivadora = session.timerBaile.chicaActual;
+                    }
                 }
             }
         }
@@ -340,9 +341,13 @@ function createPointsProcessor(io, activeSessions, resolverNombreFn, timerHandle
             let destinatarioFinal = 'Global';
             const queenActivadoraClean = (queenActivadora || '').trim();
             const chicaActualClean = (session.timerBaile && session.timerBaile.chicaActual || '').trim();
+            const chicaPodioClean = (session.podio && session.podio.chicaActual || '').trim();
+            const chicaConociendoClean = (session.conociendo && session.conociendo.chicaActual || '').trim();
             
             const esChicaValida = queenActivadoraClean && (
                 session.QUEENS.some(q => q.trim().toLowerCase() === queenActivadoraClean.toLowerCase()) ||
+                (session.podio && session.podio.activo && queenActivadoraClean.toLowerCase() === chicaPodioClean.toLowerCase()) ||
+                (session.conociendo && session.conociendo.activo && queenActivadoraClean.toLowerCase() === chicaConociendoClean.toLowerCase()) ||
                 (session.timerBaile && session.timerBaile.activo && queenActivadoraClean.toLowerCase() === chicaActualClean.toLowerCase()) ||
                 (session.db && session.db.getAllQueensFull().some(q => q.name.trim().toLowerCase() === queenActivadoraClean.toLowerCase()))
             );
@@ -494,19 +499,19 @@ function createPointsProcessor(io, activeSessions, resolverNombreFn, timerHandle
         let pointsDinamicaDelta = {};
         let saltaTurnoPara = null;
         
-        const forzarChicaConociendo = (session.conociendo && session.conociendo.activo && session.conociendo.estado === 'activo' && session.conociendo.chicaActual && session.estadoBatalla === 'inactiva' && !session.dinamicaActiva)
-            ? session.conociendo.chicaActual
-            : null;
-        const forzarChicaPodio = (session.podio && session.podio.activo && session.podio.estado === 'activo' && session.podio.chicaActual && session.estadoBatalla === 'inactiva' && !session.dinamicaActiva)
+        const forzarChicaPodio = (session.podio && session.podio.activo && session.podio.estado === 'activo' && session.podio.chicaActual)
             ? session.podio.chicaActual
             : null;
-        const forzarChicaTimer = (session.timerBaile && session.timerBaile.activo && session.timerBaile.chicaActual && session.estadoBatalla === 'inactiva' && !session.dinamicaActiva && (!session.revivir || !session.revivir.activo || session.revivir.estado !== 'activo'))
+        const forzarChicaConociendo = (session.conociendo && session.conociendo.activo && session.conociendo.estado === 'activo' && session.conociendo.chicaActual)
+            ? session.conociendo.chicaActual
+            : null;
+        const forzarChicaTimer = (session.timerBaile && session.timerBaile.activo && session.timerBaile.chicaActual && session.estadoBatalla !== 'activa' && !session.dinamicaActiva && (!session.revivir || !session.revivir.activo || session.revivir.estado !== 'activo'))
             ? session.timerBaile.chicaActual
             : null;
 
         temp.forEach(item => {
-            const nombreEfectivo = forzarChicaConociendo 
-                || forzarChicaPodio 
+            const nombreEfectivo = forzarChicaPodio
+                || forzarChicaConociendo 
                 || (item.saltaTurno ? item.saltaTurno : forzarChicaTimer) 
                 || item.nombre;
             if (nombreEfectivo) {
@@ -680,7 +685,7 @@ function createPointsProcessor(io, activeSessions, resolverNombreFn, timerHandle
                 });
             }
         }
-        if (session.conociendo.activo && session.conociendo.estado === 'activo') {
+        if (session.conociendo && session.conociendo.activo && session.conociendo.estado === 'activo') {
             const chicaActual = session.conociendo.chicaActual;
             let nuevosPuntos = 0;
             temp.forEach(item => {
@@ -702,7 +707,7 @@ function createPointsProcessor(io, activeSessions, resolverNombreFn, timerHandle
         }
 
         // Si la dinámica revivir está activa y en estado activo, sumar los puntos recibidos, calcular el MVP y contar los regalos
-        if (session.revivir.activo && session.revivir.estado === 'activo') {
+        if (session.revivir && session.revivir.activo && session.revivir.estado === 'activo') {
             const chicaActual = session.revivir.chicaActual;
             let nuevosPuntos = 0;
             temp.forEach(item => {

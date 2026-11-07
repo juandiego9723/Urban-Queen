@@ -46,6 +46,80 @@ function setupSystemRoutes(app, io, requireSession, activeSessions) {
         }
     });
 
+    app.post('/api/tiktok/regalos-detectados/asignar-todos', requireSession, (req, res) => {
+        const s = req.userSession;
+        let queen = (req.body && req.body.queen) || '';
+        if (!queen) {
+            if (s.podio && s.podio.activo && s.podio.chicaActual) {
+                queen = s.podio.chicaActual;
+            } else if (s.conociendo && s.conociendo.activo && s.conociendo.chicaActual) {
+                queen = s.conociendo.chicaActual;
+            } else if (s.timerBaile && s.timerBaile.activo && s.timerBaile.chicaActual) {
+                queen = s.timerBaile.chicaActual;
+            }
+        }
+        
+        const queenClean = (queen || '').trim();
+        const esValida = queenClean && (
+            s.QUEENS.some(q => q.trim().toLowerCase() === queenClean.toLowerCase()) ||
+            (s.db && s.db.getAllQueensFull().some(q => q.name.trim().toLowerCase() === queenClean.toLowerCase()))
+        );
+
+        if (!esValida) {
+            return res.status(400).json({ error: 'No hay bailarina válida activa o especificada para asignar.' });
+        }
+
+        const canonQueen = s.QUEENS.find(q => q.trim().toLowerCase() === queenClean.toLowerCase()) || queenClean;
+        const ids = Object.keys(s.regalosDetectados || {});
+        let asignados = 0;
+        let totalPuntos = 0;
+        const eq = s.equipos[canonQueen] || {};
+
+        ids.forEach(id => {
+            const giftInstance = s.regalosDetectados[id];
+            if (giftInstance) {
+                const giftName = giftInstance.giftName;
+                const coins = giftInstance.coins || 1;
+                const viewer = giftInstance.viewer || 'Anónimo';
+                s.db.registrarRegalo(canonQueen, giftName, coins, viewer);
+                s.queueUpdate.push({ nombre: canonQueen, puntos: coins });
+                s.lealtadUsuarios[viewer] = canonQueen;
+                totalPuntos += coins;
+                asignados++;
+                io.to(req.username).emit('nuevoRegalo', {
+                    nombre: canonQueen,
+                    viewer,
+                    avatar: '',
+                    giftImg: eq.regalo_img || giftInstance.giftImgSrc || '',
+                    queenColor: eq.color || '#fff',
+                    coins,
+                    giftName
+                });
+                delete s.regalosDetectados[id];
+            }
+        });
+
+        if (s.podio && s.podio.activo && s.podio.chicaActual && s.podio.chicaActual.trim().toLowerCase() === canonQueen.toLowerCase() && totalPuntos > 0) {
+            s.podio.puntos = (s.podio.puntos || 0) + totalPuntos;
+            s.podio.puntosRanking = s.podio.puntosRanking || {};
+            s.podio.puntosRanking[s.podio.chicaActual] = (s.podio.puntosRanking[s.podio.chicaActual] || 0) + totalPuntos;
+            if (s.db && typeof s.db.setConfigVal === 'function') {
+                try { s.db.setConfigVal('podio_ranking', JSON.stringify(s.podio.puntosRanking)); } catch(e) {}
+            }
+            io.to(req.username).emit('podioPuntos', {
+                puntos: s.podio.puntos,
+                meta: s.podio.meta || 2000
+            });
+            io.to(req.username).emit('podioRankingActualizado', {
+                chicaActual: s.podio.chicaActual || '',
+                puntosRanking: s.podio.puntosRanking,
+                eliminadas: s.podio.eliminadas || []
+            });
+        }
+
+        res.json({ status: 'OK', asignados, totalPuntos, queen: canonQueen });
+    });
+
     // Regalos custom
     app.get('/api/regalos-imgs', (req, res) => {
         const dir = path.join(__dirname, '..', '..', 'public', 'regalos');
