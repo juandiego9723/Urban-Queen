@@ -5,6 +5,7 @@
     <title>TikDance — Panel de Control</title>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
+    <script src="/js/image-utils.js"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
 
@@ -5916,6 +5917,9 @@
             }
 
             function fileToBase64(file) {
+                if (typeof window.comprimirImagenWebP === 'function') {
+                    return window.comprimirImagenWebP(file, 512, 0.82);
+                }
                 return new Promise((resolve, reject) => {
                     const reader = new FileReader();
                     reader.onload = () => resolve(reader.result);
@@ -6858,6 +6862,7 @@
 
             // ── Gestor Custom con Listas y Reordenamiento ──
             let gestorBase64 = '';
+            let gestorCompressPromise = null;
             let gestorListas = [];
             let gestorListaSeleccionadaId = 1;
             let gestorListaActivaId = 1;
@@ -6866,9 +6871,16 @@
             function previewGestorFile(e) {
                 const file = e.target.files[0];
                 if (!file) return;
-                const r = new FileReader();
-                r.onload = ev => gestorBase64 = ev.target.result;
-                r.readAsDataURL(file);
+                if (typeof window.comprimirImagenWebP === 'function') {
+                    gestorCompressPromise = window.comprimirImagenWebP(file, 256, 0.82)
+                        .then(res => { gestorBase64 = res; return res; });
+                } else {
+                    gestorCompressPromise = new Promise((resolve) => {
+                        const r = new FileReader();
+                        r.onload = ev => { gestorBase64 = ev.target.result; resolve(gestorBase64); };
+                        r.readAsDataURL(file);
+                    });
+                }
             }
 
             async function cargarGestorListas() {
@@ -7022,6 +7034,9 @@
             }
 
             async function guardarRegaloCustom(e) {
+                if (gestorCompressPromise) {
+                    try { await gestorCompressPromise; } catch (err) {}
+                }
                 const nombre = document.getElementById('gestorNombre').value.trim();
                 if (!nombre || !gestorBase64) {
                     uiAlert('Datos Incompletos', 'Falta ingresar el nombre o seleccionar la imagen del regalo.', 'warning');
@@ -7043,6 +7058,7 @@
                     document.getElementById('gestorNombre').value = '';
                     document.getElementById('gestorFile').value = '';
                     gestorBase64 = '';
+                    gestorCompressPromise = null;
                     await cargarGestorRegalos();
                 } catch (err) {
                     console.error('Error guardando regalo custom:', err);

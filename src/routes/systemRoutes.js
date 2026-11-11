@@ -1,8 +1,8 @@
 const path = require('path');
 const fs = require('fs');
-const crypto = require('crypto');
 const { query } = require('../config/dbPool');
 const { ejecutarResetManual, getTimezone } = require('../services/rankingResetService');
+const { uploadBase64Image } = require('../services/storageService');
 
 function setupSystemRoutes(app, io, requireSession, activeSessions) {
     // Regalos detectados sin asignar
@@ -134,29 +134,11 @@ function setupSystemRoutes(app, io, requireSession, activeSessions) {
         res.json(req.userSession.db.getRegalosCustom(req.query.lista_id));
     });
 
-    function procesarImagenBase64(base64Str) {
-        if (!base64Str || !base64Str.startsWith('data:image')) return base64Str;
-        try {
-            const matches = base64Str.match(/^data:image\/([A-Za-z-+\/]+);base64,(.+)$/);
-            if (matches.length !== 3) return base64Str;
-            const ext = matches[1] === 'jpeg' ? 'jpg' : matches[1];
-            const buffer = Buffer.from(matches[2], 'base64');
-            const filename = `custom_${crypto.randomUUID()}.${ext}`;
-            const regalosDir = path.join(__dirname, '..', '..', 'public', 'regalos');
-            if (!fs.existsSync(regalosDir)) fs.mkdirSync(regalosDir, { recursive: true });
-            fs.writeFileSync(path.join(regalosDir, filename), buffer);
-            return `/regalos/${filename}`;
-        } catch (e) {
-            console.error('Error procesando imagen base64:', e);
-            return base64Str;
-        }
-    }
-
     app.all('/api/regalos-custom/crear', requireSession, async (req, res) => {
         const s = req.userSession;
         const data = req.body || {};
         if (!data.nombre) return res.status(400).send('Falta nombre');
-        data.imagen = procesarImagenBase64(data.imagen);
+        data.imagen = await uploadBase64Image(data.imagen, { folder: 'regalos', prefix: `custom_${req.username}_${data.nombre}` });
         const nuevo = await s.db.crearRegaloCustom(data);
         io.to(req.username).emit('regalosCustomActualizados', s.db.getRegalosCustom());
         res.json({ status: 'OK', regalo: nuevo });
@@ -167,7 +149,7 @@ function setupSystemRoutes(app, io, requireSession, activeSessions) {
         const data = req.body || {};
         const id = parseInt(req.query.id || data.id);
         if (!id || !data.nombre) return res.status(400).send('Datos incompletos');
-        data.imagen = procesarImagenBase64(data.imagen);
+        data.imagen = await uploadBase64Image(data.imagen, { folder: 'regalos', prefix: `custom_${req.username}_${data.nombre}` });
         await s.db.editarRegaloCustom(id, data);
         io.to(req.username).emit('regalosCustomActualizados', s.db.getRegalosCustom());
         res.send('OK');
@@ -226,10 +208,11 @@ function setupSystemRoutes(app, io, requireSession, activeSessions) {
     app.post('/api/marca', requireSession, async (req, res) => {
         const s = req.userSession;
         const { logoUrl, fontFamily, neonIntensity } = req.body;
-        await s.db.setConfigVal('marca_logo_url', logoUrl || '');
+        const logoUrlClean = await uploadBase64Image(logoUrl || '', { folder: 'marcas', prefix: `logo_${req.username}` });
+        await s.db.setConfigVal('marca_logo_url', logoUrlClean || '');
         await s.db.setConfigVal('marca_font_family', fontFamily || 'Inter');
         await s.db.setConfigVal('marca_neon_intensity', neonIntensity || 'normal');
-        const config = { logoUrl, fontFamily, neonIntensity };
+        const config = { logoUrl: logoUrlClean, fontFamily, neonIntensity };
         io.to(req.username).emit('marcaCambiado', config);
         res.json({ status: 'OK', config });
     });

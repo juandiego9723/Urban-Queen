@@ -305,6 +305,13 @@ function iniciarScheduler(io, activeSessions) {
             for (const uname of activeUsernames) {
                 const s = activeSessions[uname];
                 if (!s || !s.db || (s.queueUpdate && s.queueUpdate.length > 0)) continue;
+
+                const roomSize = (io && io.sockets && io.sockets.adapter && io.sockets.adapter.rooms)
+                    ? (io.sockets.adapter.rooms.get(uname)?.size || 0)
+                    : 0;
+                const tiktokConectado = s.tiktokEstado === 'conectado';
+                if (roomSize === 0 && !tiktokConectado) continue;
+
                 try {
                     const syncRes = await s.db.sincronizarRankingsSiNecesario(14000);
                     if (syncRes && syncRes.changed && io) {

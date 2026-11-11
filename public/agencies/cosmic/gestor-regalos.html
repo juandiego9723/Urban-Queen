@@ -46,6 +46,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Gestor Dinámico de Regalos</title>
+    <script src="/js/image-utils.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
     <style>
         :root {
@@ -462,9 +463,17 @@
             document.getElementById('modal').classList.remove('active');
         }
 
-        function previsualizarImagen(event) {
+        async function previsualizarImagen(event) {
             const file = event.target.files[0];
             if (!file) return;
+
+            if (typeof window.comprimirImagenWebP === 'function') {
+                base64Image = await window.comprimirImagenWebP(file, 256, 0.82);
+                const preview = document.getElementById('preview');
+                preview.src = base64Image;
+                preview.style.display = 'block';
+                return;
+            }
 
             const reader = new FileReader();
             reader.onload = function (e) {

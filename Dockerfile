@@ -22,6 +22,8 @@ RUN addgroup -g 1001 -S nodejs && \
 COPY --from=builder /app/node_modules ./node_modules
 COPY . .
 
+RUN mkdir -p /app/public/regalos && chown -R nodejs:nodejs /app/public/regalos
+
 # Asignar permisos al usuario no root
 USER nodejs
 

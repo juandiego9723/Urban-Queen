@@ -129,6 +129,14 @@ class DBInstance {
         }
     }
 
+    async recargarQueensCache() {
+        const uId = await this.ensureUserId();
+        if (!uId) return;
+        const qRes = await query('SELECT * FROM queens WHERE user_id = $1 ORDER BY activo DESC, name', [uId]);
+        this.cacheQueens = qRes.rows;
+        await this.sincronizarRankingsDesdeHistorial();
+    }
+
     async initQueens(queensArray) {
         const uId = await this.ensureUserId();
         if (!uId) return;
@@ -143,7 +151,7 @@ class DBInstance {
                     [uId, name, colores[name] || '#ffffff']
                 );
             }
-            await this.cargarCache();
+            await this.recargarQueensCache();
         } catch (e) {
             console.error('Error en initQueens:', e.message);
         }
@@ -173,7 +181,7 @@ class DBInstance {
                     nombre_img = EXCLUDED.nombre_img,
                     activo = 1
             `, [uId, name, color, apodo, regaloImg, regaloPts, avatarImg, nombreImg]);
-            await this.cargarCache();
+            await this.recargarQueensCache();
         } catch (e) {
             console.error('Error en crearQueen:', e.message);
         }
@@ -199,7 +207,7 @@ class DBInstance {
             const idxName = ++idx;
 
             await query(`UPDATE queens SET ${sets.join(', ')} WHERE user_id = $${idxUid} AND LOWER(name) = LOWER($${idxName})`, vals);
-            await this.cargarCache();
+            await this.recargarQueensCache();
         } catch (e) {
             console.error('Error en editarQueen:', e.message);
         }
@@ -216,7 +224,7 @@ class DBInstance {
         if (!uId) return 0;
         try {
             const res = await query('UPDATE queens SET activo = CASE WHEN activo = 1 THEN 0 ELSE 1 END WHERE user_id = $1 AND LOWER(name) = LOWER($2) RETURNING activo', [uId, name]);
-            await this.cargarCache();
+            await this.recargarQueensCache();
             return res.rows.length > 0 ? res.rows[0].activo : 0;
         } catch (e) {
             console.error('Error en toggleQueenActivo:', e.message);
@@ -229,7 +237,7 @@ class DBInstance {
         if (!uId) return;
         try {
             await query('UPDATE queens SET name = $1 WHERE user_id = $2 AND LOWER(name) = LOWER($3)', [nombreNuevo, uId, nombreViejo]);
-            await this.cargarCache();
+            await this.recargarQueensCache();
         } catch (e) {
             console.error('Error en renombrarQueen:', e.message);
         }
@@ -240,7 +248,7 @@ class DBInstance {
         if (!uId) return;
         try {
             await query('DELETE FROM queens WHERE user_id = $1 AND LOWER(name) = LOWER($2)', [uId, nombre]);
-            await this.cargarCache();
+            await this.recargarQueensCache();
         } catch (e) {
             console.error('Error en eliminarQueen:', e.message);
         }
@@ -604,6 +612,13 @@ class DBInstance {
         return found ? found.queen_name : null;
     }
 
+    async recargarAliasesCache() {
+        const uId = await this.ensureUserId();
+        if (!uId) return;
+        const aRes = await query('SELECT a.alias_name, q.name as queen_name FROM aliases a JOIN queens q ON a.queen_id = q.id WHERE q.user_id = $1', [uId]);
+        this.cacheAliases = aRes.rows;
+    }
+
     async agregarAlias(aliasName, queenName) {
         const uId = await this.ensureUserId();
         if (!uId) return;
@@ -612,7 +627,7 @@ class DBInstance {
             if (qRes.rows.length === 0) return;
             const queenId = qRes.rows[0].id;
             await query('INSERT INTO aliases (queen_id, alias_name) VALUES ($1, $2) ON CONFLICT (queen_id, alias_name) DO NOTHING', [queenId, aliasName]);
-            await this.cargarCache();
+            await this.recargarAliasesCache();
         } catch (e) {
             console.error('Error en agregarAlias:', e.message);
         }
@@ -623,7 +638,7 @@ class DBInstance {
         if (!uId) return;
         try {
             await query('DELETE FROM aliases WHERE LOWER(alias_name) = LOWER($1) AND queen_id IN (SELECT id FROM queens WHERE user_id = $2)', [aliasName, uId]);
-            await this.cargarCache();
+            await this.recargarAliasesCache();
         } catch (e) {
             console.error('Error en eliminarAlias:', e.message);
         }
@@ -645,11 +660,18 @@ class DBInstance {
         }));
     }
 
+    async recargarGruposCache() {
+        const uId = await this.ensureUserId();
+        if (!uId) return;
+        const gRes = await query('SELECT * FROM grupos WHERE user_id = $1 ORDER BY nombre', [uId]);
+        this.cacheGrupos = gRes.rows;
+    }
+
     async crearGrupo(nombre, color) {
         const uId = await this.ensureUserId();
         if (!uId) return null;
         const res = await query('INSERT INTO grupos (user_id, nombre, color) VALUES ($1, $2, $3) RETURNING id', [uId, nombre, color]);
-        await this.cargarCache();
+        await this.recargarGruposCache();
         return res.rows[0]?.id;
     }
 
@@ -657,7 +679,7 @@ class DBInstance {
         const uId = await this.ensureUserId();
         if (!uId) return;
         await query('DELETE FROM grupos WHERE user_id = $1 AND id = $2', [uId, id]);
-        await this.cargarCache();
+        await this.recargarGruposCache();
     }
 
     async agregarMiembro(grupoId, queenName) {
@@ -812,6 +834,13 @@ class DBInstance {
             : [{ id: 1, nombre: 'Lista Principal', activa: 1 }];
     }
 
+    async recargarRegalosListasCache() {
+        const uId = await this.ensureUserId();
+        if (!uId) return;
+        const res = await query('SELECT * FROM regalos_listas WHERE user_id = $1 ORDER BY id ASC', [uId]).catch(() => ({ rows: [] }));
+        this.cacheRegalosListas = res.rows || [];
+    }
+
     async crearRegaloLista(nombre) {
         const uId = await this.ensureUserId();
         if (!uId) return;
@@ -819,7 +848,7 @@ class DBInstance {
             const hasActive = (this.cacheRegalosListas || []).some(l => l.activa === 1);
             const activaVal = hasActive ? 0 : 1;
             const res = await query('INSERT INTO regalos_listas (user_id, nombre, activa) VALUES ($1, $2, $3) RETURNING *', [uId, nombre, activaVal]);
-            await this.cargarCache();
+            await this.recargarRegalosListasCache();
             return res.rows[0];
         } catch (e) { console.error('Error en crearRegaloLista:', e.message); }
     }
@@ -830,6 +859,7 @@ class DBInstance {
         try {
             // Eliminar regalos asociados a esa lista
             await query('DELETE FROM regalos_custom WHERE user_id = $1 AND lista_id = $2', [uId, id]);
+            this.cacheRegalosCustom = this.cacheRegalosCustom.filter(r => r.lista_id !== id);
             // Eliminar la lista
             await query('DELETE FROM regalos_listas WHERE user_id = $1 AND id = $2', [uId, id]);
             
@@ -841,7 +871,7 @@ class DBInstance {
                     await query('UPDATE regalos_listas SET activa = 1 WHERE user_id = $1 AND id = $2', [uId, remaining.rows[0].id]);
                 }
             }
-            await this.cargarCache();
+            await this.recargarRegalosListasCache();
         } catch (e) { console.error('Error en eliminarRegaloLista:', e.message); }
     }
 
@@ -851,7 +881,7 @@ class DBInstance {
         try {
             await query('UPDATE regalos_listas SET activa = 0 WHERE user_id = $1', [uId]);
             await query('UPDATE regalos_listas SET activa = 1 WHERE user_id = $1 AND id = $2', [uId, id]);
-            await this.cargarCache();
+            await this.recargarRegalosListasCache();
         } catch (e) { console.error('Error en activarRegaloLista:', e.message); }
     }
 

@@ -1,27 +1,6 @@
-const fs = require('fs');
-const path = require('path');
-const crypto = require('crypto');
-
 const { reconstruirQueens, reconstruirEquipos, resolverNombre } = require('../config/sessionStore');
 const { verificarResetParaSesion } = require('../services/rankingResetService');
-
-function procesarAvatarBase64(base64Str) {
-    if (!base64Str || !base64Str.startsWith('data:image')) return base64Str;
-    try {
-        const matches = base64Str.match(/^data:image\/([A-Za-z-+\/]+);base64,(.+)$/);
-        if (matches.length !== 3) return base64Str;
-        const ext = matches[1] === 'jpeg' ? 'jpg' : matches[1];
-        const buffer = Buffer.from(matches[2], 'base64');
-        const filename = `avatar_${crypto.randomUUID()}.${ext}`;
-        const regalosDir = path.join(__dirname, '..', '..', 'public', 'regalos');
-        if (!fs.existsSync(regalosDir)) fs.mkdirSync(regalosDir, { recursive: true });
-        fs.writeFileSync(path.join(regalosDir, filename), buffer);
-        return `/regalos/${filename}`;
-    } catch (e) {
-        console.error('Error procesando avatar base64:', e);
-        return base64Str;
-    }
-}
+const { uploadBase64Image } = require('../services/storageService');
 
 function setupQueensRoutes(app, io, requireSession) {
     app.get('/api/queens', requireSession, (req, res) => {
@@ -44,16 +23,21 @@ function setupQueensRoutes(app, io, requireSession) {
     app.all('/api/queens/crear', requireSession, async (req, res) => {
         const s = req.userSession;
         const nombre = (req.query.nombre || (req.body && req.body.nombre) || '').trim();
+        if (!nombre) return res.status(400).send('Falta nombre');
+
         const color = req.query.color || (req.body && req.body.color) || '#ffffff';
         const apodo = (req.query.apodo || (req.body && req.body.apodo) || '').trim();
-        const regaloImg = req.query.regalo_img || (req.body && req.body.regalo_img) || '';
+        const regaloImgRaw = req.query.regalo_img || (req.body && req.body.regalo_img) || '';
         const regaloPts = parseInt(req.query.regalo_pts || (req.body && req.body.regalo_pts) || '0') || 0;
         const avatarImgRaw = req.query.avatar_img || (req.body && req.body.avatar_img) || '';
-        const avatarImg = procesarAvatarBase64(avatarImgRaw);
         const nombreImgRaw = req.query.nombre_img || (req.body && req.body.nombre_img) || '';
-        const nombreImg = procesarAvatarBase64(nombreImgRaw);
 
-        if (!nombre) return res.status(400).send('Falta nombre');
+        const [regaloImg, avatarImg, nombreImg] = await Promise.all([
+            uploadBase64Image(regaloImgRaw, { folder: 'regalos', prefix: `regalo_${req.username}_${nombre}` }),
+            uploadBase64Image(avatarImgRaw, { folder: 'avatars', prefix: `avatar_${req.username}_${nombre}` }),
+            uploadBase64Image(nombreImgRaw, { folder: 'nombres', prefix: `nombre_${req.username}_${nombre}` })
+        ]);
+
         await s.db.crearQueen(nombre, color, apodo, regaloImg, regaloPts, avatarImg, nombreImg);
         reconstruirQueens(s);
         s.QUEENS.forEach(q => { if (!s.rachasPerdidas[q]) s.rachasPerdidas[q] = 0; if (!s.amarillasAcumuladas[q]) s.amarillasAcumuladas[q] = 0; });
@@ -66,15 +50,20 @@ function setupQueensRoutes(app, io, requireSession) {
         const p      = (k) => req.query[k] !== undefined ? req.query[k] : (req.body && req.body[k] !== undefined ? req.body[k] : null);
         const nombre = p('nombre');
         const color  = p('color');
+        if (!nombre || !color) return res.status(400).send('Faltan datos');
+
         const apodo  = p('apodo');
-        const regImg = p('regalo_img');
+        const regImgRaw = p('regalo_img');
         const regPts = p('regalo_pts') !== null ? parseInt(p('regalo_pts')) : null;
         const avatarImgRaw = p('avatar_img');
-        const avatarImg = avatarImgRaw !== null ? procesarAvatarBase64(avatarImgRaw) : null;
         const nombreImgRaw = p('nombre_img');
-        const nombreImg = nombreImgRaw !== null ? procesarAvatarBase64(nombreImgRaw) : null;
 
-        if (!nombre || !color) return res.status(400).send('Faltan datos');
+        const [regImg, avatarImg, nombreImg] = await Promise.all([
+            regImgRaw !== null ? uploadBase64Image(regImgRaw, { folder: 'regalos', prefix: `regalo_${req.username}_${nombre}` }) : Promise.resolve(null),
+            avatarImgRaw !== null ? uploadBase64Image(avatarImgRaw, { folder: 'avatars', prefix: `avatar_${req.username}_${nombre}` }) : Promise.resolve(null),
+            nombreImgRaw !== null ? uploadBase64Image(nombreImgRaw, { folder: 'nombres', prefix: `nombre_${req.username}_${nombre}` }) : Promise.resolve(null)
+        ]);
+
         await s.db.editarQueen(nombre, color, apodo, regImg, regPts, avatarImg, nombreImg);
         reconstruirEquipos(s);
         io.to(req.username).emit('queensActualizadas', { queens: s.QUEENS, equipos: s.equipos, apodos: s.db.getApodosMap() });
