@@ -332,6 +332,8 @@ function createPointsProcessor(io, activeSessions, resolverNombreFn, timerHandle
                     // (a menos que sea un regalo exclusivo de salto configurado para otra bailarina)
                     if (!queenSalto || queenSalto.trim().toLowerCase() === session.timerBaile.chicaActual.trim().toLowerCase()) {
                         queenActivadora = session.timerBaile.chicaActual;
+                    } else {
+                        queenActivadora = queenSalto;
                     }
                 }
             }
@@ -498,30 +500,17 @@ function createPointsProcessor(io, activeSessions, resolverNombreFn, timerHandle
         let pointsBatallaDelta = {};
         let pointsDinamicaDelta = {};
         let saltaTurnoPara = null;
-        
-        const forzarChicaPodio = (session.podio && session.podio.activo && session.podio.estado === 'activo' && session.podio.chicaActual)
-            ? session.podio.chicaActual
-            : null;
-        const forzarChicaConociendo = (session.conociendo && session.conociendo.activo && session.conociendo.estado === 'activo' && session.conociendo.chicaActual)
-            ? session.conociendo.chicaActual
-            : null;
-        const forzarChicaTimer = (session.timerBaile && session.timerBaile.activo && session.timerBaile.chicaActual && session.estadoBatalla !== 'activa' && !session.dinamicaActiva && (!session.revivir || !session.revivir.activo || session.revivir.estado !== 'activo'))
-            ? session.timerBaile.chicaActual
-            : null;
 
         temp.forEach(item => {
-            const nombreEfectivo = forzarChicaPodio
-                || forzarChicaConociendo 
-                || (item.saltaTurno ? item.saltaTurno : forzarChicaTimer) 
-                || item.nombre;
+            const nombreEfectivo = item.nombre;
             if (nombreEfectivo) {
                 sumas[nombreEfectivo] = (sumas[nombreEfectivo] || 0) + item.puntos;
-                if (session.estadoBatalla === 'activa' && session.participantesActuales.includes(item.nombre)) {
+                if (session.estadoBatalla === 'activa' && session.participantesActuales.includes(nombreEfectivo)) {
                     const multBatalla = (session.esBatallaVS && session.batalla2X) ? 2 : 1;
-                    pointsBatallaDelta[item.nombre] = (pointsBatallaDelta[item.nombre] || 0) + (item.puntos * multBatalla);
+                    pointsBatallaDelta[nombreEfectivo] = (pointsBatallaDelta[nombreEfectivo] || 0) + (item.puntos * multBatalla);
                 }
-                if (session.dinamicaActiva && session.dinamicaActiva.participantes.includes(item.nombre) && !session.eliminadosDinamica.includes(item.nombre)) {
-                    pointsDinamicaDelta[item.nombre] = (pointsDinamicaDelta[item.nombre] || 0) + item.puntos;
+                if (session.dinamicaActiva && session.dinamicaActiva.participantes.includes(nombreEfectivo) && !session.eliminadosDinamica.includes(nombreEfectivo)) {
+                    pointsDinamicaDelta[nombreEfectivo] = (pointsDinamicaDelta[nombreEfectivo] || 0) + item.puntos;
                 }
             }
             if (item.saltaTurno) {
@@ -536,11 +525,13 @@ function createPointsProcessor(io, activeSessions, resolverNombreFn, timerHandle
         let rankingPayload = null;
         if (session.db) {
             try {
-                rankingPayload = {
-                    semanal: typeof session.db.getRanking === 'function' ? session.db.getRanking() : {},
-                    mensual: typeof session.db.getRankingMensual === 'function' ? session.db.getRankingMensual() : {},
-                    diario: typeof session.db.getRankingDiario === 'function' ? session.db.getRankingDiario() : {}
-                };
+                rankingPayload = typeof session.db.getRankingsPayload === 'function'
+                    ? session.db.getRankingsPayload()
+                    : {
+                        semanal: typeof session.db.getRanking === 'function' ? session.db.getRanking() : {},
+                        mensual: typeof session.db.getRankingMensual === 'function' ? session.db.getRankingMensual() : {},
+                        diario: typeof session.db.getRankingDiario === 'function' ? session.db.getRankingDiario() : {}
+                    };
             } catch (e) {
                 console.error('Error generando payload de ranking:', e);
             }

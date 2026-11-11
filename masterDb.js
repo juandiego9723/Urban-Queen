@@ -17,6 +17,9 @@ function verifyPassword(password, storedPassword) {
 
 async function initMasterDB() {
     try {
+        // Asegurar índice compuesto para sincronización rápida de rankings desde historial_regalos
+        await query('CREATE INDEX IF NOT EXISTS idx_historial_user_ts ON historial_regalos(user_id, timestamp)').catch(() => {});
+
         // Asegurar que el usuario admin inicial exista en Supabase
         const adminUser = await obtenerUsuario('admin');
         if (!adminUser) {

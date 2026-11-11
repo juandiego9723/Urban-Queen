@@ -67,6 +67,7 @@ async function verificarResetParaSesion(session, username, io) {
             await session.db.setConfigVal('last_reset_diario', diaStr);
         } else if (lastDiario !== diaStr) {
             console.log(`[RankingReset] [${username}] Nuevo día detectado: ${diaStr} (Anterior: ${lastDiario}). Reiniciando diario.`);
+            await session.db.limpiarResetsManuales(['diario']);
             await session.db.resetDiario();
             await session.db.setConfigVal('last_reset_diario', diaStr);
             if (io) io.to(username).emit('resetDiario');
@@ -79,6 +80,7 @@ async function verificarResetParaSesion(session, username, io) {
             await session.db.setConfigVal('last_reset_semanal', semanaStr);
         } else if (lastSemanal !== semanaStr) {
             console.log(`[RankingReset] [${username}] Nueva semana detectada: ${semanaStr} (Anterior: ${lastSemanal}). Reiniciando semanal.`);
+            await session.db.limpiarResetsManuales(['semanal']);
             await session.db.resetSemanal();
             await session.db.setConfigVal('last_reset_semanal', semanaStr);
             if (io) {
@@ -94,6 +96,7 @@ async function verificarResetParaSesion(session, username, io) {
             await session.db.setConfigVal('last_reset_mensual', mesStr);
         } else if (lastMensual !== mesStr) {
             console.log(`[RankingReset] [${username}] Nuevo mes detectado: ${mesStr} (Anterior: ${lastMensual}). Reiniciando mensual.`);
+            await session.db.limpiarResetsManuales(['mensual']);
             await session.db.resetMensual();
             await session.db.setConfigVal('last_reset_mensual', mesStr);
             if (io) io.to(username).emit('resetMensual');
@@ -102,7 +105,7 @@ async function verificarResetParaSesion(session, username, io) {
         }
 
         if (huboCambios && io) {
-            io.to(username).emit('rankingActualizado');
+            io.to(username).emit('rankingActualizado', session.db.getRankingsPayload());
             io.to(username).emit('queensActualizadas', {
                 queens: session.QUEENS,
                 equipos: session.equipos,
@@ -156,6 +159,7 @@ async function verificarTodosLosUsuarios(io, activeSessions = {}) {
             } else if (lastDiario !== diaStr) {
                 console.log(`[RankingReset] [DB User ${u.username}] Nuevo día detectado: ${diaStr}. Reseteando ranking diario en DB.`);
                 await query('UPDATE queens SET ranking_diario = 0 WHERE user_id = $1', [uId]);
+                await query("DELETE FROM config WHERE user_id = $1 AND clave = 'reset_diario_desde'", [uId]);
                 await query('UPDATE config SET valor = $1 WHERE user_id = $2 AND clave = $3', [diaStr, uId, 'last_reset_diario']);
             }
 
@@ -165,6 +169,7 @@ async function verificarTodosLosUsuarios(io, activeSessions = {}) {
             } else if (lastSemanal !== semanaStr) {
                 console.log(`[RankingReset] [DB User ${u.username}] Nueva semana detectada: ${semanaStr}. Reseteando ranking semanal en DB.`);
                 await query('UPDATE queens SET ranking_semanal = 0 WHERE user_id = $1', [uId]);
+                await query("DELETE FROM config WHERE user_id = $1 AND clave = 'reset_semanal_desde'", [uId]);
                 await query('UPDATE config SET valor = $1 WHERE user_id = $2 AND clave = $3', [semanaStr, uId, 'last_reset_semanal']);
             }
 
@@ -174,6 +179,7 @@ async function verificarTodosLosUsuarios(io, activeSessions = {}) {
             } else if (lastMensual !== mesStr) {
                 console.log(`[RankingReset] [DB User ${u.username}] Nuevo mes detectado: ${mesStr}. Reseteando ranking mensual en DB.`);
                 await query('UPDATE queens SET ranking_mensual = 0 WHERE user_id = $1', [uId]);
+                await query("DELETE FROM config WHERE user_id = $1 AND clave = 'reset_mensual_desde'", [uId]);
                 await query('UPDATE config SET valor = $1 WHERE user_id = $2 AND clave = $3', [mesStr, uId, 'last_reset_mensual']);
             }
         }
@@ -189,30 +195,37 @@ async function ejecutarResetManual(userSession, username, io, tipo) {
     if (!userSession || !userSession.db) return;
     const tz = getTimezone();
     const { diaStr, mesStr, semanaStr } = getLocalDateStrings(tz);
+    const ahoraISO = new Date().toISOString();
 
     if (tipo === 'diario') {
+        await userSession.db.setConfigVal('reset_diario_desde', ahoraISO);
         await userSession.db.resetDiario();
         await userSession.db.setConfigVal('last_reset_diario', diaStr);
         if (io) {
             io.to(username).emit('resetDiario');
-            io.to(username).emit('rankingActualizado');
+            io.to(username).emit('rankingActualizado', userSession.db.getRankingsPayload());
         }
     } else if (tipo === 'semanal') {
+        await userSession.db.setConfigVal('reset_semanal_desde', ahoraISO);
         await userSession.db.resetSemanal();
         await userSession.db.setConfigVal('last_reset_semanal', semanaStr);
         if (io) {
             io.to(username).emit('resetRanking');
             io.to(username).emit('resetSemanal');
-            io.to(username).emit('rankingActualizado');
+            io.to(username).emit('rankingActualizado', userSession.db.getRankingsPayload());
         }
     } else if (tipo === 'mensual') {
+        await userSession.db.setConfigVal('reset_mensual_desde', ahoraISO);
         await userSession.db.resetMensual();
         await userSession.db.setConfigVal('last_reset_mensual', mesStr);
         if (io) {
             io.to(username).emit('resetMensual');
-            io.to(username).emit('rankingActualizado');
+            io.to(username).emit('rankingActualizado', userSession.db.getRankingsPayload());
         }
     } else if (tipo === 'total') {
+        await userSession.db.setConfigVal('reset_diario_desde', ahoraISO);
+        await userSession.db.setConfigVal('reset_semanal_desde', ahoraISO);
+        await userSession.db.setConfigVal('reset_mensual_desde', ahoraISO);
         await userSession.db.resetSemanal();
         await userSession.db.resetMensual();
         await userSession.db.resetDiario();
@@ -233,7 +246,7 @@ async function ejecutarResetManual(userSession, username, io, tipo) {
             io.to(username).emit('resetMensual');
             io.to(username).emit('resetDiario');
             io.to(username).emit('actualizarCopa', userSession.db.getCopa());
-            io.to(username).emit('rankingActualizado');
+            io.to(username).emit('rankingActualizado', userSession.db.getRankingsPayload());
         }
     }
 
@@ -247,8 +260,8 @@ async function ejecutarResetManual(userSession, username, io, tipo) {
 }
 
 /**
- * Inicia el temporizador de fondo en el servidor para verificar cada 30 segundos
- * si ocurrió la medianoche o un cambio de ciclo en la hora local.
+ * Inicia el temporizador de fondo en el servidor para verificar ciclos y
+ * mantener las sesiones activas sincronizadas automáticamente con historial_regalos.
  */
 let schedulerInterval = null;
 let lastKnownDia = '';
@@ -271,7 +284,7 @@ function iniciarScheduler(io, activeSessions) {
         console.error('[RankingReset] Error en verificación inicial del scheduler:', e);
     });
 
-    // Evaluar cada 30 segundos
+    // Evaluar cada 15 segundos: cambio de ciclo y auto-sincronización continua desde historial_regalos
     schedulerInterval = setInterval(async () => {
         try {
             const current = getLocalDateStrings(tz);
@@ -287,10 +300,24 @@ function iniciarScheduler(io, activeSessions) {
 
                 await verificarTodosLosUsuarios(io, activeSessions);
             }
+
+            const activeUsernames = Object.keys(activeSessions || {});
+            for (const uname of activeUsernames) {
+                const s = activeSessions[uname];
+                if (!s || !s.db || (s.queueUpdate && s.queueUpdate.length > 0)) continue;
+                try {
+                    const syncRes = await s.db.sincronizarRankingsSiNecesario(14000);
+                    if (syncRes && syncRes.changed && io) {
+                        io.to(uname).emit('rankingActualizado', s.db.getRankingsPayload());
+                    }
+                } catch (syncErr) {
+                    console.error(`[RankingReset] Error sincronizando sesión '${uname}':`, syncErr.message);
+                }
+            }
         } catch (err) {
             console.error('[RankingReset] Error en ciclo del scheduler:', err);
         }
-    }, 30000);
+    }, 15000);
 }
 
 module.exports = {

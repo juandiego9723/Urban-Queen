@@ -11,6 +11,17 @@ class DBInstance {
         this.cacheSonidos = {};
         this.cacheRegalosCustom = [];
         this.cacheDinamicas = [];
+        this._initPromise = null;
+        this._syncPromise = null;
+        this._lastSyncTime = 0;
+        this._pendingWrites = new Set();
+    }
+
+    _trackWrite(promise) {
+        this._pendingWrites.add(promise);
+        const cleanup = () => this._pendingWrites.delete(promise);
+        promise.then(cleanup, cleanup);
+        return promise;
     }
 
     close() {
@@ -40,8 +51,18 @@ class DBInstance {
 
     async init(userId) {
         if (userId) this.userId = userId;
-        await this.ensureUserId();
-        await this.cargarCache();
+        if (this._initPromise) return this._initPromise;
+        if (this._initialized && !userId) return;
+        this._initPromise = (async () => {
+            try {
+                await this.ensureUserId();
+                await this.cargarCache();
+                this._initialized = true;
+            } finally {
+                this._initPromise = null;
+            }
+        })();
+        return this._initPromise;
     }
 
     async cargarCache() {
@@ -102,6 +123,7 @@ class DBInstance {
             }
 
             this.cacheRegalosCustom = rcRes.rows;
+            await this.sincronizarRankingsDesdeHistorial();
         } catch (e) {
             console.error(`⚠️ Error cargando cache desde Supabase para ${this.username}:`, e.message);
         }
@@ -242,6 +264,172 @@ class DBInstance {
         return obj;
     }
 
+    getRankingsPayload() {
+        return {
+            semanal: this.getRanking(),
+            mensual: this.getRankingMensual(),
+            diario: this.getRankingDiario()
+        };
+    }
+
+    async limpiarResetsManuales(tipos = ['diario', 'semanal', 'mensual']) {
+        const claves = (tipos || []).map(t => `reset_${t}_desde`);
+        if (claves.length === 0) return;
+        claves.forEach(c => { delete this.cacheConfig[c]; });
+        const uId = await this.ensureUserId();
+        if (!uId) return;
+        try {
+            await query('DELETE FROM config WHERE user_id = $1 AND clave = ANY($2)', [uId, claves]);
+        } catch (e) {
+            console.error('Error en limpiarResetsManuales:', e.message);
+        }
+    }
+
+    async sincronizarRankingsDesdeHistorial({ ignorarResetsManuales = false } = {}) {
+        if (this._syncPromise && !ignorarResetsManuales) {
+            return this._syncPromise;
+        }
+        const runSync = async () => {
+            const uId = await this.ensureUserId();
+            const tz = this.getTimezone();
+            if (!uId) {
+                return { changed: false, dbUpdated: false, memoryChanged: false, timezone: tz, diarios: [], semanales: [], mensuales: [] };
+            }
+
+            if (ignorarResetsManuales) {
+                await this.limpiarResetsManuales(['diario', 'semanal', 'mensual']);
+            }
+
+            for (let pass = 0; pass < 3 && this._pendingWrites.size > 0; pass++) {
+                await Promise.allSettled([...this._pendingWrites]);
+            }
+
+            const parseCutoff = (val) => {
+                if (!val) return null;
+                const d = new Date(val);
+                return Number.isNaN(d.getTime()) ? null : d.toISOString();
+            };
+
+            const cutoffDiario = ignorarResetsManuales ? null : parseCutoff(this.getConfigVal('reset_diario_desde'));
+            const cutoffSemanal = ignorarResetsManuales ? null : parseCutoff(this.getConfigVal('reset_semanal_desde'));
+            const cutoffMensual = ignorarResetsManuales ? null : parseCutoff(this.getConfigVal('reset_mensual_desde'));
+
+            try {
+                const res = await query(`
+                    WITH bounds AS (
+                        SELECT 
+                            GREATEST(
+                                DATE_TRUNC('day', CURRENT_TIMESTAMP AT TIME ZONE $2) AT TIME ZONE $2,
+                                COALESCE($3::timestamptz, '-infinity'::timestamptz)
+                            ) AS inicio_dia,
+                            GREATEST(
+                                DATE_TRUNC('week', CURRENT_TIMESTAMP AT TIME ZONE $2) AT TIME ZONE $2,
+                                COALESCE($4::timestamptz, '-infinity'::timestamptz)
+                            ) AS inicio_semana,
+                            GREATEST(
+                                DATE_TRUNC('month', CURRENT_TIMESTAMP AT TIME ZONE $2) AT TIME ZONE $2,
+                                COALESCE($5::timestamptz, '-infinity'::timestamptz)
+                            ) AS inicio_mes
+                    ),
+                    agregados AS (
+                        SELECT 
+                            h.queen_id,
+                            COALESCE(SUM(CASE WHEN h.timestamp >= b.inicio_dia    THEN h.diamonds ELSE 0 END), 0)::int AS diario,
+                            COALESCE(SUM(CASE WHEN h.timestamp >= b.inicio_semana THEN h.diamonds ELSE 0 END), 0)::int AS semanal,
+                            COALESCE(SUM(CASE WHEN h.timestamp >= b.inicio_mes    THEN h.diamonds ELSE 0 END), 0)::int AS mensual
+                        FROM historial_regalos h
+                        CROSS JOIN bounds b
+                        WHERE h.user_id = $1
+                          AND h.timestamp >= LEAST(b.inicio_dia, b.inicio_semana, b.inicio_mes)
+                        GROUP BY h.queen_id
+                    ),
+                    calculado AS (
+                        SELECT 
+                            q2.id AS queen_id,
+                            q2.name AS queen_name,
+                            GREATEST(0, COALESCE(ag.diario, 0))::int AS diario,
+                            GREATEST(0, COALESCE(ag.semanal, 0))::int AS semanal,
+                            GREATEST(0, COALESCE(ag.mensual, 0))::int AS mensual,
+                            (
+                                q2.ranking_diario  IS DISTINCT FROM GREATEST(0, COALESCE(ag.diario, 0))::int
+                             OR q2.ranking_semanal IS DISTINCT FROM GREATEST(0, COALESCE(ag.semanal, 0))::int
+                             OR q2.ranking_mensual IS DISTINCT FROM GREATEST(0, COALESCE(ag.mensual, 0))::int
+                            ) AS needs_update
+                        FROM queens q2
+                        LEFT JOIN agregados ag ON ag.queen_id = q2.id
+                        WHERE q2.user_id = $1
+                    ),
+                    actualizado AS (
+                        UPDATE queens q
+                        SET 
+                            ranking_diario  = c.diario,
+                            ranking_semanal = c.semanal,
+                            ranking_mensual = c.mensual
+                        FROM calculado c
+                        WHERE q.id = c.queen_id AND q.user_id = $1 AND c.needs_update
+                        RETURNING q.id
+                    )
+                    SELECT c.queen_id, c.queen_name, c.diario, c.semanal, c.mensual, c.needs_update,
+                           EXISTS(SELECT 1 FROM actualizado) AS any_updated
+                    FROM calculado c
+                `, [uId, tz, cutoffDiario, cutoffSemanal, cutoffMensual]);
+
+                const rows = res.rows || [];
+                let dbUpdated = false;
+                let memoryChanged = false;
+
+                if (this._pendingWrites.size === 0) {
+                    rows.forEach(r => {
+                        if (r.needs_update || r.any_updated) dbUpdated = true;
+                        const qCache = this.cacheQueens.find(q => q.id === r.queen_id || q.name.toLowerCase() === r.queen_name.toLowerCase());
+                        if (qCache) {
+                            if (
+                                (qCache.ranking_diario || 0) !== r.diario ||
+                                (qCache.ranking_semanal || 0) !== r.semanal ||
+                                (qCache.ranking_mensual || 0) !== r.mensual
+                            ) {
+                                memoryChanged = true;
+                            }
+                            qCache.ranking_diario = r.diario;
+                            qCache.ranking_semanal = r.semanal;
+                            qCache.ranking_mensual = r.mensual;
+                        }
+                    });
+                }
+
+                this._lastSyncTime = Date.now();
+                return {
+                    changed: dbUpdated || memoryChanged,
+                    dbUpdated,
+                    memoryChanged,
+                    timezone: tz,
+                    diarios: rows.filter(r => r.diario > 0).map(r => ({ queen_name: r.queen_name, total: r.diario })),
+                    semanales: rows.filter(r => r.semanal > 0).map(r => ({ queen_name: r.queen_name, total: r.semanal })),
+                    mensuales: rows.filter(r => r.mensual > 0).map(r => ({ queen_name: r.queen_name, total: r.mensual }))
+                };
+            } catch (e) {
+                console.error(`⚠️ Error sincronizando rankings desde historial para ${this.username}:`, e.message);
+                return { changed: false, dbUpdated: false, memoryChanged: false, timezone: tz, diarios: [], semanales: [], mensuales: [] };
+            }
+        };
+
+        const promise = runSync().finally(() => {
+            if (this._syncPromise === promise) {
+                this._syncPromise = null;
+            }
+        });
+        this._syncPromise = promise;
+        return promise;
+    }
+
+    async sincronizarRankingsSiNecesario(maxAgeMs = 3000) {
+        if (this._syncPromise) return this._syncPromise;
+        if (Date.now() - this._lastSyncTime < maxAgeMs && this._pendingWrites.size === 0) {
+            return { changed: false, cached: true };
+        }
+        return this.sincronizarRankingsDesdeHistorial();
+    }
+
     getVictorias() {
         const obj = {};
         this.cacheQueens.forEach(q => obj[q.name] = q.victorias || 0);
@@ -314,7 +502,7 @@ class DBInstance {
         await this.setConfigVal('agencia_config', JSON.stringify(config || {}));
     }
 
-    async sumarPuntos(name, puntos) {
+    sumarPuntos(name, puntos) {
         const qCache = this.cacheQueens.find(item => item.name.toLowerCase() === name.toLowerCase());
         if (qCache) {
             qCache.ranking_semanal = Math.max(0, (qCache.ranking_semanal || 0) + puntos);
@@ -322,28 +510,22 @@ class DBInstance {
             qCache.ranking_diario  = Math.max(0, (qCache.ranking_diario || 0) + puntos);
             qCache.copa            = Math.max(0, (qCache.copa || 0) + puntos);
         }
-        const uId = await this.ensureUserId();
-        if (!uId) return;
-        try {
-            var q = this.cacheQueens.find(item => item.name.toLowerCase() === name.toLowerCase());
-            if (q) {
-        // actualizado en cacheQueens de forma síncrona arriba
-        // fin cacheQueens
-        // diario cacheQueens
-        // copa cacheQueens
+        return this._trackWrite((async () => {
+            const uId = await this.ensureUserId();
+            if (!uId) return;
+            try {
+                await query(`
+                    UPDATE queens 
+                    SET ranking_semanal = GREATEST(0, ranking_semanal + $1),
+                        ranking_mensual = GREATEST(0, ranking_mensual + $1),
+                        ranking_diario = GREATEST(0, ranking_diario + $1),
+                        copa = GREATEST(0, copa + $1)
+                    WHERE user_id = $2 AND LOWER(name) = LOWER($3)
+                `, [puntos, uId, name]);
+            } catch (e) {
+                console.error('Error en sumarPuntos:', e.message);
             }
-            var q = this.cacheQueens.find(item => item.name.toLowerCase() === name.toLowerCase());
-            await query(`
-                UPDATE queens 
-                SET ranking_semanal = GREATEST(0, ranking_semanal + $1),
-                    ranking_mensual = GREATEST(0, ranking_mensual + $1),
-                    ranking_diario = GREATEST(0, ranking_diario + $1),
-                    copa = GREATEST(0, copa + $1)
-                WHERE user_id = $2 AND LOWER(name) = LOWER($3)
-            `, [puntos, uId, name]);
-        } catch (e) {
-            console.error('Error en sumarPuntos:', e.message);
-        }
+        })());
     }
 
     async sumarVictoria(name) {
@@ -693,27 +875,32 @@ class DBInstance {
         }
     }
 
-    // REGISTRO DE REGALOS (Garantizado para Analíticas)
-    async registrarRegalo(queenName, giftName, diamonds, viewerName) {
-        const uId = await this.ensureUserId();
-        if (!uId) return;
-        try {
-            let qRes = await query('SELECT id FROM queens WHERE user_id = $1 AND LOWER(name) = LOWER($2)', [uId, queenName]);
-            let queenId = null;
-            if (qRes.rows.length === 0) {
-                const insRes = await query('INSERT INTO queens (user_id, name, activo) VALUES ($1, $2, 1) RETURNING id', [uId, queenName]);
-                if (insRes.rows.length > 0) queenId = insRes.rows[0].id;
-            } else {
-                queenId = qRes.rows[0].id;
+    // REGISTRO DE REGALOS (Garantizado para Analíticas y Sincronización)
+    registrarRegalo(queenName, giftName, diamonds, viewerName) {
+        return this._trackWrite((async () => {
+            const uId = await this.ensureUserId();
+            if (!uId || !queenName) return;
+            try {
+                const qCached = this.cacheQueens.find(item => item.name.toLowerCase() === String(queenName).toLowerCase());
+                let queenId = qCached ? qCached.id : null;
+                if (!queenId) {
+                    const qRes = await query('SELECT id FROM queens WHERE user_id = $1 AND LOWER(name) = LOWER($2)', [uId, queenName]);
+                    if (qRes.rows.length === 0) {
+                        const insRes = await query('INSERT INTO queens (user_id, name, activo) VALUES ($1, $2, 1) RETURNING id', [uId, queenName]);
+                        if (insRes.rows.length > 0) queenId = insRes.rows[0].id;
+                    } else {
+                        queenId = qRes.rows[0].id;
+                    }
+                }
+                if (!queenId) return;
+                await query(
+                    'INSERT INTO historial_regalos (user_id, queen_id, gift_name, diamonds, viewer_name) VALUES ($1, $2, $3, $4, $5)',
+                    [uId, queenId, giftName || 'Regalo', diamonds || 0, viewerName || 'Anónimo']
+                );
+            } catch (e) {
+                console.error('Error en registrarRegalo:', e.message);
             }
-            if (!queenId) return;
-            await query(
-                'INSERT INTO historial_regalos (user_id, queen_id, gift_name, diamonds, viewer_name) VALUES ($1, $2, $3, $4, $5)',
-                [uId, queenId, giftName || 'Regalo', diamonds || 0, viewerName || 'Anónimo']
-            );
-        } catch (e) {
-            console.error('Error en registrarRegalo:', e.message);
-        }
+        })());
     }
 
     getTimezone() {

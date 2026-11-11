@@ -4,6 +4,20 @@ const { DBInstance } = require('../../db');
 
 const sessions = {}; // token -> { user, name }
 const activeSessions = {}; // username -> session
+const sessionInitPromises = {}; // username -> Promise
+let _procesarPuntosFn = null;
+
+function setProcesarPuntosFn(fn) {
+    _procesarPuntosFn = fn;
+    if (typeof fn === 'function') {
+        Object.keys(activeSessions).forEach(username => {
+            const s = activeSessions[username];
+            if (s && !s.batchInterval) {
+                s.batchInterval = setInterval(() => fn(username), 300);
+            }
+        });
+    }
+}
 
 function getUserId(req) {
     if (req.query && req.query.user) return req.query.user;
@@ -57,24 +71,43 @@ function getSocketUser(socket) {
 
 async function getUserSessionAsync(username, io, procesarPuntosFn) {
     if (!username) return null;
-    if (!activeSessions[username]) {
+    const fnBatch = procesarPuntosFn || _procesarPuntosFn;
+
+    if (activeSessions[username]) {
+        const existing = activeSessions[username];
+        if (existing.db) {
+            await existing.db.init();
+            if (!existing.QUEENS || existing.QUEENS.length === 0) {
+                reconstruirQueens(existing);
+            }
+        }
+        if (!existing.batchInterval && typeof fnBatch === 'function') {
+            existing.batchInterval = setInterval(() => {
+                fnBatch(username);
+            }, 300);
+        }
+        return existing;
+    }
+
+    if (sessionInitPromises[username]) {
+        const s = await sessionInitPromises[username];
+        if (s && !s.batchInterval && typeof fnBatch === 'function') {
+            s.batchInterval = setInterval(() => fnBatch(username), 300);
+        }
+        return s;
+    }
+
+    sessionInitPromises[username] = (async () => {
         const dbInstance = new DBInstance(username);
         await dbInstance.init();
         
         const initialQueens = dbInstance.getActiveQueenNames();
-        const initialEquipos = {};
-        dbInstance.getAllQueensFull().forEach(q => {
-            if (q.activo) {
-                const display = (q.apodo && q.apodo.trim()) ? q.apodo.trim() : q.name;
-                initialEquipos[q.name] = { nombre: display.toUpperCase(), color: q.color, regalo_img: q.regalo_img || '', avatar_img: q.avatar_img || '' };
-            }
-        });
 
         const session = {
             db: dbInstance,
             agencySlug: dbInstance.agencySlug || ((username && username.toLowerCase().includes('cosmic')) ? 'cosmic' : 'urbanqueens'),
             QUEENS: initialQueens,
-            equipos: initialEquipos,
+            equipos: {},
             rachasPerdidas: {},
             amarillasAcumuladas: {},
             configFutbol: { limiteAmarilla: parseInt(dbInstance.getConfigVal('limiteAmarilla')) || 3 },
@@ -108,7 +141,7 @@ async function getUserSessionAsync(username, io, procesarPuntosFn) {
             tiempoAcumulado: {},
             conociendo: { activo: false, tiempo: 0, chicaActual: '', orden: [...initialQueens], estado: 'inactivo', tiempoTransicion: 0, meta: 2000, puntos: 0, puntosRanking: {}, eliminadas: [] },
             intervaloConociendo: null,
-            podio: { activo: false, tiempo: 0, chicaActual: '', orden: (typeof initialQueens !== 'undefined' ? [...initialQueens] : []), estado: 'inactivo', tiempoTransicion: 0, meta: 2000, puntos: 0, puntosRanking: {}, eliminadas: [] },
+            podio: { activo: false, tiempo: 0, chicaActual: '', orden: [...initialQueens], estado: 'inactivo', tiempoTransicion: 0, meta: 2000, puntos: 0, puntosRanking: {}, eliminadas: [] },
             intervaloPodio: null,
             revivir: { activo: false, tiempo: 0, chicaActual: '', estado: 'inactivo', meta: 5000, puntos: 0, donantes: {}, donantesAvatars: {}, regalosEnviados: {}, regalosImgs: {}, clasificadas: 2 },
             intervaloRevivir: null,
@@ -138,6 +171,17 @@ async function getUserSessionAsync(username, io, procesarPuntosFn) {
                 return { title: '¡NUEVA QUEEN!', target: 10000, current: 0 };
             })()
         };
+
+        try {
+            const rawPodioRank = dbInstance.getConfigVal('podio_ranking');
+            if (rawPodioRank && session.podio) session.podio.puntosRanking = JSON.parse(rawPodioRank);
+        } catch (e) {}
+        try {
+            const rawPodioElim = dbInstance.getConfigVal('podio_eliminadas');
+            if (rawPodioElim && session.podio) session.podio.eliminadas = JSON.parse(rawPodioElim);
+        } catch (e) {}
+
+        reconstruirEquipos(session);
         
         initialQueens.forEach(q => {
             session.rachasPerdidas[q] = 0;
@@ -145,19 +189,24 @@ async function getUserSessionAsync(username, io, procesarPuntosFn) {
             session.tiempoAcumulado[q] = 0;
         });
         
-        if (typeof procesarPuntosFn === 'function') {
+        if (typeof fnBatch === 'function') {
             session.batchInterval = setInterval(() => {
-                procesarPuntosFn(username);
+                fnBatch(username);
             }, 300);
         }
 
         activeSessions[username] = session;
-    }
-    return activeSessions[username];
+        return session;
+    })().finally(() => {
+        delete sessionInitPromises[username];
+    });
+
+    return sessionInitPromises[username];
 }
 
 function getUserSession(username, io, procesarPuntosFn) {
     if (!username) return null;
+    const fnBatch = procesarPuntosFn || _procesarPuntosFn;
     if (!activeSessions[username]) {
         // Enrutador síncrono que inicializa el objeto sesión de forma inmediata
         const dbInstance = new DBInstance(username);
@@ -187,7 +236,7 @@ function getUserSession(username, io, procesarPuntosFn) {
             tiempoAcumulado: {},
             conociendo: { activo: false, tiempo: 0, chicaActual: '', orden: [], estado: 'inactivo', tiempoTransicion: 0, meta: 2000, puntos: 0, puntosRanking: {}, eliminadas: [] },
             intervaloConociendo: null,
-            podio: { activo: false, tiempo: 0, chicaActual: '', orden: (typeof initialQueens !== 'undefined' ? [...initialQueens] : []), estado: 'inactivo', tiempoTransicion: 0, meta: 2000, puntos: 0, puntosRanking: {}, eliminadas: [] },
+            podio: { activo: false, tiempo: 0, chicaActual: '', orden: [], estado: 'inactivo', tiempoTransicion: 0, meta: 2000, puntos: 0, puntosRanking: {}, eliminadas: [] },
             intervaloPodio: null,
             revivir: { activo: false, tiempo: 0, chicaActual: '', estado: 'inactivo', meta: 5000, puntos: 0, donantes: {}, donantesAvatars: {}, regalosEnviados: {}, regalosImgs: {}, clasificadas: 2 },
             intervaloRevivir: null,
@@ -233,12 +282,13 @@ function getUserSession(username, io, procesarPuntosFn) {
             if (session.podio) session.podio.orden = [...session.QUEENS];
             if (io) {
                 io.to(username).emit('queensActualizadas', { queens: session.QUEENS, equipos: session.equipos, apodos: session.db.getApodosMap() });
+                io.to(username).emit('rankingActualizado', session.db.getRankingsPayload());
             }
         }).catch(err => console.error('Error cargando BD Supabase para usuario:', username, err));
 
-        if (typeof procesarPuntosFn === 'function') {
+        if (typeof fnBatch === 'function') {
             session.batchInterval = setInterval(() => {
-                procesarPuntosFn(username);
+                fnBatch(username);
             }, 300);
         }
 
@@ -272,13 +322,7 @@ async function requireSession(req, res, next) {
     if (!username) {
         return res.status(401).send('No autorizado: Falta especificar usuario');
     }
-    let session = activeSessions[username];
-    if (!session) {
-        session = await getUserSessionAsync(username);
-    } else if (!session.QUEENS || session.QUEENS.length === 0) {
-        await session.db.init();
-        reconstruirQueens(session);
-    }
+    const session = await getUserSessionAsync(username);
     if (!session) {
         return res.status(404).send('Usuario no encontrado');
     }
@@ -296,6 +340,14 @@ function resolverNombre(session, nombre) {
 
 function cleanupUserSession(session, io = null, username = null) {
     if (!session) return;
+
+    // 0. Vaciar cola de puntos pendiente antes de detener los intervalos
+    const targetUser = username || (session.db ? session.db.username : null);
+    if (targetUser && session.queueUpdate && session.queueUpdate.length > 0 && typeof _procesarPuntosFn === 'function') {
+        try {
+            _procesarPuntosFn(targetUser);
+        } catch (e) {}
+    }
 
     // 1. Cancelar todos los temporizadores e intervalos de la sesión
     if (session.timerBatalla) {
@@ -368,6 +420,7 @@ function cleanupUserSession(session, io = null, username = null) {
 module.exports = {
     sessions,
     activeSessions,
+    setProcesarPuntosFn,
     getUserId,
     getSocketUser,
     getUserSession,

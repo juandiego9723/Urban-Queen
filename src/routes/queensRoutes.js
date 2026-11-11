@@ -119,15 +119,20 @@ function setupQueensRoutes(app, io, requireSession) {
         if (s.timerBaile && s.timerBaile.activo && s.timerBaile.modoTorneo) {
             return res.json(s.timerBaile.puntosTorneo);
         }
+        try { await s.db.sincronizarRankingsSiNecesario(3000); } catch(e) {}
         res.json(s.db.getRanking());
     });
     app.get('/api/ranking-mensual', requireSession, async (req, res) => {
-        try { await verificarResetParaSesion(req.userSession, req.username, io); } catch(e) {}
-        res.json(req.userSession.db.getRankingMensual());
+        const s = req.userSession;
+        try { await verificarResetParaSesion(s, req.username, io); } catch(e) {}
+        try { await s.db.sincronizarRankingsSiNecesario(3000); } catch(e) {}
+        res.json(s.db.getRankingMensual());
     });
     app.get('/api/ranking-diario', requireSession, async (req, res) => {
-        try { await verificarResetParaSesion(req.userSession, req.username, io); } catch(e) {}
-        res.json(req.userSession.db.getRankingDiario());
+        const s = req.userSession;
+        try { await verificarResetParaSesion(s, req.username, io); } catch(e) {}
+        try { await s.db.sincronizarRankingsSiNecesario(3000); } catch(e) {}
+        res.json(s.db.getRankingDiario());
     });
     app.get('/api/ranking/titulos', requireSession, (req, res) => res.json(req.userSession.db.getRankingTitulos()));
     app.all('/api/ranking/titulos/set', requireSession, async (req, res) => {
@@ -216,20 +221,17 @@ function setupQueensRoutes(app, io, requireSession) {
         nombre = resolverNombre(s, nombre);
         
         if (nombre && !isNaN(puntos)) {
-            if (viewer && puntos > 0) s.lealtadUsuarios[viewer] = nombre;
-            if (puntos !== 0) {
+            const vName = viewer || 'Admin';
+            if (puntos > 0) {
+                if (viewer) s.lealtadUsuarios[viewer] = nombre;
                 s.queueUpdate.push({ 
                     nombre, 
                     puntos, 
-                    viewer: viewer || 'Admin', 
+                    viewer: vName, 
                     avatar: avatar || '', 
                     giftName: 'Regalo Manual', 
                     repeat: 1 
                 });
-            }
-            
-            if (puntos > 0) {
-                const vName = viewer || 'Admin';
                 await s.db.registrarRegalo(nombre, 'Regalo Manual', puntos, vName);
                 if (viewer) {
                     const eq = s.equipos[nombre] || {};
@@ -242,6 +244,22 @@ function setupQueensRoutes(app, io, requireSession) {
                         coins: puntos,
                         giftName: 'Regalo Manual'
                     });
+                }
+            } else if (puntos < 0) {
+                const currentDiario = (s.db.getRankingDiario && s.db.getRankingDiario()[nombre]) || 0;
+                const currentSemanal = (s.db.getRanking && s.db.getRanking()[nombre]) || 0;
+                const maxDescuento = currentDiario > 0 ? currentDiario : Math.max(0, currentSemanal);
+                const descuento = maxDescuento > 0 ? -Math.min(Math.abs(puntos), maxDescuento) : 0;
+                if (descuento < 0) {
+                    s.queueUpdate.push({ 
+                        nombre, 
+                        puntos: descuento, 
+                        viewer: vName, 
+                        avatar: avatar || '', 
+                        giftName: 'Ajuste Manual', 
+                        repeat: 1 
+                    });
+                    await s.db.registrarRegalo(nombre, 'Ajuste Manual', descuento, vName);
                 }
             }
             return res.send("OK");

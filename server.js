@@ -22,7 +22,7 @@ const MasterDB = require('./masterDb');
 const {
     sessions, activeSessions,
     getUserId, getSocketUser, getUserSession,
-    requireSession, resolverNombre, cleanupUserSession
+    setProcesarPuntosFn, requireSession, resolverNombre, cleanupUserSession
 } = require('./src/config/sessionStore');
 
 const createPointsProcessor   = require('./src/services/pointsProcessor');
@@ -117,6 +117,7 @@ const penaltiHandlers     = setupPenaltiDynamics(app, io, requireSession, active
 const { procesarRegaloTikTok, procesarPuntosEnLote } = createPointsProcessor(
     io, activeSessions, resolverNombre, timerHandlers, conociendoHandlers, revivirHandlers, penaltiHandlers
 );
+setProcesarPuntosFn(procesarPuntosEnLote);
 
 const _getUserSessionOriginal = getUserSession;
 function getUserSessionWithBatch(username) {
@@ -626,6 +627,17 @@ io.on('connection', (socket) => {
             }
         }
         socket.emit('metaConfigActualizada', session.goalConfig);
+
+        if (session.db && typeof session.db.init === 'function') {
+            session.db.init()
+                .then(() => session.db.sincronizarRankingsSiNecesario(3000))
+                .then(() => {
+                    if (socket.connected) {
+                        socket.emit('rankingActualizado', session.db.getRankingsPayload());
+                    }
+                })
+                .catch(() => {});
+        }
     }
 
     socket.on('cambiarModoRanking', (modo) => {

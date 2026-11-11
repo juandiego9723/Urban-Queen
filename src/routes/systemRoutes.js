@@ -309,8 +309,9 @@ function setupSystemRoutes(app, io, requireSession, activeSessions) {
     });
 
     // Compatibilidad con overlays viejos
-    app.get('/datos.json', requireSession, (req, res) => {
+    app.get('/datos.json', requireSession, async (req, res) => {
         const s = req.userSession;
+        try { await s.db.sincronizarRankingsSiNecesario(3000); } catch(e) {}
         res.json({ ranking: s.db.getRanking(), victorias: s.db.getVictorias(), copa: s.db.getCopa() });
     });
 
@@ -321,58 +322,9 @@ function setupSystemRoutes(app, io, requireSession, activeSessions) {
             const uId = await db.ensureUserId();
             if (!uId) return res.status(400).send('Usuario no identificado');
 
-            const tz = getTimezone();
+            const syncRes = await db.sincronizarRankingsDesdeHistorial({ ignorarResetsManuales: true });
 
-            // 1. Resetear contadores de ranking en DB
-            await query('UPDATE queens SET ranking_diario = 0, ranking_semanal = 0, ranking_mensual = 0 WHERE user_id = $1', [uId]);
-
-            // 2. Calcular acumulados diarios (hoy en zona horaria local)
-            const diariosRes = await query(`
-                SELECT q.name as queen_name, COALESCE(SUM(h.diamonds), 0)::int as total 
-                FROM historial_regalos h 
-                JOIN queens q ON h.queen_id = q.id 
-                WHERE h.user_id = $1 AND (h.timestamp AT TIME ZONE $2)::date >= (CURRENT_TIMESTAMP AT TIME ZONE $2)::date
-                GROUP BY q.name
-            `, [uId, tz]);
-            const diarios = diariosRes.rows || [];
-            for (const d of diarios) {
-                await query('UPDATE queens SET ranking_diario = $1 WHERE user_id = $2 AND LOWER(name) = LOWER($3)', [d.total, uId, d.queen_name]);
-            }
-
-            // 3. Calcular acumulados semanales (desde lunes en zona horaria local)
-            const semanalesRes = await query(`
-                SELECT q.name as queen_name, COALESCE(SUM(h.diamonds), 0)::int as total 
-                FROM historial_regalos h 
-                JOIN queens q ON h.queen_id = q.id 
-                WHERE h.user_id = $1 AND (h.timestamp AT TIME ZONE $2)::date >= DATE_TRUNC('week', CURRENT_TIMESTAMP AT TIME ZONE $2)::date
-                GROUP BY q.name
-            `, [uId, tz]);
-            const semanales = semanalesRes.rows || [];
-            for (const s of semanales) {
-                await query('UPDATE queens SET ranking_semanal = $1 WHERE user_id = $2 AND LOWER(name) = LOWER($3)', [s.total, uId, s.queen_name]);
-            }
-
-            // 4. Calcular acumulados mensuales (desde día 1 en zona horaria local)
-            const mensualesRes = await query(`
-                SELECT q.name as queen_name, COALESCE(SUM(h.diamonds), 0)::int as total 
-                FROM historial_regalos h 
-                JOIN queens q ON h.queen_id = q.id 
-                WHERE h.user_id = $1 AND (h.timestamp AT TIME ZONE $2)::date >= DATE_TRUNC('month', CURRENT_TIMESTAMP AT TIME ZONE $2)::date
-                GROUP BY q.name
-            `, [uId, tz]);
-            const mensuales = mensualesRes.rows || [];
-            for (const m of mensuales) {
-                await query('UPDATE queens SET ranking_mensual = $1 WHERE user_id = $2 AND LOWER(name) = LOWER($3)', [m.total, uId, m.queen_name]);
-            }
-
-            // 5. Recargar la memoria cache y notificar por Socket.IO
-            await db.cargarCache();
-
-            io.to(req.username).emit('resetRanking');
-            io.to(req.username).emit('resetSemanal');
-            io.to(req.username).emit('resetMensual');
-            io.to(req.username).emit('resetDiario');
-            io.to(req.username).emit('rankingActualizado');
+            io.to(req.username).emit('rankingActualizado', db.getRankingsPayload());
             io.to(req.username).emit('queensActualizadas', {
                 queens: req.userSession.QUEENS,
                 equipos: req.userSession.equipos,
@@ -381,12 +333,12 @@ function setupSystemRoutes(app, io, requireSession, activeSessions) {
 
             res.json({
                 status: 'OK',
-                mensaje: 'Rankings restaurados con éxito a partir del historial de regalos.',
+                mensaje: 'Rankings sincronizados con éxito a partir del historial de regalos.',
                 detalles: {
-                    timezone: tz,
-                    diariosRestaurados: diarios,
-                    semanalesRestaurados: semanales,
-                    mensualesRestaurados: mensuales
+                    timezone: syncRes.timezone,
+                    diariosRestaurados: syncRes.diarios,
+                    semanalesRestaurados: syncRes.semanales,
+                    mensualesRestaurados: syncRes.mensuales
                 }
             });
         } catch (e) {

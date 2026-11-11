@@ -106,3 +106,4 @@ CREATE TABLE IF NOT EXISTS sonidos (
 CREATE INDEX IF NOT EXISTS idx_queens_user ON queens(user_id);
 CREATE INDEX IF NOT EXISTS idx_historial_user_queen ON historial_regalos(user_id, queen_id);
 CREATE INDEX IF NOT EXISTS idx_historial_timestamp ON historial_regalos(timestamp);
+CREATE INDEX IF NOT EXISTS idx_historial_user_ts ON historial_regalos(user_id, timestamp);
