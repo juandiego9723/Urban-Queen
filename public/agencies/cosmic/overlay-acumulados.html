@@ -105,6 +105,8 @@
         // ── Copa ──
         socket.on('actualizarCopa', function(d) { forwardToIframe('actualizarCopa', d); });
         socket.on('futbolConfigActualizada', function(d) { forwardToIframe('futbolConfigActualizada', d); });
+        socket.on('goleadoresClasicoActualizados', function(d) { forwardToIframe('goleadoresClasicoActualizados', d); });
+        socket.on('resetGoleadoresClasico', function(d) { forwardToIframe('resetGoleadoresClasico', d); });
 
         // ── Revivir ──
         socket.on('revivirInicio', function(d) { forwardToIframe('revivirInicio', d); });

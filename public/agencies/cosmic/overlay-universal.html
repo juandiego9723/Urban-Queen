@@ -141,6 +141,8 @@
 
         socket.on('actualizarCopa', function(d) { forwardToIframe('actualizarCopa', d); });
         socket.on('futbolConfigActualizada', function(d) { forwardToIframe('futbolConfigActualizada', d); });
+        socket.on('goleadoresClasicoActualizados', function(d) { forwardToIframe('goleadoresClasicoActualizados', d); });
+        socket.on('resetGoleadoresClasico', function(d) { forwardToIframe('resetGoleadoresClasico', d); });
 
         socket.on('rankingActualizado', function(d) { forwardToIframe('rankingActualizado', d); });
         socket.on('actualizarRanking', function(d) { forwardToIframe('actualizarRanking', d); });

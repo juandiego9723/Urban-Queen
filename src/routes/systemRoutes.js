@@ -3,6 +3,7 @@ const fs = require('fs');
 const { query } = require('../config/dbPool');
 const { ejecutarResetManual, getTimezone } = require('../services/rankingResetService');
 const { uploadBase64Image } = require('../services/storageService');
+const clasicoGoleadoresService = require('../services/clasicoGoleadoresService');
 
 function setupSystemRoutes(app, io, requireSession, activeSessions) {
     // Regalos detectados sin asignar
@@ -26,14 +27,25 @@ function setupSystemRoutes(app, io, requireSession, activeSessions) {
             const giftName = giftInstance.giftName;
             const coins = giftInstance.coins || 1;
             const viewer = giftInstance.viewer || 'Anónimo';
+            const avatar = giftInstance.avatar || '';
+            const repeat = Math.max(1, parseInt(giftInstance.repeat, 10) || 1);
             s.db.registrarRegalo(queen, giftName, coins, viewer);
             s.queueUpdate.push({ nombre: queen, puntos: coins });
             s.lealtadUsuarios[viewer] = queen;
+            clasicoGoleadoresService.registrarAporteGoleador({
+                session: s,
+                io,
+                queenName: queen,
+                viewerName: viewer,
+                viewerAvatar: avatar,
+                puntos: coins,
+                goles: repeat
+            }).catch(() => {});
             const eq = s.equipos[queen] || {};
             io.to(req.username).emit('nuevoRegalo', {
                 nombre: queen,
                 viewer,
-                avatar: '',
+                avatar,
                 giftImg: eq.regalo_img || giftInstance.giftImgSrc || '',
                 queenColor: eq.color || '#fff',
                 coins,
@@ -81,15 +93,26 @@ function setupSystemRoutes(app, io, requireSession, activeSessions) {
                 const giftName = giftInstance.giftName;
                 const coins = giftInstance.coins || 1;
                 const viewer = giftInstance.viewer || 'Anónimo';
+                const avatar = giftInstance.avatar || '';
+                const repeat = Math.max(1, parseInt(giftInstance.repeat, 10) || 1);
                 s.db.registrarRegalo(canonQueen, giftName, coins, viewer);
                 s.queueUpdate.push({ nombre: canonQueen, puntos: coins });
                 s.lealtadUsuarios[viewer] = canonQueen;
+                clasicoGoleadoresService.registrarAporteGoleador({
+                    session: s,
+                    io,
+                    queenName: canonQueen,
+                    viewerName: viewer,
+                    viewerAvatar: avatar,
+                    puntos: coins,
+                    goles: repeat
+                }).catch(() => {});
                 totalPuntos += coins;
                 asignados++;
                 io.to(req.username).emit('nuevoRegalo', {
                     nombre: canonQueen,
                     viewer,
-                    avatar: '',
+                    avatar,
                     giftImg: eq.regalo_img || giftInstance.giftImgSrc || '',
                     queenColor: eq.color || '#fff',
                     coins,

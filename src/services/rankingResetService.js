@@ -5,43 +5,9 @@
 // ═══════════════════════════════════════════════════════════════════
 
 const { query } = require('../config/dbPool');
-
-function getTimezone() {
-    return process.env.TIMEZONE || 'America/Bogota';
-}
-
-/**
- * Devuelve las cadenas de fecha local (dia, mes y semana ISO)
- * estrictamente calculadas según la zona horaria configurada.
- */
-function getLocalDateStrings(tz = getTimezone(), date = new Date()) {
-    const formatter = new Intl.DateTimeFormat('en-CA', {
-        timeZone: tz,
-        year: 'numeric',
-        month: '2-digit',
-        day: '2-digit'
-    });
-    
-    // YYYY-MM-DD en la zona horaria local
-    const diaStr = formatter.format(date);
-    // YYYY-MM
-    const mesStr = diaStr.substring(0, 7);
-
-    // Cálculo preciso de la semana ISO en la zona horaria local
-    const parts = formatter.formatToParts(date);
-    const y = parseInt(parts.find(p => p.type === 'year').value, 10);
-    const m = parseInt(parts.find(p => p.type === 'month').value, 10) - 1;
-    const d = parseInt(parts.find(p => p.type === 'day').value, 10);
-
-    const target = new Date(Date.UTC(y, m, d));
-    const dayNr = target.getUTCDay() || 7; // 1 = Lunes, 7 = Domingo
-    target.setUTCDate(target.getUTCDate() + 4 - dayNr);
-    const yearStart = new Date(Date.UTC(target.getUTCFullYear(), 0, 1));
-    const weekNo = Math.ceil((((target - yearStart) / 86400000) + 1) / 7);
-    const semanaStr = `${target.getUTCFullYear()}-W${String(weekNo).padStart(2, '0')}`;
-
-    return { diaStr, mesStr, semanaStr };
-}
+const { getTimezone, getLocalDateStrings } = require('../utils/dateUtils');
+const { checkIsCosmic } = require('../utils/agencyUtils');
+const { emitirEstadoGoleadores, reiniciarGoleadoresMes } = require('./clasicoGoleadoresService');
 
 /**
  * Verifica y ejecuta el reinicio si corresponde para una sesión en memoria activa.
@@ -100,6 +66,10 @@ async function verificarResetParaSesion(session, username, io) {
             await session.db.resetMensual();
             await session.db.setConfigVal('last_reset_mensual', mesStr);
             if (io) io.to(username).emit('resetMensual');
+            if (checkIsCosmic(null, session)) {
+                if (io) io.to(username).emit('resetGoleadoresClasico', { mesKey: mesStr, equipo: null });
+                await emitirEstadoGoleadores(session, io);
+            }
             huboCambios = true;
             huboMensual = true;
         }
@@ -222,6 +192,9 @@ async function ejecutarResetManual(userSession, username, io, tipo) {
             io.to(username).emit('resetMensual');
             io.to(username).emit('rankingActualizado', userSession.db.getRankingsPayload());
         }
+        if (checkIsCosmic(null, userSession)) {
+            await reiniciarGoleadoresMes({ session: userSession, io, mesKey: mesStr });
+        }
     } else if (tipo === 'total') {
         await userSession.db.setConfigVal('reset_diario_desde', ahoraISO);
         await userSession.db.setConfigVal('reset_semanal_desde', ahoraISO);
@@ -247,6 +220,9 @@ async function ejecutarResetManual(userSession, username, io, tipo) {
             io.to(username).emit('resetDiario');
             io.to(username).emit('actualizarCopa', userSession.db.getCopa());
             io.to(username).emit('rankingActualizado', userSession.db.getRankingsPayload());
+        }
+        if (checkIsCosmic(null, userSession)) {
+            await reiniciarGoleadoresMes({ session: userSession, io, mesKey: mesStr });
         }
     }
 

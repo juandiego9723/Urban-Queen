@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <script>
+        (function () {
+            const urlParams = new URLSearchParams(window.location.search);
+            const user = urlParams.get('user');
+            if (user) {
+                const originalFetch = window.fetch;
+                window.fetch = function (url, options) {
+                    if (typeof url === 'string' && !url.includes('user=')) {
+                        const sep = url.includes('?') ? '&' : '?';
+                        url = url + sep + 'user=' + encodeURIComponent(user);
+                    }
+                    return originalFetch(url, options);
+                };
+            }
+        })();
+    </script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Máximos Goleadores - El Clásico</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=TikTok+Sans:ital,wght@0,400..900;1,400..900&family=Montserrat:ital,wght@0,700..900;1,700..900&display=swap" rel="stylesheet">
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            user-select: none;
+        }
+        html, body {
+            width: 100%;
+            height: 100%;
+            background: transparent;
+            overflow: hidden;
+        }
+        body {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 16px 28px;
+        }
+        #goleadores-root {
+            width: 100%;
+            max-width: 780px;
+        }
+        body.neon-none * {
+            box-shadow: none !important;
+            text-shadow: none !important;
+        }
+    </style>
+</head>
+<body>
+    <div id="goleadores-root"></div>
+
+    <script src="/js/iframe-bridge.js"></script>
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="/agencies/cosmic/js/goleadores-widget.js?v=1"></script>
+    <script>
+        const urlParams = new URLSearchParams(window.location.search);
+        const isTestMode = urlParams.get('test') === 'true' || urlParams.get('demo') === 'true';
+
+        let userParam = urlParams.get('user') || '';
+        if (!userParam && window.parent !== window) {
+            try {
+                const parentParams = new URLSearchParams(window.parent.location.search);
+                userParam = parentParams.get('user') || '';
+            } catch (e) {}
+        }
+
+        const root = document.getElementById('goleadores-root');
+        const socket = window.__iframeBridgeSocket || io({ query: userParam ? { user: userParam } : {} });
+
+        let currentPayload = null;
+
+        function renderState(payload) {
+            if (isTestMode) {
+                const demo = JSON.parse(JSON.stringify(window.CosmicGoleadoresWidget.DEMO_PAYLOAD));
+                if (payload && payload.equipos) {
+                    demo.equipos = payload.equipos;
+                }
+                window.CosmicGoleadoresWidget.render(root, demo);
+                return;
+            }
+            currentPayload = payload || { equipo1: [], equipo2: [], equipos: {} };
+            window.CosmicGoleadoresWidget.render(root, currentPayload);
+        }
+
+        async function fetchInitial() {
+            if (!currentPayload) {
+                renderState(null);
+            }
+            const qs = userParam ? `?user=${encodeURIComponent(userParam)}` : '';
+            try {
+                const res = await fetch(`/api/futbol/goleadores${qs}`);
+                if (!res.ok) {
+                    console.warn(`[goleadores-clasico] /api/futbol/goleadores devolvió HTTP ${res.status}. Si acabas de actualizar, reinicia node server.js.`);
+                    if (res.status !== 403) {
+                        const cfgRes = await fetch(`/api/futbol/config${qs}`).catch(() => null);
+                        if (cfgRes && cfgRes.ok) {
+                            const cfg = await cfgRes.json();
+                            if (!currentPayload || (!currentPayload.equipo1?.length && !currentPayload.equipo2?.length)) {
+                                renderState({ equipo1: [], equipo2: [], equipos: cfg });
+                            }
+                        }
+                    }
+                    return;
+                }
+                const data = await res.json();
+                renderState(data);
+            } catch (e) {
+                console.warn('[goleadores-clasico] Error consultando /api/futbol/goleadores:', e);
+            }
+        }
+
+        socket.on('goleadoresClasicoActualizados', (payload) => {
+            renderState(payload);
+        });
+
+        socket.on('resetGoleadoresClasico', () => {
+            fetchInitial();
+        });
+
+        socket.on('resetMensual', () => {
+            fetchInitial();
+        });
+
+        socket.on('futbolConfigActualizada', (cfg) => {
+            if (currentPayload && cfg) {
+                currentPayload.equipos = {
+                    equipo1: cfg.equipo1 || currentPayload.equipos?.equipo1,
+                    equipo2: cfg.equipo2 || currentPayload.equipos?.equipo2
+                };
+                renderState(currentPayload);
+            } else {
+                fetchInitial();
+            }
+        });
+
+        socket.on('connect', () => {
+            fetchInitial();
+            socket.emit('solicitarEstadoGoleadores');
+        });
+
+        function aplicarMarca(config) {
+            if (!config) return;
+            if (config.fontFamily) {
+                const fontId = 'custom-google-font';
+                let link = document.getElementById(fontId);
+                if (!link) {
+                    link = document.createElement('link');
+                    link.id = fontId;
+                    link.rel = 'stylesheet';
+                    document.head.appendChild(link);
+                }
+                link.href = `https://fonts.googleapis.com/css2?family=${encodeURIComponent(config.fontFamily)}:ital,wght@0,700;0,900;1,700;1,900&display=swap`;
+                document.body.style.fontFamily = `'${config.fontFamily}', 'TikTok Sans', sans-serif`;
+            }
+            document.body.classList.remove('neon-none', 'neon-low', 'neon-high');
+            if (config.neonIntensity && config.neonIntensity !== 'normal') {
+                document.body.classList.add('neon-' + config.neonIntensity);
+            }
+        }
+
+        socket.on('marcaCambiado', aplicarMarca);
+
+        fetchInitial();
+    </script>
+</body>
+</html>
+

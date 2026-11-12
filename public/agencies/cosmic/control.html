@@ -1688,6 +1688,58 @@
                             </div>
                         </div>
                     </div>
+
+                    <div class="card" id="card-goleadores-clasico">
+                        <div class="card-title" style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;">
+                            <span>⚽ <span class="card-title-accent">Máximos Goleadores (Mensual)</span></span>
+                            <span id="golMesBadge" style="font-size:11px;font-weight:700;padding:3px 9px;border-radius:999px;background:rgba(99,102,241,0.18);border:1px solid rgba(129,140,248,0.4);color:#c7d2fe;">Mes: --</span>
+                        </div>
+                        <div class="col">
+                            <div class="info-box">
+                                Acumula automáticamente el Top 3 de donadores por cada equipo y se reinicia el día 1 de cada mes.
+                            </div>
+                            <div class="row-2">
+                                <div style="background:var(--surface2);padding:12px;border-radius:12px;border:1px solid var(--border);">
+                                    <div id="golPreviewEq1Title" style="font-weight:800;font-size:12px;margin-bottom:8px;color:#93c5fd;">EQUIPO 1</div>
+                                    <div id="golPreviewEq1List" style="font-size:12px;color:var(--muted);line-height:1.7;">Sin goleadores este mes</div>
+                                </div>
+                                <div style="background:var(--surface2);padding:12px;border-radius:12px;border:1px solid var(--border);">
+                                    <div id="golPreviewEq2Title" style="font-weight:800;font-size:12px;margin-bottom:8px;color:#e2e8f0;">EQUIPO 2</div>
+                                    <div id="golPreviewEq2List" style="font-size:12px;color:var(--muted);line-height:1.7;">Sin goleadores este mes</div>
+                                </div>
+                            </div>
+                            <div class="info-box" style="display:flex;flex-direction:column;gap:8px;">
+                                <div class="row" style="align-items:center;gap:10px;">
+                                    <span class="label" style="min-width:130px;">Conteo mostrado:</span>
+                                    <select id="golCriterio" class="input" style="flex:1;padding:6px 10px;font-size:13px;">
+                                        <option value="puntos">💎 Puntos / Diamantes acumulados</option>
+                                        <option value="goles">⚽ Cantidad de Regalos / Goles</option>
+                                    </select>
+                                </div>
+                                <label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer;">
+                                    <input type="checkbox" id="golSoloEnBatalla" checked> Sumar únicamente durante batalla Clásico activa
+                                </label>
+                                <label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer;">
+                                    <input type="checkbox" id="golMostrarEnHud"> Mostrar también debajo del HUD Clásico (batalla-futbol-hud)
+                                </label>
+                            </div>
+                            <div class="row-2">
+                                <button class="btn btn-success btn-full" onclick="guardarGoleadoresConfig()">💾 Guardar Configuración</button>
+                                <button class="btn btn-danger btn-full" onclick="uiConfirm('¿Reiniciar los Máximos Goleadores del mes actual para ambos equipos?', reiniciarGoleadoresClasico)">🔄 Reiniciar Goleadores del Mes</button>
+                            </div>
+                            <div class="row-2">
+                                <button class="btn btn-primary btn-full" onclick="cambiarVistaUniversal('/goleadores-clasico')">🔮 Proyectar en Universal</button>
+                                <button class="btn btn-primary btn-full" style="background: linear-gradient(135deg, #f59e0b, #d97706); border: none; color: #111827; font-weight: 700;" onclick="cambiarVistaAcumulados('/goleadores-clasico')">🏆 Proyectar en Acumulados</button>
+                            </div>
+                            <div class="row-2" style="margin-top: 8px;">
+                                <button class="btn btn-ghost btn-full" onclick="copiarUrl('goleadores-clasico')">📋 Copiar URL OBS</button>
+                                <button class="btn btn-ghost btn-full" onclick="abrirUrl('goleadores-clasico')">🔗 Abrir Overlay en Vivo</button>
+                            </div>
+                            <div style="margin-top: 8px;">
+                                <button class="btn btn-ghost btn-full" onclick="abrirUrlGoleadoresDemo()">🧪 Probar Diseño (?test=true)</button>
+                            </div>
+                        </div>
+                    </div>
                 </div>
                 <!-- ══ PUNTOS ══ -->
                 <div id="tab-puntos" class="tab-content">
@@ -1989,6 +2041,19 @@
                                     <button class="btn btn-ghost btn-sm" onclick="abrirUrl('goal')">&#128279; Probar</button>
                                 </div>
                             </div>
+
+                            <div class="page-card" style="margin: 0;">
+                                <div style="display:flex;align-items:center;gap:8px">
+                                    <span style="font-size:1.4rem">⚽</span>
+                                    <span class="page-card-name">Máximos Goleadores Clásico (Mensual)</span>
+                                </div>
+                                <div class="page-card-desc">Top 3 de donadores mensuales por cada equipo de El Clásico, con reinicio automático mensual.</div>
+                                <div class="page-card-url" id="url-overlay-goleadores-clasico" style="word-break:break-all; font-family: monospace; font-size: 0.85rem; color: var(--text-muted); margin-top: 6px;">Cargando...</div>
+                                <div style="display: flex; gap: 8px; margin-top: 10px;">
+                                    <button class="btn btn-ghost btn-sm" onclick="copiarUrl('goleadores-clasico')">&#128203; Copiar</button>
+                                    <button class="btn btn-ghost btn-sm" onclick="abrirUrl('goleadores-clasico')">&#128279; Probar</button>
+                                </div>
+                            </div>
                         </div>
                     </div>
 
@@ -2012,6 +2077,7 @@
                                 <button class="btn btn-primary" onclick="cambiarVistaUniversal('/revivir')" id="btn-view-revivir" style="transition: all 0.3s ease; text-align: left; padding: 12px 16px;">🔥 Dinámica Revivir</button>
                                 <button class="btn btn-primary" onclick="cambiarVistaUniversal('/batalla-futbol')" id="btn-view-batalla-futbol" style="transition: all 0.3s ease; text-align: left; padding: 12px 16px;">⚽ El Clásico (Fútbol)</button>
                                 <button class="btn btn-primary" onclick="cambiarVistaUniversal('/batalla-futbol-hud')" id="btn-view-batalla-futbol-hud" style="transition: all 0.3s ease; text-align: left; padding: 12px 16px;">⚽ HUD Clásico (Fútbol)</button>
+                                <button class="btn btn-primary" onclick="cambiarVistaUniversal('/goleadores-clasico')" id="btn-view-goleadores-clasico" style="transition: all 0.3s ease; text-align: left; padding: 12px 16px;">⚽ Máximos Goleadores (Clásico)</button>
                                 <button class="btn btn-primary" onclick="cambiarVistaUniversal('/timer')" id="btn-view-timer" style="transition: all 0.3s ease; text-align: left; padding: 12px 16px;">💃 Timer de Baile</button>
                                 <button class="btn btn-primary" onclick="cambiarVistaUniversal('/conociendo')" id="btn-view-conociendo" style="transition: all 0.3s ease; text-align: left; padding: 12px 16px;">👑 Conociendo a mi Bailarina</button>
                                 <button class="btn btn-primary" onclick="cambiarVistaUniversal('/podio')" id="btn-view-podio" style="transition: all 0.3s ease; text-align: left; padding: 12px 16px;">🏆 Podio HUD</button>
@@ -2033,6 +2099,7 @@
                                 <button class="btn btn-primary" onclick="cambiarVistaAcumulados('/')" id="btn-view-ranking" style="transition: all 0.3s ease; text-align: left; padding: 12px 16px;">🏆 Ranking General</button>
                                 <button class="btn btn-primary" onclick="cambiarVistaAcumulados('/overlay-top-likes')" id="btn-view-top-likes" style="transition: all 0.3s ease; text-align: left; padding: 12px 16px;">❤️ Top Likes / Tappers</button>
                                 <button class="btn btn-primary" onclick="cambiarVistaAcumulados('/copa')" id="btn-view-copa" style="transition: all 0.3s ease; text-align: left; padding: 12px 16px;">🥇 Copa del Día</button>
+                                <button class="btn btn-primary" onclick="cambiarVistaAcumulados('/goleadores-clasico')" id="btn-view-acum-goleadores-clasico" style="transition: all 0.3s ease; text-align: left; padding: 12px 16px;">⚽ Goleadores Clásico (Mensual)</button>
                                 <button class="btn btn-primary" onclick="cambiarVistaAcumulados('/revivir-ranking')" id="btn-view-revivir-ranking" style="transition: all 0.3s ease; text-align: left; padding: 12px 16px;">👑 Ranking de Revivir</button>
                                 <button class="btn btn-primary" onclick="cambiarVistaAcumulados('/ranking-conociendo')" id="btn-view-ranking-conociendo" style="transition: all 0.3s ease; text-align: left; padding: 12px 16px;">📊 Ranking Conociendo</button>
                                 <button class="btn btn-primary" onclick="cambiarVistaAcumulados('/ranking-podio')" id="btn-view-ranking-podio" style="transition: all 0.3s ease; text-align: left; padding: 12px 16px;">📊 Ranking Podio</button>
@@ -4179,6 +4246,7 @@
                 cargarSonidos();
                 cargarBailarinas();
                 cargarFutbolConfig();
+                cargarGoleadoresClasico();
                 cargarPenaltiConfig();
                 cargarDinamicas();
                 cargarTikTokPanel();
@@ -4742,16 +4810,19 @@
                 const urlAcumulados = `${window.location.origin}${agencyPrefix}/overlay-acumulados${userParam}`;
                 const urlTopLikes = `${window.location.origin}${agencyPrefix}/overlay-top-likes${userParam}`;
                 const urlGoal = `${window.location.origin}${agencyPrefix}/overlay-goal${userParam}`;
+                const urlGoleadoresClasico = `${window.location.origin}${agencyPrefix}/goleadores-clasico${userParam}`;
                 
                 const elUniversal = document.getElementById('url-overlay-universal');
                 const elAcumulados = document.getElementById('url-overlay-acumulados');
                 const elTopLikes = document.getElementById('url-overlay-top-likes');
                 const elGoal = document.getElementById('url-overlay-goal');
+                const elGoleadoresClasico = document.getElementById('url-overlay-goleadores-clasico');
                 
                 if (elUniversal) elUniversal.textContent = urlUniversal;
                 if (elAcumulados) elAcumulados.textContent = urlAcumulados;
                 if (elTopLikes) elTopLikes.textContent = urlTopLikes;
                 if (elGoal) elGoal.textContent = urlGoal;
+                if (elGoleadoresClasico) elGoleadoresClasico.textContent = urlGoleadoresClasico;
 
                 cargarVistaUniversalActiva();
                 cargarVistaAcumuladosActiva();
@@ -4830,8 +4901,109 @@
                 if (tipo === 'acumulados') path = `/${slug}/overlay-acumulados`;
                 if (tipo === 'top-likes') path = `/${slug}/overlay-top-likes`;
                 if (tipo === 'goal') path = `/${slug}/overlay-goal`;
+                if (tipo === 'goleadores-clasico') path = `/${slug}/goleadores-clasico`;
                 return `${window.location.origin}${path}${userParam}`;
             }
+
+            function abrirUrlGoleadoresDemo() {
+                const base = obtenerUrlOverlay('goleadores-clasico');
+                const sep = base.includes('?') ? '&' : '?';
+                window.open(`${base}${sep}test=true`, '_blank');
+            }
+
+            function renderPreviewGoleadoresClasico(data) {
+                if (!data) return;
+                const badge = document.getElementById('golMesBadge');
+                if (badge && data.mesKey) badge.textContent = `Mes: ${data.mesKey}`;
+
+                const cfg = data.config || {};
+                const selCrit = document.getElementById('golCriterio');
+                const chkBat = document.getElementById('golSoloEnBatalla');
+                const chkHud = document.getElementById('golMostrarEnHud');
+                if (selCrit && cfg.criterio) selCrit.value = cfg.criterio;
+                if (chkBat) chkBat.checked = Boolean(cfg.soloEnBatalla);
+                if (chkHud) chkHud.checked = Boolean(cfg.mostrarEnHud);
+
+                const renderList = (elId, items) => {
+                    const el = document.getElementById(elId);
+                    if (!el) return;
+                    if (!items || items.length === 0) {
+                        el.innerHTML = '<span style="opacity:0.7;">Sin goleadores este mes</span>';
+                        return;
+                    }
+                    const iconos = ['👑', '🥈', '🥉'];
+                    el.innerHTML = items.map((it, idx) => {
+                        const val = it.score !== undefined ? it.score : (it.puntos || 0);
+                        const handle = String(it.viewer || '').replace(/^@/, '');
+                        return `<div style="display:flex;justify-content:space-between;gap:8px;color:#f8fafc;">
+                            <span>${iconos[idx] || (idx + 1 + '.')} <strong>@${handle.replace(/</g, '&lt;')}</strong></span>
+                            <span style="font-weight:800;color:#fde047;">⚽ ${Number(val).toLocaleString()}</span>
+                        </div>`;
+                    }).join('');
+                };
+
+                const eq1Title = document.getElementById('golPreviewEq1Title');
+                const eq2Title = document.getElementById('golPreviewEq2Title');
+                if (eq1Title && data.equipos && data.equipos.equipo1) eq1Title.textContent = data.equipos.equipo1.nombre || 'EQUIPO 1';
+                if (eq2Title && data.equipos && data.equipos.equipo2) eq2Title.textContent = data.equipos.equipo2.nombre || 'EQUIPO 2';
+
+                renderList('golPreviewEq1List', data.equipo1 || []);
+                renderList('golPreviewEq2List', data.equipo2 || []);
+            }
+
+            async function cargarGoleadoresClasico() {
+                try {
+                    const res = await fetch('/api/futbol/goleadores');
+                    if (!res.ok) return;
+                    const data = await res.json();
+                    renderPreviewGoleadoresClasico(data);
+                } catch (e) {
+                    console.error('Error cargando goleadores del Clásico:', e);
+                }
+            }
+
+            async function guardarGoleadoresConfig() {
+                const payload = {
+                    criterio: document.getElementById('golCriterio') ? document.getElementById('golCriterio').value : 'puntos',
+                    soloEnBatalla: Boolean(document.getElementById('golSoloEnBatalla') && document.getElementById('golSoloEnBatalla').checked),
+                    mostrarEnHud: Boolean(document.getElementById('golMostrarEnHud') && document.getElementById('golMostrarEnHud').checked)
+                };
+                try {
+                    const res = await fetch('/api/futbol/goleadores/config', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    });
+                    if (res.ok) {
+                        showToast('✅ Configuración de Máximos Goleadores guardada', 'success');
+                    } else {
+                        showToast('⚠️ Error guardando configuración de goleadores', 'error');
+                    }
+                } catch (e) {
+                    showToast('⚠️ Error de conexión al guardar goleadores', 'error');
+                }
+            }
+
+            async function reiniciarGoleadoresClasico() {
+                try {
+                    const res = await fetch('/api/futbol/goleadores/reset', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({})
+                    });
+                    if (res.ok) {
+                        showToast('🔄 Máximos Goleadores del mes reiniciados', 'info');
+                        cargarGoleadoresClasico();
+                    } else {
+                        showToast('⚠️ No se pudieron reiniciar los goleadores', 'error');
+                    }
+                } catch (e) {
+                    showToast('⚠️ Error de conexión al reiniciar goleadores', 'error');
+                }
+            }
+
+            socket.on('goleadoresClasicoActualizados', renderPreviewGoleadoresClasico);
+            socket.on('resetGoleadoresClasico', cargarGoleadoresClasico);
 
             function abrirUrl(tipo) {
                 window.open(obtenerUrlOverlay(tipo), '_blank');
@@ -4923,6 +5095,7 @@
                     '/batalla-pk': 'btn-view-batalla-pk',
                     '/batalla-futbol': 'btn-view-batalla-futbol',
                     '/batalla-futbol-hud': 'btn-view-batalla-futbol-hud',
+                    '/goleadores-clasico': 'btn-view-goleadores-clasico',
                     '/timer': 'btn-view-timer',
                     '/conociendo': 'btn-view-conociendo',
                     '/podio': 'btn-view-podio',
@@ -4982,6 +5155,7 @@
                 const ids = {
                     '/': 'btn-view-ranking',
                     '/copa': 'btn-view-copa',
+                    '/goleadores-clasico': 'btn-view-acum-goleadores-clasico',
                     '/revivir-ranking': 'btn-view-revivir-ranking',
                     '/ranking-conociendo': 'btn-view-ranking-conociendo',
                     '/ranking-podio': 'btn-view-ranking-podio'

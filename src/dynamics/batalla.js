@@ -1,15 +1,4 @@
-function checkIsCosmic(req, session) {
-    if (session && session.agencySlug === 'cosmic') return true;
-    if (session && session.db && session.db.agencySlug === 'cosmic') return true;
-    if (req && req.agencySlug === 'cosmic') return true;
-    if (req && req.agency && req.agency.slug === 'cosmic') return true;
-    if (req && req.query && req.query.agency === 'cosmic') return true;
-    const referer = (req && req.headers && req.headers.referer) ? req.headers.referer.toLowerCase() : '';
-    if (referer.includes('/cosmic') || referer.includes('agency=cosmic')) return true;
-    const username = (req && req.username) || (session && session.username) || '';
-    if (username.toLowerCase().includes('cosmic')) return true;
-    return false;
-}
+const { checkIsCosmic } = require('../utils/agencyUtils');
 
 function setupBatallaDynamics(app, io, requireSession) {
     app.all('/batalla/start', requireSession, (req, res) => {
@@ -25,6 +14,9 @@ function setupBatallaDynamics(app, io, requireSession) {
         s.esBatallaVS = tipoSolicitado
             ? (tipoSolicitado === 'vs')
             : (s.vistaActiva === '/batalla-vs');
+        s.esBatallaFutbol = tipoSolicitado
+            ? (tipoSolicitado === 'futbol')
+            : (typeof s.vistaActiva === 'string' && s.vistaActiva.includes('batalla-futbol'));
         
         if (s.esBatallaVS) {
             if (isCosmic) {
@@ -73,6 +65,8 @@ function setupBatallaDynamics(app, io, requireSession) {
                 if (tiempoExtraSnipe <= 0) {
                     clearInterval(s.timerBatalla);
                     s.estadoBatalla = 'finalizada';
+                    s.esBatallaVS = false;
+                    s.esBatallaFutbol = false;
                     s.batalla2X = false;
                     s.batalla2XTiempo = 0;
                     let maxPts = 0;
@@ -158,6 +152,7 @@ function setupBatallaDynamics(app, io, requireSession) {
         clearInterval(s.timerBatalla);
         s.estadoBatalla = 'inactiva';
         s.esBatallaVS = false;
+        s.esBatallaFutbol = false;
         s.batalla2X = false;
         s.batalla2XTiempo = 0;
         io.to(req.username).emit('batallaCancelada');

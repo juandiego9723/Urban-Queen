@@ -44,6 +44,8 @@ const setupAnalyticsRoutes     = require('./src/routes/analyticsRoutes');
 const { setupSystemRoutes, cleanupAllSessions } = require('./src/routes/systemRoutes');
 const { agencyMiddleware } = require('./src/middlewares/agencyMiddleware');
 const rankingResetService      = require('./src/services/rankingResetService');
+const { checkIsCosmic }        = require('./src/utils/agencyUtils');
+const { emitirEstadoGoleadores } = require('./src/services/clasicoGoleadoresService');
 
 // ── Express + HTTP + Socket.IO ───────────────────────────────────
 const app = express();
@@ -326,6 +328,14 @@ app.get('/ranking-clasico',(req, res) => res.sendFile(pub('ranking-clasico.html'
 app.get('/batalla',       (req, res) => res.sendFile(pub('batalla.html')));
 app.get('/batalla-futbol',(req, res) => res.sendFile(pub('batalla-futbol.html')));
 app.get('/batalla-futbol-hud',(req, res) => res.sendFile(pub('batalla-futbol-hud.html')));
+app.get('/goleadores-clasico', (req, res, next) => {
+    const userParam = req.query.user || '';
+    const sessionForReq = userParam ? activeSessions[userParam] : null;
+    if (checkIsCosmic(req, sessionForReq || req.session) || userParam.toLowerCase().includes('cosmic')) {
+        return res.sendFile(agencyPub('cosmic', 'goleadores-clasico.html'));
+    }
+    return next();
+});
 app.get('/penalti',       (req, res) => res.sendFile(pub('penalti.html')));
 app.get('/batalla-pk',    (req, res) => res.sendFile(pub('batalla-pk.html')));
 app.get('/batalla-vs',    (req, res) => res.sendFile(pub('batalla-vs.html')));
@@ -630,15 +640,27 @@ io.on('connection', (socket) => {
 
         if (session.db && typeof session.db.init === 'function') {
             session.db.init()
-                .then(() => session.db.sincronizarRankingsSiNecesario(3000))
                 .then(() => {
+                    if (session.db.agencySlug) session.agencySlug = session.db.agencySlug;
+                    return session.db.sincronizarRankingsSiNecesario(3000);
+                })
+                .then(async () => {
                     if (socket.connected) {
                         socket.emit('rankingActualizado', session.db.getRankingsPayload());
+                        if (checkIsCosmic(null, session)) {
+                            await emitirEstadoGoleadores(session, io, socket);
+                        }
                     }
                 })
                 .catch(() => {});
         }
     }
+
+    socket.on('solicitarEstadoGoleadores', async () => {
+        if (session && checkIsCosmic(null, session)) {
+            await emitirEstadoGoleadores(session, io, socket);
+        }
+    });
 
     socket.on('cambiarModoRanking', (modo) => {
         if (session) {

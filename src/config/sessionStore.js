@@ -104,6 +104,7 @@ async function getUserSessionAsync(username, io, procesarPuntosFn) {
         const initialQueens = dbInstance.getActiveQueenNames();
 
         const session = {
+            username,
             db: dbInstance,
             agencySlug: dbInstance.agencySlug || ((username && username.toLowerCase().includes('cosmic')) ? 'cosmic' : 'urbanqueens'),
             QUEENS: initialQueens,
@@ -212,6 +213,7 @@ function getUserSession(username, io, procesarPuntosFn) {
         const dbInstance = new DBInstance(username);
 
         const session = {
+            username,
             db: dbInstance,
             agencySlug: (username && username.toLowerCase().includes('cosmic')) ? 'cosmic' : 'urbanqueens',
             QUEENS: [],

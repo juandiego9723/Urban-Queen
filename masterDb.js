@@ -20,6 +20,24 @@ async function initMasterDB() {
         // Asegurar índice compuesto para sincronización rápida de rankings desde historial_regalos
         await query('CREATE INDEX IF NOT EXISTS idx_historial_user_ts ON historial_regalos(user_id, timestamp)').catch(() => {});
 
+        // Asegurar tabla de Máximos Goleadores Mensuales de El Clásico (exclusivo Cosmic)
+        await query(`
+            CREATE TABLE IF NOT EXISTS clasico_goleadores (
+                id SERIAL PRIMARY KEY,
+                user_id INT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+                mes_key VARCHAR(7) NOT NULL,
+                equipo SMALLINT NOT NULL CHECK (equipo IN (1, 2)),
+                viewer_name VARCHAR(255) NOT NULL,
+                viewer_avatar TEXT NOT NULL DEFAULT '',
+                puntos INT NOT NULL DEFAULT 0,
+                goles INT NOT NULL DEFAULT 0,
+                ultima_queen VARCHAR(255) NOT NULL DEFAULT '',
+                updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+                UNIQUE (user_id, mes_key, equipo, viewer_name)
+            )
+        `).catch(() => {});
+        await query('CREATE INDEX IF NOT EXISTS idx_clasico_goleadores_lookup ON clasico_goleadores(user_id, mes_key, equipo, puntos DESC, goles DESC)').catch(() => {});
+
         // Asegurar que el usuario admin inicial exista en Supabase
         const adminUser = await obtenerUsuario('admin');
         if (!adminUser) {

@@ -88,7 +88,7 @@
         .hud-grid {
             display: grid;
             grid-template-columns: clamp(170px, 20vw, 210px) minmax(0, 1fr) clamp(170px, 20vw, 210px);
-            grid-template-rows: auto auto auto auto;
+            grid-template-rows: auto auto auto auto auto;
             align-items: center;
             justify-items: center;
             width: 94vw;
@@ -96,6 +96,13 @@
             position: relative;
             filter: drop-shadow(0 15px 35px rgba(0, 0, 0, 0.75));
             z-index: 10;
+        }
+        #hud-goleadores-dock {
+            grid-column: 1 / 4;
+            grid-row: 5;
+            width: 100%;
+            display: none;
+            margin-top: 2px;
         }
 
         /* ── FILA 1: NOMBRES DE EQUIPOS ── */
@@ -930,6 +937,9 @@
         <div class="celebracion-bottom" id="celebracion-bottom" style="display: none;">¡SIUUU!</div>
         <div class="score-num score-eq2" id="pts-eq2">0</div>
 
+        <!-- FILA 5 (Opcional desde Panel): Máximos Goleadores Mensuales -->
+        <div id="hud-goleadores-dock"></div>
+
     </div>
 
     <!-- ── OVERLAY DE TARJETAS DE ÁRBITRO ── -->
@@ -947,6 +957,7 @@
 
     <script src="/js/iframe-bridge.js"></script>
     <script src="/socket.io/socket.io.js"></script>
+    <script src="/agencies/cosmic/js/goleadores-widget.js?v=1"></script>
     <script>
         const urlParams = new URLSearchParams(window.location.search);
         let userParam = urlParams.get('user') || '';
@@ -1448,6 +1459,44 @@
         }
 
         socket.on('marcaCambiado', aplicarMarca);
+
+        // ── DOCK OPCIONAL DE MÁXIMOS GOLEADORES MENSUALES ──
+        const hudGoleadoresDock = document.getElementById('hud-goleadores-dock');
+        const forceHudGoleadores = urlParams.get('goleadores') === '1';
+        let ultimoPayloadGoleadores = null;
+
+        function renderHudGoleadoresDock(payload) {
+            if (!hudGoleadoresDock || !window.CosmicGoleadoresWidget) return;
+            ultimoPayloadGoleadores = payload || ultimoPayloadGoleadores;
+            const activo = forceHudGoleadores || Boolean(ultimoPayloadGoleadores && ultimoPayloadGoleadores.config && ultimoPayloadGoleadores.config.mostrarEnHud);
+            if (!activo) {
+                hudGoleadoresDock.style.display = 'none';
+                hudGoleadoresDock.innerHTML = '';
+                return;
+            }
+            const sourceData = (urlParams.get('test') === 'true')
+                ? Object.assign({}, window.CosmicGoleadoresWidget.DEMO_PAYLOAD, {
+                    equipos: (ultimoPayloadGoleadores && ultimoPayloadGoleadores.equipos) || window.CosmicGoleadoresWidget.DEMO_PAYLOAD.equipos
+                })
+                : (ultimoPayloadGoleadores || { equipo1: [], equipo2: [], equipos: { equipo1: futbolConfig.equipo1, equipo2: futbolConfig.equipo2 } });
+            hudGoleadoresDock.style.display = 'block';
+            window.CosmicGoleadoresWidget.render(hudGoleadoresDock, sourceData, { hudMode: true });
+        }
+
+        function fetchHudGoleadores() {
+            const apiUrl = userParam
+                ? `/api/futbol/goleadores?user=${encodeURIComponent(userParam)}`
+                : '/api/futbol/goleadores';
+            fetch(apiUrl)
+                .then(r => (r.ok ? r.json() : null))
+                .then(data => { if (data) renderHudGoleadoresDock(data); })
+                .catch(() => {});
+        }
+
+        socket.on('goleadoresClasicoActualizados', renderHudGoleadoresDock);
+        socket.on('resetGoleadoresClasico', fetchHudGoleadores);
+        socket.on('resetMensual', fetchHudGoleadores);
+        fetchHudGoleadores();
     </script>
 </body>
 

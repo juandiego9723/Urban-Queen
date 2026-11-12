@@ -1,3 +1,5 @@
+const clasicoGoleadoresService = require('../services/clasicoGoleadoresService');
+
 const DIRECCIONES = ['izquierda', 'centro', 'derecha'];
 
 const CONFIG_DEFAULT = {
@@ -77,6 +79,17 @@ function setupPenaltiDynamics(app, io, requireSession, activeSessions) {
                         session.db.registrarRegalo(destino, `Penalti (${resultado})`, puntos, tiro.viewer || 'Penalti');
                     }
                 } catch (e) { }
+
+                // 1b. Máximos Goleadores mensuales de El Clásico (exclusivo Cosmic)
+                clasicoGoleadoresService.registrarAporteGoleador({
+                    session,
+                    io,
+                    queenName: destino,
+                    viewerName: tiro.viewer || '',
+                    viewerAvatar: tiro.avatar || '',
+                    puntos,
+                    goles: 1
+                }).catch(() => {});
 
                 // 2. Sumar directamente al marcador de El Clásico (Batalla de Fútbol)
                 if (!session.puntosBatalla) session.puntosBatalla = {};

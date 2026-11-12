@@ -1,3 +1,5 @@
+const clasicoGoleadoresService = require('./clasicoGoleadoresService');
+
 function createPointsProcessor(io, activeSessions, resolverNombreFn, timerHandlers, conociendoHandlers, revivirHandlers, penaltiHandlers) {
 
     function buscarEnMapa(mapaObj, nombreRegalo, diamondUnit = 1, giftId = null) {
@@ -341,6 +343,7 @@ function createPointsProcessor(io, activeSessions, resolverNombreFn, timerHandle
         
         try {
             let destinatarioFinal = 'Global';
+            let puntosParaGoleador = 0;
             const queenActivadoraClean = (queenActivadora || '').trim();
             const chicaActualClean = (session.timerBaile && session.timerBaile.chicaActual || '').trim();
             const chicaPodioClean = (session.podio && session.podio.chicaActual || '').trim();
@@ -358,6 +361,7 @@ function createPointsProcessor(io, activeSessions, resolverNombreFn, timerHandle
                 const customPts = parseInt(eq.regalo_pts);
                 const pts = (!isNaN(customPts) && customPts > 0) ? (customPts * deltaRepeat) : coins;
                 destinatarioFinal = queenActivadora;
+                puntosParaGoleador = pts;
                 const giftImgFinal = resolverImagenRegalo(giftImgSrc, giftName, eq.regalo_img);
                 
                 session.queueUpdate.push({ nombre: queenActivadora, puntos: pts, saltaTurno: queenSalto, viewer, avatar, giftName, giftImg: giftImgFinal, repeat: deltaRepeat });
@@ -419,6 +423,7 @@ function createPointsProcessor(io, activeSessions, resolverNombreFn, timerHandle
                 const queenAsignada = session.lealtadUsuarios[viewer] || null;
                 if (queenAsignada && session.QUEENS.includes(queenAsignada)) {
                     destinatarioFinal = queenAsignada;
+                    puntosParaGoleador = coins;
                     const eq = session.equipos[queenAsignada] || {};
                     const giftImgFinal = resolverImagenRegalo(giftImgSrc, giftName, eq.regalo_img);
                     
@@ -437,6 +442,7 @@ function createPointsProcessor(io, activeSessions, resolverNombreFn, timerHandle
                     });
                 } else if (queenSalto && session.QUEENS.includes(queenSalto)) {
                     destinatarioFinal = queenSalto;
+                    puntosParaGoleador = coins;
                     const eq = session.equipos[queenSalto] || {};
                     const giftImgFinal = resolverImagenRegalo(giftImgSrc, giftName, eq.regalo_img);
                     
@@ -462,6 +468,7 @@ function createPointsProcessor(io, activeSessions, resolverNombreFn, timerHandle
                         id: giftId,
                         giftName,
                         viewer,
+                        avatar,
                         coins,
                         giftImgSrc,
                         repeat: deltaRepeat,
@@ -471,6 +478,18 @@ function createPointsProcessor(io, activeSessions, resolverNombreFn, timerHandle
                     session.regalosDetectados[giftId] = giftInstance;
                     io.to(username).emit('regaloDetectado', giftInstance);
                 }
+            }
+
+            if (puntosParaGoleador > 0 && destinatarioFinal && destinatarioFinal !== 'Global') {
+                clasicoGoleadoresService.registrarAporteGoleador({
+                    session,
+                    io,
+                    queenName: destinatarioFinal,
+                    viewerName: viewer,
+                    viewerAvatar: avatar,
+                    puntos: puntosParaGoleador,
+                    goles: deltaRepeat
+                }).catch(() => {});
             }
 
             io.to(username).emit('tiktokLiveEvent', {
