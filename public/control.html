@@ -1669,6 +1669,10 @@
                                     </div>
                                 </div>
                             </div>
+                            <label style="display:flex;align-items:center;gap:10px;cursor:pointer;margin-top:12px;background:var(--surface);padding:10px 14px;border-radius:10px;border:1px solid var(--border);">
+                                <input type="checkbox" id="clasicoMostrarActivadores" checked onchange="guardarFutbolConfig(true)">
+                                <span class="label" style="text-transform:none;letter-spacing:0;font-weight:600;margin:0;font-size:13px;">🎁 Mostrar Regalos Activadores en esquinas del HUD</span>
+                            </label>
                             <div class="row-3" style="margin-top:10px">
                                 <button class="btn btn-primary btn-full" onclick="guardarFutbolConfig()">💾 Guardar
                                     Equipos</button>
@@ -4377,12 +4381,16 @@
 
                     renderChecks(eq1Miembros, 'eq1Miembros');
                     renderChecks(eq2Miembros, 'eq2Miembros');
+
+                    if (document.getElementById('clasicoMostrarActivadores')) {
+                        document.getElementById('clasicoMostrarActivadores').checked = config.mostrarActivadores !== false;
+                    }
                 } catch (e) {
                     console.error("Error al cargar config de futbol:", e);
                 }
             }
 
-            async function guardarFutbolConfig() {
+            async function guardarFutbolConfig(silencioso = false) {
                 const getChecked = (containerId) => {
                     const inputs = document.getElementById(containerId).querySelectorAll('input[type="checkbox"]:checked');
                     return Array.from(inputs).map(inp => inp.value);
@@ -4402,11 +4410,13 @@
                         color1: document.getElementById('eq2Color1').value,
                         color2: document.getElementById('eq2Color2').value,
                         miembros: getChecked('eq2Miembros')
-                    }
+                    },
+                    mostrarActivadores: document.getElementById('clasicoMostrarActivadores') ? document.getElementById('clasicoMostrarActivadores').checked : true
                 };
 
                 if (!config.equipo1.nombre || !config.equipo2.nombre) {
-                    return alert('Los nombres de los equipos son obligatorios.');
+                    if (!silencioso) alert('Los nombres de los equipos son obligatorios.');
+                    return;
                 }
 
                 try {
@@ -4415,9 +4425,11 @@
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify(config)
                     });
-                    alert('✅ Equipos guardados exitosamente');
+                    if (!silencioso) {
+                        alert('✅ Equipos guardados exitosamente');
+                    }
                 } catch (e) {
-                    alert('Error al guardar equipos.');
+                    if (!silencioso) alert('Error al guardar equipos.');
                 }
             }
 

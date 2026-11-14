@@ -434,6 +434,92 @@
             color: #FFFFFF;
         }
 
+        /* ── ÍCONOS DE REGALOS ACTIVADORES (ARRIBA EN LA ESQUINA DEL CÍRCULO) ── */
+        .activator-gifts-corner {
+            position: absolute;
+            top: -20px;
+            display: flex;
+            align-items: center;
+            z-index: 35;
+            pointer-events: none;
+            transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        .activator-gifts-corner.corner-left {
+            left: -10px;
+            justify-content: flex-start;
+        }
+
+        .activator-gifts-corner.corner-right {
+            right: -10px;
+            justify-content: flex-end;
+            flex-direction: row-reverse;
+        }
+
+        .activator-gift-item {
+            width: 52px;
+            height: 52px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.65)) drop-shadow(0 0 12px rgba(255, 255, 255, 0.75));
+            transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            position: relative;
+        }
+
+        .activator-gift-item.compact {
+            width: 44px;
+            height: 44px;
+        }
+
+        .activator-gifts-corner.corner-left .activator-gift-item.compact:not(:first-child) {
+            margin-left: -10px;
+        }
+
+        .activator-gifts-corner.corner-right .activator-gift-item.compact:not(:first-child) {
+            margin-right: -10px;
+        }
+
+        .activator-gift-item.mini {
+            width: 38px;
+            height: 38px;
+        }
+
+        .activator-gifts-corner.corner-left .activator-gift-item.mini:not(:first-child) {
+            margin-left: -12px;
+        }
+
+        .activator-gifts-corner.corner-right .activator-gift-item.mini:not(:first-child) {
+            margin-right: -12px;
+        }
+
+        .activator-gift-item img {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+            pointer-events: auto;
+        }
+
+        .activator-gift-item.bounce,
+        .activator-gifts-corner.bounce {
+            animation: gift-corner-pop 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        @keyframes gift-corner-pop {
+            0% {
+                transform: scale(1) rotate(0deg);
+            }
+            40% {
+                transform: scale(1.35) rotate(-10deg);
+            }
+            70% {
+                transform: scale(0.9) rotate(5deg);
+            }
+            100% {
+                transform: scale(1) rotate(0deg);
+            }
+        }
+
         /* Halo / Aura Solar de Victoria para el Avatar Ganador */
         .winner-aura {
             z-index: 30 !important;
@@ -993,6 +1079,9 @@
                 <div class="team-win-header" id="win-header-eq1"><span class="win-tag">WIN</span> <span
                         class="win-count" id="win-count-eq1">x 1</span></div>
 
+                <!-- Regalos Activadores Arriba en la Esquina -->
+                <div class="activator-gifts-corner corner-left" id="activator-badge-eq1"></div>
+
                 <div class="avatar-ring-gold" id="border-avatar-eq1">
                     <div class="avatar-inner avatar-bg-barsa" id="inner-avatar-eq1">
                         <img class="avatar-img-custom" id="img-avatar-eq1" alt="Equipo 1">
@@ -1045,6 +1134,9 @@
                 <!-- Contador WIN Superior -->
                 <div class="team-win-header" id="win-header-eq2"><span class="win-tag">WIN</span> <span
                         class="win-count" id="win-count-eq2">x 0</span></div>
+
+                <!-- Regalos Activadores Arriba en la Esquina -->
+                <div class="activator-gifts-corner corner-right" id="activator-badge-eq2"></div>
 
                 <div class="avatar-ring-silver" id="border-avatar-eq2">
                     <div class="avatar-inner avatar-bg-real" id="inner-avatar-eq2">
@@ -1236,16 +1328,171 @@
             });
         }
 
-        // Listener en tiempo real de regalos de TikTok / Socket para sillas de donadores
+        let equipos = {};
+
+        function resolverImagenRegalo(rawImg) {
+            if (!rawImg) return '';
+            if (rawImg.startsWith('/') || rawImg.startsWith('http') || rawImg.startsWith('data:')) return rawImg;
+            return '/regalos/' + rawImg;
+        }
+
+        function obtenerRegalosEquipo(equipoObj) {
+            if (!equipoObj) return [];
+            const regalos = [];
+            const vistos = new Set();
+
+            // 1. Regalo asignado directamente al equipo si lo tuviera
+            if (equipoObj.regalo_img) {
+                const src = resolverImagenRegalo(equipoObj.regalo_img);
+                if (src && !vistos.has(src.toLowerCase())) {
+                    vistos.add(src.toLowerCase());
+                    regalos.push({ src, nombre: equipoObj.nombre || 'Equipo' });
+                }
+            }
+
+            // 2. Regalos activadores de cada integrante del equipo
+            const miembros = equipoObj.miembros || [];
+            miembros.forEach(m => {
+                const mName = String(m).trim();
+                const qKey = Object.keys(equipos).find(k => k.toLowerCase() === mName.toLowerCase());
+                const eqInfo = qKey ? equipos[qKey] : null;
+                if (eqInfo && eqInfo.regalo_img) {
+                    const src = resolverImagenRegalo(eqInfo.regalo_img);
+                    if (src && !vistos.has(src.toLowerCase())) {
+                        vistos.add(src.toLowerCase());
+                        regalos.push({ src, nombre: mName });
+                    }
+                }
+            });
+
+            return regalos;
+        }
+
+        function renderizarRegalosActivadores() {
+            const cont1 = document.getElementById('activator-badge-eq1');
+            const cont2 = document.getElementById('activator-badge-eq2');
+            if (!cont1 || !cont2) return;
+
+            // Opción de visibilidad: URL (?activadores=1 / ?activadores=0) o futbolConfig.mostrarActivadores
+            const urlParams = new URLSearchParams(window.location.search);
+            const paramAct = urlParams.get('activadores');
+            let visible = true;
+            if (paramAct !== null) {
+                visible = paramAct === '1' || paramAct === 'true' || paramAct === 'si';
+            } else if (futbolConfig && futbolConfig.mostrarActivadores !== undefined) {
+                visible = futbolConfig.mostrarActivadores !== false;
+            }
+
+            if (!visible) {
+                cont1.style.display = 'none';
+                cont2.style.display = 'none';
+                cont1.innerHTML = '';
+                cont2.innerHTML = '';
+                return;
+            }
+
+            cont1.style.display = 'flex';
+            cont2.style.display = 'flex';
+
+            let regalos1 = obtenerRegalosEquipo(futbolConfig.equipo1);
+            let regalos2 = obtenerRegalosEquipo(futbolConfig.equipo2);
+
+            // Fallbacks si aún no cargan o no tienen regalos configurados
+            if (regalos1.length === 0) {
+                regalos1 = [{ src: '/regalos/Rosa.png', nombre: 'Equipo 1' }];
+            }
+            if (regalos2.length === 0) {
+                regalos2 = [{ src: '/regalos/tiktok.png', nombre: 'Equipo 2' }];
+            }
+
+            // Renderizar Equipo 1 (Izquierda)
+            cont1.innerHTML = '';
+            const sizeClass1 = regalos1.length > 2 ? 'mini' : (regalos1.length === 2 ? 'compact' : '');
+            regalos1.forEach((reg, idx) => {
+                const item = document.createElement('div');
+                item.className = `activator-gift-item ${sizeClass1}`.trim();
+                item.id = `gift-item-eq1-${idx}`;
+                item.dataset.queen = reg.nombre.toLowerCase();
+                item.title = `Activador: ${reg.nombre}`;
+                item.innerHTML = `<img src="${reg.src}" alt="${reg.nombre}" onerror="this.src='/regalos/Rosa.png'">`;
+                cont1.appendChild(item);
+            });
+
+            // Renderizar Equipo 2 (Derecha)
+            cont2.innerHTML = '';
+            const sizeClass2 = regalos2.length > 2 ? 'mini' : (regalos2.length === 2 ? 'compact' : '');
+            regalos2.forEach((reg, idx) => {
+                const item = document.createElement('div');
+                item.className = `activator-gift-item ${sizeClass2}`.trim();
+                item.id = `gift-item-eq2-${idx}`;
+                item.dataset.queen = reg.nombre.toLowerCase();
+                item.title = `Activador: ${reg.nombre}`;
+                item.innerHTML = `<img src="${reg.src}" alt="${reg.nombre}" onerror="this.src='/regalos/tiktok.png'">`;
+                cont2.appendChild(item);
+            });
+        }
+
+        function animarRegaloActivador(lado, queenName) {
+            const cont = document.getElementById(`activator-badge-${lado}`);
+            if (!cont) return;
+
+            let target = null;
+            if (queenName) {
+                target = cont.querySelector(`.activator-gift-item[data-queen="${String(queenName).toLowerCase()}"]`);
+            }
+            if (!target) {
+                target = cont.querySelector('.activator-gift-item') || cont;
+            }
+
+            target.classList.remove('bounce');
+            void target.offsetWidth;
+            target.classList.add('bounce');
+        }
+
+        // Cargar catálogo de integrantes y sus regalos activadores
+        async function cargarEquiposCatalogo() {
+            try {
+                const url = userParam ? `/api/queens/all?user=${encodeURIComponent(userParam)}` : '/api/queens/all';
+                const res = await fetch(url);
+                if (res.ok) {
+                    const data = await res.json();
+                    if (Array.isArray(data)) {
+                        data.forEach(q => {
+                            equipos[q.name] = {
+                                nombre: q.name,
+                                color: q.color,
+                                regalo_img: q.regalo_img || '',
+                                apodo: q.apodo || ''
+                            };
+                        });
+                        renderizarRegalosActivadores();
+                    }
+                }
+            } catch (e) {
+                console.warn('Error cargando catálogo de queens para activadores:', e);
+            }
+        }
+        cargarEquiposCatalogo();
+
+        socket.on('queensActualizadas', (d) => {
+            if (d && d.equipos) {
+                equipos = d.equipos;
+                renderizarRegalosActivadores();
+            }
+        });
+
+        // Listener en tiempo real de regalos de TikTok / Socket para sillas de donadores y animación activadora
         socket.on('nuevoRegalo', (data) => {
             if (!data || !data.viewer) return;
             const eq1M = (futbolConfig.equipo1 && futbolConfig.equipo1.miembros) || [];
             const eq2M = (futbolConfig.equipo2 && futbolConfig.equipo2.miembros) || [];
             let lado = null;
-            if (eq1M.includes(data.nombre)) lado = 'eq1';
-            else if (eq2M.includes(data.nombre)) lado = 'eq2';
+            if (eq1M.some(m => String(m).toLowerCase() === String(data.nombre || '').toLowerCase())) lado = 'eq1';
+            else if (eq2M.some(m => String(m).toLowerCase() === String(data.nombre || '').toLowerCase())) lado = 'eq2';
 
             if (lado) {
+                animarRegaloActivador(lado, data.nombre);
+
                 if (!teamDonors[lado][data.viewer]) {
                     teamDonors[lado][data.viewer] = { viewer: data.viewer, avatar: data.avatar || '', coins: 0 };
                 }
@@ -1375,6 +1622,9 @@
 
             aplicarFondoEquipo(innerAvatarEq1, barraEq1, name1, c1_1, c1_2, diseno1, 'barsa', '#FF2A5F');
             aplicarFondoEquipo(innerAvatarEq2, barraEq2, name2, c2_1, c2_2, diseno2, 'real', '#00E5FF');
+
+            // Actualizar regalos activadores en las esquinas de los avatares
+            renderizarRegalosActivadores();
         }
 
         const configUrl = userParam ? `/api/futbol/config?user=${encodeURIComponent(userParam)}` : '/api/futbol/config';
