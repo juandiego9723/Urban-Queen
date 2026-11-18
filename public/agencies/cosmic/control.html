@@ -1181,6 +1181,97 @@
                         </div>
                     </div>
 
+                    <!-- ══ CONFRONTO GELADO / CONGELAMIENTO CON VIDEO ══ -->
+                    <div class="card" style="border: 1px solid rgba(56, 189, 248, 0.35); background: linear-gradient(145deg, rgba(14, 165, 233, 0.08), rgba(15, 23, 42, 0.6));">
+                        <div class="card-title" style="display:flex; align-items:center; justify-content:space-between; gap:8px;">
+                            <span>❄️ <span class="card-title-accent" style="color:#38bdf8;">Confronto Gelado (Hielo)</span></span>
+                            <label style="display:inline-flex; align-items:center; gap:6px; font-size:12px; font-weight:700; cursor:pointer; color:#e0f2fe;">
+                                <input type="checkbox" id="hieloActivo" checked onchange="guardarConfigHielo(true)" style="width:16px; height:16px; accent-color:#38bdf8; cursor:pointer;">
+                                Activo
+                            </label>
+                        </div>
+                        <div class="col" style="gap:10px;">
+                            <div style="font-size:11px; color:var(--muted); line-height:1.4;">
+                                Activa el video <code>hielo_animado_suave_transparente</code> cuando una bailarina vaya perdiendo en Batalla VS. Ajusta el tamaño en vivo viendo tu pantalla de OBS.
+                            </div>
+
+                            <div class="row-2">
+                                <div>
+                                    <div class="label" style="margin-bottom:4px">Zona del efecto</div>
+                                    <select id="hieloModo" class="select" onchange="guardarConfigHielo(true)">
+                                        <option value="split">Mitad de pantalla (Cámara Izq / Der)</option>
+                                        <option value="avatar">Sobre el Avatar (Batalla VS)</option>
+                                    </select>
+                                </div>
+                                <div style="display:flex; flex-direction:column; gap:6px; justify-content:flex-end;">
+                                    <label style="display:flex; align-items:center; gap:6px; font-size:12px; cursor:pointer; padding:6px 10px; border-radius:8px; background:rgba(255,255,255,0.04); width:100%;">
+                                        <input type="checkbox" id="hieloBucle" checked onchange="guardarConfigHielo(true)" style="width:15px; height:15px; accent-color:#38bdf8;">
+                                        🔁 Repetir en bucle
+                                    </label>
+                                    <label style="display:flex; align-items:center; gap:6px; font-size:12px; cursor:pointer; padding:6px 10px; border-radius:8px; background:rgba(255,255,255,0.04); width:100%;">
+                                        <input type="checkbox" id="hieloMostrarBadge" onchange="guardarConfigHielo(true)" style="width:15px; height:15px; accent-color:#38bdf8;">
+                                        Texto "❄️ CONGELADA"
+                                    </label>
+                                </div>
+                            </div>
+
+                            <div>
+                                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+                                    <span class="label">Tamaño / Escala del Hielo</span>
+                                    <span id="lblHieloEscala" style="font-size:12px; font-weight:800; color:#38bdf8;">100%</span>
+                                </div>
+                                <input type="range" id="hieloEscala" min="20" max="200" step="2" value="100"
+                                    style="width:100%; accent-color:#38bdf8; cursor:pointer;"
+                                    oninput="onInputConfigHielo()" onchange="guardarConfigHielo(true)">
+                                <div style="display:flex; gap:6px; margin-top:4px;">
+                                    <button type="button" class="btn btn-ghost" style="padding:4px 8px; font-size:11px; flex:1;" onclick="setHieloEscalaPreset(50)">50%</button>
+                                    <button type="button" class="btn btn-ghost" style="padding:4px 8px; font-size:11px; flex:1;" onclick="setHieloEscalaPreset(80)">80%</button>
+                                    <button type="button" class="btn btn-ghost" style="padding:4px 8px; font-size:11px; flex:1;" onclick="setHieloEscalaPreset(100)">100%</button>
+                                    <button type="button" class="btn btn-ghost" style="padding:4px 8px; font-size:11px; flex:1;" onclick="setHieloEscalaPreset(135)">135%</button>
+                                    <button type="button" class="btn btn-ghost" style="padding:4px 8px; font-size:11px; flex:1;" onclick="setHieloEscalaPreset(170)">170%</button>
+                                </div>
+                            </div>
+
+                            <div>
+                                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+                                    <span class="label">Opacidad</span>
+                                    <span id="lblHieloOpacidad" style="font-size:12px; font-weight:800; color:#38bdf8;">95%</span>
+                                </div>
+                                <input type="range" id="hieloOpacidad" min="20" max="100" step="1" value="95"
+                                    style="width:100%; accent-color:#38bdf8; cursor:pointer;"
+                                    oninput="onInputConfigHielo()" onchange="guardarConfigHielo(true)">
+                            </div>
+
+                            <div class="row-2">
+                                <div>
+                                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+                                        <span class="label">Posición X</span>
+                                        <span id="lblHieloOffsetX" style="font-size:11px; font-weight:700; color:#94a3b8;">0px</span>
+                                    </div>
+                                    <input type="range" id="hieloOffsetX" min="-400" max="400" step="5" value="0"
+                                        style="width:100%; accent-color:#38bdf8; cursor:pointer;"
+                                        oninput="onInputConfigHielo()" onchange="guardarConfigHielo(true)">
+                                </div>
+                                <div>
+                                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+                                        <span class="label">Posición Y</span>
+                                        <span id="lblHieloOffsetY" style="font-size:11px; font-weight:700; color:#94a3b8;">0px</span>
+                                    </div>
+                                    <input type="range" id="hieloOffsetY" min="-400" max="400" step="5" value="0"
+                                        style="width:100%; accent-color:#38bdf8; cursor:pointer;"
+                                        oninput="onInputConfigHielo()" onchange="guardarConfigHielo(true)">
+                                </div>
+                            </div>
+
+                            <div style="display:grid; grid-template-columns: repeat(4, 1fr); gap:6px; margin-top:2px;">
+                                <button type="button" class="btn btn-primary" style="padding:7px 6px; font-size:11px; background:#0284c7;" onclick="probarHielo('left')">❄️ Izq</button>
+                                <button type="button" class="btn btn-primary" style="padding:7px 6px; font-size:11px; background:#0284c7;" onclick="probarHielo('right')">❄️ Der</button>
+                                <button type="button" class="btn btn-ghost" style="padding:7px 6px; font-size:11px;" onclick="centrarHielo()">↺ Centrar</button>
+                                <button type="button" class="btn btn-danger" style="padding:7px 6px; font-size:11px;" onclick="probarHielo('off')">⏹ Quitar</button>
+                            </div>
+                        </div>
+                    </div>
+
                     <div class="card">
                         <div class="card-title">
                             ⚔️ <span class="card-title-accent">Modo Batalla</span>
@@ -1641,7 +1732,7 @@
                             </div>
                             <div class="row-2">
                                 <button class="btn btn-success btn-full" onclick="guardarPenaltiConfig()">💾 Guardar penalti</button>
-                                <a class="btn btn-ghost btn-full" href="/cosmic/penalti" target="_blank" style="text-align:center;text-decoration:none;display:flex;align-items:center;justify-content:center;">🔗 Abrir overlay</a>
+                                <a id="btn-penalti-overlay" class="btn btn-ghost btn-full" href="/penalti" target="_blank" style="text-align:center;text-decoration:none;display:flex;align-items:center;justify-content:center;">🔗 Abrir overlay</a>
                             </div>
                             <div class="label" style="margin-top:4px;">Probar tiro:</div>
                             <div class="row-3">
@@ -2070,6 +2161,7 @@
                             <div style="display: flex; flex-direction: column; gap: 8px; margin-top: 10px;" id="universal-overlay-controls">
                                 <button class="btn btn-primary" onclick="cambiarVistaUniversal('/batalla')" id="btn-view-batalla" style="transition: all 0.3s ease; text-align: left; padding: 12px 16px;">⚔️ Batalla Normal</button>
                                 <button class="btn btn-primary" onclick="cambiarVistaUniversal('/batalla-vs')" id="btn-view-batalla-vs" style="transition: all 0.3s ease; text-align: left; padding: 12px 16px;">⚔️ Batalla VS (TikTok LIVE)</button>
+                                <button class="btn btn-primary" onclick="cambiarVistaUniversal('/batalla-pk')" id="btn-view-batalla-pk" style="transition: all 0.3s ease; text-align: left; padding: 12px 16px;">❄️⚔️ Batalla PK (Icy Clash)</button>
                                 <button class="btn btn-primary" onclick="cambiarVistaUniversal('/batalla-activadores')" id="btn-view-batalla-activadores" style="transition: all 0.3s ease; text-align: left; padding: 12px 16px;">⚔️ Batalla Normal V2</button>
                                 <button class="btn btn-primary" onclick="cambiarVistaUniversal('/dinamica-activadores')"
                                     id="btn-view-activadores"
@@ -4779,6 +4871,10 @@
                     if (res.ok) {
                         const data = await res.json();
                         currentUsername = data.username;
+                        const btnPenalti = document.getElementById('btn-penalti-overlay');
+                        if (btnPenalti && currentUsername) {
+                            btnPenalti.href = `${window.location.origin}/penalti?user=${encodeURIComponent(currentUsername)}`;
+                        }
                         currentUserIsAdmin = !!(data.isAdmin || currentUsername === 'admin' || currentUsername === 'master' || data.role === 'admin' || data.role === 'superadmin');
                         document.getElementById('master-control-title').textContent = `${data.name || 'Control Maestro'} (@${data.username})`;
                         
@@ -5277,6 +5373,128 @@
                 cambiarVistaUniversal('/batalla-vs');
                 hacerFetch('/batalla/start?tipo=vs&agency=cosmic&m=' + m + '&p=' + encodeURIComponent(b1 + ',' + b2));
             }
+
+            // ── CONFRONTO GELADO / EFECTO HIELO ──
+            let _hieloSaveTimer = null;
+
+            function leerConfigHieloUI() {
+                return {
+                    activo: Boolean(document.getElementById('hieloActivo')?.checked ?? true),
+                    modo: document.getElementById('hieloModo')?.value || 'split',
+                    escala: parseInt(document.getElementById('hieloEscala')?.value, 10) || 100,
+                    opacidad: parseInt(document.getElementById('hieloOpacidad')?.value, 10) || 95,
+                    offsetX: parseInt(document.getElementById('hieloOffsetX')?.value, 10) || 0,
+                    offsetY: parseInt(document.getElementById('hieloOffsetY')?.value, 10) || 0,
+                    mostrarBadge: Boolean(document.getElementById('hieloMostrarBadge')?.checked ?? false),
+                    bucle: Boolean(document.getElementById('hieloBucle')?.checked ?? true)
+                };
+            }
+
+            function pintarConfigHieloUI(cfg) {
+                if (!cfg) return;
+                const elAct = document.getElementById('hieloActivo');
+                const elModo = document.getElementById('hieloModo');
+                const elEsc = document.getElementById('hieloEscala');
+                const elOpa = document.getElementById('hieloOpacidad');
+                const elOx = document.getElementById('hieloOffsetX');
+                const elOy = document.getElementById('hieloOffsetY');
+                const elBadge = document.getElementById('hieloMostrarBadge');
+                const elBucle = document.getElementById('hieloBucle');
+
+                if (elAct) elAct.checked = Boolean(cfg.activo);
+                if (elModo && cfg.modo) elModo.value = cfg.modo;
+                if (elEsc && cfg.escala !== undefined) elEsc.value = cfg.escala;
+                if (elOpa && cfg.opacidad !== undefined) elOpa.value = cfg.opacidad;
+                if (elOx && cfg.offsetX !== undefined) elOx.value = cfg.offsetX;
+                if (elOy && cfg.offsetY !== undefined) elOy.value = cfg.offsetY;
+                if (elBadge) elBadge.checked = Boolean(cfg.mostrarBadge);
+                if (elBucle) elBucle.checked = cfg.bucle !== false;
+
+                actualizarLabelsHielo();
+            }
+
+            function actualizarLabelsHielo() {
+                const cfg = leerConfigHieloUI();
+                const lEsc = document.getElementById('lblHieloEscala');
+                const lOpa = document.getElementById('lblHieloOpacidad');
+                const lOx = document.getElementById('lblHieloOffsetX');
+                const lOy = document.getElementById('lblHieloOffsetY');
+                if (lEsc) lEsc.textContent = cfg.escala + '%';
+                if (lOpa) lOpa.textContent = cfg.opacidad + '%';
+                if (lOx) lOx.textContent = cfg.offsetX + 'px';
+                if (lOy) lOy.textContent = cfg.offsetY + 'px';
+            }
+
+            function onInputConfigHielo() {
+                actualizarLabelsHielo();
+                const cfg = leerConfigHieloUI();
+                try { socket.emit('actualizarConfigHielo', { ...cfg, guardar: false }); } catch (e) {}
+                clearTimeout(_hieloSaveTimer);
+                _hieloSaveTimer = setTimeout(() => guardarConfigHielo(true), 350);
+            }
+
+            async function guardarConfigHielo(persistir = true) {
+                actualizarLabelsHielo();
+                const cfg = leerConfigHieloUI();
+                try { socket.emit('actualizarConfigHielo', { ...cfg, guardar: persistir }); } catch (e) {}
+                if (persistir) {
+                    try {
+                        await fetch('/api/batalla/hielo-config', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify(cfg)
+                        });
+                    } catch (e) {
+                        console.warn('Error guardando config hielo:', e);
+                    }
+                }
+            }
+
+            function setHieloEscalaPreset(valor) {
+                const elEsc = document.getElementById('hieloEscala');
+                if (elEsc) {
+                    elEsc.value = valor;
+                    guardarConfigHielo(true);
+                }
+            }
+
+            function centrarHielo() {
+                const elOx = document.getElementById('hieloOffsetX');
+                const elOy = document.getElementById('hieloOffsetY');
+                if (elOx) elOx.value = 0;
+                if (elOy) elOy.value = 0;
+                guardarConfigHielo(true);
+            }
+
+            async function probarHielo(lado) {
+                const cfg = leerConfigHieloUI();
+                try {
+                    socket.emit('actualizarConfigHielo', { ...cfg, guardar: false });
+                    socket.emit('testHielo', { lado });
+                } catch (e) {}
+                try {
+                    await fetch('/api/batalla/hielo-test', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ lado })
+                    });
+                } catch (e) {}
+            }
+
+            async function cargarConfigHielo() {
+                try {
+                    const res = await fetch('/api/batalla/hielo-config');
+                    if (res.ok) {
+                        const cfg = await res.json();
+                        pintarConfigHieloUI(cfg);
+                    }
+                } catch (e) {}
+            }
+
+            socket.on('configHieloActualizada', (cfg) => {
+                pintarConfigHieloUI(cfg);
+            });
+            cargarConfigHielo();
 
             function renderBatallaOptions() {
                 renderVSSelects();

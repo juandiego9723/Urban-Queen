@@ -38,6 +38,22 @@ async function initMasterDB() {
         `).catch(() => {});
         await query('CREATE INDEX IF NOT EXISTS idx_clasico_goleadores_lookup ON clasico_goleadores(user_id, mes_key, equipo, puntos DESC, goles DESC)').catch(() => {});
 
+        // Asegurar Row Level Security (RLS) en todas las tablas del esquema public (bloquea acceso público vía PostgREST de Supabase)
+        await query(`
+            DO $$
+            DECLARE
+                r RECORD;
+            BEGIN
+                FOR r IN
+                    SELECT tablename
+                    FROM pg_tables
+                    WHERE schemaname = 'public' AND rowsecurity = false
+                LOOP
+                    EXECUTE format('ALTER TABLE public.%I ENABLE ROW LEVEL SECURITY;', r.tablename);
+                END LOOP;
+            END $$;
+        `).catch(() => {});
+
         // Asegurar que el usuario admin inicial exista en Supabase
         const adminUser = await obtenerUsuario('admin');
         if (!adminUser) {

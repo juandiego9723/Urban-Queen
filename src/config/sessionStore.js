@@ -170,6 +170,24 @@ async function getUserSessionAsync(username, io, procesarPuntosFn) {
                     if (raw) return JSON.parse(raw);
                 } catch (e) {}
                 return { title: '¡NUEVA QUEEN!', target: 10000, current: 0 };
+            })(),
+            hieloConfig: (() => {
+                const defaults = {
+                    activo: true,
+                    modo: 'split',
+                    escala: 100,
+                    opacidad: 95,
+                    offsetX: 0,
+                    offsetY: 0,
+                    mostrarBadge: false,
+                    bucle: true,
+                    videoUrl: '/regalos/hielo_animado_suave_transparente.webm'
+                };
+                try {
+                    const raw = dbInstance.getConfigVal('hielo_config');
+                    if (raw) return { ...defaults, ...JSON.parse(raw) };
+                } catch (e) {}
+                return defaults;
             })()
         };
 
@@ -260,13 +278,26 @@ function getUserSession(username, io, procesarPuntosFn) {
             giftStreaks: {},
             vistaActiva: '/batalla',
             vistaAcumuladosActiva: '/',
-            goalConfig: { title: '¡NUEVA QUEEN!', target: 10000, current: 0 }
+            goalConfig: { title: '¡NUEVA QUEEN!', target: 10000, current: 0 },
+            hieloConfig: {
+                activo: true,
+                modo: 'split',
+                escala: 100,
+                opacidad: 95,
+                offsetX: 0,
+                offsetY: 0,
+                mostrarBadge: false,
+                bucle: true,
+                videoUrl: '/regalos/hielo_animado_suave_transparente.webm'
+            }
         };
 
         dbInstance.init().then(() => {
             try {
                 const rawGoal = session.db.getConfigVal('goal_config');
                 if (rawGoal) session.goalConfig = JSON.parse(rawGoal);
+                const rawHielo = session.db.getConfigVal('hielo_config');
+                if (rawHielo) session.hieloConfig = { ...session.hieloConfig, ...JSON.parse(rawHielo) };
                 const rawPodioRank = session.db.getConfigVal('podio_ranking');
                 if (rawPodioRank && session.podio) {
                     try { session.podio.puntosRanking = JSON.parse(rawPodioRank); } catch(e){}
@@ -285,6 +316,7 @@ function getUserSession(username, io, procesarPuntosFn) {
             if (io) {
                 io.to(username).emit('queensActualizadas', { queens: session.QUEENS, equipos: session.equipos, apodos: session.db.getApodosMap() });
                 io.to(username).emit('rankingActualizado', session.db.getRankingsPayload());
+                io.to(username).emit('configHieloActualizada', session.hieloConfig);
             }
         }).catch(err => console.error('Error cargando BD Supabase para usuario:', username, err));
 

@@ -524,7 +524,8 @@ io.on('connection', (socket) => {
                 equipos: session.equipos,
                 participantes: session.participantesActuales,
                 batalla2X: session.batalla2X || false,
-                batalla2XTiempo: session.batalla2XTiempo || 0
+                batalla2XTiempo: session.batalla2XTiempo || 0,
+                hieloConfig: setupBatallaDynamics.getSessionHieloConfig(session)
             });
         }
         socket.emit('tiktokEstado', { estado: session.tiktokEstado, usuario: session.tiktokUsuario });
@@ -637,6 +638,7 @@ io.on('connection', (socket) => {
             }
         }
         socket.emit('metaConfigActualizada', session.goalConfig);
+        socket.emit('configHieloActualizada', setupBatallaDynamics.getSessionHieloConfig(session));
 
         if (session.db && typeof session.db.init === 'function') {
             session.db.init()
@@ -707,6 +709,29 @@ io.on('connection', (socket) => {
                 try { session.db.setConfigVal('goal_config', JSON.stringify(session.goalConfig)); } catch (e) {}
             }
             io.to(username).emit('metaConfigActualizada', session.goalConfig);
+        }
+    });
+
+    socket.on('actualizarConfigHielo', (data) => {
+        if (session && data) {
+            const current = setupBatallaDynamics.getSessionHieloConfig(session);
+            const updated = setupBatallaDynamics.normalizeHieloConfig(data, current);
+            session.hieloConfig = updated;
+            if (data.guardar !== false && session.db && typeof session.db.setConfigVal === 'function') {
+                try { session.db.setConfigVal('hielo_config', JSON.stringify(updated)); } catch (e) {}
+            }
+            io.to(username).emit('configHieloActualizada', updated);
+        }
+    });
+
+    socket.on('testHielo', (payload) => {
+        if (session) {
+            const rawLado = (typeof payload === 'string') ? payload : (payload && payload.lado);
+            const lado = ['left', 'right', 'both', 'off'].includes(rawLado) ? rawLado : 'off';
+            io.to(username).emit('testHieloOverlay', {
+                lado,
+                config: setupBatallaDynamics.getSessionHieloConfig(session)
+            });
         }
     });
 });

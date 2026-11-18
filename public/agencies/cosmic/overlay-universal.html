@@ -153,6 +153,8 @@
         socket.on('modoRankingCambiado', function(d) { forwardToIframe('modoRankingCambiado', d); });
 
         socket.on('queensActualizadas', function(d) { forwardToIframe('queensActualizadas', d); });
+        socket.on('configHieloActualizada', function(d) { forwardToIframe('configHieloActualizada', d); });
+        socket.on('testHieloOverlay', function(d) { forwardToIframe('testHieloOverlay', d); });
         socket.on('marcaCambiado', function(d) { forwardToIframe('marcaCambiado', d); });
         socket.on('tiktokEstado', function(d) { forwardToIframe('tiktokEstado', d); });
 

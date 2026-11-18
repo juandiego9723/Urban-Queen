@@ -579,12 +579,118 @@
             pointer-events: none;
             z-index: 50;
         }
+
+        /* ── EFECTO CONGELAMIENTO CON VIDEO (CONFRONTO GELADO) ── */
+        .hielo-layer {
+            position: fixed;
+            top: 0;
+            width: 50vw;
+            height: 100vh;
+            pointer-events: none;
+            z-index: 12;
+            opacity: 0;
+            transition: opacity 0.45s ease-in-out;
+            overflow: hidden;
+        }
+
+        .hielo-layer.hielo-left {
+            left: 0;
+        }
+
+        .hielo-layer.hielo-right {
+            right: 0;
+        }
+
+        .hielo-layer.mode-avatar {
+            overflow: visible;
+            z-index: 35;
+        }
+
+        .hielo-layer.active {
+            opacity: var(--hielo-opacity, 0.95);
+        }
+
+        .hielo-video {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: calc(100% * var(--hielo-scale, 1));
+            height: calc(100% * var(--hielo-scale, 1));
+            transform: translate(
+                calc(-50% + var(--hielo-offset-x, 0px)),
+                calc(-50% + var(--hielo-offset-y, 0px))
+            );
+            object-fit: contain;
+            pointer-events: none;
+            display: block;
+        }
+
+        .hielo-badge {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(
+                calc(-50% + var(--hielo-offset-x, 0px)),
+                calc(-50% + var(--hielo-offset-y, 0px))
+            );
+            font-family: 'Outfit', 'Inter', sans-serif;
+            font-weight: 900;
+            font-size: 28px;
+            color: #e0f7fa;
+            background: rgba(8, 47, 73, 0.85);
+            border: 2px solid #38bdf8;
+            padding: 8px 22px;
+            border-radius: 14px;
+            letter-spacing: 2px;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.6), 0 0 20px rgba(56, 189, 248, 0.7);
+            text-transform: uppercase;
+            white-space: nowrap;
+            z-index: 15;
+            display: none;
+        }
+
+        .hielo-layer.show-badge .hielo-badge {
+            display: block;
+        }
+
+        .hielo-shatter {
+            position: fixed;
+            top: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 84px;
+            z-index: 60;
+            pointer-events: none;
+            animation: hielo-shatter-pop 0.8s ease-out forwards;
+        }
+
+        @keyframes hielo-shatter-pop {
+            0% { transform: translate(-50%, -50%) scale(0.5); opacity: 1; }
+            45% { transform: translate(-50%, -50%) scale(1.35); opacity: 1; }
+            100% { transform: translate(-50%, -50%) scale(1.8); opacity: 0; }
+        }
     </style>
 </head>
 
 <body>
     <!-- CANVAS DE CONFETI CELEBRATORIO -->
     <canvas id="winner-confetti-canvas"></canvas>
+
+    <!-- CAPAS DE CONGELAMIENTO CON VIDEO (CONFRONTO GELADO) -->
+    <div id="hielo-left" class="hielo-layer hielo-left">
+        <video id="hielo-video-left" class="hielo-video" loop muted playsinline preload="auto">
+            <source src="/regalos/hielo_animado_suave_transparente.webm" type="video/webm">
+            <source src="/regalos/hielo_animado_suave_transparente.mov" type="video/quicktime">
+        </video>
+        <div class="hielo-badge">❄️ CONGELADA</div>
+    </div>
+
+    <div id="hielo-right" class="hielo-layer hielo-right">
+        <video id="hielo-video-right" class="hielo-video" loop muted playsinline preload="auto">
+            <source src="/regalos/hielo_animado_suave_transparente.webm" type="video/webm">
+            <source src="/regalos/hielo_animado_suave_transparente.mov" type="video/quicktime">
+        </video>
+        <div class="hielo-badge">❄️ CONGELADA</div>
+    </div>
 
     <!-- CONTENEDOR HUD PRINCIPAL -->
     <div id="pk-hud-wrap">
@@ -1072,7 +1178,177 @@
             barLeftEl.style.width = pctL + '%';
             barRightEl.style.width = pctR + '%';
             vsDividerEl.style.left = pctL + '%';
+
+            // Evaluar congelamiento automático si no hay prueba manual activa
+            evaluarHieloBatalla();
         }
+
+        // ── CONTROLADOR DE CONGELAMIENTO CON VIDEO (CONFRONTO GELADO) ──
+        const hieloLeftEl = document.getElementById('hielo-left');
+        const hieloRightEl = document.getElementById('hielo-right');
+        const hieloVideoLeft = document.getElementById('hielo-video-left');
+        const hieloVideoRight = document.getElementById('hielo-video-right');
+
+        let hieloConfig = {
+            activo: true,
+            modo: 'split',
+            escala: 100,
+            opacidad: 95,
+            offsetX: 0,
+            offsetY: 0,
+            mostrarBadge: false,
+            bucle: true,
+            videoUrl: '/regalos/hielo_animado_suave_transparente.webm'
+        };
+        let hieloTestLado = 'off'; // 'off' | 'left' | 'right' | 'both'
+        let estadoHielo = { left: false, right: false };
+
+        function aplicarConfigHieloUI(cfg) {
+            if (cfg && typeof cfg === 'object') {
+                hieloConfig = { ...hieloConfig, ...cfg };
+            }
+            const root = document.documentElement;
+            root.style.setProperty('--hielo-scale', (Number(hieloConfig.escala) || 100) / 100);
+            root.style.setProperty('--hielo-opacity', (Number(hieloConfig.opacidad) || 95) / 100);
+            root.style.setProperty('--hielo-offset-x', (Number(hieloConfig.offsetX) || 0) + 'px');
+            root.style.setProperty('--hielo-offset-y', (Number(hieloConfig.offsetY) || 0) + 'px');
+
+            const esBucle = hieloConfig.bucle !== false;
+            [hieloVideoLeft, hieloVideoRight].forEach((vid, idx) => {
+                if (!vid) return;
+                vid.loop = esBucle;
+                const el = idx === 0 ? hieloLeftEl : hieloRightEl;
+                if (esBucle && el && el.classList.contains('active') && vid.paused) {
+                    const p = vid.play();
+                    if (p && typeof p.catch === 'function') p.catch(() => {});
+                }
+            });
+
+            [hieloLeftEl, hieloRightEl].forEach((el, idx) => {
+                if (!el) return;
+                el.classList.toggle('show-badge', Boolean(hieloConfig.mostrarBadge));
+                if (hieloConfig.modo === 'avatar') {
+                    el.classList.add('mode-avatar');
+                    const targetAvatar = idx === 0 ? circleLeftEl : circleRightEl;
+                    if (targetAvatar) {
+                        const rect = targetAvatar.getBoundingClientRect();
+                        el.style.left = rect.left + 'px';
+                        el.style.right = 'auto';
+                        el.style.top = rect.top + 'px';
+                        el.style.width = rect.width + 'px';
+                        el.style.height = rect.height + 'px';
+                    }
+                } else {
+                    el.classList.remove('mode-avatar');
+                    el.style.top = '0';
+                    el.style.width = '50vw';
+                    el.style.height = '100vh';
+                    if (idx === 0) {
+                        el.style.left = '0';
+                        el.style.right = 'auto';
+                    } else {
+                        el.style.left = 'auto';
+                        el.style.right = '0';
+                    }
+                }
+            });
+
+            if (hieloTestLado !== 'off') {
+                aplicarTestHielo(hieloTestLado);
+            } else {
+                evaluarHieloBatalla();
+            }
+        }
+
+        function setLadoCongelado(lado, debeCongelar, conRuptura = true) {
+            const el = lado === 'left' ? hieloLeftEl : hieloRightEl;
+            const vid = lado === 'left' ? hieloVideoLeft : hieloVideoRight;
+            const yaCongelada = estadoHielo[lado];
+            estadoHielo[lado] = debeCongelar;
+
+            if (!el || !vid) return;
+
+            if (debeCongelar) {
+                el.classList.add('active');
+                if (!yaCongelada) {
+                    try {
+                        vid.currentTime = 0;
+                        const p = vid.play();
+                        if (p && typeof p.catch === 'function') p.catch(() => {});
+                    } catch (e) {}
+                }
+            } else {
+                el.classList.remove('active');
+                if (yaCongelada) {
+                    try {
+                        vid.pause();
+                        vid.currentTime = 0;
+                    } catch (e) {}
+                    if (conRuptura) {
+                        const shatter = document.createElement('div');
+                        shatter.className = 'hielo-shatter';
+                        shatter.style.left = lado === 'left' ? '25%' : '75%';
+                        shatter.textContent = '❄️💥';
+                        document.body.appendChild(shatter);
+                        setTimeout(() => shatter.remove(), 800);
+                    }
+                }
+            }
+        }
+
+        function limpiarHielo(conRuptura = false) {
+            setLadoCongelado('left', false, conRuptura);
+            setLadoCongelado('right', false, conRuptura);
+        }
+
+        function aplicarTestHielo(lado) {
+            hieloTestLado = lado || 'off';
+            if (hieloTestLado === 'left') {
+                setLadoCongelado('left', true, false);
+                setLadoCongelado('right', false, false);
+            } else if (hieloTestLado === 'right') {
+                setLadoCongelado('left', false, false);
+                setLadoCongelado('right', true, false);
+            } else if (hieloTestLado === 'both') {
+                setLadoCongelado('left', true, false);
+                setLadoCongelado('right', true, false);
+            } else {
+                limpiarHielo(false);
+                evaluarHieloBatalla();
+            }
+        }
+
+        function evaluarHieloBatalla() {
+            if (hieloTestLado !== 'off') return;
+            if (!hieloConfig.activo || participantes.length < 2) {
+                limpiarHielo(false);
+                return;
+            }
+            const ptsL = puntos[participantes[0]] || 0;
+            const ptsR = puntos[participantes[1]] || 0;
+            const total = ptsL + ptsR;
+
+            if (total > 0 && ptsL < ptsR) {
+                setLadoCongelado('left', true, true);
+                setLadoCongelado('right', false, true);
+            } else if (total > 0 && ptsR < ptsL) {
+                setLadoCongelado('left', false, true);
+                setLadoCongelado('right', true, true);
+            } else {
+                setLadoCongelado('left', false, true);
+                setLadoCongelado('right', false, true);
+            }
+        }
+
+        window.addEventListener('resize', () => {
+            if (hieloConfig.modo === 'avatar') aplicarConfigHieloUI(hieloConfig);
+        });
+
+        // Cargar configuración inicial de hielo si está disponible vía API
+        fetch('/api/batalla/hielo-config')
+            .then(r => r.ok ? r.json() : null)
+            .then(cfg => { if (cfg) aplicarConfigHieloUI(cfg); })
+            .catch(() => {});
 
         // Registrar donación en tiempo real para el podio de Top 3 Donadores
         function registrarDonador(chica, viewer, avatar, coins) {
@@ -1133,7 +1409,24 @@
 
         // ── SOCKET.IO EVENT HANDLERS ──
         socket.on('batallaInicio', (data) => {
+            hieloTestLado = 'off';
+            limpiarHielo(false);
+            if (data && data.hieloConfig) {
+                aplicarConfigHieloUI(data.hieloConfig);
+            }
             renderBatalla(data);
+        });
+
+        socket.on('configHieloActualizada', (cfg) => {
+            aplicarConfigHieloUI(cfg);
+        });
+
+        socket.on('testHieloOverlay', (data) => {
+            if (data && data.config) {
+                aplicarConfigHieloUI(data.config);
+            }
+            const lado = (typeof data === 'string') ? data : (data && data.lado);
+            aplicarTestHielo(lado || 'off');
         });
 
         socket.on('batallaTick', (tiempo) => {
@@ -1172,6 +1465,8 @@
             timerEl.classList.remove('urgente');
             ocultar2X();
             resetVictoriaUI();
+            hieloTestLado = 'off';
+            limpiarHielo(false);
 
             const chicaL = participantes[0];
             const chicaR = participantes[1];
@@ -1212,6 +1507,8 @@
             timerEl.classList.remove('urgente');
             ocultar2X();
             resetVictoriaUI();
+            hieloTestLado = 'off';
+            limpiarHielo(false);
         });
 
         socket.on('queensActualizadas', (d) => {

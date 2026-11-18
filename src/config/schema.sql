@@ -123,3 +123,19 @@ CREATE INDEX IF NOT EXISTS idx_historial_user_queen ON historial_regalos(user_id
 CREATE INDEX IF NOT EXISTS idx_historial_timestamp ON historial_regalos(timestamp);
 CREATE INDEX IF NOT EXISTS idx_historial_user_ts ON historial_regalos(user_id, timestamp);
 CREATE INDEX IF NOT EXISTS idx_clasico_goleadores_lookup ON clasico_goleadores(user_id, mes_key, equipo, puntos DESC, goles DESC);
+
+-- Seguridad: Habilitar Row Level Security (RLS) en todas las tablas públicas
+-- El backend Node.js se conecta vía DATABASE_URL (rol postgres) y omite RLS;
+-- esto bloquea el acceso externo por la API REST pública de Supabase (rls_disabled_in_public).
+DO $$
+DECLARE
+    r RECORD;
+BEGIN
+    FOR r IN
+        SELECT tablename
+        FROM pg_tables
+        WHERE schemaname = 'public' AND rowsecurity = false
+    LOOP
+        EXECUTE format('ALTER TABLE public.%I ENABLE ROW LEVEL SECURITY;', r.tablename);
+    END LOOP;
+END $$;
