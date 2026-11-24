@@ -35,7 +35,7 @@
 
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="description" content="Overlay de penalti: un balón vuela a izquierda, centro o derecha al recibir un regalo.">
+    <meta name="description" content="Overlay de penalti: un balón 3D vuela con curva a izquierda, centro o derecha al recibir un regalo.">
     <title>Overlay Penalti - Urban Queens</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -64,55 +64,298 @@
         .shot.centro    { --dest-x: 50vw; }
         .shot.derecha   { --dest-x: 80vw; }
 
-        /* Contenedor que se mueve en X (linea casi recta) */
+        /* Onda de disparo en el punto de salida */
+        .kick-wave {
+            position: absolute;
+            left: 50vw; top: 92vh;
+            width: 180px; height: 70px;
+            margin: -35px 0 0 -90px;
+            border-radius: 50%;
+            border: 5px solid rgba(255, 255, 255, 0.85);
+            box-shadow: 0 0 25px rgba(255, 215, 0, 0.8);
+            animation: kickBurst 0.45s cubic-bezier(.15, .8, .3, 1) forwards;
+        }
+        @keyframes kickBurst {
+            0%   { transform: scale(0.3); opacity: 1; }
+            100% { transform: scale(2.2); opacity: 0; }
+        }
+
+        /* Contenedor que se mueve en X con efecto curva / chanfle (Magnus effect) */
         .ball-x {
             position: absolute;
             left: 50vw; top: 0;
             width: 0; height: 0;
-            animation: moveX 0.95s cubic-bezier(.25, .6, .3, 1) forwards;
         }
-        /* Contenedor que se mueve en Y con arco (sube rápido, frena al llegar) */
+        .shot.izquierda .ball-x {
+            animation: moveXLeft 0.92s cubic-bezier(.22, .68, .32, 1) forwards;
+        }
+        .shot.derecha .ball-x {
+            animation: moveXRight 0.92s cubic-bezier(.22, .68, .32, 1) forwards;
+        }
+        .shot.centro .ball-x {
+            animation: moveXCenter 0.92s ease-in-out forwards;
+        }
+
+        /* Contenedor que se mueve en Y con arco parabólico */
         .ball-y {
             position: absolute;
             left: 0; top: 92vh;
             width: 0; height: 0;
-            animation: moveY 0.95s cubic-bezier(.15, .75, .3, 1) forwards;
+            animation: moveY 0.92s cubic-bezier(.16, .82, .28, 1) forwards;
         }
+
+        /* Curva hacia la izquierda: abre más a la izquierda (-38vw) y cierra al objetivo (-30vw) */
+        @keyframes moveXLeft {
+            0%   { transform: translateX(0); }
+            55%  { transform: translateX(-37vw); }
+            100% { transform: translateX(calc(var(--dest-x) - 50vw)); }
+        }
+        /* Curva hacia la derecha: abre más a la derecha (+38vw) y cierra al objetivo (+30vw) */
+        @keyframes moveXRight {
+            0%   { transform: translateX(0); }
+            55%  { transform: translateX(37vw); }
+            100% { transform: translateX(calc(var(--dest-x) - 50vw)); }
+        }
+        /* Tiro al centro tipo "knuckleball" / hoja seca con curva en S */
+        @keyframes moveXCenter {
+            0%   { transform: translateX(0); }
+            35%  { transform: translateX(-5.5vw); }
+            72%  { transform: translateX(4.5vw); }
+            100% { transform: translateX(0); }
+        }
+        /* Arco vertical con leve elevación antes de clavarse en el ángulo */
+        @keyframes moveY {
+            0%   { transform: translateY(0); }
+            68%  { transform: translateY(calc(var(--dest-y) - 96vh)); }
+            100% { transform: translateY(calc(var(--dest-y) - 92vh)); }
+        }
+
+        /* Contenedor de física pos-vuelo (vibración clavado, caída de gol o desvío de atajada) */
+        .ball-physics {
+            position: absolute;
+            width: 0; height: 0;
+        }
+
+        /* El balón con Squash & Stretch durante el disparo y el impacto */
         .ball {
             position: absolute;
             width: 210px; height: 210px;
             margin: -105px 0 0 -105px;
-            filter: drop-shadow(0 18px 18px rgba(0, 0, 0, 0.55));
-            animation: shrinkSpin 0.95s cubic-bezier(.2, .7, .3, 1) forwards;
+            filter: drop-shadow(0 18px 20px rgba(0, 0, 0, 0.65));
+            animation: flightScaleSquash 0.92s cubic-bezier(.2, .7, .3, 1) forwards;
+            will-change: transform;
         }
-        .ball svg { width: 100%; height: 100%; display: block; }
+        .ball svg { width: 100%; height: 100%; display: block; overflow: visible; }
 
-        @keyframes moveX {
-            from { transform: translateX(0); }
-            to   { transform: translateX(calc(var(--dest-x) - 50vw)); }
-        }
-        @keyframes moveY {
-            from { transform: translateY(0); }
-            to   { transform: translateY(calc(var(--dest-y) - 92vh)); }
-        }
-        @keyframes shrinkSpin {
-            0%   { transform: scale(1.5) rotate(0deg); }
-            100% { transform: scale(0.72) rotate(900deg); }
+        @keyframes flightScaleSquash {
+            0%   { transform: scale(1.65, 1.25) rotate(0deg); }
+            10%  { transform: scale(1.25, 1.62) rotate(-10deg); }
+            24%  { transform: scale(1.32, 1.32) rotate(6deg); }
+            90%  { transform: scale(0.76, 0.76) rotate(0deg); }
+            96%  { transform: scale(0.92, 0.56) rotate(0deg); }
+            100% { transform: scale(0.72, 0.72) rotate(0deg); }
         }
 
-        /* Estela del balón */
+        /* ── Rotación 3D Realista de la Malla Interna del Balón ── */
+        .ball-seam-spin {
+            transform-origin: 0px 0px;
+            animation: seamSpin3D 0.42s linear infinite;
+        }
+        .ball-seam-scroll {
+            animation: seamScroll3D 0.42s linear infinite;
+        }
+        @keyframes seamSpin3D {
+            from { transform: rotate(0deg); }
+            to   { transform: rotate(360deg); }
+        }
+        @keyframes seamScroll3D {
+            from { transform: translate(0px, 0px); }
+            to   { transform: translate(-64px, -64px); }
+        }
+
+        /* ── ESTADO CLAVADO EN EL IMPACTO (Girando rápido + Vibrando + Chispas) ── */
+        .ball-physics.pinned {
+            animation: highTensionVibrate 0.07s linear infinite;
+        }
+        .ball-physics.pinned .ball {
+            filter:
+                drop-shadow(0 0 22px rgba(255, 180, 0, 0.95))
+                drop-shadow(0 0 42px rgba(255, 70, 0, 0.75))
+                drop-shadow(0 14px 18px rgba(0, 0, 0, 0.7));
+        }
+        .ball-physics.pinned .ball-seam-spin {
+            animation-duration: 0.16s !important;
+        }
+        .ball-physics.pinned .ball-seam-scroll {
+            animation-duration: 0.16s !important;
+        }
+
+        @keyframes highTensionVibrate {
+            0%   { transform: translate(0, 0) scale(1, 1); }
+            25%  { transform: translate(-4px, 3px) scale(1.03, 0.97); }
+            50%  { transform: translate(4px, -3px) scale(0.97, 1.03); }
+            75%  { transform: translate(-3px, -4px) scale(1.02, 0.98); }
+            100% { transform: translate(3px, 4px) scale(0.98, 1.02); }
+        }
+
+        /* Anillo de fricción incandescente mientras el balón está clavado */
+        .friction-halo {
+            position: absolute;
+            width: 170px; height: 170px;
+            margin: -85px 0 0 -85px;
+            border-radius: 50%;
+            border: 4px dashed rgba(255, 230, 110, 0.95);
+            box-shadow: 0 0 28px rgba(255, 120, 0, 0.9), inset 0 0 22px rgba(255, 200, 0, 0.7);
+            opacity: 0;
+            pointer-events: none;
+        }
+        .ball-physics.pinned .friction-halo {
+            opacity: 1;
+            animation: haloSpin 0.35s linear infinite;
+        }
+        @keyframes haloSpin {
+            from { transform: rotate(0deg) scale(0.96); }
+            50%  { transform: rotate(180deg) scale(1.05); }
+            to   { transform: rotate(360deg) scale(0.96); }
+        }
+
+        /* Chispas radiales que salen del balón clavado */
+        .spark {
+            position: absolute;
+            left: 0; top: 0;
+            width: var(--len, 28px);
+            height: 4px;
+            margin-top: -2px;
+            border-radius: 4px;
+            background: linear-gradient(90deg, #ffffff 0%, #ffe600 45%, #ff3c00 100%);
+            box-shadow: 0 0 10px #ff9900, 0 0 18px #ff3300;
+            transform-origin: 0% 50%;
+            pointer-events: none;
+            animation: sparkShoot var(--dur, 0.38s) cubic-bezier(.12, .78, .35, 1) forwards;
+        }
+        @keyframes sparkShoot {
+            0% {
+                transform: rotate(var(--ang)) translateX(48px) scaleX(0.4);
+                opacity: 1;
+            }
+            65% {
+                opacity: 1;
+            }
+            100% {
+                transform: rotate(var(--ang)) translateX(var(--dist, 165px)) scaleX(0.15);
+                opacity: 0;
+            }
+        }
+
+        /* Onda de choque al clavarse a los 0.92s */
+        .impact-shockwave {
+            position: absolute;
+            left: 0; top: 0;
+            width: 160px; height: 160px;
+            margin: -80px 0 0 -80px;
+            border-radius: 50%;
+            border: 8px solid #ffffff;
+            box-shadow: 0 0 35px #FFD700, inset 0 0 25px #FFD700;
+            animation: shockwaveExpand 0.55s cubic-bezier(.15, .85, .3, 1) forwards;
+            pointer-events: none;
+        }
+        @keyframes shockwaveExpand {
+            0%   { transform: scale(0.35); opacity: 1; border-width: 12px; }
+            100% { transform: scale(2.4); opacity: 0; border-width: 1px; }
+        }
+
+        /* ── REACCIÓN FÍSICA 1: ¡GOL! (Rompe/sacude la red y cae rebotando con gravedad) ── */
+        .ball-physics.goal-drop {
+            animation: goalGravityBounce 1.85s linear forwards !important;
+        }
+        .ball-physics.goal-drop .ball {
+            filter: drop-shadow(0 18px 16px rgba(0, 0, 0, 0.6));
+        }
+        .ball-physics.goal-drop .ball-seam-spin,
+        .ball-physics.goal-drop .ball-seam-scroll {
+            animation-duration: 0.75s !important;
+        }
+        @keyframes goalGravityBounce {
+            0%   { transform: translate(0, 0) scale(1); }
+            14%  { transform: translate(0, -18px) scale(0.84); } /* Empuja la red al fondo */
+            42%  { transform: translate(6px, 34vh) scale(0.78, 0.78); } /* Cae al césped */
+            46%  { transform: translate(8px, 35vh) scale(0.92, 0.64); } /* Squash 1er bote */
+            62%  { transform: translate(14px, 21vh) scale(0.76, 0.76); } /* Sube 1er rebote */
+            78%  { transform: translate(20px, 35vh) scale(0.86, 0.68); } /* Squash 2do bote */
+            88%  { transform: translate(25px, 29vh) scale(0.75, 0.75); } /* Sube 2do rebote */
+            100% { transform: translate(30px, 35vh) scale(0.75, 0.75); } /* Reposo en el suelo */
+        }
+
+        /* Red hexagonal que se sacude y brilla en ¡GOL! */
+        .goal-net-burst {
+            position: absolute;
+            left: 0; top: 0;
+            width: 380px; height: 380px;
+            margin: -190px 0 0 -190px;
+            pointer-events: none;
+            animation: netStretchShake 1.1s cubic-bezier(.18, .85, .32, 1.2) forwards;
+        }
+        @keyframes netStretchShake {
+            0%   { transform: scale(0.45); opacity: 0; }
+            18%  { transform: scale(1.22); opacity: 1; }
+            36%  { transform: scale(0.95) rotate(3deg); opacity: 0.95; }
+            54%  { transform: scale(1.06) rotate(-2deg); opacity: 0.85; }
+            100% { transform: scale(1.15); opacity: 0; }
+        }
+
+        /* ── REACCIÓN FÍSICA 2: ¡ATAJADA! (Guantes/Escudo y balón desviado fuera de pantalla) ── */
+        .ball-physics.save-deflect-left {
+            animation: deflectOutLeft 0.75s cubic-bezier(.15, .75, .35, 1) forwards !important;
+        }
+        .ball-physics.save-deflect-right {
+            animation: deflectOutRight 0.75s cubic-bezier(.15, .75, .35, 1) forwards !important;
+        }
+        .ball-physics.save-deflect-left .ball-seam-spin,
+        .ball-physics.save-deflect-right .ball-seam-spin {
+            animation-direction: reverse !important;
+            animation-duration: 0.14s !important;
+        }
+        @keyframes deflectOutLeft {
+            0%   { transform: translate(0, 0) scale(0.75, 1.15); }
+            12%  { transform: translate(-6vw, -4vh) scale(1.1, 0.9); }
+            100% { transform: translate(-75vw, -35vh) scale(1.35) rotate(-540deg); opacity: 0; }
+        }
+        @keyframes deflectOutRight {
+            0%   { transform: translate(0, 0) scale(0.75, 1.15); }
+            12%  { transform: translate(6vw, -4vh) scale(1.1, 0.9); }
+            100% { transform: translate(75vw, -35vh) scale(1.35) rotate(540deg); opacity: 0; }
+        }
+
+        /* Escudo y guantes de bloqueo en ¡ATAJADA! */
+        .save-shield-burst {
+            position: absolute;
+            left: 0; top: 0;
+            width: 320px; height: 320px;
+            margin: -160px 0 0 -160px;
+            pointer-events: none;
+            animation: shieldBlockPop 0.95s cubic-bezier(.16, 1.3, .3, 1) forwards;
+        }
+        @keyframes shieldBlockPop {
+            0%   { transform: scale(0.25) rotate(-12deg); opacity: 0; }
+            22%  { transform: scale(1.15) rotate(4deg); opacity: 1; }
+            45%  { transform: scale(1) rotate(0deg); opacity: 1; }
+            100% { transform: scale(1.25); opacity: 0; }
+        }
+
+        /* Estela aerodinámica del balón durante el vuelo */
         .trail {
             position: absolute;
-            width: 90px; height: 90px;
-            margin: -45px 0 0 -45px;
+            width: 110px; height: 110px;
+            margin: -55px 0 0 -55px;
             border-radius: 50%;
-            background: radial-gradient(circle, rgba(255, 255, 255, 0.55), rgba(255, 255, 255, 0) 70%);
+            background: radial-gradient(circle, rgba(255, 240, 170, 0.85) 0%, rgba(255, 140, 0, 0.45) 45%, rgba(255, 255, 255, 0) 72%);
+            mix-blend-mode: screen;
             opacity: 0;
-            animation: trailFade 0.7s ease-out forwards;
+            animation: trailFade 0.72s ease-out forwards;
         }
         @keyframes trailFade {
-            0%   { opacity: 0.8; transform: scale(1.6); }
-            100% { opacity: 0; transform: scale(0.3); }
+            0%   { opacity: 0.9; transform: scale(1.45); }
+            100% { opacity: 0; transform: scale(0.2); }
         }
 
         /* Marca de la zona de impacto */
@@ -121,7 +364,7 @@
             left: var(--dest-x); top: var(--dest-y);
             width: 0; height: 0;
             opacity: 0;
-            animation: targetIn 0.35s ease-out 0.85s forwards;
+            animation: targetIn 0.35s ease-out 0.82s forwards;
         }
         .ring {
             position: absolute;
@@ -130,10 +373,10 @@
             border-radius: 50%;
             border: 7px solid #FFD700;
             box-shadow: 0 0 30px rgba(255, 215, 0, 0.85), inset 0 0 30px rgba(255, 215, 0, 0.5);
-            animation: ringPulse 0.9s ease-in-out infinite alternate;
+            animation: ringPulse 0.45s ease-in-out infinite alternate;
         }
         @keyframes ringPulse {
-            from { transform: scale(0.88); opacity: 0.75; }
+            from { transform: scale(0.9); opacity: 0.8; }
             to   { transform: scale(1.12); opacity: 1; }
         }
         @keyframes targetIn { to { opacity: 1; } }
@@ -195,7 +438,7 @@
         @keyframes bannerPop {
             0%   { opacity: 0; transform: translate(-50%, 0) scale(0.2) rotate(-6deg); }
             12%  { opacity: 1; transform: translate(-50%, 0) scale(1.08) rotate(2deg); }
-            22%  { transform: translate(-50%, 0) scale(1) rotate(0deg); }
+            22%  { opacity: 1; transform: translate(-50%, 0) scale(1) rotate(0deg); }
             85%  { opacity: 1; transform: translate(-50%, 0) scale(1); }
             100% { opacity: 0; transform: translate(-50%, -20px) scale(0.9); }
         }
@@ -234,6 +477,8 @@
 
         let tiroActual = null;
         let limpiarTimer = null;
+        let impactoTimer = null;
+        let chispasInterval = null;
 
         // Polígono regular: devuelve los puntos "x,y ..." con centro (cx,cy), radio r y rotación inicial
         function poligono(cx, cy, r, rotDeg, lados) {
@@ -245,83 +490,197 @@
             return pts.join(' ');
         }
 
+        // Genera una celda repetible de pentágonos y costuras para simular rotación esférica 3D
+        function crearCeldaPatron(ox, oy) {
+            let html = `<polygon points="${poligono(ox, oy, 13.5, -90, 5)}"/>`;
+            for (let i = 0; i < 5; i++) {
+                const ang = (-90 + 72 * i) * Math.PI / 180;
+                const x1 = ox + 13 * Math.cos(ang), y1 = oy + 13 * Math.sin(ang);
+                const x2 = ox + 29 * Math.cos(ang), y2 = oy + 29 * Math.sin(ang);
+                html += `<line x1="${x1.toFixed(2)}" y1="${y1.toFixed(2)}" x2="${x2.toFixed(2)}" y2="${y2.toFixed(2)}"/>`;
+            }
+            return html;
+        }
+
         function crearBalon() {
             const svg = document.createElementNS(SVG_NS, 'svg');
             svg.setAttribute('viewBox', '-50 -50 100 100');
             const uid = 'b' + Math.floor(Math.random() * 1e6);
+
+            // Malla repetible en cuadrícula de paso 64px para desplazamiento continuo sin cortes
+            const offsets = [-64, 0, 64];
+            let mallaHTML = '';
+            for (const gx of offsets) {
+                for (const gy of offsets) {
+                    mallaHTML += crearCeldaPatron(gx, gy);
+                    mallaHTML += crearCeldaPatron(gx + 32, gy + 32);
+                }
+            }
+
             svg.innerHTML = `
                 <defs>
-                    <radialGradient id="${uid}g" cx="35%" cy="30%" r="75%">
+                    <!-- Gradiente base perlado del cuero -->
+                    <radialGradient id="${uid}base" cx="32%" cy="28%" r="78%">
                         <stop offset="0%" stop-color="#ffffff"/>
-                        <stop offset="70%" stop-color="#e8e8ee"/>
-                        <stop offset="100%" stop-color="#9a9aa8"/>
+                        <stop offset="55%" stop-color="#f0f2f7"/>
+                        <stop offset="85%" stop-color="#b8bcc9"/>
+                        <stop offset="100%" stop-color="#6e7385"/>
+                    </radialGradient>
+                    <!-- Sombra esférica 3D fija (no gira con el balón) -->
+                    <radialGradient id="${uid}shade" cx="30%" cy="25%" r="75%">
+                        <stop offset="0%" stop-color="#ffffff" stop-opacity="0.35"/>
+                        <stop offset="50%" stop-color="#000000" stop-opacity="0"/>
+                        <stop offset="84%" stop-color="#0b0d14" stop-opacity="0.45"/>
+                        <stop offset="100%" stop-color="#05060a" stop-opacity="0.78"/>
                     </radialGradient>
                     <clipPath id="${uid}c"><circle r="48"/></clipPath>
                 </defs>
-                <circle r="48" fill="url(#${uid}g)" stroke="#2a2a33" stroke-width="2"/>
-                <g clip-path="url(#${uid}c)" fill="#1b1b22" stroke="#1b1b22" stroke-width="1.6" stroke-linejoin="round">
-                    <polygon points="${poligono(0, 0, 15, -90, 5)}"/>
-                    ${[0, 1, 2, 3, 4].map(i => {
-                        const ang = (-90 + 72 * i) * Math.PI / 180;
-                        const x1 = 15 * Math.cos(ang), y1 = 15 * Math.sin(ang);
-                        const x2 = 33 * Math.cos(ang), y2 = 33 * Math.sin(ang);
-                        const cx = 49 * Math.cos(ang), cy = 49 * Math.sin(ang);
-                        return `<line x1="${x1.toFixed(2)}" y1="${y1.toFixed(2)}" x2="${x2.toFixed(2)}" y2="${y2.toFixed(2)}"/>` +
-                               `<polygon points="${poligono(cx, cy, 15, -90 + 72 * i + 180, 5)}"/>`;
-                    }).join('')}
+
+                <!-- 1. Esfera base -->
+                <circle r="48" fill="url(#${uid}base)"/>
+
+                <!-- 2. Textura 3D que se desplaza y gira dentro de la esfera -->
+                <g clip-path="url(#${uid}c)">
+                    <g class="ball-seam-spin">
+                        <g class="ball-seam-scroll" fill="#161821" stroke="#222533" stroke-width="2.2" stroke-linejoin="round" stroke-linecap="round">
+                            ${mallaHTML}
+                        </g>
+                    </g>
                 </g>
-                <ellipse cx="-17" cy="-24" rx="14" ry="7" fill="#fff" opacity="0.5" transform="rotate(-35 -17 -24)"/>`;
+
+                <!-- 3. Iluminación volumétrica y brillo especular fijos (dan el efecto 3D real) -->
+                <circle r="48" fill="url(#${uid}shade)" stroke="#1b1d26" stroke-width="2"/>
+                <ellipse cx="-16" cy="-23" rx="16" ry="7.5" fill="#ffffff" opacity="0.65" transform="rotate(-32 -16 -23)"/>
+                <ellipse cx="-22" cy="-14" rx="5" ry="2.5" fill="#ffffff" opacity="0.45" transform="rotate(-32 -22 -14)"/>
+            `;
             return svg;
+        }
+
+        function detenerChispas() {
+            if (chispasInterval) {
+                clearInterval(chispasInterval);
+                chispasInterval = null;
+            }
+            if (impactoTimer) {
+                clearTimeout(impactoTimer);
+                impactoTimer = null;
+            }
         }
 
         function limpiarEscena() {
             clearTimeout(limpiarTimer);
+            detenerChispas();
             stage.innerHTML = '';
             banner.className = 'banner';
             banner.innerHTML = '';
             tiroActual = null;
         }
 
+        function emitirRafagaChispas(contenedor, cantidad = 5) {
+            if (!contenedor || !contenedor.isConnected) return;
+            for (let i = 0; i < cantidad; i++) {
+                const sp = document.createElement('div');
+                sp.className = 'spark';
+                const ang = (Math.random() * 360).toFixed(1) + 'deg';
+                const dist = (115 + Math.random() * 95).toFixed(0) + 'px';
+                const len = (18 + Math.random() * 24).toFixed(0) + 'px';
+                const dur = (0.24 + Math.random() * 0.22).toFixed(2) + 's';
+                sp.style.setProperty('--ang', ang);
+                sp.style.setProperty('--dist', dist);
+                sp.style.setProperty('--len', len);
+                sp.style.setProperty('--dur', dur);
+                contenedor.appendChild(sp);
+                setTimeout(() => sp.remove(), 500);
+            }
+        }
+
+        function crearEfectoRedGol() {
+            const wrap = document.createElement('div');
+            wrap.className = 'goal-net-burst';
+            wrap.innerHTML = `
+                <svg viewBox="-150 -150 300 300" width="100%" height="100%">
+                    <defs>
+                        <radialGradient id="goalGlow" cx="50%" cy="50%" r="50%">
+                            <stop offset="0%" stop-color="#FFF7B0" stop-opacity="0.95"/>
+                            <stop offset="45%" stop-color="#FFD700" stop-opacity="0.65"/>
+                            <stop offset="100%" stop-color="#FF6B00" stop-opacity="0"/>
+                        </radialGradient>
+                    </defs>
+                    <circle r="140" fill="url(#goalGlow)"/>
+                    <!-- Malla tensada de la red en el punto de impacto -->
+                    <g stroke="#FFFFFF" stroke-width="2.5" stroke-opacity="0.85" fill="none">
+                        <polygon points="${poligono(0, 0, 35, 0, 6)}"/>
+                        <polygon points="${poligono(0, 0, 70, 0, 6)}"/>
+                        <polygon points="${poligono(0, 0, 105, 0, 6)}"/>
+                        <line x1="-120" y1="-70" x2="120" y2="70"/>
+                        <line x1="-120" y1="70" x2="120" y2="-70"/>
+                        <line x1="0" y1="-130" x2="0" y2="130"/>
+                        <line x1="-125" y1="0" x2="125" y2="0"/>
+                    </g>
+                </svg>
+            `;
+            return wrap;
+        }
+
+        function crearEfectoEscudoAtajada() {
+            const wrap = document.createElement('div');
+            wrap.className = 'save-shield-burst';
+            wrap.innerHTML = `
+                <svg viewBox="-150 -150 300 300" width="100%" height="100%">
+                    <defs>
+                        <radialGradient id="saveGlow" cx="50%" cy="50%" r="50%">
+                            <stop offset="0%" stop-color="#E0FFFF" stop-opacity="0.95"/>
+                            <stop offset="50%" stop-color="#00E5FF" stop-opacity="0.7"/>
+                            <stop offset="100%" stop-color="#0051FF" stop-opacity="0"/>
+                        </radialGradient>
+                    </defs>
+                    <circle r="135" fill="url(#saveGlow)"/>
+                    <!-- Escudo hexagonal energético de bloqueo -->
+                    <polygon points="${poligono(0, 0, 95, 30, 6)}" fill="rgba(0, 229, 255, 0.22)" stroke="#00E5FF" stroke-width="7"/>
+                    <polygon points="${poligono(0, 0, 68, 30, 6)}" fill="none" stroke="#FFFFFF" stroke-width="4" stroke-dasharray="14 8"/>
+                    <!-- Silueta estilizada de guantes/impacto central -->
+                    <circle r="28" fill="#FFFFFF" opacity="0.9"/>
+                </svg>
+            `;
+            return wrap;
+        }
+
         function lanzarPenalti(data) {
             limpiarEscena();
             tiroActual = data;
             const dir = ['izquierda', 'centro', 'derecha'].includes(data.direccion) ? data.direccion : 'centro';
+            tiroActual.direccionNorm = dir;
 
             const shot = document.createElement('div');
             shot.className = 'shot ' + dir;
             shot.id = 'shot-' + data.id;
 
-            // Estelas
-            for (let i = 0; i < 4; i++) {
+            // Onda de disparo en el césped/punto de partida
+            const kickWave = document.createElement('div');
+            kickWave.className = 'kick-wave';
+            shot.appendChild(kickWave);
+
+            // Estelas aerodinámicas siguiendo la curva
+            for (let i = 1; i <= 6; i++) {
+                const delay = (i * 0.032).toFixed(3) + 's';
                 const wrapX = document.createElement('div');
                 wrapX.className = 'ball-x';
-                wrapX.style.animationDelay = (i * 0.04) + 's';
+                wrapX.style.animationDelay = delay;
                 const wrapY = document.createElement('div');
                 wrapY.className = 'ball-y';
-                wrapY.style.animationDelay = (i * 0.04) + 's';
+                wrapY.style.animationDelay = delay;
                 const t = document.createElement('div');
                 t.className = 'trail';
-                t.style.animationDelay = (i * 0.04) + 's';
+                t.style.animationDelay = delay;
                 wrapY.appendChild(t);
                 wrapX.appendChild(wrapY);
                 shot.appendChild(wrapX);
             }
 
-            // Balón
-            const bx = document.createElement('div');
-            bx.className = 'ball-x';
-            const by = document.createElement('div');
-            by.className = 'ball-y';
-            const ball = document.createElement('div');
-            ball.className = 'ball';
-            ball.appendChild(crearBalon());
-            by.appendChild(ball);
-            bx.appendChild(by);
-            shot.appendChild(bx);
-
             // Marca de zona + etiqueta del viewer
             const target = document.createElement('div');
             target.className = 'target';
+            target.id = 'target-' + data.id;
             const ring = document.createElement('div');
             ring.className = 'ring';
             target.appendChild(ring);
@@ -353,7 +712,45 @@
             target.appendChild(tag);
             shot.appendChild(target);
 
+            // Balón 3D + Contenedor de Física de Impacto
+            const bx = document.createElement('div');
+            bx.className = 'ball-x';
+            const by = document.createElement('div');
+            by.className = 'ball-y';
+            const physics = document.createElement('div');
+            physics.className = 'ball-physics';
+            physics.id = 'physics-' + data.id;
+
+            const halo = document.createElement('div');
+            halo.className = 'friction-halo';
+            physics.appendChild(halo);
+
+            const ball = document.createElement('div');
+            ball.className = 'ball';
+            ball.appendChild(crearBalon());
+            physics.appendChild(ball);
+
+            by.appendChild(physics);
+            bx.appendChild(by);
+            shot.appendChild(bx);
+
             stage.appendChild(shot);
+
+            // Al llegar al punto de impacto (0.90s): clavar el balón girando a máxima velocidad y soltando chispas
+            impactoTimer = setTimeout(() => {
+                if (!physics.isConnected) return;
+                physics.classList.add('pinned');
+
+                const wave = document.createElement('div');
+                wave.className = 'impact-shockwave';
+                target.appendChild(wave);
+                setTimeout(() => wave.remove(), 600);
+
+                emitirRafagaChispas(target, 12);
+                chispasInterval = setInterval(() => {
+                    emitirRafagaChispas(target, 5);
+                }, 85);
+            }, 900);
         }
 
         function avatarInicial(nombre) {
@@ -365,6 +762,10 @@
 
         function mostrarResultado(data) {
             const shot = tiroActual ? document.getElementById('shot-' + tiroActual.id) : null;
+            const physics = tiroActual ? document.getElementById('physics-' + tiroActual.id) : null;
+            const target = tiroActual ? document.getElementById('target-' + tiroActual.id) : null;
+
+            detenerChispas();
 
             if (data.resultado === 'descartado') {
                 if (shot) shot.classList.add('fade');
@@ -373,6 +774,28 @@
             }
 
             const esGol = data.resultado === 'gol';
+
+            // Reacción física del balón según GOL o ATAJADA
+            if (physics) {
+                physics.classList.remove('pinned');
+                if (esGol) {
+                    physics.classList.add('goal-drop');
+                    if (target) {
+                        target.appendChild(crearEfectoRedGol());
+                        emitirRafagaChispas(target, 18);
+                    }
+                } else {
+                    const dir = (tiroActual && tiroActual.direccionNorm) || 'centro';
+                    const deflectClass = dir === 'izquierda'
+                        ? 'save-deflect-left'
+                        : (dir === 'derecha' ? 'save-deflect-right' : (Math.random() < 0.5 ? 'save-deflect-left' : 'save-deflect-right'));
+                    physics.classList.add(deflectClass);
+                    if (target) {
+                        target.appendChild(crearEfectoEscudoAtajada());
+                    }
+                }
+            }
+
             banner.className = 'banner ' + (esGol ? 'gol' : 'atajada');
             banner.innerHTML = (esGol ? '¡GOL!' : '¡ATAJADA!') +
                 (data.puntos > 0 ? `<span class="banner-pts">+${data.puntos} PTS${data.destino ? ' · ' + escapeHtml(data.destino) : ''}</span>` : '');

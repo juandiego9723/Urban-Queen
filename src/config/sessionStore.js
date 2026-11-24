@@ -172,6 +172,10 @@ async function getUserSessionAsync(username, io, procesarPuntosFn) {
                 return { title: '¡NUEVA QUEEN!', target: 10000, current: 0 };
             })(),
             hieloConfig: (() => {
+                const isCosmicAgency = (dbInstance.agencySlug || (username && username.toLowerCase().includes('cosmic') ? 'cosmic' : 'urbanqueens')) === 'cosmic';
+                const agencyVideoUrl = isCosmicAgency
+                    ? '/regalos/hielo_congelando_suave.webm'
+                    : '/regalos/hielo_cristal_transparente.webm';
                 const defaults = {
                     activo: true,
                     modo: 'split',
@@ -181,11 +185,15 @@ async function getUserSessionAsync(username, io, procesarPuntosFn) {
                     offsetY: 0,
                     mostrarBadge: false,
                     bucle: true,
-                    videoUrl: '/regalos/hielo_animado_suave_transparente.webm'
+                    videoUrl: agencyVideoUrl
                 };
                 try {
                     const raw = dbInstance.getConfigVal('hielo_config');
-                    if (raw) return { ...defaults, ...JSON.parse(raw) };
+                    if (raw) {
+                        const parsed = JSON.parse(raw);
+                        parsed.videoUrl = agencyVideoUrl;
+                        return { ...defaults, ...parsed };
+                    }
                 } catch (e) {}
                 return defaults;
             })()
@@ -288,16 +296,29 @@ function getUserSession(username, io, procesarPuntosFn) {
                 offsetY: 0,
                 mostrarBadge: false,
                 bucle: true,
-                videoUrl: '/regalos/hielo_animado_suave_transparente.webm'
+                videoUrl: (username && username.toLowerCase().includes('cosmic'))
+                    ? '/regalos/hielo_congelando_suave.webm'
+                    : '/regalos/hielo_cristal_transparente.webm'
             }
         };
 
         dbInstance.init().then(() => {
             try {
+                if (dbInstance.agencySlug) session.agencySlug = dbInstance.agencySlug;
+                const isCosmicAgency = session.agencySlug === 'cosmic';
+                const agencyVideoUrl = isCosmicAgency
+                    ? '/regalos/hielo_congelando_suave.webm'
+                    : '/regalos/hielo_cristal_transparente.webm';
+                session.hieloConfig.videoUrl = agencyVideoUrl;
+
                 const rawGoal = session.db.getConfigVal('goal_config');
                 if (rawGoal) session.goalConfig = JSON.parse(rawGoal);
                 const rawHielo = session.db.getConfigVal('hielo_config');
-                if (rawHielo) session.hieloConfig = { ...session.hieloConfig, ...JSON.parse(rawHielo) };
+                if (rawHielo) {
+                    const parsedHielo = JSON.parse(rawHielo);
+                    parsedHielo.videoUrl = agencyVideoUrl;
+                    session.hieloConfig = { ...session.hieloConfig, ...parsedHielo };
+                }
                 const rawPodioRank = session.db.getConfigVal('podio_ranking');
                 if (rawPodioRank && session.podio) {
                     try { session.podio.puntosRanking = JSON.parse(rawPodioRank); } catch(e){}

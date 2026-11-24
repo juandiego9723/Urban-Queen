@@ -45,7 +45,7 @@
         })();
     </script>
 
-    <title>HUD Dinámica Activadores — TikDance</title>
+    <title>HUD Dinámica Activadores — Cosmic</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=TikTok+Sans:ital,wght@0,300..900;1,300..900&family=Montserrat:ital,wght@0,600;0,800;0,900;1,700&display=swap" rel="stylesheet">
@@ -59,6 +59,17 @@
             user-select: none;
         }
 
+        :root {
+            --card-w: 116px;
+            --card-h: 122px;
+            --hud-gap: 14px;
+            --gift-size: 46px;
+            --name-size: 13.5px;
+            --count-size: 19px;
+            --pill-min-w: 78px;
+            --pill-h: 28px;
+        }
+
         body {
             background: transparent;
             overflow: hidden;
@@ -68,106 +79,315 @@
             flex-direction: column;
             align-items: center;
             justify-content: flex-end;
-            padding-bottom: 35px;
+            padding-bottom: 38px;
         }
 
-        /* ── CONTENEDOR PRINCIPAL HORIZONTAL (HUD) ── */
+        /* ── CONTENEDOR PRINCIPAL HORIZONTAL (HUD) CON AUTO-ESCALADO ── */
         #activadores-hud {
             display: flex;
             flex-direction: row;
             align-items: flex-end;
             justify-content: center;
-            gap: 15px;
+            gap: var(--hud-gap);
             max-width: 98vw;
             position: relative;
             z-index: 10;
-            filter: drop-shadow(0 10px 25px rgba(0, 0, 0, 0.6));
-            transition: all 0.3s ease;
-            min-height: 140px;
+            filter: drop-shadow(0 10px 24px rgba(0, 0, 0, 0.55));
+            transition: gap 0.3s ease;
+            min-height: 165px;
         }
 
-        /* ── TARJETA INDIVIDUAL DE BAILARINA ── */
+        /* Auto-ajuste según número de bailarinas */
+        #activadores-hud[data-size="large"] {
+            --card-w: 126px;
+            --card-h: 134px;
+            --hud-gap: 16px;
+            --gift-size: 50px;
+            --name-size: 14.5px;
+            --count-size: 20px;
+            --pill-min-w: 84px;
+            --pill-h: 30px;
+        }
+
+        #activadores-hud[data-size="medium"] {
+            --card-w: 116px;
+            --card-h: 122px;
+            --hud-gap: 13px;
+            --gift-size: 46px;
+            --name-size: 13.5px;
+            --count-size: 19px;
+            --pill-min-w: 78px;
+            --pill-h: 28px;
+        }
+
+        #activadores-hud[data-size="compact"] {
+            --card-w: 102px;
+            --card-h: 110px;
+            --hud-gap: 10px;
+            --gift-size: 41px;
+            --name-size: 12px;
+            --count-size: 17px;
+            --pill-min-w: 68px;
+            --pill-h: 26px;
+        }
+
+        #activadores-hud[data-size="ultra"] {
+            --card-w: 88px;
+            --card-h: 98px;
+            --hud-gap: 8px;
+            --gift-size: 36px;
+            --name-size: 11px;
+            --count-size: 15px;
+            --pill-min-w: 58px;
+            --pill-h: 24px;
+        }
+
+        /* ── TARJETA INDIVIDUAL DE BAILARINA (CON FOTO) ── */
         .dancer-card {
+            --queen-color: #FFD700;
             position: relative;
-            width: 126px;
-            min-width: 112px;
-            max-width: 142px;
-            background: rgba(36, 36, 43, 0.88);
-            backdrop-filter: blur(14px);
-            -webkit-backdrop-filter: blur(14px);
-            border: 2px solid rgba(255, 255, 255, 0.14);
-            border-radius: 20px;
-            padding: 34px 8px 12px 8px;
+            width: var(--card-w);
+            height: var(--card-h);
+            flex-shrink: 1;
             display: flex;
             flex-direction: column;
             align-items: center;
-            justify-content: center;
-            gap: 7px;
-            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.65), inset 0 1px 2px rgba(255, 255, 255, 0.1);
-            transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275),
-                        border-color 0.4s ease,
-                        background 0.4s ease,
-                        box-shadow 0.4s ease;
+            justify-content: flex-end;
+            transition: transform 0.38s cubic-bezier(0.175, 0.885, 0.32, 1.275),
+                        width 0.3s ease,
+                        height 0.3s ease,
+                        z-index 0.3s ease;
         }
 
-        /* ── ESTADO LÍDER / GANADORA (AMARILLO ACTIVO / GOLDEN GLOW) ── */
-        .dancer-card.is-leader {
-            border: 2.8px solid #FFD700 !important;
-            background: linear-gradient(180deg, #6e4e04 0%, #423002 100%) !important;
-            box-shadow: 0 0 24px rgba(255, 215, 0, 0.8),
-                        0 0 45px rgba(255, 200, 0, 0.4),
-                        inset 0 0 16px rgba(255, 215, 0, 0.35),
-                        0 12px 32px rgba(0, 0, 0, 0.85) !important;
-            transform: scale(1.06) translateY(-5px);
-            z-index: 5;
+        /* Marco interno con la foto de la bailarina */
+        .dancer-photo-frame {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            border-radius: 16px;
+            overflow: hidden;
+            background: #18181f;
+            border: 2.2px solid rgba(20, 20, 26, 0.96);
+            box-shadow: 0 6px 18px rgba(0, 0, 0, 0.7);
+            transition: border-color 0.35s ease,
+                        box-shadow 0.35s ease,
+                        transform 0.35s ease;
         }
 
-        .dancer-card.is-leader .gift-icon {
-            filter: drop-shadow(0 0 14px rgba(255, 215, 0, 0.95)) drop-shadow(0 6px 12px rgba(0, 0, 0, 0.8)) !important;
-        }
-
-        /* Insignia o corona sutil para la líder */
-        .leader-crown-badge {
-            position: absolute;
-            top: -46px;
-            right: 12px;
-            font-size: 20px;
-            filter: drop-shadow(0 2px 6px rgba(0, 0, 0, 0.8));
-            animation: crownBounce 2.2s infinite alternate ease-in-out;
-            pointer-events: none;
-            display: none;
-        }
-
-        .dancer-card.is-leader .leader-crown-badge {
+        /* Foto de la bailarina: blanco y negro cuando NO es líder */
+        .dancer-photo {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            object-position: center 18%;
             display: block;
+            filter: grayscale(100%) contrast(1.08) brightness(0.88);
+            transition: filter 0.38s ease, transform 0.38s ease;
         }
 
-        @keyframes crownBounce {
-            0% { transform: translateY(0) rotate(8deg); }
-            100% { transform: translateY(-4px) rotate(16deg) scale(1.1); }
-        }
-
-        /* ── ÍCONO 3D DEL REGALO FLOTANTE ── */
-        .gift-floating-box {
-            position: absolute;
-            top: -32px;
-            left: 50%;
-            transform: translateX(-50%);
-            width: 60px;
-            height: 60px;
+        /* Fallback elegante si no hay foto de bailarina */
+        .dancer-photo-fallback {
+            width: 100%;
+            height: 100%;
             display: flex;
             align-items: center;
             justify-content: center;
+            background: radial-gradient(circle at 50% 35%, #3a3a48 0%, #16161d 100%);
+            color: rgba(255, 255, 255, 0.55);
+            font-size: 32px;
+            font-weight: 900 !important;
+            letter-spacing: 1px;
+            filter: grayscale(100%);
+            transition: filter 0.4s ease, background 0.4s ease, color 0.4s ease;
+        }
+
+        /* Sombra degradada inferior para legibilidad del nombre */
+        .dancer-bottom-shade {
+            position: absolute;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            height: 55%;
+            background: linear-gradient(180deg, rgba(0, 0, 0, 0) 0%, rgba(0, 0, 0, 0.64) 55%, rgba(0, 0, 0, 0.93) 100%);
+            pointer-events: none;
+            z-index: 2;
+        }
+
+        /* ── MEJORA 2: EFECTO "DESPERTAR A COLOR" AL RECIBIR REGALO (NO-LÍDER) ── */
+        .dancer-card.receiving-gift:not(.is-leader) {
+            transform: translateY(-4px) scale(1.03);
+            z-index: 4;
+        }
+
+        .dancer-card.receiving-gift:not(.is-leader) .dancer-photo-frame {
+            border-color: var(--queen-color) !important;
+            box-shadow: 0 0 16px var(--queen-color),
+                        0 8px 20px rgba(0, 0, 0, 0.8) !important;
+        }
+
+        .dancer-card.receiving-gift:not(.is-leader) .dancer-photo,
+        .dancer-card.receiving-gift:not(.is-leader) .dancer-photo-fallback {
+            filter: grayscale(0%) contrast(1.05) brightness(1.04) !important;
+            transform: scale(1.04);
+        }
+
+        /* ── ESTADO LÍDER / GANADORA (A COLOR + MARCO DORADO ANIMADO) ── */
+        .dancer-card.is-leader {
+            z-index: 5;
+        }
+
+        .dancer-card.is-leader .dancer-photo-frame {
+            border: 2.6px solid #FFE169 !important;
+            box-shadow: 0 0 18px rgba(255, 215, 0, 0.95),
+                        0 0 34px rgba(255, 196, 0, 0.48),
+                        inset 0 0 14px rgba(255, 215, 0, 0.3),
+                        0 8px 24px rgba(0, 0, 0, 0.85) !important;
+        }
+
+        /* Brillo dorado en movimiento sobre el marco de la líder */
+        .dancer-card.is-leader .dancer-photo-frame::after {
+            content: '';
+            position: absolute;
+            inset: 0;
+            border-radius: 14px;
+            background: linear-gradient(125deg,
+                rgba(255, 255, 255, 0) 30%,
+                rgba(255, 235, 130, 0.32) 48%,
+                rgba(255, 255, 255, 0.55) 50%,
+                rgba(255, 235, 130, 0.32) 52%,
+                rgba(255, 255, 255, 0) 70%);
+            background-size: 260% 260%;
+            animation: leaderFrameShimmer 3.2s infinite ease-in-out;
             pointer-events: none;
             z-index: 4;
         }
 
+        @keyframes leaderFrameShimmer {
+            0% { background-position: 180% 180%; }
+            55%, 100% { background-position: -60% -60%; }
+        }
+
+        .dancer-card.is-leader .dancer-photo {
+            filter: grayscale(0%) contrast(1.04) brightness(1.03) !important;
+        }
+
+        .dancer-card.is-leader .dancer-photo-fallback {
+            filter: grayscale(0%) !important;
+            background: radial-gradient(circle at 50% 35%, #6e5209 0%, #241a02 100%);
+            color: #FFE169;
+        }
+
+        /* Destellos dorados en las esquinas de la líder (como en la referencia) */
+        .leader-glint {
+            position: absolute;
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #FFFDE7;
+            box-shadow: 0 0 8px 3px #FFD700, 0 0 14px 5px rgba(255, 215, 0, 0.85);
+            pointer-events: none;
+            z-index: 7;
+            opacity: 0;
+            transition: opacity 0.35s ease;
+        }
+
+        .leader-glint.glint-tl {
+            top: 10px;
+            left: -3px;
+            animation: glintPulse 1.7s infinite alternate ease-in-out;
+        }
+
+        .leader-glint.glint-br {
+            bottom: 8px;
+            right: -3px;
+            animation: glintPulse 1.7s 0.85s infinite alternate ease-in-out;
+        }
+
+        .dancer-card.is-leader .leader-glint {
+            opacity: 1;
+        }
+
+        @keyframes glintPulse {
+            0% { transform: scale(0.7); opacity: 0.65; }
+            100% { transform: scale(1.3); opacity: 1; }
+        }
+
+        /* ── MEJORA 6: ANIMACIÓN DE CAMBIO DE LÍDER (OVERTHROW BURST) ── */
+        .dancer-card.overthrow-burst {
+            animation: overthrowPop 0.7s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        .dancer-card.overthrow-burst::before {
+            content: '';
+            position: absolute;
+            inset: -6px;
+            border-radius: 22px;
+            border: 3px solid #FFE57F;
+            box-shadow: 0 0 30px #FFD700, inset 0 0 20px #FFD700;
+            pointer-events: none;
+            z-index: 20;
+            animation: shockwaveRing 0.75s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        }
+
+        @keyframes overthrowPop {
+            0% { transform: scale(1); }
+            35% { transform: scale(1.13) translateY(-8px); }
+            70% { transform: scale(0.98) translateY(-2px); }
+            100% { transform: scale(1) translateY(0); }
+        }
+
+        @keyframes shockwaveRing {
+            0% { transform: scale(0.88); opacity: 1; }
+            100% { transform: scale(1.35); opacity: 0; }
+        }
+
+        /* ── MEJORA 1: INSIGNIA DE RACHA / VICTORIAS (🔥 1) EN ESQUINA SUPERIOR DERECHA ── */
+        .streak-badge {
+            position: absolute;
+            top: -8px;
+            right: -6px;
+            z-index: 8;
+            background: linear-gradient(135deg, #FFF3B0 0%, #FFD54F 55%, #FFB300 100%);
+            color: #261600;
+            font-size: 11.5px;
+            font-weight: 900 !important;
+            line-height: 1;
+            padding: 3px 7px;
+            border-radius: 9999px;
+            border: 1.5px solid #FFFFFF;
+            box-shadow: 0 3px 8px rgba(0, 0, 0, 0.65), 0 0 8px rgba(255, 213, 79, 0.55);
+            display: inline-flex;
+            align-items: center;
+            gap: 2px;
+            pointer-events: none;
+            white-space: nowrap;
+        }
+
+        /* ── ÍCONO DEL REGALO ACTIVADOR FLOTANTE ARRIBA ── */
+        .gift-floating-box {
+            position: absolute;
+            top: calc(var(--gift-size) * -0.5);
+            left: 50%;
+            transform: translateX(-50%);
+            width: calc(var(--gift-size) + 2px);
+            height: calc(var(--gift-size) + 2px);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            pointer-events: none;
+            z-index: 6;
+        }
+
         .gift-icon {
-            width: 58px;
-            height: 58px;
+            width: var(--gift-size);
+            height: var(--gift-size);
             object-fit: contain;
-            filter: drop-shadow(0 6px 12px rgba(0, 0, 0, 0.75));
+            filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.82));
             transition: transform 0.25s ease, filter 0.3s ease;
+        }
+
+        .dancer-card.is-leader .gift-icon {
+            filter: drop-shadow(0 0 10px rgba(255, 215, 0, 0.78)) drop-shadow(0 4px 8px rgba(0, 0, 0, 0.85));
         }
 
         .gift-icon.bounce {
@@ -176,90 +396,233 @@
 
         @keyframes giftBounceAnim {
             0% { transform: scale(1) rotate(0deg); }
-            30% { transform: scale(1.45) rotate(-10deg); }
+            30% { transform: scale(1.42) rotate(-10deg); }
             60% { transform: scale(0.88) rotate(6deg); }
             80% { transform: scale(1.12) rotate(-3deg); }
             100% { transform: scale(1) rotate(0deg); }
         }
 
-        /* ── PÍLDORA DEL CONTADOR EN AMARILLO VIVO ── */
-        .count-pill {
-            background: rgba(14, 14, 18, 0.94);
-            border-radius: 9999px;
-            padding: 3px 14px;
-            border: 1px solid rgba(255, 255, 255, 0.08);
-            box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.7), 0 2px 6px rgba(0, 0, 0, 0.4);
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            min-width: 64px;
-            transition: transform 0.2s ease;
-        }
-
-        .count-number {
-            font-size: 21px;
-            font-weight: 800 !important;
-            color: #FFE600; /* Amarillo vivo idéntico al de la imagen */
-            letter-spacing: 0.5px;
-            line-height: 1.1;
-            text-shadow: 0 1px 4px rgba(0, 0, 0, 0.9);
-            text-align: center;
-            transition: color 0.2s ease, transform 0.2s ease;
-        }
-
-        .count-number.pop {
-            transform: scale(1.3);
-            color: #FFFFFF;
-        }
-
-        /* ── NOMBRE DE LA BAILARINA ── */
+        /* ── NOMBRE DE LA BAILARINA (SOBRE LA PARTE INFERIOR DE LA FOTO) ── */
         .dancer-name {
-            font-size: 15px;
-            font-weight: 700 !important;
+            position: absolute;
+            bottom: 15px;
+            left: 5px;
+            right: 5px;
+            z-index: 3;
+            font-size: var(--name-size);
+            font-weight: 800 !important;
             color: #FFFFFF;
             letter-spacing: 0.4px;
             text-align: center;
-            line-height: 1.15;
-            max-width: 95%;
-            word-break: break-word;
-            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.95);
+            line-height: 1.1;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            text-shadow: 0 1px 4px rgba(0, 0, 0, 0.98), 0 0 8px rgba(0, 0, 0, 0.9);
+            pointer-events: none;
         }
 
-        /* ── NOTIFICACIÓN FLOTANTE +DELTA AL RECIBIR REGALO ── */
-        .floating-pts-tag {
+        /* ── MEJORA 4: MINI-AVATAR DEL MVP EN LA TARJETA + BURBUJA DE DONADOR ── */
+        .mvp-mini-badge {
             position: absolute;
-            top: -24px;
+            top: 6px;
+            left: 6px;
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            border: 1.6px solid #FFD700;
+            background: #14141a;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.85), 0 0 6px rgba(255, 215, 0, 0.5);
+            overflow: hidden;
+            z-index: 5;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            pointer-events: none;
+            animation: mvpPopIn 0.35s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        .mvp-mini-badge.visible {
+            display: flex;
+        }
+
+        .mvp-mini-badge img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .mvp-mini-initial {
+            font-size: 10px;
+            font-weight: 900 !important;
+            color: #FFD54F;
+        }
+
+        @keyframes mvpPopIn {
+            0% { transform: scale(0); opacity: 0; }
+            80% { transform: scale(1.15); opacity: 1; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+
+        /* ── CAJA NEGRA INFERIOR DEL CONTADOR + PARTÍCULAS DE LÍDER ── */
+        .count-pill {
+            position: absolute;
+            bottom: -14px;
             left: 50%;
             transform: translateX(-50%);
-            font-size: 18px;
+            z-index: 6;
+            background: #070709;
+            border-radius: 7px;
+            padding: 2px 14px;
+            min-width: var(--pill-min-w);
+            height: var(--pill-h);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            box-shadow: 0 5px 12px rgba(0, 0, 0, 0.85);
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+            transition: transform 0.2s ease, border-color 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .dancer-card.is-leader .count-pill {
+            border-color: rgba(255, 215, 0, 0.42);
+            box-shadow: 0 5px 14px rgba(0, 0, 0, 0.92), 0 0 12px rgba(255, 215, 0, 0.28);
+        }
+
+        /* Chispas doradas dentro de la caja negra de la líder (como en el 211 de MAYA) */
+        .pill-sparkle {
+            position: absolute;
+            width: 4px;
+            height: 4px;
+            border-radius: 50%;
+            background: #FFE57F;
+            box-shadow: 0 0 5px 1px #FFD700;
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        .pill-sparkle.sp-1 {
+            bottom: 4px;
+            right: 7px;
+            animation: sparkleTwinkle 1.6s infinite alternate ease-in-out;
+        }
+
+        .pill-sparkle.sp-2 {
+            top: 5px;
+            left: 8px;
+            width: 3px;
+            height: 3px;
+            animation: sparkleTwinkle 1.9s 0.7s infinite alternate ease-in-out;
+        }
+
+        .dancer-card.is-leader .pill-sparkle {
+            opacity: 0.9;
+        }
+
+        @keyframes sparkleTwinkle {
+            0% { transform: scale(0.5); opacity: 0.25; }
+            100% { transform: scale(1.25); opacity: 0.95; }
+        }
+
+        .count-number {
+            position: relative;
+            z-index: 2;
+            font-size: var(--count-size);
+            font-weight: 900 !important;
+            color: #FFFFFF;
+            letter-spacing: 0.4px;
+            line-height: 1;
+            text-shadow: 0 1px 4px rgba(0, 0, 0, 0.95);
+            text-align: center;
+            transition: color 0.25s ease, transform 0.2s ease;
+        }
+
+        /* Número dorado para la líder */
+        .dancer-card.is-leader .count-number {
+            color: #FFD54F;
+            text-shadow: 0 0 8px rgba(255, 213, 79, 0.45), 0 1px 4px rgba(0, 0, 0, 0.95);
+        }
+
+        .count-number.pop {
+            transform: scale(1.28);
+            color: #FFE600;
+        }
+
+        /* ── NOTIFICACIÓN FLOTANTE (+DELTA Y BURBUJA DE DONADOR) ── */
+        .floating-pts-tag {
+            position: absolute;
+            top: -32px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 16px;
             font-weight: 900 !important;
             color: #FFE600;
             text-shadow: 0 0 8px rgba(0, 0, 0, 0.95), 1px 1px 0 #000, -1px -1px 0 #000;
             pointer-events: none;
-            z-index: 15;
+            z-index: 25;
             white-space: nowrap;
-            animation: floatUpFade 0.85s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            background: rgba(12, 12, 16, 0.85);
+            border: 1px solid rgba(255, 215, 0, 0.45);
+            border-radius: 9999px;
+            padding: 2px 9px 2px 5px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.75);
+            animation: floatUpFade 1.05s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+        }
+
+        .floating-pts-tag.simple-delta {
+            background: transparent;
+            border: none;
+            box-shadow: none;
+            padding: 0;
+            font-size: 18px;
+        }
+
+        .floating-donor-avatar {
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            object-fit: cover;
+            border: 1px solid #FFD700;
+            flex-shrink: 0;
+        }
+
+        .floating-donor-name {
+            font-size: 11px;
+            font-weight: 700 !important;
+            color: #FFFFFF;
+            max-width: 68px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
         }
 
         @keyframes floatUpFade {
             0% {
                 opacity: 0;
-                transform: translate(-50%, 8px) scale(0.6);
+                transform: translate(-50%, 8px) scale(0.65);
             }
-            25% {
+            22% {
                 opacity: 1;
-                transform: translate(-50%, -4px) scale(1.25);
+                transform: translate(-50%, -6px) scale(1.12);
+            }
+            80% {
+                opacity: 1;
+                transform: translate(-50%, -26px) scale(1);
             }
             100% {
                 opacity: 0;
-                transform: translate(-50%, -32px) scale(1);
+                transform: translate(-50%, -38px) scale(0.95);
             }
         }
     </style>
 </head>
 
 <body>
-    <div id="activadores-hud">
+    <div id="activadores-hud" data-size="medium">
         <!-- Generado dinámicamente con las tarjetas de bailarinas -->
     </div>
 
@@ -280,14 +643,68 @@
         let participantes = [];
         let conteos = {};
         let equipos = {};
+        let avatarsMap = {};
+        let victoriasMap = {};
+        let mvpsMap = {};
         let lider = null;
+        let previousLider = null;
+        const wakeTimers = {};
 
         const hudContainer = document.getElementById('activadores-hud');
 
         function resolverImagenRegalo(rawImg) {
             if (!rawImg) return '/regalos/Rosa.png';
-            if (rawImg.startsWith('/') || rawImg.startsWith('http')) return rawImg;
+            if (rawImg.startsWith('/') || rawImg.startsWith('http') || rawImg.startsWith('data:')) return rawImg;
             return '/regalos/' + rawImg;
+        }
+
+        function resolverAvatarBailarina(chica, eq) {
+            const raw = (eq && eq.avatar_img) || avatarsMap[chica] || avatarsMap[(chica || '').toLowerCase()] || '';
+            if (!raw) return '';
+            if (raw.startsWith('/') || raw.startsWith('http') || raw.startsWith('data:')) return raw;
+            return '/regalos/' + raw;
+        }
+
+        function obtenerIniciales(nombre) {
+            const clean = String(nombre || '').replace(/[^a-zA-Z0-9ÁÉÍÓÚÑáéíóúñ\s]/g, '').trim();
+            if (!clean) return '?';
+            const parts = clean.split(/\s+/);
+            if (parts.length >= 2) return (parts[0][0] + parts[1][0]).toUpperCase();
+            return clean.slice(0, 2).toUpperCase();
+        }
+
+        function aplicarEscalaPorCantidad(total) {
+            if (total <= 4) {
+                hudContainer.setAttribute('data-size', 'large');
+            } else if (total <= 6) {
+                hudContainer.setAttribute('data-size', 'medium');
+            } else if (total <= 8) {
+                hudContainer.setAttribute('data-size', 'compact');
+            } else {
+                hudContainer.setAttribute('data-size', 'ultra');
+            }
+        }
+
+        function renderMvpMiniBadge(chica) {
+            const safeId = sanitizeId(chica);
+            const badgeEl = document.getElementById('mvp-badge-' + safeId);
+            if (!badgeEl) return;
+
+            const mvp = mvpsMap[chica] || (equipos[chica] && equipos[chica].mvp) || null;
+            if (!mvp || !mvp.viewer) {
+                badgeEl.classList.remove('visible');
+                badgeEl.innerHTML = '';
+                return;
+            }
+
+            badgeEl.classList.add('visible');
+            if (mvp.avatar) {
+                const init = obtenerIniciales(mvp.viewer).slice(0, 1);
+                badgeEl.innerHTML = `<img src="${mvp.avatar}" alt="${mvp.viewer}" onerror="this.outerHTML='<span class=\\'mvp-mini-initial\\'>${init}</span>'">`;
+            } else {
+                const init = obtenerIniciales(mvp.viewer).slice(0, 1);
+                badgeEl.innerHTML = `<span class="mvp-mini-initial">${init}</span>`;
+            }
         }
 
         function renderCards() {
@@ -301,36 +718,77 @@
                 return;
             }
 
+            aplicarEscalaPorCantidad(participantes.length);
+
             participantes.forEach(chica => {
-                const eq = equipos[chica] || { nombre: chica, regalo_img: '' };
+                const eq = equipos[chica] || { nombre: chica, regalo_img: '', avatar_img: '', color: '#FFD700' };
                 const count = conteos[chica] || 0;
                 const isLider = (lider && lider.toLowerCase() === chica.toLowerCase() && count > 0);
-                const imgSrc = resolverImagenRegalo(eq.regalo_img);
+                const giftSrc = resolverImagenRegalo(eq.regalo_img);
+                const avatarSrc = resolverAvatarBailarina(chica, eq);
+                const displayName = eq.nombre || chica;
+                const initials = obtenerIniciales(displayName);
+                const safeId = sanitizeId(chica);
+                const wins = (eq.victorias !== undefined ? eq.victorias : victoriasMap[chica]) || 0;
+                if (eq.mvp && !mvpsMap[chica]) {
+                    mvpsMap[chica] = eq.mvp;
+                }
 
                 const card = document.createElement('div');
                 card.className = 'dancer-card' + (isLider ? ' is-leader' : '');
-                card.id = 'card-' + sanitizeId(chica);
+                card.id = 'card-' + safeId;
+                card.style.setProperty('--queen-color', eq.color || '#FFD700');
+
+                const photoHtml = avatarSrc
+                    ? `<img class="dancer-photo" id="photo-${safeId}" src="${avatarSrc}" alt="${displayName}" onerror="this.style.display='none'; document.getElementById('fallback-${safeId}').style.display='flex';">
+                       <div class="dancer-photo-fallback" id="fallback-${safeId}" style="display:none;">${initials}</div>`
+                    : `<div class="dancer-photo-fallback" id="fallback-${safeId}">${initials}</div>`;
+
+                const streakHtml = wins > 0
+                    ? `<div class="streak-badge" id="streak-${safeId}">🔥 ${wins}</div>`
+                    : `<div class="streak-badge" id="streak-${safeId}" style="display:none;">🔥 0</div>`;
 
                 card.innerHTML = `
-                    <div class="leader-crown-badge">👑</div>
+                    <div class="leader-glint glint-tl"></div>
+                    <div class="leader-glint glint-br"></div>
+                    ${streakHtml}
                     <div class="gift-floating-box">
-                        <img class="gift-icon" id="gift-icon-${sanitizeId(chica)}" src="${imgSrc}" alt="${chica}" onerror="this.src='/regalos/Rosa.png'">
+                        <img class="gift-icon" id="gift-icon-${safeId}" src="${giftSrc}" alt="${displayName}" onerror="this.src='/regalos/Rosa.png'">
+                    </div>
+                    <div class="dancer-photo-frame">
+                        <div class="mvp-mini-badge" id="mvp-badge-${safeId}"></div>
+                        ${photoHtml}
+                        <div class="dancer-bottom-shade"></div>
+                        <span class="dancer-name">${displayName}</span>
                     </div>
                     <div class="count-pill">
-                        <span class="count-number" id="count-${sanitizeId(chica)}">${count}</span>
+                        <span class="pill-sparkle sp-1"></span>
+                        <span class="pill-sparkle sp-2"></span>
+                        <span class="count-number" id="count-${safeId}">${count}</span>
                     </div>
-                    <span class="dancer-name">${eq.nombre || chica}</span>
                 `;
 
                 hudContainer.appendChild(card);
+                renderMvpMiniBadge(chica);
             });
+
+            previousLider = lider;
         }
 
         function sanitizeId(str) {
             return String(str).replace(/[^a-zA-Z0-9_-]/g, '_');
         }
 
-        function updateCard(chica, nuevoConteo, delta) {
+        function activarDespertarColor(chica, cardEl) {
+            if (!cardEl) return;
+            cardEl.classList.add('receiving-gift');
+            if (wakeTimers[chica]) clearTimeout(wakeTimers[chica]);
+            wakeTimers[chica] = setTimeout(() => {
+                cardEl.classList.remove('receiving-gift');
+            }, 1600);
+        }
+
+        function updateCard(chica, nuevoConteo, delta, donorInfo) {
             const safeId = sanitizeId(chica);
             const countEl = document.getElementById('count-' + safeId);
             const cardEl = document.getElementById('card-' + safeId);
@@ -349,29 +807,44 @@
                 setTimeout(() => countEl.classList.remove('pop'), 260);
             }
 
-            if (iconEl && delta > 0) {
-                iconEl.classList.remove('bounce');
-                void iconEl.offsetWidth; // Forzar reflow para reiniciar animación
-                iconEl.classList.add('bounce');
-            }
-
-            // Notificación flotante +delta
             if (delta > 0) {
-                mostrarTagFlotante(cardEl, '+' + delta);
+                if (iconEl) {
+                    iconEl.classList.remove('bounce');
+                    void iconEl.offsetWidth;
+                    iconEl.classList.add('bounce');
+                }
+                // Mejora 2: Despertar temporal a color al recibir regalo
+                activarDespertarColor(chica, cardEl);
+
+                // Mejora 4: Notificación flotante con foto/nombre del donador o +delta
+                mostrarTagFlotante(cardEl, '+' + delta, donorInfo);
             }
 
-            // Actualizar líderes en todas las tarjetas
+            if (donorInfo && donorInfo.mvp) {
+                mvpsMap[chica] = donorInfo.mvp;
+                renderMvpMiniBadge(chica);
+            }
+
+            // Actualizar líderes y disparar animación de cambio de líder si aplica
             actualizarLiderVisual();
         }
 
-        function mostrarTagFlotante(parentEl, texto) {
+        function mostrarTagFlotante(parentEl, textoDelta, donorInfo) {
             const tag = document.createElement('div');
-            tag.className = 'floating-pts-tag';
-            tag.textContent = texto;
+            if (donorInfo && donorInfo.viewer) {
+                tag.className = 'floating-pts-tag';
+                const avatarHtml = donorInfo.avatar
+                    ? `<img class="floating-donor-avatar" src="${donorInfo.avatar}" alt="" onerror="this.style.display='none'">`
+                    : '';
+                tag.innerHTML = `${avatarHtml}<span class="floating-donor-name">${donorInfo.viewer}</span><span>${textoDelta}</span>`;
+            } else {
+                tag.className = 'floating-pts-tag simple-delta';
+                tag.textContent = textoDelta;
+            }
             parentEl.appendChild(tag);
             setTimeout(() => {
                 if (tag.parentNode) tag.parentNode.removeChild(tag);
-            }, 900);
+            }, 1050);
         }
 
         function actualizarLiderVisual() {
@@ -387,17 +860,53 @@
             });
 
             lider = (max > 0) ? currentLeader : null;
+            const cambioDeLider = (lider && (!previousLider || lider.toLowerCase() !== previousLider.toLowerCase()));
 
             participantes.forEach(chica => {
                 const card = document.getElementById('card-' + sanitizeId(chica));
                 if (card) {
-                    if (lider && lider.toLowerCase() === chica.toLowerCase() && (conteos[chica] || 0) > 0) {
+                    const esEstaLider = (lider && lider.toLowerCase() === chica.toLowerCase() && (conteos[chica] || 0) > 0);
+                    if (esEstaLider) {
                         card.classList.add('is-leader');
+                        if (cambioDeLider) {
+                            card.classList.remove('overthrow-burst');
+                            void card.offsetWidth;
+                            card.classList.add('overthrow-burst');
+                            setTimeout(() => card.classList.remove('overthrow-burst'), 800);
+                        }
                     } else {
-                        card.classList.remove('is-leader');
+                        card.classList.remove('is-leader', 'overthrow-burst');
                     }
                 }
             });
+
+            previousLider = lider;
+        }
+
+        async function cargarAvataresRespaldo() {
+            try {
+                let url = '/api/queens/all';
+                if (userParam && !url.includes('user=')) {
+                    url += `?user=${encodeURIComponent(userParam)}`;
+                }
+                const res = await fetch(url);
+                if (res.ok) {
+                    const allQueens = await res.json();
+                    if (Array.isArray(allQueens)) {
+                        allQueens.forEach(q => {
+                            if (q && q.name) {
+                                if (q.avatar_img) {
+                                    avatarsMap[q.name] = q.avatar_img;
+                                    avatarsMap[q.name.toLowerCase()] = q.avatar_img;
+                                }
+                                if (q.victorias !== undefined) {
+                                    victoriasMap[q.name] = q.victorias;
+                                }
+                            }
+                        });
+                    }
+                }
+            } catch (e) {}
         }
 
         async function cargarEstado() {
@@ -406,12 +915,17 @@
                 if (userParam && !url.includes('user=')) {
                     url += `?user=${encodeURIComponent(userParam)}`;
                 }
-                const res = await fetch(url);
-                if (res.ok) {
+                const [res] = await Promise.all([
+                    fetch(url),
+                    cargarAvataresRespaldo()
+                ]);
+                if (res && res.ok) {
                     const data = await res.json();
                     participantes = data.participantes || [];
                     conteos = data.conteos || {};
                     equipos = data.equipos || {};
+                    if (data.victorias) victoriasMap = { ...victoriasMap, ...data.victorias };
+                    if (data.mvps) mvpsMap = { ...mvpsMap, ...data.mvps };
                     lider = data.lider || null;
                     renderCards();
 
@@ -430,6 +944,8 @@
             participantes = data.participantes || [];
             conteos = data.conteos || {};
             equipos = data.equipos || {};
+            if (data.victorias) victoriasMap = { ...victoriasMap, ...data.victorias };
+            if (data.mvps) mvpsMap = data.mvps;
             lider = data.lider || null;
             renderCards();
         });
@@ -439,7 +955,12 @@
             if (data.conteos) conteos = data.conteos;
             if (data.lider !== undefined) lider = data.lider;
             if (data.chica) {
-                updateCard(data.chica, data.conteo !== undefined ? data.conteo : (conteos[data.chica] || 0), data.delta || 0);
+                updateCard(
+                    data.chica,
+                    data.conteo !== undefined ? data.conteo : (conteos[data.chica] || 0),
+                    data.delta || 0,
+                    { viewer: data.viewer, avatar: data.avatar, mvp: data.mvp }
+                );
             } else {
                 actualizarLiderVisual();
             }
@@ -451,11 +972,53 @@
             } else {
                 participantes.forEach(p => conteos[p] = 0);
             }
+            mvpsMap = {};
             lider = null;
+            previousLider = null;
             renderCards();
         });
 
-        socket.on('queensActualizadas', () => {
+        socket.on('batallaFin', (data) => {
+            if (data && data.victorias) {
+                victoriasMap = { ...victoriasMap, ...data.victorias };
+                actualizarInsigniasVictorias();
+            }
+        });
+
+        socket.on('victoriasActualizadas', (nuevasVictorias) => {
+            victoriasMap = nuevasVictorias || {};
+            Object.keys(equipos).forEach(chica => {
+                if (equipos[chica]) {
+                    equipos[chica].victorias = victoriasMap[chica] || 0;
+                }
+            });
+            actualizarInsigniasVictorias();
+        });
+
+        function actualizarInsigniasVictorias() {
+            participantes.forEach(chica => {
+                const wins = victoriasMap[chica] || 0;
+                const streakEl = document.getElementById('streak-' + sanitizeId(chica));
+                if (streakEl) {
+                    if (wins > 0) {
+                        streakEl.textContent = `🔥 ${wins}`;
+                        streakEl.style.display = 'inline-flex';
+                    } else {
+                        streakEl.style.display = 'none';
+                    }
+                }
+            });
+        }
+
+        socket.on('queensActualizadas', (data) => {
+            if (data && data.equipos) {
+                Object.keys(data.equipos).forEach(k => {
+                    if (data.equipos[k] && data.equipos[k].avatar_img) {
+                        avatarsMap[k] = data.equipos[k].avatar_img;
+                        avatarsMap[k.toLowerCase()] = data.equipos[k].avatar_img;
+                    }
+                });
+            }
             cargarEstado();
         });
 

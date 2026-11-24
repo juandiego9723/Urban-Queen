@@ -13,6 +13,9 @@ function setupActivadoresDynamics(app, io, requireSession, activeSessions) {
         if (!s.dinamicaActivadores.conteos) {
             s.dinamicaActivadores.conteos = {};
         }
+        if (!s.dinamicaActivadores.donadores) {
+            s.dinamicaActivadores.donadores = {};
+        }
 
         // Sincronizar participantes con s.QUEENS o consultar directamente db si estuviera vacío
         let queensDisponibles = (s.QUEENS && s.QUEENS.length > 0) ? s.QUEENS : [];
@@ -106,15 +109,44 @@ function setupActivadoresDynamics(app, io, requireSession, activeSessions) {
         const infoEquipos = {};
         const participantes = s.dinamicaActivadores.participantes || [];
 
+        const allQueensList = (s.db && typeof s.db.getAllQueensFull === 'function') ? (s.db.getAllQueensFull() || []) : [];
+        const victoriasMap = (s.db && typeof s.db.getVictorias === 'function') ? (s.db.getVictorias() || {}) : {};
+        const queenByName = {};
+        allQueensList.forEach(q => {
+            if (q && q.name) {
+                queenByName[q.name.trim().toLowerCase()] = q;
+            }
+        });
+
+        const mvps = {};
+
         participantes.forEach(chica => {
             const eq = (s.equipos && s.equipos[chica]) || {};
             const cleanName = chica.trim().toLowerCase();
+            const dbQueen = queenByName[cleanName] || {};
             const giftName = chicaToGiftName[cleanName] || eq.regalo_nombre || eq.regalo_img || '';
-            const rawImg = eq.regalo_img || '';
+            const rawImg = eq.regalo_img || dbQueen.regalo_img || '';
+            const avatarImg = eq.avatar_img || dbQueen.avatar_img || '';
+            const nombreImg = eq.nombre_img || dbQueen.nombre_img || '';
+            const wins = victoriasMap[chica] !== undefined ? victoriasMap[chica] : (dbQueen.victorias || 0);
+
+            const donorsForQueen = (s.dinamicaActivadores.donadores && s.dinamicaActivadores.donadores[chica]) || {};
+            let topDonor = null;
+            Object.values(donorsForQueen).forEach(d => {
+                if (d && d.total > 0 && (!topDonor || d.total > topDonor.total)) {
+                    topDonor = d;
+                }
+            });
+            if (topDonor) mvps[chica] = topDonor;
+
             infoEquipos[chica] = {
-                nombre: eq.nombre || chica.toUpperCase(),
-                color: eq.color || '#FFD700',
+                nombre: eq.nombre || ((dbQueen.apodo && dbQueen.apodo.trim()) ? dbQueen.apodo.trim().toUpperCase() : chica.toUpperCase()),
+                color: eq.color || dbQueen.color || '#FFD700',
                 regalo_img: resolverRegaloImg(rawImg),
+                avatar_img: avatarImg,
+                nombre_img: nombreImg,
+                victorias: wins,
+                mvp: topDonor,
                 giftName: giftName
             };
         });
@@ -125,6 +157,8 @@ function setupActivadoresDynamics(app, io, requireSession, activeSessions) {
             participantes: participantes,
             lider: s.dinamicaActivadores.lider,
             maxConteo: s.dinamicaActivadores.maxConteo,
+            victorias: victoriasMap,
+            mvps: mvps,
             equipos: infoEquipos
         };
     }
@@ -150,6 +184,7 @@ function setupActivadoresDynamics(app, io, requireSession, activeSessions) {
         participantes.forEach(p => {
             s.dinamicaActivadores.conteos[p] = 0;
         });
+        s.dinamicaActivadores.donadores = {};
         s.dinamicaActivadores.lider = null;
         s.dinamicaActivadores.maxConteo = 0;
 
@@ -158,6 +193,49 @@ function setupActivadoresDynamics(app, io, requireSession, activeSessions) {
         io.to(user).emit('activadoresEstado', payload);
 
         res.json({ status: 'OK', estado: payload });
+    });
+
+    app.all('/api/activadores/reset-victorias', requireSession, async (req, res) => {
+        const s = req.userSession;
+        const user = req.username;
+        ensureActivadoresState(s);
+
+        if (s.db && typeof s.db.resetVictorias === 'function') {
+            await s.db.resetVictorias();
+        }
+
+        const payload = construirEstadoCompleto(s);
+        io.to(user).emit('victoriasActualizadas', {});
+        io.to(user).emit('activadoresEstado', payload);
+
+        res.json({ status: 'OK', estado: payload });
+    });
+
+    app.all('/api/activadores/premiar-lider', requireSession, async (req, res) => {
+        const s = req.userSession;
+        const user = req.username;
+        ensureActivadoresState(s);
+        recalcularLiderActivadores(s);
+
+        const liderActual = s.dinamicaActivadores.lider;
+        if (liderActual && s.dinamicaActivadores.maxConteo > 0 && s.db && typeof s.db.sumarVictoria === 'function') {
+            await s.db.sumarVictoria(liderActual);
+        }
+
+        const participantes = s.dinamicaActivadores.participantes || [...(s.QUEENS || [])];
+        participantes.forEach(p => {
+            s.dinamicaActivadores.conteos[p] = 0;
+        });
+        s.dinamicaActivadores.donadores = {};
+        s.dinamicaActivadores.lider = null;
+        s.dinamicaActivadores.maxConteo = 0;
+
+        const payload = construirEstadoCompleto(s);
+        io.to(user).emit('victoriasActualizadas', payload.victorias || {});
+        io.to(user).emit('activadoresReset', payload);
+        io.to(user).emit('activadoresEstado', payload);
+
+        res.json({ status: 'OK', ganadora: liderActual, estado: payload });
     });
 
     app.all('/api/activadores/participantes', requireSession, (req, res) => {

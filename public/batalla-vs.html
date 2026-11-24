@@ -677,17 +677,15 @@
 
     <!-- CAPAS DE CONGELAMIENTO CON VIDEO (CONFRONTO GELADO) -->
     <div id="hielo-left" class="hielo-layer hielo-left">
-        <video id="hielo-video-left" class="hielo-video" loop muted playsinline preload="auto">
-            <source src="/regalos/hielo_animado_suave_transparente.webm" type="video/webm">
-            <source src="/regalos/hielo_animado_suave_transparente.mov" type="video/quicktime">
+        <video id="hielo-video-left" class="hielo-video" muted playsinline preload="auto" src="/regalos/hielo_cristal_transparente.webm">
+            <source src="/regalos/hielo_cristal_transparente.webm" type="video/webm">
         </video>
         <div class="hielo-badge">❄️ CONGELADA</div>
     </div>
 
     <div id="hielo-right" class="hielo-layer hielo-right">
-        <video id="hielo-video-right" class="hielo-video" loop muted playsinline preload="auto">
-            <source src="/regalos/hielo_animado_suave_transparente.webm" type="video/webm">
-            <source src="/regalos/hielo_animado_suave_transparente.mov" type="video/quicktime">
+        <video id="hielo-video-right" class="hielo-video" muted playsinline preload="auto" src="/regalos/hielo_cristal_transparente.webm">
+            <source src="/regalos/hielo_cristal_transparente.webm" type="video/webm">
         </video>
         <div class="hielo-badge">❄️ CONGELADA</div>
     </div>
@@ -1189,6 +1187,11 @@
         const hieloVideoLeft = document.getElementById('hielo-video-left');
         const hieloVideoRight = document.getElementById('hielo-video-right');
 
+        const _urlParamsHielo = new URLSearchParams(window.location.search);
+        const _userHielo = (_urlParamsHielo.get('user') || '').toLowerCase();
+        const _agencyHielo = (_urlParamsHielo.get('agency') || '').toLowerCase();
+        const _isCosmicInitial = _userHielo.includes('cosmic') || _agencyHielo === 'cosmic' || (document.referrer || '').toLowerCase().includes('/cosmic');
+
         let hieloConfig = {
             activo: true,
             modo: 'split',
@@ -1198,10 +1201,34 @@
             offsetY: 0,
             mostrarBadge: false,
             bucle: true,
-            videoUrl: '/regalos/hielo_animado_suave_transparente.webm'
+            videoUrl: _isCosmicInitial
+                ? '/regalos/hielo_congelando_suave.webm'
+                : '/regalos/hielo_cristal_transparente.webm'
         };
         let hieloTestLado = 'off'; // 'off' | 'left' | 'right' | 'both'
         let estadoHielo = { left: false, right: false };
+
+        function obtenerInicioBucleHielo(url) {
+            const u = String(url || '');
+            if (u.includes('hielo_cristal_transparente')) return 2.45; // Urban: tras crecer desde los bordes
+            if (u.includes('hielo_congelando_suave')) return 2.05;     // Cosmic: tras subir y formarse el bloque de hielo
+            return 0;
+        }
+
+        // Al terminar el video en bucle, saltar únicamente a la fase donde el hielo ya está puesto
+        [hieloVideoLeft, hieloVideoRight].forEach((vid, idx) => {
+            if (!vid) return;
+            vid.addEventListener('ended', () => {
+                const el = idx === 0 ? hieloLeftEl : hieloRightEl;
+                if (hieloConfig.bucle !== false && el && el.classList.contains('active')) {
+                    try {
+                        vid.currentTime = obtenerInicioBucleHielo(hieloConfig.videoUrl);
+                        const p = vid.play();
+                        if (p && typeof p.catch === 'function') p.catch(() => {});
+                    } catch (e) {}
+                }
+            });
+        });
 
         function aplicarConfigHieloUI(cfg) {
             if (cfg && typeof cfg === 'object') {
@@ -1214,9 +1241,14 @@
             root.style.setProperty('--hielo-offset-y', (Number(hieloConfig.offsetY) || 0) + 'px');
 
             const esBucle = hieloConfig.bucle !== false;
+            const targetVideoUrl = hieloConfig.videoUrl || '/regalos/hielo_cristal_transparente.webm';
             [hieloVideoLeft, hieloVideoRight].forEach((vid, idx) => {
                 if (!vid) return;
-                vid.loop = esBucle;
+                if (vid.getAttribute('src') !== targetVideoUrl) {
+                    vid.setAttribute('src', targetVideoUrl);
+                    vid.load();
+                }
+                vid.loop = false; // Usamos el bucle inteligente en 'ended' para no borrar el hielo ya crecido
                 const el = idx === 0 ? hieloLeftEl : hieloRightEl;
                 if (esBucle && el && el.classList.contains('active') && vid.paused) {
                     const p = vid.play();

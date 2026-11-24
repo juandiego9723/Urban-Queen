@@ -1,5 +1,8 @@
 const { checkIsCosmic } = require('../utils/agencyUtils');
 
+const URBAN_HIELO_VIDEO = '/regalos/hielo_cristal_transparente.webm';
+const COSMIC_HIELO_VIDEO = '/regalos/hielo_congelando_suave.webm';
+
 const DEFAULT_HIELO_CONFIG = {
     activo: true,
     modo: 'split',
@@ -9,11 +12,12 @@ const DEFAULT_HIELO_CONFIG = {
     offsetY: 0,
     mostrarBadge: false,
     bucle: true,
-    videoUrl: '/regalos/hielo_animado_suave_transparente.webm'
+    videoUrl: URBAN_HIELO_VIDEO
 };
 
-function normalizeHieloConfig(input, current = DEFAULT_HIELO_CONFIG) {
-    const base = { ...DEFAULT_HIELO_CONFIG, ...(current || {}) };
+function normalizeHieloConfig(input, current = DEFAULT_HIELO_CONFIG, isCosmic = false) {
+    const agencyVideo = isCosmic ? COSMIC_HIELO_VIDEO : URBAN_HIELO_VIDEO;
+    const base = { ...DEFAULT_HIELO_CONFIG, ...(current || {}), videoUrl: agencyVideo };
     const src = (input && typeof input === 'object') ? input : {};
     const clamp = (val, min, max, fallback) => {
         const n = Number(val);
@@ -21,8 +25,14 @@ function normalizeHieloConfig(input, current = DEFAULT_HIELO_CONFIG) {
         return Math.max(min, Math.min(max, n));
     };
     let videoUrl = (typeof src.videoUrl === 'string' && src.videoUrl.trim()) ? src.videoUrl.trim() : base.videoUrl;
-    if (videoUrl === '/regalos/hielo_congelando_suave.webm' || videoUrl === '/regalos/hielo_congelando_suave.mov') {
-        videoUrl = DEFAULT_HIELO_CONFIG.videoUrl;
+    if (
+        videoUrl === '/regalos/hielo_congelando_suave.webm' ||
+        videoUrl === '/regalos/hielo_congelando_suave.mov' ||
+        videoUrl === '/regalos/hielo_animado_suave_transparente.webm' ||
+        videoUrl === '/regalos/hielo_animado_suave_transparente.mov' ||
+        videoUrl === URBAN_HIELO_VIDEO
+    ) {
+        videoUrl = agencyVideo;
     }
     return {
         activo: src.activo !== undefined ? Boolean(src.activo) : Boolean(base.activo),
@@ -37,15 +47,19 @@ function normalizeHieloConfig(input, current = DEFAULT_HIELO_CONFIG) {
     };
 }
 
-function getSessionHieloConfig(s) {
-    if (!s) return { ...DEFAULT_HIELO_CONFIG };
+function getSessionHieloConfig(s, req = null) {
+    const isCosmic = checkIsCosmic(req, s);
+    const agencyVideo = isCosmic ? COSMIC_HIELO_VIDEO : URBAN_HIELO_VIDEO;
+    if (!s) return { ...DEFAULT_HIELO_CONFIG, videoUrl: agencyVideo };
     if (!s.hieloConfig) {
         let saved = null;
         try {
             const raw = s.db && s.db.getConfigVal ? s.db.getConfigVal('hielo_config') : null;
             if (raw) saved = JSON.parse(raw);
         } catch (e) {}
-        s.hieloConfig = normalizeHieloConfig(saved, DEFAULT_HIELO_CONFIG);
+        s.hieloConfig = normalizeHieloConfig(saved, DEFAULT_HIELO_CONFIG, isCosmic);
+    } else if (s.hieloConfig.videoUrl !== agencyVideo) {
+        s.hieloConfig = normalizeHieloConfig(s.hieloConfig, DEFAULT_HIELO_CONFIG, isCosmic);
     }
     return s.hieloConfig;
 }
@@ -212,20 +226,22 @@ function setupBatallaDynamics(app, io, requireSession) {
         res.send("OK");
     });
 
-    app.all('/batalla/reset-wins', requireSession, (req, res) => {
-        req.userSession.db.resetVictorias();
+    app.all('/batalla/reset-wins', requireSession, async (req, res) => {
+        await req.userSession.db.resetVictorias();
+        io.to(req.username).emit('victoriasActualizadas', {});
         res.send("OK");
     });
 
     // ── Configuración y Prueba del Efecto Hielo (Confronto Gelado) ──
     app.get('/api/batalla/hielo-config', requireSession, (req, res) => {
-        res.json(getSessionHieloConfig(req.userSession));
+        res.json(getSessionHieloConfig(req.userSession, req));
     });
 
     app.post('/api/batalla/hielo-config', requireSession, async (req, res) => {
         const s = req.userSession;
-        const current = getSessionHieloConfig(s);
-        const updated = normalizeHieloConfig(req.body || {}, current);
+        const isCosmic = checkIsCosmic(req, s);
+        const current = getSessionHieloConfig(s, req);
+        const updated = normalizeHieloConfig(req.body || {}, current, isCosmic);
         s.hieloConfig = updated;
         if (s.db && typeof s.db.setConfigVal === 'function') {
             try {
@@ -244,7 +260,7 @@ function setupBatallaDynamics(app, io, requireSession) {
         const lado = ['left', 'right', 'both', 'off'].includes(body.lado) ? body.lado : 'off';
         io.to(req.username).emit('testHieloOverlay', {
             lado,
-            config: getSessionHieloConfig(s)
+            config: getSessionHieloConfig(s, req)
         });
         res.json({ status: 'OK', lado });
     });

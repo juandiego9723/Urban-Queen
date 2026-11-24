@@ -36,6 +36,7 @@ const setupBatallaDynamics     = require('./src/dynamics/batalla');
 const setupFutbolDynamics      = require('./src/dynamics/futbol');
 const setupCustomDynamics      = require('./src/dynamics/customDynamics');
 const setupPenaltiDynamics     = require('./src/dynamics/penalti');
+const setupRuletaDynamics      = require('./src/dynamics/ruleta');
 const setupActivadoresDynamics = require('./src/dynamics/activadores');
 
 const setupQueensRoutes        = require('./src/routes/queensRoutes');
@@ -115,9 +116,10 @@ const conociendoHandlers = setupConociendoDynamics(app, io, requireSession, acti
 const podioHandlers      = setupPodioDynamics(app, io, requireSession, activeSessions);
 const revivirHandlers    = setupRevivirDynamics(app, io, requireSession, activeSessions);
 const penaltiHandlers     = setupPenaltiDynamics(app, io, requireSession, activeSessions);
+const ruletaHandlers      = setupRuletaDynamics(app, io, requireSession, activeSessions);
 
 const { procesarRegaloTikTok, procesarPuntosEnLote } = createPointsProcessor(
-    io, activeSessions, resolverNombre, timerHandlers, conociendoHandlers, revivirHandlers, penaltiHandlers
+    io, activeSessions, resolverNombre, timerHandlers, conociendoHandlers, revivirHandlers, penaltiHandlers, ruletaHandlers
 );
 setProcesarPuntosFn(procesarPuntosEnLote);
 
@@ -337,13 +339,19 @@ app.get('/goleadores-clasico', (req, res, next) => {
     return next();
 });
 app.get('/penalti',       (req, res) => res.sendFile(pub('penalti.html')));
+app.get('/ruleta',        (req, res) => res.sendFile(pub('ruleta.html')));
 app.get('/batalla-pk',    (req, res) => res.sendFile(pub('batalla-pk.html')));
 app.get('/batalla-vs',    (req, res) => res.sendFile(pub('batalla-vs.html')));
 app.get('/batalla-activadores', (req, res) => res.sendFile(pub('batalla-activadores.html')));
 app.get('/batalla-normal-v2', (req, res) => res.sendFile(pub('batalla-activadores.html')));
 app.get('/dinamica-activadores', (req, res) => {
     const userParam = req.query.user || '';
-    const agencySlug = (req.session && req.session.agencySlug) || (userParam.toLowerCase().includes('cosmic') ? 'cosmic' : null);
+    const activeKeys = Object.keys(activeSessions);
+    const sessionForReq = userParam ? activeSessions[userParam] : (activeKeys.length === 1 ? activeSessions[activeKeys[0]] : null);
+    if (checkIsCosmic(req, sessionForReq || req.session) || userParam.toLowerCase().includes('cosmic')) {
+        return res.sendFile(agencyPub('cosmic', 'dinamica-activadores.html'));
+    }
+    const agencySlug = (req.session && req.session.agencySlug) || (sessionForReq && sessionForReq.agencySlug) || null;
     if (agencySlug && agencySlug !== 'urbanqueens') {
         return res.sendFile(agencyPub(agencySlug, 'dinamica-activadores.html'));
     }
@@ -714,8 +722,9 @@ io.on('connection', (socket) => {
 
     socket.on('actualizarConfigHielo', (data) => {
         if (session && data) {
+            const isCosmic = checkIsCosmic(null, session);
             const current = setupBatallaDynamics.getSessionHieloConfig(session);
-            const updated = setupBatallaDynamics.normalizeHieloConfig(data, current);
+            const updated = setupBatallaDynamics.normalizeHieloConfig(data, current, isCosmic);
             session.hieloConfig = updated;
             if (data.guardar !== false && session.db && typeof session.db.setConfigVal === 'function') {
                 try { session.db.setConfigVal('hielo_config', JSON.stringify(updated)); } catch (e) {}

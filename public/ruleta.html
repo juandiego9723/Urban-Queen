@@ -1,0 +1,1002 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <!-- Inyección de multi-cuenta -->
+    <script>
+        (function () {
+            const urlParams = new URLSearchParams(window.location.search);
+            const user = urlParams.get('user');
+            if (user) {
+                const originalFetch = window.fetch;
+                window.fetch = function (url, options) {
+                    if (typeof url === 'string' && !url.includes('user=')) {
+                        const sep = url.includes('?') ? '&' : '?';
+                        url = url + sep + 'user=' + encodeURIComponent(user);
+                    }
+                    return originalFetch(url, options);
+                };
+                let _io = undefined;
+                Object.defineProperty(window, 'io', {
+                    get: function () { return _io; },
+                    set: function (val) {
+                        _io = function (opts) {
+                            opts = opts || {};
+                            opts.query = opts.query || {};
+                            opts.query.user = user;
+                            return val(opts);
+                        };
+                    },
+                    configurable: true
+                });
+            }
+        })();
+    </script>
+
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description"
+        content="Overlay de Ruleta de la Suerte: aparece y gira al recibir el regalo configurado o activarse desde el panel.">
+    <title>Overlay Ruleta - Urban Queens</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Montserrat:ital,wght@0,700;0,800;0,900;1,800;1,900&display=swap"
+        rel="stylesheet">
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            user-select: none;
+        }
+
+        html,
+        body {
+            background: transparent;
+            width: 100vw;
+            height: 100vh;
+            overflow: hidden;
+            font-family: 'Montserrat', sans-serif;
+        }
+
+        .stage {
+            position: fixed;
+            inset: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            pointer-events: none;
+            perspective: 1200px;
+        }
+
+        /* ── Contenedor Principal de la Ruleta (Auto-Ocultable) ── */
+        .roulette-overlay {
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 14px;
+            opacity: 0;
+            transform: scale(0.45) translateY(80px) rotateX(15deg);
+            transition:
+                opacity 0.48s cubic-bezier(0.18, 0.89, 0.32, 1.28),
+                transform 0.56s cubic-bezier(0.18, 0.89, 0.32, 1.28);
+            will-change: transform, opacity;
+        }
+
+        .roulette-overlay.visible {
+            opacity: 1;
+            transform: scale(1) translateY(0) rotateX(0deg);
+        }
+
+        .roulette-overlay.hiding {
+            opacity: 0;
+            transform: scale(0.6) translateY(-50px);
+            transition:
+                opacity 0.42s ease-in,
+                transform 0.42s ease-in;
+        }
+
+        /* ── Título Superior Neón ── */
+        .roulette-title-badge {
+            position: relative;
+            padding: 8px 28px;
+            border-radius: 999px;
+            background: linear-gradient(135deg, rgba(15, 23, 42, 0.92), rgba(30, 15, 60, 0.94));
+            border: 2.5px solid #FFD700;
+            box-shadow:
+                0 0 25px rgba(255, 215, 0, 0.55),
+                0 10px 24px rgba(0, 0, 0, 0.65),
+                inset 0 0 14px rgba(255, 215, 0, 0.25);
+            color: #FFFFFF;
+            font-size: clamp(18px, 2.4vw, 28px);
+            font-weight: 900;
+            font-style: italic;
+            letter-spacing: 1.5px;
+            text-transform: uppercase;
+            text-shadow:
+                0 0 12px rgba(255, 215, 0, 0.9),
+                0 3px 6px rgba(0, 0, 0, 0.9);
+            z-index: 10;
+        }
+
+        /* ── Tarjeta del Viewer / Donador ── */
+        .viewer-pill {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 7px 18px 7px 9px;
+            border-radius: 999px;
+            background: rgba(12, 14, 24, 0.88);
+            border: 2px solid rgba(0, 229, 255, 0.75);
+            box-shadow:
+                0 0 20px rgba(0, 229, 255, 0.4),
+                0 8px 20px rgba(0, 0, 0, 0.65);
+            color: #fff;
+            z-index: 10;
+            backdrop-filter: blur(8px);
+        }
+
+        .viewer-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            object-fit: cover;
+            border: 2px solid #FFD700;
+            background: linear-gradient(135deg, #FF2A5F, #7C3AED);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 900;
+            font-size: 18px;
+            color: #fff;
+            flex-shrink: 0;
+        }
+
+        .viewer-info {
+            display: flex;
+            flex-direction: column;
+            line-height: 1.15;
+        }
+
+        .viewer-name {
+            font-size: 16px;
+            font-weight: 900;
+            color: #FFD700;
+            text-shadow: 0 2px 6px rgba(0, 0, 0, 0.9);
+            max-width: 240px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .viewer-sub {
+            font-size: 11px;
+            font-weight: 800;
+            color: #00E5FF;
+            letter-spacing: 0.7px;
+            text-transform: uppercase;
+        }
+
+        .queue-badge {
+            margin-left: 6px;
+            padding: 3px 9px;
+            border-radius: 999px;
+            background: linear-gradient(135deg, #FF2A5F, #FF6B00);
+            color: #fff;
+            font-size: 11px;
+            font-weight: 900;
+            box-shadow: 0 0 12px rgba(255, 42, 95, 0.7);
+        }
+
+        /* ── Tambor y Marco de la Ruleta ── */
+        .wheel-stage {
+            position: relative;
+            width: min(74vw, 68vh, 520px);
+            height: min(74vw, 68vh, 520px);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        /* Halo trasero reactivo */
+        .wheel-glow {
+            position: absolute;
+            inset: -26px;
+            border-radius: 50%;
+            background: radial-gradient(circle, var(--glow-color, rgba(255, 215, 0, 0.55)) 0%, rgba(124, 58, 237, 0.25) 52%, transparent 74%);
+            filter: blur(14px);
+            animation: pulseGlow 2s ease-in-out infinite alternate;
+            pointer-events: none;
+        }
+
+        @keyframes pulseGlow {
+            0% {
+                transform: scale(0.96);
+                opacity: 0.75;
+            }
+
+            100% {
+                transform: scale(1.06);
+                opacity: 1;
+            }
+        }
+
+        /* Marco exterior tipo casino neón */
+        .wheel-outer-rim {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            padding: 16px;
+            background: conic-gradient(from 0deg,
+                    #B45309, #FDE047, #F59E0B, #FEF08A,
+                    #B45309, #FDE047, #D97706, #FEF08A, #B45309);
+            box-shadow:
+                0 22px 50px rgba(0, 0, 0, 0.8),
+                0 0 36px rgba(255, 215, 0, 0.55),
+                inset 0 0 18px rgba(0, 0, 0, 0.75);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .wheel-inner-track {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            background: #0B0F19;
+            padding: 8px;
+            box-shadow: inset 0 0 22px rgba(0, 0, 0, 0.95);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        #wheelCanvas {
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            display: block;
+        }
+
+        /* Bombillas LED alrededor del bisel */
+        .rim-lights {
+            position: absolute;
+            inset: 0;
+            border-radius: 50%;
+            pointer-events: none;
+        }
+
+        .rim-bulb {
+            position: absolute;
+            left: 50%;
+            top: 50%;
+            width: 10px;
+            height: 10px;
+            margin: -5px 0 0 -5px;
+            border-radius: 50%;
+            background: #FFFBEB;
+            box-shadow: 0 0 10px #FDE047, 0 0 18px #F59E0B;
+            animation: bulbBlink 0.7s ease-in-out infinite alternate;
+        }
+
+        .rim-bulb:nth-child(even) {
+            animation-delay: 0.35s;
+            background: #00E5FF;
+            box-shadow: 0 0 10px #00E5FF, 0 0 18px #3B82F6;
+        }
+
+        @keyframes bulbBlink {
+            0% {
+                opacity: 0.45;
+                transform: var(--bulb-pos) scale(0.82);
+            }
+
+            100% {
+                opacity: 1;
+                transform: var(--bulb-pos) scale(1.18);
+            }
+        }
+
+        /* Tapón Central Metálico 3D */
+        .wheel-center-cap {
+            position: absolute;
+            width: 19%;
+            height: 19%;
+            border-radius: 50%;
+            background: radial-gradient(circle at 32% 30%, #FFF7B0 0%, #FFD700 42%, #B45309 85%, #78350F 100%);
+            border: 4px solid #FFFFFF;
+            box-shadow:
+                0 8px 22px rgba(0, 0, 0, 0.75),
+                0 0 22px rgba(255, 215, 0, 0.8),
+                inset 0 3px 8px rgba(255, 255, 255, 0.8);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: clamp(22px, 3.6vw, 36px);
+            z-index: 6;
+        }
+
+        /* Puntero / Aguja Superior con Rebote Mecánico */
+        .wheel-pointer-wrap {
+            position: absolute;
+            top: -22px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 58px;
+            height: 68px;
+            z-index: 12;
+            filter: drop-shadow(0 8px 14px rgba(0, 0, 0, 0.8));
+            transform-origin: 50% 14px;
+        }
+
+        .wheel-pointer-wrap.tick-kick {
+            animation: pointerDeflect 0.11s cubic-bezier(0.2, 0.8, 0.4, 1);
+        }
+
+        @keyframes pointerDeflect {
+            0% {
+                transform: translateX(-50%) rotate(0deg);
+            }
+
+            40% {
+                transform: translateX(-50%) rotate(-26deg);
+            }
+
+            100% {
+                transform: translateX(-50%) rotate(0deg);
+            }
+        }
+
+        /* ── Banner de Resultado Ganador ── */
+        .winner-banner {
+            position: absolute;
+            bottom: -18px;
+            left: 50%;
+            transform: translate(-50%, 30px) scale(0.35);
+            opacity: 0;
+            min-width: min(88vw, 460px);
+            max-width: 92vw;
+            padding: 16px 32px;
+            border-radius: 24px;
+            background: linear-gradient(135deg, rgba(15, 23, 42, 0.96), rgba(25, 12, 48, 0.96));
+            border: 3.5px solid var(--win-color, #FFD700);
+            box-shadow:
+                0 22px 50px rgba(0, 0, 0, 0.85),
+                0 0 40px var(--win-color, #FFD700),
+                inset 0 0 22px rgba(255, 255, 255, 0.18);
+            text-align: center;
+            z-index: 20;
+            transition:
+                transform 0.46s cubic-bezier(0.18, 0.89, 0.32, 1.28),
+                opacity 0.35s ease;
+        }
+
+        .winner-banner.show {
+            transform: translate(-50%, 0) scale(1);
+            opacity: 1;
+        }
+
+        .winner-label {
+            font-size: 12px;
+            font-weight: 800;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            color: #FDE047;
+            margin-bottom: 4px;
+        }
+
+        .winner-main {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+            font-size: clamp(24px, 3.8vw, 40px);
+            font-weight: 900;
+            font-style: italic;
+            color: #FFFFFF;
+            text-transform: uppercase;
+            text-shadow:
+                0 0 18px var(--win-color, #FFD700),
+                0 4px 10px rgba(0, 0, 0, 0.9);
+            line-height: 1.1;
+        }
+
+        /* ── Confeti de Celebración ── */
+        .confetti {
+            position: fixed;
+            top: -20px;
+            border-radius: 3px;
+            pointer-events: none;
+            z-index: 30;
+            animation: confettiFall linear forwards;
+        }
+
+        @keyframes confettiFall {
+            0% {
+                transform: translate3d(0, -20px, 0) rotate(0deg);
+                opacity: 1;
+            }
+
+            85% {
+                opacity: 1;
+            }
+
+            100% {
+                transform: translate3d(var(--drift, 40px), 106vh, 0) rotate(720deg);
+                opacity: 0;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="stage">
+        <div id="rouletteOverlay" class="roulette-overlay">
+            <!-- Título de la Ruleta -->
+            <div id="rouletteTitle" class="roulette-title-badge">¡RULETA DE RETOS!</div>
+
+            <!-- Tarjeta del Donador / Viewer -->
+            <div id="viewerPill" class="viewer-pill">
+                <div id="viewerAvatarWrap"></div>
+                <div class="viewer-info">
+                    <span id="viewerName" class="viewer-name">Girando...</span>
+                    <span id="viewerSub" class="viewer-sub">Giro de la Suerte</span>
+                </div>
+                <span id="queueBadge" class="queue-badge" style="display:none;">+1</span>
+            </div>
+
+            <!-- Escenario de la Rueda -->
+            <div class="wheel-stage">
+                <div id="wheelGlow" class="wheel-glow"></div>
+
+                <!-- Aguja / Puntero Superior -->
+                <div id="wheelPointer" class="wheel-pointer-wrap">
+                    <svg viewBox="0 0 64 76" width="100%" height="100%">
+                        <defs>
+                            <linearGradient id="ptrGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                                <stop offset="0%" stop-color="#FFF7B0" />
+                                <stop offset="45%" stop-color="#FFD700" />
+                                <stop offset="100%" stop-color="#DC2626" />
+                            </linearGradient>
+                        </defs>
+                        <!-- Cuerpo de la aguja -->
+                        <path d="M12 16 L52 16 L32 70 Z" fill="url(#ptrGrad)" stroke="#FFFFFF" stroke-width="3.5"
+                            stroke-linejoin="round" />
+                        <!-- Perno superior -->
+                        <circle cx="32" cy="16" r="12" fill="#1E293B" stroke="#FFD700" stroke-width="3.5" />
+                        <circle cx="32" cy="16" r="5" fill="#FFF7B0" />
+                    </svg>
+                </div>
+
+                <!-- Aro exterior + Bombillas + Canvas -->
+                <div class="wheel-outer-rim">
+                    <div id="rimLights" class="rim-lights"></div>
+                    <div class="wheel-inner-track">
+                        <canvas id="wheelCanvas" width="700" height="700"></canvas>
+                    </div>
+                    <div id="wheelCenterCap" class="wheel-center-cap">🎰</div>
+                </div>
+
+                <!-- Banner de Resultado Ganador -->
+                <div id="winnerBanner" class="winner-banner">
+                    <div class="winner-label">✨ ¡RESULTADO GANADOR! ✨</div>
+                    <div class="winner-main">
+                        <span id="winnerEmoji">💃</span>
+                        <span id="winnerText">BAILE SORPRESA</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script>
+        const socket = io();
+
+        const overlayEl = document.getElementById('rouletteOverlay');
+        const titleEl = document.getElementById('rouletteTitle');
+        const viewerAvatarW = document.getElementById('viewerAvatarWrap');
+        const viewerNameEl = document.getElementById('viewerName');
+        const viewerSubEl = document.getElementById('viewerSub');
+        const queueBadgeEl = document.getElementById('queueBadge');
+        const wheelGlowEl = document.getElementById('wheelGlow');
+        const pointerEl = document.getElementById('wheelPointer');
+        const rimLightsEl = document.getElementById('rimLights');
+        const centerCapEl = document.getElementById('wheelCenterCap');
+        const winnerBannerEl = document.getElementById('winnerBanner');
+        const winnerEmojiEl = document.getElementById('winnerEmoji');
+        const winnerTextEl = document.getElementById('winnerText');
+        const canvas = document.getElementById('wheelCanvas');
+        const ctx = canvas.getContext('2d');
+
+        const OPCIONES_DEMO = [
+            { id: 'opt-1', texto: 'Baile Sorpresa', emoji: '💃', color: '#FF2A5F', peso: 1 },
+            { id: 'opt-2', texto: 'Reto del Chat', emoji: '🔥', color: '#7C3AED', peso: 1 },
+            { id: 'opt-3', texto: 'Cantar 30 seg', emoji: '🎤', color: '#00E5FF', peso: 1 },
+            { id: 'opt-4', texto: 'Castigo Random', emoji: '😈', color: '#F59E0B', peso: 1 },
+            { id: 'opt-5', texto: 'Saludo VIP', emoji: '👑', color: '#10B981', peso: 1 },
+            { id: 'opt-6', texto: '¡Se Salva!', emoji: '🍀', color: '#3B82F6', peso: 1 }
+        ];
+
+        let opcionesActuales = [...OPCIONES_DEMO];
+        let rotacionActualRad = 0; // Ángulo acumulado de la rueda en radianes
+        let animFrameId = null;
+        let ocultarTimer = null;
+        let resultadoTimer = null;
+        let audioCtx = null;
+        let sonidoHabilitado = true;
+        let ganadorResaltadoIdx = -1;
+
+        // Crear las 24 bombillas LED en el aro exterior
+        function inicializarBombillas() {
+            rimLightsEl.innerHTML = '';
+            const total = 20;
+            for (let i = 0; i < total; i++) {
+                const bulb = document.createElement('div');
+                bulb.className = 'rim-bulb';
+                const deg = (i * 360) / total;
+                bulb.style.setProperty('--bulb-pos', `rotate(${deg}deg) translateY(-244px)`);
+                bulb.style.transform = `rotate(${deg}deg) translateY(-244px)`;
+                rimLightsEl.appendChild(bulb);
+            }
+        }
+        inicializarBombillas();
+
+        // Ajustar radio de bombillas si cambia el tamaño de ventana
+        function actualizarRadioBombillas() {
+            const rim = document.querySelector('.wheel-outer-rim');
+            if (!rim) return;
+            const radius = (rim.clientWidth / 2) - 8;
+            const bulbs = rimLightsEl.querySelectorAll('.rim-bulb');
+            const total = bulbs.length;
+            bulbs.forEach((b, i) => {
+                const deg = (i * 360) / total;
+                const pos = `rotate(${deg}deg) translateY(-${radius}px)`;
+                b.style.setProperty('--bulb-pos', pos);
+                b.style.transform = pos;
+            });
+        }
+        window.addEventListener('resize', actualizarRadioBombillas);
+
+        // ── Audio Sintetizado (Web Audio API) para Ticks y Fanfarria ──
+        function ensureAudio() {
+            if (!sonidoHabilitado) return null;
+            try {
+                if (!audioCtx) {
+                    const AC = window.AudioContext || window.webkitAudioContext;
+                    if (AC) audioCtx = new AC();
+                }
+                if (audioCtx && audioCtx.state === 'suspended') {
+                    audioCtx.resume();
+                }
+                return audioCtx;
+            } catch (e) {
+                return null;
+            }
+        }
+
+        function reproducirTick(velocidadNorm = 1) {
+            const ac = ensureAudio();
+            if (!ac) return;
+            try {
+                const now = ac.currentTime;
+                const osc = ac.createOscillator();
+                const gain = ac.createGain();
+                osc.type = 'triangle';
+                const baseFreq = 650 + Math.min(600, velocidadNorm * 450);
+                osc.frequency.setValueAtTime(baseFreq, now);
+                osc.frequency.exponentialRampToValueAtTime(180, now + 0.038);
+
+                gain.gain.setValueAtTime(0.22, now);
+                gain.gain.exponentialRampToValueAtTime(0.001, now + 0.042);
+
+                osc.connect(gain);
+                gain.connect(ac.destination);
+                osc.start(now);
+                osc.stop(now + 0.045);
+            } catch (e) { }
+        }
+
+        function reproducirFanfarriaGanador() {
+            const ac = ensureAudio();
+            if (!ac) return;
+            try {
+                const notas = [523.25, 659.25, 783.99, 1046.50]; // C5, E5, G5, C6
+                notas.forEach((freq, idx) => {
+                    const start = ac.currentTime + idx * 0.09;
+                    const dur = idx === notas.length - 1 ? 0.45 : 0.16;
+                    const osc = ac.createOscillator();
+                    const gain = ac.createGain();
+                    osc.type = 'Bright' ? 'sawtooth' : 'triangle';
+                    osc.type = idx === notas.length - 1 ? 'triangle' : 'sine';
+                    osc.frequency.setValueAtTime(freq, start);
+
+                    gain.gain.setValueAtTime(0.24, start);
+                    gain.gain.exponentialRampToValueAtTime(0.001, start + dur);
+
+                    osc.connect(gain);
+                    gain.connect(ac.destination);
+                    osc.start(start);
+                    osc.stop(start + dur + 0.02);
+                });
+            } catch (e) { }
+        }
+
+        function animarRebotePuntero() {
+            pointerEl.classList.remove('tick-kick');
+            void pointerEl.offsetWidth;
+            pointerEl.classList.add('tick-kick');
+        }
+
+        // ── Renderizado Canvas 2D de la Ruleta ──
+        function dibujarRuleta(opciones, anguloRotacionRad, highlightIndex = -1) {
+            const list = (Array.isArray(opciones) && opciones.length >= 2) ? opciones : OPCIONES_DEMO;
+            const n = list.length;
+            const arc = (Math.PI * 2) / n;
+            const W = canvas.width;
+            const H = canvas.height;
+            const cx = W / 2;
+            const cy = H / 2;
+            const r = (W / 2) - 6;
+
+            ctx.clearRect(0, 0, W, H);
+            ctx.save();
+            ctx.translate(cx, cy);
+            ctx.rotate(anguloRotacionRad);
+
+            for (let i = 0; i < n; i++) {
+                const opt = list[i];
+                const startAngle = i * arc;
+                const endAngle = startAngle + arc;
+                const midAngle = startAngle + arc / 2;
+                const baseColor = opt.color || '#7C3AED';
+
+                // Sector con gradiente radial sutil
+                ctx.beginPath();
+                ctx.moveTo(0, 0);
+                ctx.arc(0, 0, r, startAngle, endAngle);
+                ctx.closePath();
+
+                const grad = ctx.createRadialGradient(0, 0, r * 0.12, 0, 0, r);
+                grad.addColorStop(0, aclararColor(baseColor, 22));
+                grad.addColorStop(0.75, baseColor);
+                grad.addColorStop(1, oscurecerColor(baseColor, 26));
+                ctx.fillStyle = grad;
+                ctx.fill();
+
+                // Si es el sector ganador al finalizar, añadir brillo extra
+                if (i === highlightIndex) {
+                    ctx.save();
+                    ctx.fillStyle = 'rgba(255, 255, 255, 0.24)';
+                    ctx.fill();
+                    ctx.lineWidth = 7;
+                    ctx.strokeStyle = '#FFF7B0';
+                    ctx.stroke();
+                    ctx.restore();
+                }
+
+                // Línea divisoria entre segmentos
+                ctx.lineWidth = 3;
+                ctx.strokeStyle = 'rgba(255, 255, 255, 0.85)';
+                ctx.stroke();
+
+                // Perno metálico en el borde de cada división
+                const pinX = Math.cos(startAngle) * (r - 12);
+                const pinY = Math.sin(startAngle) * (r - 12);
+                ctx.beginPath();
+                ctx.arc(pinX, pinY, 5.5, 0, Math.PI * 2);
+                ctx.fillStyle = '#FFFBEB';
+                ctx.fill();
+                ctx.lineWidth = 2;
+                ctx.strokeStyle = '#92400E';
+                ctx.stroke();
+
+                // Texto y emoji del sector
+                ctx.save();
+                ctx.rotate(midAngle);
+                ctx.textAlign = 'right';
+                ctx.textBaseline = 'middle';
+
+                const maxTextWidth = r * 0.62;
+                const fontSize = n > 12 ? 17 : (n > 8 ? 20 : 23);
+                ctx.font = `900 italic ${fontSize}px Montserrat, sans-serif`;
+                ctx.fillStyle = '#FFFFFF';
+                ctx.shadowColor = 'rgba(0, 0, 0, 0.85)';
+                ctx.shadowBlur = 6;
+                ctx.shadowOffsetX = 2;
+                ctx.shadowOffsetY = 2;
+
+                const emojiStr = (opt.emoji || '').trim();
+                const labelStr = (opt.texto || '').toUpperCase();
+
+                if (emojiStr) {
+                    ctx.font = `${fontSize + 5}px sans-serif`;
+                    ctx.fillText(emojiStr, r - 24, 0);
+                    ctx.font = `900 italic ${fontSize}px Montserrat, sans-serif`;
+                    ctx.fillText(truncarTextoCanvas(ctx, labelStr, maxTextWidth - 36), r - 62, 0);
+                } else {
+                    ctx.fillText(truncarTextoCanvas(ctx, labelStr, maxTextWidth), r - 28, 0);
+                }
+                ctx.restore();
+            }
+
+            ctx.restore();
+        }
+
+        function truncarTextoCanvas(context, text, maxWidth) {
+            if (context.measureText(text).width <= maxWidth) return text;
+            let str = text;
+            while (str.length > 3 && context.measureText(str + '…').width > maxWidth) {
+                str = str.slice(0, -1);
+            }
+            return str + '…';
+        }
+
+        function hexToRgb(hex) {
+            const clean = String(hex || '#7C3AED').replace('#', '');
+            const full = clean.length === 3
+                ? clean.split('').map(c => c + c).join('')
+                : clean.padEnd(6, '0').slice(0, 6);
+            const num = parseInt(full, 16);
+            return {
+                r: (num >> 16) & 255,
+                g: (num >> 8) & 255,
+                b: num & 255
+            };
+        }
+
+        function aclararColor(hex, pct) {
+            const { r, g, b } = hexToRgb(hex);
+            const f = pct / 100;
+            return `rgb(${Math.round(r + (255 - r) * f)}, ${Math.round(g + (255 - g) * f)}, ${Math.round(b + (255 - b) * f)})`;
+        }
+
+        function oscurecerColor(hex, pct) {
+            const { r, g, b } = hexToRgb(hex);
+            const f = 1 - pct / 100;
+            return `rgb(${Math.round(r * f)}, ${Math.round(g * f)}, ${Math.round(b * f)})`;
+        }
+
+        function renderViewerInfo(data) {
+            const nombre = (data.viewer || '').trim();
+            viewerAvatarW.innerHTML = '';
+
+            if (data.avatar) {
+                const img = document.createElement('img');
+                img.className = 'viewer-avatar';
+                img.src = data.avatar;
+                img.alt = nombre || 'Viewer';
+                img.onerror = () => {
+                    img.replaceWith(crearAvatarInicial(nombre));
+                };
+                viewerAvatarW.appendChild(img);
+            } else {
+                viewerAvatarW.appendChild(crearAvatarInicial(nombre));
+            }
+
+            viewerNameEl.textContent = nombre ? `@${nombre}` : '¡Giro de Ruleta!';
+            viewerSubEl.textContent = data.giftName
+                ? `🎁 ${data.giftName}`
+                : 'Activado en Vivo';
+
+            if (data.pendientes && data.pendientes > 0) {
+                queueBadgeEl.style.display = 'inline-block';
+                queueBadgeEl.textContent = `+${data.pendientes} en cola`;
+            } else {
+                queueBadgeEl.style.display = 'none';
+            }
+        }
+
+        function crearAvatarInicial(nombre) {
+            const div = document.createElement('div');
+            div.className = 'viewer-avatar';
+            div.textContent = nombre ? nombre[0].toUpperCase() : '🎰';
+            return div;
+        }
+
+        function limpiarTimersEscena() {
+            if (animFrameId) {
+                cancelAnimationFrame(animFrameId);
+                animFrameId = null;
+            }
+            clearTimeout(ocultarTimer);
+            clearTimeout(resultadoTimer);
+        }
+
+        function ocultarEscenaInmediato() {
+            limpiarTimersEscena();
+            winnerBannerEl.classList.remove('show');
+            overlayEl.classList.remove('visible');
+            overlayEl.classList.add('hiding');
+            setTimeout(() => {
+                overlayEl.classList.remove('hiding');
+            }, 450);
+        }
+
+        // ── Ejecutar Giro de Ruleta ──
+        function iniciarGiroRuleta(data) {
+            limpiarTimersEscena();
+
+            opcionesActuales = (Array.isArray(data.opciones) && data.opciones.length >= 2)
+                ? data.opciones
+                : OPCIONES_DEMO;
+            sonidoHabilitado = data.sonidoActivo !== false;
+            ganadorResaltadoIdx = -1;
+
+            titleEl.textContent = data.titulo || '¡RULETA DE RETOS!';
+            centerCapEl.textContent = '🎰';
+            wheelGlowEl.style.setProperty('--glow-color', 'rgba(255, 215, 0, 0.55)');
+            winnerBannerEl.classList.remove('show');
+
+            renderViewerInfo(data);
+            actualizarRadioBombillas();
+
+            // Mostrar la ruleta en pantalla
+            overlayEl.classList.remove('hiding');
+            overlayEl.classList.add('visible');
+
+            const n = opcionesActuales.length;
+            const arc = (Math.PI * 2) / n;
+            const ganadorIdx = (typeof data.ganadorIndex === 'number' && data.ganadorIndex >= 0 && data.ganadorIndex < n)
+                ? data.ganadorIndex
+                : 0;
+            const ganador = opcionesActuales[ganadorIdx];
+
+            // En Canvas 0 rad está a las 3 en punto; el puntero está arriba a las 12 en punto (-PI/2 = 3*PI/2).
+            // Para que el centro del segmento `ganadorIdx` quede exactamente bajo el puntero superior (-PI/2):
+            // anguloFinal + (ganadorIdx + 0.5 + offset) * arc ≡ -PI/2 (mod 2*PI)
+            const offsetSeg = typeof data.offsetSegmento === 'number' ? data.offsetSegmento : 0;
+            const anguloObjetivoMod = (-Math.PI / 2) - ((ganadorIdx + 0.5 + offsetSeg) * arc);
+
+            const vueltas = (parseInt(data.vueltasExtras) || 7) * (Math.PI * 2);
+            const baseActual = rotacionActualRad;
+            const modActual = ((baseActual % (Math.PI * 2)) + Math.PI * 2) % (Math.PI * 2);
+            const modTarget = ((anguloObjetivoMod % (Math.PI * 2)) + Math.PI * 2) % (Math.PI * 2);
+            let delta = modTarget - modActual;
+            if (delta <= 0) delta += Math.PI * 2;
+
+            const rotacionInicial = baseActual;
+            const rotacionFinal = rotacionInicial + vueltas + delta;
+            const duracionMs = Math.max(2000, parseInt(data.duracionGiroMs) || 5000);
+            const tiempoResultadoMs = Math.max(2000, parseInt(data.tiempoResultadoMs) || 4000);
+
+            const t0 = performance.now();
+            let ultimoPasoPin = Math.floor(((rotacionInicial + Math.PI / 2) / arc));
+
+            function step(now) {
+                const elapsed = now - t0;
+                const progress = Math.min(1, elapsed / duracionMs);
+                // Curva quintic ease-out para desaceleración de casino realista
+                const eased = 1 - Math.pow(1 - progress, 4.5);
+
+                rotacionActualRad = rotacionInicial + (rotacionFinal - rotacionInicial) * eased;
+                dibujarRuleta(opcionesActuales, rotacionActualRad, -1);
+
+                // Detectar cruce de cada división bajo el puntero superior
+                const pasoActual = Math.floor(((rotacionActualRad + Math.PI / 2) / arc));
+                if (pasoActual > ultimoPasoPin) {
+                    ultimoPasoPin = pasoActual;
+                    const velNorm = 1 - progress;
+                    animarRebotePuntero();
+                    reproducirTick(velNorm);
+                }
+
+                if (progress < 1) {
+                    animFrameId = requestAnimationFrame(step);
+                } else {
+                    animFrameId = null;
+                    revelarGanador(ganador, ganadorIdx, tiempoResultadoMs);
+                }
+            }
+
+            animFrameId = requestAnimationFrame(step);
+        }
+
+        function revelarGanador(ganador, ganadorIdx, tiempoResultadoMs) {
+            ganadorResaltadoIdx = ganadorIdx;
+            dibujarRuleta(opcionesActuales, rotacionActualRad, ganadorIdx);
+
+            const winColor = (ganador && ganador.color) || '#FFD700';
+            const winEmoji = (ganador && ganador.emoji) || '🎉';
+            const winTexto = (ganador && ganador.texto) || '¡PREMIO!';
+
+            centerCapEl.textContent = winEmoji;
+            wheelGlowEl.style.setProperty('--glow-color', winColor);
+            winnerBannerEl.style.setProperty('--win-color', winColor);
+            winnerEmojiEl.textContent = winEmoji;
+            winnerTextEl.textContent = winTexto;
+            winnerBannerEl.classList.add('show');
+
+            reproducirFanfarriaGanador();
+            lanzarConfeti(winColor);
+
+            // Auto-ocultar después de mostrar el resultado
+            ocultarTimer = setTimeout(() => {
+                winnerBannerEl.classList.remove('show');
+                overlayEl.classList.remove('visible');
+                overlayEl.classList.add('hiding');
+                setTimeout(() => {
+                    overlayEl.classList.remove('hiding');
+                }, 450);
+            }, tiempoResultadoMs);
+        }
+
+        function lanzarConfeti(colorPrincipal) {
+            const colores = [colorPrincipal || '#FFD700', '#FFD700', '#FF2A5F', '#00E5FF', '#FFFFFF', '#7CFF6B'];
+            for (let i = 0; i < 65; i++) {
+                const c = document.createElement('div');
+                c.className = 'confetti';
+                c.style.left = (15 + Math.random() * 70) + 'vw';
+                c.style.width = (7 + Math.random() * 8) + 'px';
+                c.style.height = (9 + Math.random() * 12) + 'px';
+                c.style.background = colores[Math.floor(Math.random() * colores.length)];
+                c.style.setProperty('--drift', (Math.random() * 200 - 100) + 'px');
+                c.style.animationDuration = (1.8 + Math.random() * 1.8) + 's';
+                c.style.animationDelay = (Math.random() * 0.45) + 's';
+                document.body.appendChild(c);
+                setTimeout(() => c.remove(), 4200);
+            }
+        }
+
+        // Dibujo inicial en reposo
+        dibujarRuleta(opcionesActuales, 0, -1);
+
+        // Eventos Socket.IO
+        socket.on('ruletaGirar', iniciarGiroRuleta);
+        socket.on('ruletaLimpiar', ocultarEscenaInmediato);
+        socket.on('ruletaConfigActualizada', (cfg) => {
+            if (cfg && Array.isArray(cfg.opciones) && cfg.opciones.length >= 2) {
+                opcionesActuales = cfg.opciones;
+                dibujarRuleta(opcionesActuales, rotacionActualRad, -1);
+            }
+        });
+
+        // Cargar configuración inicial del servidor
+        fetch('/api/ruleta/config')
+            .then(r => r.ok ? r.json() : null)
+            .then(cfg => {
+                if (cfg && Array.isArray(cfg.opciones) && cfg.opciones.length >= 2) {
+                    opcionesActuales = cfg.opciones;
+                    titleEl.textContent = cfg.titulo || '¡RULETA DE RETOS!';
+                    sonidoHabilitado = cfg.sonidoActivo !== false;
+                    dibujarRuleta(opcionesActuales, rotacionActualRad, -1);
+                }
+            })
+            .catch(() => { });
+
+        // Pruebas rápidas con teclado: Espacio / G = girar demo, R / Escape = ocultar
+        window.addEventListener('keydown', (e) => {
+            const k = e.key.toLowerCase();
+            if (k === ' ' || k === 'g') {
+                e.preventDefault();
+                const idx = Math.floor(Math.random() * opcionesActuales.length);
+                iniciarGiroRuleta({
+                    id: 'demo-' + Date.now(),
+                    viewer: 'ViewerDemo',
+                    avatar: '',
+                    giftName: 'Rosa',
+                    titulo: titleEl.textContent || '¡RULETA DE RETOS!',
+                    sonidoActivo: true,
+                    opciones: opcionesActuales,
+                    ganadorIndex: idx,
+                    ganador: opcionesActuales[idx],
+                    vueltasExtras: 7,
+                    offsetSegmento: (Math.random() * 0.5) - 0.25,
+                    duracionGiroMs: 4800,
+                    tiempoResultadoMs: 4000,
+                    pendientes: 0
+                });
+            } else if (k === 'r' || k === 'escape') {
+                ocultarEscenaInmediato();
+            }
+        });
+    </script>
+</body>
+
+</html>

@@ -1,6 +1,6 @@
 const clasicoGoleadoresService = require('./clasicoGoleadoresService');
 
-function createPointsProcessor(io, activeSessions, resolverNombreFn, timerHandlers, conociendoHandlers, revivirHandlers, penaltiHandlers) {
+function createPointsProcessor(io, activeSessions, resolverNombreFn, timerHandlers, conociendoHandlers, revivirHandlers, penaltiHandlers, ruletaHandlers) {
 
     function buscarEnMapa(mapaObj, nombreRegalo, diamondUnit = 1, giftId = null) {
         if (!mapaObj || !nombreRegalo) return null;
@@ -287,6 +287,15 @@ function createPointsProcessor(io, activeSessions, resolverNombreFn, timerHandle
             }
         }
 
+        // Dinámica Ruleta: si el regalo coincide con el configurado, gira la ruleta en el overlay
+        if (ruletaHandlers && typeof ruletaHandlers.onGift === 'function') {
+            try {
+                ruletaHandlers.onGift(username, { giftName, giftId: data.giftId, viewer, avatar, repeat: deltaRepeat, giftImg: giftImgSrc, diamondUnit });
+            } catch (e) {
+                console.error('Error en dinámica Ruleta:', e);
+            }
+        }
+
         const coins = diamondUnit * deltaRepeat;
         
         if (!session.goalConfig) {
@@ -380,8 +389,26 @@ function createPointsProcessor(io, activeSessions, resolverNombreFn, timerHandle
                 }
                 if (session.dinamicaActivadores.activo) {
                     if (!session.dinamicaActivadores.conteos) session.dinamicaActivadores.conteos = {};
+                    if (!session.dinamicaActivadores.donadores) session.dinamicaActivadores.donadores = {};
                     session.dinamicaActivadores.conteos[queenActivadora] = (session.dinamicaActivadores.conteos[queenActivadora] || 0) + deltaRepeat;
                     
+                    let topMvp = null;
+                    if (viewer) {
+                        if (!session.dinamicaActivadores.donadores[queenActivadora]) {
+                            session.dinamicaActivadores.donadores[queenActivadora] = {};
+                        }
+                        const prevD = session.dinamicaActivadores.donadores[queenActivadora][viewer] || { viewer, avatar: '', total: 0 };
+                        prevD.total += deltaRepeat;
+                        if (avatar) prevD.avatar = avatar;
+                        session.dinamicaActivadores.donadores[queenActivadora][viewer] = prevD;
+
+                        Object.values(session.dinamicaActivadores.donadores[queenActivadora]).forEach(d => {
+                            if (d && d.total > 0 && (!topMvp || d.total > topMvp.total)) {
+                                topMvp = d;
+                            }
+                        });
+                    }
+
                     let maxConteo = 0;
                     let lider = null;
                     const parts = (session.dinamicaActivadores.participantes && session.dinamicaActivadores.participantes.length > 0) 
@@ -405,7 +432,10 @@ function createPointsProcessor(io, activeSessions, resolverNombreFn, timerHandle
                         lider: session.dinamicaActivadores.lider,
                         maxConteo: session.dinamicaActivadores.maxConteo,
                         giftName,
-                        giftImg: giftImgFinal
+                        giftImg: giftImgFinal,
+                        viewer,
+                        avatar,
+                        mvp: topMvp
                     });
                 }
                 

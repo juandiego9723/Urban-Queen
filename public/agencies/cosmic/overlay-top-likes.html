@@ -42,25 +42,28 @@
         })();
     </script>
     <meta charset="UTF-8">
-    <title>Top 5 Tap Tap — Edición Halloween Neón (Cosmic)</title>
-    <!-- Tipografías gaming & stream (Montserrat & Inter) -->
-    <link href="https://fonts.googleapis.com/css2?family=Montserrat:ital,wght@0,700;0,800;0,900;1,800;1,900&family=Inter:ital,wght@0,600;0,700;0,800;0,900;1,700;1,800&display=swap" rel="stylesheet">
+    <title>Top 3 Tap Tap — Edición Navidad Festiva (Cosmic)</title>
+    <!-- Tipografía TikTok Sans -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=TikTok+Sans:ital,wght@0,300..900;1,300..900&display=swap" rel="stylesheet">
     
     <style>
+        @import url('https://fonts.googleapis.com/css2?family=TikTok+Sans:ital,wght@0,300..900;1,300..900&display=swap');
+
         :root {
-            --orange-neon: #ff8c00;
-            --orange-bright: #ffa200;
-            --orange-drip: #ff7300;
-            --orange-glow: rgba(255, 140, 0, 0.75);
-            --purple-neon: #a855f7;
-            --purple-deep: #25094d;
-            --purple-glow: rgba(168, 85, 247, 0.65);
+            --xmas-green-deep: #0b2919;
+            --xmas-green-card: rgba(11, 38, 23, 0.94);
+            --xmas-green-inner: #103822;
+            --xmas-red: #c1121f;
+            --xmas-red-dark: #780000;
+            --xmas-red-glow: rgba(214, 40, 40, 0.65);
             --gold-bright: #ffd700;
-            --gold-glow: rgba(255, 215, 0, 0.85);
-            --bg-card: rgba(16, 7, 32, 0.90);
-            --bg-inner: rgba(10, 4, 22, 0.75);
-            --font-head: 'Montserrat', sans-serif;
-            --font-body: 'Inter', sans-serif;
+            --gold-metallic: #e5b842;
+            --gold-light: #fff3b0;
+            --gold-glow: rgba(255, 215, 0, 0.8);
+            --snow-white: #f8fafc;
+            --font-tiktok: 'TikTok Sans', 'Proxima Nova', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
         }
 
         * {
@@ -68,13 +71,14 @@
             margin: 0;
             padding: 0;
             user-select: none;
+            font-family: var(--font-tiktok) !important;
         }
 
         body, html {
             width: 100%;
             height: 100%;
             background: transparent;
-            font-family: var(--font-body);
+            font-family: var(--font-tiktok) !important;
             color: #ffffff;
             overflow: hidden;
             display: flex;
@@ -85,172 +89,341 @@
 
         .widget-wrapper {
             position: relative;
-            width: 370px;
-            margin-top: 26px;
-            filter: drop-shadow(0 10px 30px rgba(0, 0, 0, 0.8));
+            width: 295px;
+            margin-top: 32px;
+            filter: drop-shadow(0 12px 28px rgba(0, 0, 0, 0.8)) drop-shadow(0 0 22px rgba(193, 18, 31, 0.35));
             transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        .snow-cap-left {
+            position: absolute;
+            top: -11px;
+            left: 8px;
+            width: 72px;
+            height: 24px;
+            z-index: 11;
+            pointer-events: none;
+            filter: drop-shadow(0 3px 4px rgba(0, 0, 0, 0.45));
+        }
+
+        .snow-cap-right {
+            position: absolute;
+            top: -11px;
+            right: 8px;
+            width: 72px;
+            height: 24px;
+            z-index: 11;
+            pointer-events: none;
+            filter: drop-shadow(0 3px 4px rgba(0, 0, 0, 0.45));
         }
 
         .top-badge-anchor {
             position: absolute;
-            top: -25px;
+            top: -34px;
             left: 50%;
             transform: translateX(-50%);
-            z-index: 10;
+            z-index: 15;
             display: flex;
             flex-direction: column;
             align-items: center;
         }
 
-        .pumpkin-roof {
-            width: 46px;
-            height: 40px;
-            margin-bottom: -10px;
-            z-index: 12;
-            filter: drop-shadow(0 0 10px var(--orange-glow));
-            animation: pumpkinFlicker 3s infinite alternate ease-in-out;
+        .santa-hat-roof {
+            width: 68px;
+            height: 44px;
+            margin-bottom: -14px;
+            margin-left: -6px;
+            z-index: 18;
+            filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.65));
+            animation: hatFloat 3.5s infinite alternate ease-in-out;
         }
 
-        @keyframes pumpkinFlicker {
-            0%, 100% { filter: drop-shadow(0 0 8px var(--orange-glow)); transform: scale(1); }
-            50% { filter: drop-shadow(0 0 16px rgba(255, 170, 0, 0.95)) drop-shadow(0 0 4px #ffee00); transform: scale(1.06); }
+        @keyframes hatFloat {
+            0%, 100% { transform: translateY(0) rotate(-2deg); }
+            50% { transform: translateY(-3px) rotate(1deg); }
         }
 
-        .top-pill {
-            background: linear-gradient(180deg, #27064d 0%, #15022c 100%);
-            border: 2px solid var(--orange-bright);
-            border-radius: 999px;
-            padding: 4px 18px 4px 18px;
+        .top-pill-wrapper {
+            position: relative;
             display: inline-flex;
             align-items: center;
             justify-content: center;
-            gap: 7px;
-            box-shadow: 
-                0 0 14px var(--orange-glow),
-                0 0 22px rgba(168, 85, 247, 0.4),
-                inset 0 0 8px rgba(255, 140, 0, 0.3);
-            white-space: nowrap;
         }
 
+        .top-pill {
+            position: relative;
+            background: linear-gradient(180deg, #9e0b16 0%, #580409 100%);
+            border: 2px solid var(--gold-metallic);
+            border-radius: 999px;
+            padding: 4px 18px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            box-shadow: 
+                0 4px 14px rgba(0, 0, 0, 0.7),
+                0 0 16px rgba(255, 215, 0, 0.35),
+                inset 0 1px 6px rgba(255, 255, 255, 0.25);
+            white-space: nowrap;
+            z-index: 16;
+        }
+
+        .pill-snow-left, .pill-snow-right {
+            position: absolute;
+            top: -5px;
+            width: 38px;
+            height: 14px;
+            z-index: 17;
+            pointer-events: none;
+            filter: drop-shadow(0 2px 2px rgba(0,0,0,0.35));
+        }
+        .pill-snow-left { left: -3px; }
+        .pill-snow-right { right: -3px; transform: scaleX(-1); }
+
+        .pill-holly-left, .pill-holly-right {
+            position: absolute;
+            bottom: -4px;
+            width: 22px;
+            height: 22px;
+            z-index: 18;
+            pointer-events: none;
+            filter: drop-shadow(0 2px 3px rgba(0,0,0,0.6));
+        }
+        .pill-holly-left { left: -9px; }
+        .pill-holly-right { right: -9px; transform: scaleX(-1); }
+
         .pill-title {
-            font-family: var(--font-head);
-            font-size: 0.95rem;
-            font-style: italic;
+            font-size: 0.94rem;
             font-weight: 900;
             color: #ffffff;
-            letter-spacing: 1.5px;
+            letter-spacing: 1px;
             text-transform: uppercase;
-            text-shadow: 2px 2px 0px #000, 0 0 8px rgba(255, 255, 255, 0.7);
+            text-shadow: 2px 2px 0px #2b0000, 0 0 8px rgba(255, 255, 255, 0.5);
         }
 
         .pill-highlight {
-            font-family: var(--font-head);
-            font-size: 0.95rem;
-            font-style: italic;
+            font-size: 0.94rem;
             font-weight: 900;
-            color: #ffb703;
-            letter-spacing: 1.5px;
+            color: #ffd166;
+            letter-spacing: 1px;
             text-transform: uppercase;
-            text-shadow: 2px 2px 0px #000, 0 0 10px #ffb703;
+            text-shadow: 2px 2px 0px #2b0000, 0 0 10px rgba(255, 209, 102, 0.8);
         }
 
-        .halloween-card {
+        .christmas-card {
             position: relative;
-            background: var(--bg-card);
-            backdrop-filter: blur(14px);
-            -webkit-backdrop-filter: blur(14px);
-            border-radius: 24px;
-            padding: 24px 12px 14px 12px;
-            border: 2.5px solid var(--orange-bright);
+            background: 
+                radial-gradient(circle at 80% 15%, rgba(255, 215, 0, 0.08) 0%, transparent 45%),
+                radial-gradient(circle at 20% 85%, rgba(193, 18, 31, 0.12) 0%, transparent 50%),
+                linear-gradient(180deg, #0f3822 0%, #071f12 100%);
+            border-radius: 22px;
+            padding: 25px 11px 16px 11px;
+            border: 2.5px solid #d4a338;
             box-shadow: 
-                0 0 18px var(--orange-glow),
-                0 0 35px var(--purple-glow),
-                inset 0 0 18px rgba(168, 85, 247, 0.35);
+                0 0 22px rgba(214, 40, 40, 0.35),
+                inset 0 0 24px rgba(0, 0, 0, 0.75),
+                inset 0 0 12px rgba(212, 163, 56, 0.25);
             display: flex;
             flex-direction: column;
-            gap: 8px;
+            gap: 9px;
             overflow: visible;
         }
 
-        .halloween-card::after {
+        .christmas-card::after {
             content: '';
             position: absolute;
-            inset: 3px;
+            inset: 4px;
+            border-radius: 17px;
+            border: 1.2px solid rgba(229, 184, 66, 0.45);
+            pointer-events: none;
+            z-index: 1;
+        }
+
+        /* ══════════════════════════════════════════════════════════════
+           EFECTO DE NIEVE CAYENDO DENTRO DEL OVERLAY
+           ══════════════════════════════════════════════════════════════ */
+        .snowfall-layer {
+            position: absolute;
+            inset: 2px;
             border-radius: 20px;
-            border: 1.5px solid rgba(168, 85, 247, 0.7);
+            overflow: hidden;
             pointer-events: none;
-            box-shadow: inset 0 0 10px rgba(168, 85, 247, 0.3);
+            z-index: 7;
         }
 
-        .drip-top-svg {
+        .snowflake-drop {
             position: absolute;
-            top: -1px;
-            left: 20px;
-            right: 20px;
-            width: calc(100% - 40px);
-            height: 12px;
+            top: -18px;
+            color: #ffffff;
+            border-radius: 50%;
             pointer-events: none;
-            z-index: 5;
-            filter: drop-shadow(0 2px 4px var(--orange-glow));
+            will-change: transform, opacity;
+            animation: snowFallAnim linear infinite;
         }
 
-        .drip-bottom-svg {
+        .snowflake-drop.flake-dot {
+            background: radial-gradient(circle, #ffffff 30%, rgba(255, 255, 255, 0.2) 100%);
+            box-shadow: 0 0 6px rgba(255, 255, 255, 0.85);
+        }
+
+        .snowflake-drop.flake-star {
+            font-size: 10px;
+            line-height: 1;
+            text-shadow: 0 0 6px rgba(255, 255, 255, 0.9);
+        }
+
+        @keyframes snowFallAnim {
+            0% {
+                transform: translate3d(0, -15px, 0) rotate(0deg);
+                opacity: 0;
+            }
+            12% {
+                opacity: var(--flake-opacity, 0.85);
+            }
+            50% {
+                transform: translate3d(var(--flake-sway, 14px), 175px, 0) rotate(180deg);
+            }
+            88% {
+                opacity: var(--flake-opacity, 0.85);
+            }
+            100% {
+                transform: translate3d(calc(var(--flake-sway, 14px) * -0.6), 360px, 0) rotate(360deg);
+                opacity: 0;
+            }
+        }
+
+        .lights-garland-svg {
             position: absolute;
-            bottom: -9px;
-            left: 15px;
-            right: 15px;
-            width: calc(100% - 30px);
-            height: 14px;
+            top: 2px;
+            left: 8px;
+            right: 8px;
+            width: calc(100% - 16px);
+            height: 20px;
             pointer-events: none;
-            z-index: 5;
-            filter: drop-shadow(0 2px 4px var(--orange-glow));
+            z-index: 6;
         }
 
-        .hero-mvp-card {
+        .bulb-glow {
+            animation: twinkleBulb 2s infinite alternate ease-in-out;
+        }
+        .bulb-glow.d2 { animation-delay: 0.7s; }
+        .bulb-glow.d3 { animation-delay: 1.3s; }
+
+        @keyframes twinkleBulb {
+            0% { opacity: 0.65; filter: brightness(0.9); }
+            100% { opacity: 1; filter: brightness(1.35) drop-shadow(0 0 5px currentColor); }
+        }
+
+        .bottom-festive-trim {
+            position: absolute;
+            bottom: -5px;
+            left: -2px;
+            right: -2px;
+            width: calc(100% + 4px);
+            height: 30px;
+            pointer-events: none;
+            z-index: 8;
+        }
+
+        .tappers-list {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            z-index: 3;
+        }
+
+        .hero-tapper-card {
             position: relative;
-            background: linear-gradient(135deg, rgba(39, 10, 68, 0.8) 0%, rgba(15, 6, 32, 0.95) 100%);
-            border-radius: 16px;
-            border: 1.5px solid rgba(255, 162, 0, 0.55);
-            padding: 10px 14px;
+            background: 
+                radial-gradient(circle at 85% 30%, rgba(255, 215, 0, 0.14) 0%, transparent 55%),
+                linear-gradient(135deg, rgba(22, 68, 42, 0.94) 0%, rgba(9, 33, 19, 0.97) 100%);
+            border-radius: 15px;
+            border: 1.8px solid #d4a338;
+            padding: 11px 12px;
             display: flex;
             align-items: center;
             gap: 12px;
-            overflow: hidden;
+            overflow: visible;
             box-shadow: 
-                0 0 14px rgba(255, 162, 0, 0.25),
-                inset 0 0 12px rgba(168, 85, 247, 0.3);
+                0 4px 12px rgba(0, 0, 0, 0.5),
+                inset 0 0 14px rgba(255, 215, 0, 0.12);
             transition: all 0.3s ease;
+            z-index: 3;
         }
 
-        .spiderweb-corner {
+        .hero-tapper-card.rank-2 {
+            border-color: rgba(203, 213, 225, 0.75);
+            border-left: 4px solid #e2e8f0;
+            background: 
+                radial-gradient(circle at 85% 30%, rgba(226, 232, 240, 0.12) 0%, transparent 55%),
+                linear-gradient(135deg, rgba(24, 65, 43, 0.94) 0%, rgba(10, 35, 21, 0.97) 100%);
+        }
+
+        .hero-tapper-card.rank-3 {
+            border-color: rgba(245, 158, 11, 0.75);
+            border-left: 4px solid #f59e0b;
+            background: 
+                radial-gradient(circle at 85% 30%, rgba(245, 158, 11, 0.12) 0%, transparent 55%),
+                linear-gradient(135deg, rgba(38, 56, 28, 0.94) 0%, rgba(11, 35, 21, 0.97) 100%);
+        }
+
+        .card-snowflakes-bg {
             position: absolute;
-            right: 0;
-            bottom: 0;
-            width: 70px;
-            height: 70px;
+            inset: 0;
+            border-radius: 14px;
+            overflow: hidden;
             pointer-events: none;
-            opacity: 0.55;
-            filter: drop-shadow(0 0 4px var(--purple-neon));
             z-index: 1;
+        }
+
+        .corner-holly {
+            position: absolute;
+            width: 19px;
+            height: 19px;
+            pointer-events: none;
+            z-index: 6;
+            filter: drop-shadow(0 2px 3px rgba(0,0,0,0.6));
+        }
+        .corner-holly.tl { top: -5px; left: -5px; }
+        .corner-holly.tr { top: -5px; right: -5px; transform: scaleX(-1); }
+        .corner-holly.bl { bottom: -5px; left: -5px; transform: scaleY(-1); }
+        .corner-holly.br { bottom: -5px; right: -5px; transform: scale(-1, -1); }
+
+        .snowman-buddy {
+            position: absolute;
+            top: -16px;
+            right: 4px;
+            width: 26px;
+            height: 32px;
+            pointer-events: none;
+            z-index: 10;
+            filter: drop-shadow(0 2px 4px rgba(0,0,0,0.7));
+            animation: snowmanBob 3s infinite ease-in-out;
+        }
+
+        @keyframes snowmanBob {
+            0%, 100% { transform: translateY(0) rotate(2deg); }
+            50% { transform: translateY(-2px) rotate(-3deg); }
         }
 
         .avatar-section {
             position: relative;
-            width: 58px;
-            height: 58px;
+            width: 56px;
+            height: 56px;
             flex-shrink: 0;
-            z-index: 2;
+            z-index: 4;
         }
 
-        .avatar-mini-pumpkin {
+        .avatar-santa-hat {
             position: absolute;
-            top: -13px;
-            left: 50%;
-            transform: translateX(-50%);
-            width: 24px;
-            height: 20px;
-            z-index: 4;
-            filter: drop-shadow(0 0 6px var(--orange-glow));
+            top: -15px;
+            left: 48%;
+            transform: translateX(-40%) rotate(8deg);
+            width: 40px;
+            height: 27px;
+            z-index: 8;
+            filter: drop-shadow(0 3px 5px rgba(0, 0, 0, 0.65));
+            pointer-events: none;
         }
 
         .avatar-circle-ring {
@@ -260,11 +433,21 @@
             border: 2.5px solid var(--gold-bright);
             box-shadow: 
                 0 0 12px var(--gold-glow),
-                0 0 6px rgba(255, 140, 0, 0.8),
-                inset 0 0 6px rgba(0, 0, 0, 0.7);
+                0 0 6px rgba(193, 18, 31, 0.7),
+                inset 0 0 8px rgba(0, 0, 0, 0.7);
             overflow: hidden;
-            background: #18092c;
+            background: radial-gradient(circle at 35% 30%, #e63946 0%, #9e0b16 65%, #4a0207 100%);
             position: relative;
+        }
+
+        .rank-2 .avatar-circle-ring {
+            border-color: #e2e8f0;
+            box-shadow: 0 0 10px rgba(226, 232, 240, 0.5), inset 0 0 8px rgba(0,0,0,0.7);
+        }
+
+        .rank-3 .avatar-circle-ring {
+            border-color: #f59e0b;
+            box-shadow: 0 0 10px rgba(245, 158, 11, 0.6), inset 0 0 8px rgba(0,0,0,0.7);
         }
 
         .avatar-img {
@@ -280,283 +463,172 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            font-family: var(--font-head);
-            font-size: 1.35rem;
+            font-size: 1.45rem;
             font-weight: 900;
             color: #ffffff;
-            background: linear-gradient(135deg, #a855f7 0%, #581c87 100%);
-            text-shadow: 1px 1px 2px #000;
+            background: radial-gradient(circle at 35% 30%, #e63946 0%, #a40e1a 65%, #580409 100%);
+            text-shadow: 1px 2px 3px rgba(0, 0, 0, 0.8);
+        }
+
+        .rank-2 .avatar-fallback {
+            background: radial-gradient(circle at 35% 30%, #1b6b3a, #0b3b1e);
+        }
+
+        .rank-3 .avatar-fallback {
+            background: radial-gradient(circle at 35% 30%, #a855f7, #581c87);
         }
 
         .rank-medal-badge {
             position: absolute;
-            bottom: -3px;
-            right: -3px;
-            width: 23px;
-            height: 23px;
+            bottom: -4px;
+            right: -4px;
+            width: 26px;
+            height: 26px;
             border-radius: 50%;
-            background: radial-gradient(circle at 35% 35%, #fffde7 0%, #ffd600 55%, #ff8f00 100%);
+            background: radial-gradient(circle at 35% 35%, #fffde7 0%, #ffd600 55%, #d48800 100%);
             border: 1.5px solid #ffffff;
             color: #3e2723;
-            font-family: var(--font-head);
-            font-size: 0.8rem;
+            font-size: 0.92rem;
             font-weight: 900;
             display: flex;
             align-items: center;
             justify-content: center;
-            box-shadow: 0 2px 6px rgba(0,0,0,0.8), 0 0 8px var(--gold-glow);
-            z-index: 5;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.85), 0 0 8px var(--gold-glow);
+            z-index: 9;
         }
 
-        .hero-mvp-info {
+        .rank-medal-badge::before {
+            content: '';
+            position: absolute;
+            top: -4px;
+            width: 6px;
+            height: 3.5px;
+            border: 1.2px solid #ffd700;
+            border-radius: 2px;
+            background: #b8860b;
+        }
+
+        .rank-medal-badge.medal-2 {
+            background: radial-gradient(circle at 35% 30%, #ffffff 0%, #cbd5e1 55%, #64748b 100%);
+            border-color: #f8fafc;
+            color: #0f172a;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.8);
+        }
+
+        .rank-medal-badge.medal-3 {
+            background: radial-gradient(circle at 35% 30%, #fef08a 0%, #f59e0b 55%, #92400e 100%);
+            border-color: #fde68a;
+            color: #271202;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.8);
+        }
+
+        .hero-tapper-info {
             display: flex;
             flex-direction: column;
             gap: 3px;
             flex-grow: 1;
             min-width: 0;
-            z-index: 2;
+            z-index: 4;
         }
 
-        .mvp-header-row {
+        .tapper-header-row {
             display: flex;
             align-items: center;
             gap: 6px;
         }
 
-        .mvp-tag {
-            font-family: var(--font-head);
+        .mvp-tag-ribbon {
+            position: relative;
             font-size: 0.7rem;
-            font-style: italic;
             font-weight: 900;
-            color: #ffb703;
-            background: rgba(255, 183, 3, 0.2);
-            border: 1px solid rgba(255, 183, 3, 0.6);
-            border-radius: 6px;
-            padding: 1px 5px;
-            letter-spacing: 0.5px;
-            text-shadow: 1px 1px 0 #000;
+            color: #fff3b0;
+            background: linear-gradient(180deg, #d62828 0%, #8a0812 100%);
+            border: 1.2px solid #f4c44e;
+            border-radius: 5px;
+            padding: 1.5px 6px;
+            letter-spacing: 0.4px;
+            text-shadow: 1px 1px 0 #3d0000;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.5), inset 0 1px 2px rgba(255,255,255,0.3);
+            display: inline-flex;
+            align-items: center;
+            gap: 3px;
+            flex-shrink: 0;
         }
 
-        .mvp-name {
-            font-family: var(--font-head);
-            font-size: 1.05rem;
-            font-style: italic;
-            font-weight: 900;
+        .tapper-name {
+            font-size: 1.02rem;
+            font-weight: 800;
             color: #ffffff;
-            letter-spacing: 0.5px;
-            text-shadow: 2px 2px 0 #000, 0 0 8px rgba(255, 255, 255, 0.5);
+            letter-spacing: 0.2px;
+            text-shadow: 2px 2px 0 #05160c, 0 0 8px rgba(255, 255, 255, 0.4);
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
             max-width: 175px;
         }
 
+        .rank-1 .tapper-name {
+            max-width: 118px;
+        }
+
         .metrics-row {
             display: flex;
             align-items: center;
-            gap: 12px;
+            gap: 13px;
             margin-top: 2px;
         }
 
         .metric-group {
             display: inline-flex;
             align-items: center;
-            gap: 4px;
-            font-family: var(--font-head);
-            font-size: 0.95rem;
-            font-style: italic;
+            gap: 5px;
+            font-size: 1.26rem;
+            font-weight: 900;
+            letter-spacing: -0.3px;
+            text-shadow: 2px 2px 0 #000;
+        }
+
+        .streak-num {
+            color: #ffffff;
+            font-size: 1.24rem;
             font-weight: 900;
         }
 
-        .stat-icon {
-            font-size: 1.1rem;
+        .candy-cane-icon {
+            width: 18px;
+            height: 22px;
             display: inline-block;
-        }
-
-        .stat-icon.testtube {
-            filter: drop-shadow(0 0 5px #00e676);
-            transform: rotate(-10deg);
+            filter: drop-shadow(0 2px 4px rgba(0,0,0,0.6));
+            transform: rotate(12deg);
         }
 
         .stat-icon.heart {
-            filter: drop-shadow(0 0 7px #ff1744);
+            font-size: 1.12rem;
+            filter: drop-shadow(0 0 6px #ff1744);
             animation: gentleHeart 2s infinite ease-in-out;
         }
 
         @keyframes gentleHeart {
             0%, 100% { transform: scale(1); }
-            50% { transform: scale(1.15); filter: drop-shadow(0 0 10px #ff2d55); }
-        }
-
-        .stat-icon.coin {
-            filter: drop-shadow(0 0 5px #ffd600);
+            50% { transform: scale(1.14); filter: drop-shadow(0 0 9px #ff2d55); }
         }
 
         .stat-val-likes {
-            color: #ffea00;
-            text-shadow: 1.5px 1.5px 0 #000, 0 0 8px rgba(255, 234, 0, 0.7);
-        }
-
-        .stat-val-coins {
-            color: #ffd166;
-            text-shadow: 1.5px 1.5px 0 #000;
-        }
-
-        .runners-list {
-            display: flex;
-            flex-direction: column;
-            gap: 5px;
-        }
-
-        .tapper-row {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            background: linear-gradient(90deg, rgba(26, 9, 48, 0.75) 0%, rgba(13, 5, 26, 0.85) 100%);
-            border: 1px solid rgba(168, 85, 247, 0.35);
-            border-left: 4px solid var(--purple-neon);
-            border-radius: 12px;
-            padding: 5px 10px;
-            transition: all 0.3s ease;
-            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
-        }
-
-        .tapper-row.rank-2 {
-            border-left-color: #e0e0e0;
-            border-color: rgba(224, 224, 224, 0.4);
-            background: linear-gradient(90deg, rgba(224, 224, 224, 0.12) 0%, rgba(15, 8, 30, 0.9) 100%);
-        }
-
-        .tapper-row.rank-3 {
-            border-left-color: #ffb74d;
-            border-color: rgba(255, 183, 77, 0.4);
-            background: linear-gradient(90deg, rgba(255, 183, 77, 0.12) 0%, rgba(15, 8, 30, 0.9) 100%);
-        }
-
-        .row-left {
-            display: flex;
-            align-items: center;
-            gap: 7px;
-            min-width: 0;
-            flex-grow: 1;
-        }
-
-        .mini-rank-medal {
-            width: 20px;
-            height: 20px;
-            border-radius: 50%;
-            background: #25094d;
-            border: 1px solid var(--purple-neon);
-            color: #d8b4fe;
-            font-family: var(--font-head);
-            font-size: 0.72rem;
-            font-weight: 900;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            flex-shrink: 0;
-            text-shadow: 1px 1px 0 #000;
-        }
-
-        .mini-rank-medal.medal-2 {
-            background: radial-gradient(circle at 35% 35%, #ffffff 0%, #bdbdbd 60%, #757575 100%);
-            border-color: #ffffff;
-            color: #212121;
-        }
-
-        .mini-rank-medal.medal-3 {
-            background: radial-gradient(circle at 35% 35%, #ffe0b2 0%, #ffb74d 60%, #e65100 100%);
-            border-color: #ffe0b2;
-            color: #3e2723;
-        }
-
-        .mini-avatar-wrapper {
-            width: 28px;
-            height: 28px;
-            border-radius: 50%;
-            border: 1.5px solid rgba(255, 255, 255, 0.4);
-            overflow: hidden;
-            background: #18092c;
-            flex-shrink: 0;
-        }
-
-        .mini-avatar-img {
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
-            display: block;
-        }
-
-        .mini-avatar-fallback {
-            width: 100%;
-            height: 100%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-family: var(--font-head);
-            font-size: 0.78rem;
-            font-weight: 800;
-            color: white;
-            background: linear-gradient(135deg, #a855f7, #6b21a8);
-        }
-
-        .row-names {
-            display: flex;
-            flex-direction: column;
-            min-width: 0;
-        }
-
-        .row-name {
-            font-family: var(--font-body);
-            font-size: 0.88rem;
-            font-style: italic;
-            font-weight: 700;
-            color: #ffffff;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            max-width: 140px;
-            text-shadow: 1px 1px 0 #000;
-        }
-
-        .row-sub {
-            font-size: 0.65rem;
-            color: rgba(255, 255, 255, 0.45);
-            font-style: italic;
-            font-weight: 600;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            max-width: 140px;
-        }
-
-        .row-right {
-            display: flex;
-            align-items: center;
-            gap: 4px;
-            flex-shrink: 0;
-            font-family: var(--font-head);
-            font-size: 0.95rem;
-            font-style: italic;
+            font-size: 1.32rem;
             font-weight: 900;
             color: #ffd166;
-            text-shadow: 1.5px 1.5px 0 #000;
-        }
-
-        .row-heart {
-            font-size: 0.85rem;
-            filter: drop-shadow(0 0 4px #ff1744);
+            text-shadow: 2px 2px 0 #000, 0 0 10px rgba(255, 209, 102, 0.7);
         }
 
         .empty-slot {
-            opacity: 0.45;
-            border-left-style: dashed;
+            opacity: 0.55;
+            border-style: dashed;
         }
 
         .empty-slot-text {
-            font-size: 0.75rem;
-            font-style: italic;
-            color: rgba(255, 255, 255, 0.5);
+            font-size: 0.82rem;
+            font-weight: 700;
+            color: rgba(255, 255, 255, 0.7);
         }
 
         .tap-pulse {
@@ -565,7 +637,7 @@
 
         @keyframes tapPulseAnim {
             0% { transform: scale(1); }
-            50% { transform: scale(1.15); color: #fff; filter: drop-shadow(0 0 10px #ff0055); }
+            50% { transform: scale(1.18); color: #fff; filter: drop-shadow(0 0 10px #ffd700); }
             100% { transform: scale(1); }
         }
 
@@ -575,139 +647,119 @@
 
         @keyframes newMvpFlash {
             0% { transform: scale(0.92); filter: brightness(2) drop-shadow(0 0 35px #ffd700); }
-            50% { transform: scale(1.05); filter: brightness(1.4) drop-shadow(0 0 45px #ff9e00); }
+            50% { transform: scale(1.05); filter: brightness(1.4) drop-shadow(0 0 45px #c1121f); }
             100% { transform: scale(1); filter: brightness(1); }
-        }
-
-        .live-status-pill {
-            text-align: center;
-            font-size: 0.65rem;
-            font-style: italic;
-            font-weight: 800;
-            color: #00e676;
-            letter-spacing: 1px;
-            text-transform: uppercase;
-            text-shadow: 1px 1px 0 #000;
-            margin-top: 2px;
         }
     </style>
 </head>
 <body>
 
-    <!-- WIDGET PRINCIPAL HALLOWEEN TOP 5 -->
+    <svg width="0" height="0" style="position:absolute; pointer-events:none;">
+        <defs>
+            <linearGradient id="hatRed" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" stop-color="#ef233c"/>
+                <stop offset="55%" stop-color="#c1121f"/>
+                <stop offset="100%" stop-color="#64050c"/>
+            </linearGradient>
+            <radialGradient id="furWhite" cx="40%" cy="35%" r="65%">
+                <stop offset="0%" stop-color="#ffffff"/>
+                <stop offset="70%" stop-color="#e2e8f0"/>
+                <stop offset="100%" stop-color="#94a3b8"/>
+            </radialGradient>
+
+            <g id="holly-cluster">
+                <path d="M11 11 C7 4, 2 5, 1 2 C4 8, 2 11, 6 13 C3 15, 6 19, 2 21 C8 19, 11 16, 11 11 Z" fill="#1b7a3d" stroke="#0a3d1c" stroke-width="0.8"/>
+                <path d="M11 11 C18 7, 17 2, 20 1 C14 4, 11 2, 9 6 C7 3, 3 6, 1 2 C3 8, 6 11, 11 11 Z" fill="#259c4f" stroke="#0a3d1c" stroke-width="0.8"/>
+                <circle cx="11" cy="11" r="2.8" fill="#d62828" stroke="#580409" stroke-width="0.5"/>
+                <circle cx="8" cy="13.2" r="2.5" fill="#e63946" stroke="#580409" stroke-width="0.5"/>
+                <circle cx="13.2" cy="8.5" r="2.4" fill="#c1121f" stroke="#580409" stroke-width="0.5"/>
+                <circle cx="10.2" cy="10.2" r="0.8" fill="#ffb3c1"/>
+            </g>
+
+            <g id="gold-snowflake" stroke="#e5b842" stroke-linecap="round">
+                <line x1="12" y1="2" x2="12" y2="22" stroke-width="1.3"/>
+                <line x1="2" y1="12" x2="22" y2="12" stroke-width="1.3"/>
+                <line x1="5" y1="5" x2="19" y2="19" stroke-width="1.1"/>
+                <line x1="19" y1="5" x2="5" y2="19" stroke-width="1.1"/>
+                <polyline points="9,4 12,7 15,4" fill="none" stroke-width="1"/>
+                <polyline points="9,20 12,17 15,20" fill="none" stroke-width="1"/>
+                <polyline points="4,9 7,12 4,15" fill="none" stroke-width="1"/>
+                <polyline points="20,9 17,12 20,15" fill="none" stroke-width="1"/>
+            </g>
+
+            <g id="candy-cane-svg">
+                <path d="M8,32 L18,14 C21,9 19,4 14,4 C10,4 7,7 6,11" fill="none" stroke="#ffffff" stroke-width="5.5" stroke-linecap="round"/>
+                <path d="M8,32 L18,14 C21,9 19,4 14,4 C10,4 7,7 6,11" fill="none" stroke="#d62828" stroke-width="5.5" stroke-linecap="round" stroke-dasharray="4 4.5"/>
+            </g>
+        </defs>
+    </svg>
+
     <div class="widget-wrapper" id="widgetCard">
         
-        <!-- PÍLDORA SUPERIOR CON CALABAZA -->
+        <svg class="snow-cap-left" viewBox="0 0 110 30" preserveAspectRatio="none">
+            <path d="M2,26 C2,10 18,4 38,5 C58,6 75,2 95,6 C103,8 108,14 104,20 C98,25 78,18 60,21 C40,24 22,19 12,26 C6,29 2,28 2,26 Z" fill="#f1f5f9"/>
+            <path d="M5,23 C8,11 22,6 40,7 C58,8 75,5 92,8 C99,10 102,14 98,17 C90,21 75,15 58,18 C38,21 20,17 10,24 Z" fill="#ffffff"/>
+        </svg>
+
+        <svg class="snow-cap-right" viewBox="0 0 110 30" preserveAspectRatio="none">
+            <path d="M108,26 C108,10 92,4 72,5 C52,6 35,2 15,6 C7,8 2,14 6,20 C12,25 32,18 50,21 C70,24 88,19 98,26 C104,29 108,28 108,26 Z" fill="#f1f5f9"/>
+            <path d="M105,23 C102,11 88,6 70,7 C52,8 35,5 18,8 C11,10 8,14 12,17 C20,21 35,15 52,18 C72,21 90,17 100,24 Z" fill="#ffffff"/>
+        </svg>
+
         <div class="top-badge-anchor">
-            <svg class="pumpkin-roof" viewBox="0 0 100 85">
-                <defs>
-                    <radialGradient id="p-orange" cx="50%" cy="50%" r="50%">
-                        <stop offset="0%" stop-color="#ffb703" />
-                        <stop offset="65%" stop-color="#fb8500" />
-                        <stop offset="100%" stop-color="#d9480f" />
-                    </radialGradient>
-                    <filter id="p-flame-glow" x="-20%" y="-20%" width="140%" height="140%">
-                        <feGaussianBlur in="SourceGraphic" stdDeviation="3" result="blur" />
-                        <feMerge>
-                            <feMergeNode in="blur" />
-                            <feMergeNode in="SourceGraphic" />
-                        </feMerge>
-                    </filter>
-                </defs>
-                <path d="M47 22 C46 10, 56 4, 64 2 C61 11, 54 18, 51 24 Z" fill="#38b000" stroke="#004b23" stroke-width="1.5" />
-                <ellipse cx="26" cy="50" rx="20" ry="25" fill="url(#p-orange)" />
-                <ellipse cx="74" cy="50" rx="20" ry="25" fill="url(#p-orange)" />
-                <ellipse cx="37" cy="51" rx="21" ry="27" fill="url(#p-orange)" />
-                <ellipse cx="63" cy="51" rx="21" ry="27" fill="url(#p-orange)" />
-                <ellipse cx="50" cy="52" rx="23" ry="28" fill="url(#p-orange)" />
-                <g fill="#ffe066" filter="url(#p-flame-glow)">
-                    <polygon points="33,40 43,44 35,52" />
-                    <polygon points="67,40 57,44 65,52" />
-                    <polygon points="50,47 46,54 54,54" />
-                    <path d="M28 62 Q50 80 72 62 Q65 69 58 64 Q54 71 50 64 Q46 71 42 64 Q35 69 28 62 Z" />
-                </g>
+            <svg class="santa-hat-roof" viewBox="0 0 120 75">
+                <path d="M25,52 C12,42 5,45 3,36 C10,36 16,32 20,38 C18,30 24,25 30,27 C28,36 28,44 25,52 Z" fill="#1b7a3d" stroke="#082e13" stroke-width="1.2"/>
+                <circle cx="24" cy="48" r="4.5" fill="#d62828"/>
+                <circle cx="19" cy="52" r="4" fill="#e63946"/>
+                <path d="M24,52 C28,22 52,6 78,10 C98,13 108,30 110,48 C96,38 82,36 68,46 Z" fill="url(#hatRed)"/>
+                <circle cx="107" cy="49" r="11" fill="url(#furWhite)"/>
+                <path d="M18,52 C18,43 34,40 58,41 C80,42 94,46 95,55 C95,63 78,65 56,64 C32,63 18,60 18,52 Z" fill="url(#furWhite)"/>
             </svg>
 
-            <div class="top-pill">
-                <span class="pill-title">TOP 5</span>
-                <span class="pill-highlight">TAP TAP</span>
+            <div class="top-pill-wrapper">
+                <svg class="pill-snow-left" viewBox="0 0 60 22" preserveAspectRatio="none">
+                    <path d="M2,18 C4,6 18,2 38,4 C50,5 58,9 54,14 C48,18 32,12 18,16 C10,19 4,21 2,18 Z" fill="#ffffff"/>
+                </svg>
+                <svg class="pill-snow-right" viewBox="0 0 60 22" preserveAspectRatio="none">
+                    <path d="M2,18 C4,6 18,2 38,4 C50,5 58,9 54,14 C48,18 32,12 18,16 C10,19 4,21 2,18 Z" fill="#ffffff"/>
+                </svg>
+
+                <div class="top-pill">
+                    <span class="pill-title">TOP 3</span>
+                    <span class="pill-highlight">TAP TAP</span>
+                </div>
+
+                <svg class="pill-holly-left" viewBox="0 0 24 24"><use href="#holly-cluster"/></svg>
+                <svg class="pill-holly-right" viewBox="0 0 24 24"><use href="#holly-cluster"/></svg>
             </div>
         </div>
 
-        <div class="halloween-card">
+        <div class="christmas-card">
             
-            <svg class="drip-top-svg" viewBox="0 0 320 12" preserveAspectRatio="none">
-                <path d="M0,0 L320,0 C305,0 300,8 292,8 C285,8 280,0 265,0 C250,0 245,10 236,10 C228,10 223,0 205,0 C190,0 185,11 176,11 C168,11 162,0 145,0 C130,0 125,9 116,9 C108,9 104,0 85,0 C70,0 65,11 56,11 C48,11 44,0 25,0 C15,0 10,6 0,0 Z" fill="var(--orange-drip)" />
+            <!-- Capa de nieve cayendo dentro del overlay -->
+            <div class="snowfall-layer" id="snowfallLayer"></div>
+
+            <svg class="lights-garland-svg" viewBox="0 0 280 22" preserveAspectRatio="none">
+                <path d="M0,4 Q35,16 70,6 Q105,14 140,6 Q175,14 210,6 Q245,16 280,4" fill="none" stroke="#051c0e" stroke-width="1.5"/>
+                <circle class="bulb-glow" cx="20" cy="9" r="3.2" fill="#ff2a2a" style="color:#ff2a2a"/>
+                <circle class="bulb-glow d2" cx="50" cy="10" r="3.2" fill="#00f5d4" style="color:#00f5d4"/>
+                <circle class="bulb-glow d3" cx="76" cy="7" r="3" fill="#fee440" style="color:#fee440"/>
+                <circle class="bulb-glow" cx="204" cy="7" r="3" fill="#fee440" style="color:#fee440"/>
+                <circle class="bulb-glow d2" cx="230" cy="10" r="3.2" fill="#ff2a2a" style="color:#ff2a2a"/>
+                <circle class="bulb-glow d3" cx="260" cy="9" r="3.2" fill="#00e676" style="color:#00e676"/>
             </svg>
 
-            <svg class="drip-bottom-svg" viewBox="0 0 330 14" preserveAspectRatio="none">
-                <path d="M0,2 L330,2 C318,2 314,12 305,12 C298,12 294,2 278,2 C265,2 260,14 250,14 C242,14 238,2 220,2 C206,2 201,13 192,13 C184,13 180,2 162,2 C148,2 144,14 134,14 C126,14 122,2 105,2 C92,2 88,11 79,11 C72,11 68,2 50,2 C38,2 32,10 20,10 C12,10 8,2 0,2 Z" fill="var(--orange-drip)" />
+            <div class="tappers-list" id="tappersList">
+            </div>
+
+            <svg class="bottom-festive-trim" viewBox="0 0 300 34" preserveAspectRatio="none">
+                <path d="M0,10 Q28,32 76,32 L28,32 Q6,32 0,18 Z" fill="#9e0b16"/>
+                <path d="M0,5 Q22,24 66,29 Q34,17 2,2 Z" fill="#f8fafc"/>
+                <path d="M0,8 Q26,29 72,31" fill="none" stroke="#e5b842" stroke-width="2.2"/>
+                <path d="M300,10 Q272,32 224,32 L272,32 Q294,32 300,18 Z" fill="#9e0b16"/>
+                <path d="M300,5 Q278,24 234,29 Q266,17 298,2 Z" fill="#f8fafc"/>
+                <path d="M300,8 Q274,29 228,31" fill="none" stroke="#e5b842" stroke-width="2.2"/>
             </svg>
-
-            <!-- PUESTO #1: HERO MVP DESTACADO -->
-            <div class="hero-mvp-card" id="heroMvpCard">
-                
-                <svg class="spiderweb-corner" viewBox="0 0 100 100">
-                    <g stroke="var(--purple-neon)" stroke-width="1.3" fill="none" opacity="0.65">
-                        <line x1="100" y1="100" x2="0" y2="100" />
-                        <line x1="100" y1="100" x2="10" y2="60" />
-                        <line x1="100" y1="100" x2="30" y2="30" />
-                        <line x1="100" y1="100" x2="60" y2="10" />
-                        <line x1="100" y1="100" x2="100" y2="0" />
-                        <path d="M15,100 Q40,75 100,15" stroke-width="1.1" />
-                        <path d="M35,100 Q58,80 100,35" stroke-width="1.1" />
-                        <path d="M55,100 Q74,85 100,55" stroke-width="1.1" />
-                        <path d="M75,100 Q88,90 100,75" stroke-width="1.1" />
-                    </g>
-                </svg>
-
-                <div class="avatar-section">
-                    <svg class="avatar-mini-pumpkin" viewBox="0 0 100 85">
-                        <ellipse cx="26" cy="50" rx="20" ry="25" fill="#f77f00" />
-                        <ellipse cx="74" cy="50" rx="20" ry="25" fill="#f77f00" />
-                        <ellipse cx="50" cy="52" rx="24" ry="28" fill="#ffb703" />
-                        <path d="M48 20 C48 10, 56 6, 62 4 C60 12, 54 18, 52 22 Z" fill="#2d6a4f" />
-                        <polygon points="34,42 42,46 36,52" fill="#ffe066" />
-                        <polygon points="66,42 58,46 64,52" fill="#ffe066" />
-                        <polygon points="50,48 47,54 53,54" fill="#ffe066" />
-                        <path d="M30 62 Q50 76 70 62 Z" fill="#ffe066" />
-                    </svg>
-
-                    <div class="avatar-circle-ring">
-                        <img id="mvpAvatarImg" class="avatar-img" src="" alt="MVP" style="display: none;" onerror="showMvpFallback();" onload="showMvpImg();" />
-                        <div id="mvpAvatarFallback" class="avatar-fallback">👑</div>
-                    </div>
-
-                    <div class="rank-medal-badge">1</div>
-                </div>
-
-                <div class="hero-mvp-info">
-                    <div class="mvp-header-row">
-                        <span class="mvp-tag">👑 MVP</span>
-                        <span class="mvp-name" id="mvpName">ECLONYX</span>
-                    </div>
-
-                    <div class="metrics-row">
-                        <div class="metric-group">
-                            <span id="mvpStreak">7</span>
-                            <span class="stat-icon testtube">🧪</span>
-                        </div>
-                        <div class="metric-group">
-                            <span class="stat-icon heart">❤️</span>
-                            <span class="stat-val-likes" id="mvpLikes">14.5k</span>
-                        </div>
-                    </div>
-                </div>
-
-            </div>
-
-            <!-- PUESTOS #2 AL #5 (LISTA DE 4 FILAS) -->
-            <div class="runners-list" id="runnersList">
-            </div>
-
-            <div class="live-status-pill" id="liveStatus">
-                🟢 CONECTADO A TIKTOK LIVE
-            </div>
 
         </div>
 
@@ -736,129 +788,199 @@
         const demoData = [
             { uniqueId: 'eclonyx', nickname: 'ECLONYX', profilePictureUrl: '', likes: 14500, streak: 7, coins: 3 },
             { uniqueId: 'queendancer', nickname: 'Sofia Queen 👑', profilePictureUrl: '', likes: 9800, streak: 5, coins: 2 },
-            { uniqueId: 'alex_tapper', nickname: 'Alex VIP ✨', profilePictureUrl: '', likes: 6200, streak: 3, coins: 1 },
-            { uniqueId: 'carlos_live', nickname: 'Carlos R. ⚡', profilePictureUrl: '', likes: 3400, streak: 2, coins: 1 },
-            { uniqueId: 'spooky_fan', nickname: 'Spooky Fan 🎃', profilePictureUrl: '', likes: 1900, streak: 1, coins: 1 }
+            { uniqueId: 'alex_tapper', nickname: 'Alex VIP ✨', profilePictureUrl: '', likes: 6200, streak: 3, coins: 1 }
         ];
 
         if (isUsingDemoData) {
             tappersData = JSON.parse(JSON.stringify(demoData));
         }
 
-        const heroMvpCardEl = document.getElementById('heroMvpCard');
-        const mvpNameEl = document.getElementById('mvpName');
-        const mvpAvatarImgEl = document.getElementById('mvpAvatarImg');
-        const mvpAvatarFallbackEl = document.getElementById('mvpAvatarFallback');
-        const mvpStreakEl = document.getElementById('mvpStreak');
-        const mvpLikesEl = document.getElementById('mvpLikes');
-        const runnersListEl = document.getElementById('runnersList');
-        const liveStatusEl = document.getElementById('liveStatus');
+        const tappersListEl = document.getElementById('tappersList');
+        const snowfallLayerEl = document.getElementById('snowfallLayer');
 
-        function showMvpImg() {
-            mvpAvatarImgEl.style.display = 'block';
-            mvpAvatarFallbackEl.style.display = 'none';
+        function initSnowfall() {
+            if (!snowfallLayerEl) return;
+            snowfallLayerEl.innerHTML = '';
+            const totalFlakes = 26;
+            const symbols = ['❄', '❅', '❆'];
+
+            for (let i = 0; i < totalFlakes; i++) {
+                const flake = document.createElement('div');
+                const isStar = i % 3 === 0;
+                flake.className = `snowflake-drop ${isStar ? 'flake-star' : 'flake-dot'}`;
+
+                const left = Math.random() * 96 + 2;
+                const duration = (Math.random() * 4.5 + 4.2).toFixed(2);
+                const delay = (Math.random() * -9).toFixed(2);
+                const sway = (Math.random() * 28 - 14).toFixed(1) + 'px';
+                const opacity = (Math.random() * 0.45 + 0.4).toFixed(2);
+
+                flake.style.left = `${left}%`;
+                flake.style.animationDuration = `${duration}s`;
+                flake.style.animationDelay = `${delay}s`;
+                flake.style.setProperty('--flake-sway', sway);
+                flake.style.setProperty('--flake-opacity', opacity);
+
+                if (isStar) {
+                    flake.textContent = symbols[i % symbols.length];
+                    flake.style.fontSize = `${Math.floor(Math.random() * 6 + 8)}px`;
+                } else {
+                    const size = (Math.random() * 3.5 + 2.5).toFixed(1);
+                    flake.style.width = `${size}px`;
+                    flake.style.height = `${size}px`;
+                }
+
+                snowfallLayerEl.appendChild(flake);
+            }
         }
+        initSnowfall();
 
-        function showMvpFallback() {
-            mvpAvatarImgEl.style.display = 'none';
-            mvpAvatarFallbackEl.style.display = 'flex';
-        }
+        const snowmanSVG = `
+            <svg class="snowman-buddy" viewBox="0 0 40 50">
+                <rect x="11" y="10" width="18" height="3" rx="1.5" fill="#1e293b"/>
+                <rect x="14" y="2" width="12" height="9" rx="1" fill="#0f172a"/>
+                <rect x="14" y="8" width="12" height="2.2" fill="#d62828"/>
+                <circle cx="20" cy="36" r="11" fill="#f8fafc" stroke="#cbd5e1" stroke-width="0.8"/>
+                <circle cx="20" cy="20" r="8" fill="#ffffff" stroke="#cbd5e1" stroke-width="0.8"/>
+                <circle cx="17.5" cy="18.5" r="1.2" fill="#0f172a"/>
+                <circle cx="22.5" cy="18.5" r="1.2" fill="#0f172a"/>
+                <polygon points="20,19.5 26,21 20,22" fill="#fb8500"/>
+                <path d="M13,25 Q20,28 27,25 L26,28 Q20,30 14,28 Z" fill="#d62828"/>
+                <path d="M23,26 L26,34 L22,34 Z" fill="#e63946"/>
+                <circle cx="20" cy="33" r="1.2" fill="#1e293b"/>
+                <circle cx="20" cy="38" r="1.2" fill="#1e293b"/>
+            </svg>
+        `;
 
-        function renderTop5() {
+        const cardSnowflakesBg = `
+            <svg class="card-snowflakes-bg" viewBox="0 0 270 80" preserveAspectRatio="xMidYMid slice">
+                <g opacity="0.2" stroke="#2d8a4e" stroke-width="1.4" fill="none">
+                    <path d="M0,0 L28,20 M8,0 L22,12"/>
+                    <path d="M270,80 L240,55 M262,80 L246,64"/>
+                </g>
+                <use href="#gold-snowflake" x="232" y="5" width="24" height="24" opacity="0.55"/>
+                <use href="#gold-snowflake" x="202" y="30" width="20" height="20" opacity="0.4"/>
+                <use href="#gold-snowflake" x="178" y="54" width="18" height="18" opacity="0.45"/>
+                <use href="#gold-snowflake" x="228" y="56" width="16" height="16" opacity="0.45"/>
+                <circle cx="195" cy="16" r="1.5" fill="#fff3b0" opacity="0.75"/>
+                <circle cx="220" cy="46" r="1.4" fill="#ffd700" opacity="0.65"/>
+                <path d="M185,22 L186.5,26 L190.5,27.5 L186.5,29 L185,33 L183.5,29 L179.5,27.5 L183.5,26 Z" fill="#ffd700" opacity="0.55"/>
+            </svg>
+        `;
+
+        const santaHatAvatarSVG = `
+            <svg class="avatar-santa-hat" viewBox="0 0 100 68">
+                <path d="M16,46 C22,18 46,6 70,12 C86,16 94,30 95,45 C82,36 68,34 54,42 Z" fill="url(#hatRed)"/>
+                <circle cx="93" cy="46" r="9.5" fill="url(#furWhite)"/>
+                <path d="M10,46 C10,38 26,35 48,36 C68,37 82,41 82,49 C82,56 66,58 46,57 C24,56 10,53 10,46 Z" fill="url(#furWhite)"/>
+            </svg>
+        `;
+
+        function renderTop3() {
             tappersData.sort((a, b) => b.likes - a.likes);
+            tappersListEl.innerHTML = '';
 
+            let leaderChanged = false;
             if (tappersData.length > 0) {
                 const mvp = tappersData[0];
-
                 if (lastLeaderId !== mvp.uniqueId) {
-                    if (lastLeaderId !== null) {
-                        heroMvpCardEl.classList.remove('new-mvp-crown');
-                        void heroMvpCardEl.offsetWidth;
-                        heroMvpCardEl.classList.add('new-mvp-crown');
-                    }
+                    if (lastLeaderId !== null) leaderChanged = true;
                     lastLeaderId = mvp.uniqueId;
                 }
-
-                mvpNameEl.textContent = (mvp.nickname || mvp.uniqueId || 'LÍDER').toUpperCase();
-                mvpStreakEl.textContent = mvp.streak || Math.max(1, Math.min(99, Math.floor(mvp.likes / 500) || 1));
-                mvpLikesEl.textContent = formatLikes(mvp.likes);
-
-                const initial = (mvp.nickname || mvp.uniqueId || '👑').trim().charAt(0).toUpperCase();
-                mvpAvatarFallbackEl.textContent = initial;
-
-                if (mvp.profilePictureUrl && mvp.profilePictureUrl.trim().length > 0) {
-                    mvpAvatarImgEl.src = mvp.profilePictureUrl;
-                } else {
-                    showMvpFallback();
-                }
-            } else {
-                mvpNameEl.textContent = 'ESPERANDO TAPS...';
-                mvpStreakEl.textContent = '0';
-                mvpLikesEl.textContent = '0';
-                mvpAvatarFallbackEl.textContent = '🎃';
-                showMvpFallback();
             }
 
-            runnersListEl.innerHTML = '';
-            for (let i = 1; i < 5; i++) {
+            for (let i = 0; i < 3; i++) {
                 const rank = i + 1;
                 const user = tappersData[i];
 
-                const row = document.createElement('div');
-                row.className = `tapper-row rank-${rank}`;
+                const card = document.createElement('div');
+                card.className = `hero-tapper-card rank-${rank}`;
+                if (rank === 1 && leaderChanged) {
+                    card.classList.add('new-mvp-crown');
+                }
+
+                const cornersHTML = `
+                    <svg class="corner-holly tl" viewBox="0 0 24 24"><use href="#holly-cluster"/></svg>
+                    <svg class="corner-holly tr" viewBox="0 0 24 24"><use href="#holly-cluster"/></svg>
+                    <svg class="corner-holly bl" viewBox="0 0 24 24"><use href="#holly-cluster"/></svg>
+                    <svg class="corner-holly br" viewBox="0 0 24 24"><use href="#holly-cluster"/></svg>
+                    ${rank === 3 ? snowmanSVG : ''}
+                    ${cardSnowflakesBg}
+                `;
 
                 if (user) {
-                    row.id = `row-${user.uniqueId}`;
+                    card.id = `row-${user.uniqueId}`;
                     const initial = (user.nickname || user.uniqueId || '?').trim().charAt(0).toUpperCase();
-                    const medalClass = rank === 2 ? 'medal-2' : (rank === 3 ? 'medal-3' : '');
+                    const streakVal = user.streak || Math.max(1, Math.min(99, Math.floor(user.likes / 500) || 1));
+                    const medalText = rank === 1 ? '1' : `#${rank}`;
 
-                    const avatarHTML = user.profilePictureUrl ?
-                        `<img src="${user.profilePictureUrl}" class="mini-avatar-img" onerror="this.onerror=null; this.parentElement.innerHTML='<div class=\\'mini-avatar-fallback\\'>${initial}</div>';" />` :
-                        `<div class="mini-avatar-fallback">${initial}</div>`;
+                    const avatarHTML = user.profilePictureUrl && user.profilePictureUrl.trim().length > 0 ?
+                        `<img src="${user.profilePictureUrl}" class="avatar-img" onerror="this.onerror=null; this.parentElement.innerHTML='<div class=\\'avatar-fallback\\'>${initial}</div>';" />` :
+                        `<div class="avatar-fallback">${initial}</div>`;
 
-                    row.innerHTML = `
-                        <div class="row-left">
-                            <div class="mini-rank-medal ${medalClass}">#${rank}</div>
-                            <div class="mini-avatar-wrapper">${avatarHTML}</div>
-                            <div class="row-names">
-                                <span class="row-name">${user.nickname || user.uniqueId}</span>
-                                <span class="row-sub">@${user.uniqueId}</span>
+                    card.innerHTML = `
+                        ${cornersHTML}
+                        <div class="avatar-section">
+                            ${rank === 1 ? santaHatAvatarSVG : ''}
+                            <div class="avatar-circle-ring">
+                                ${avatarHTML}
                             </div>
+                            <div class="rank-medal-badge medal-${rank}">${medalText}</div>
                         </div>
-                        <div class="row-right" id="pts-${user.uniqueId}">
-                            <span class="row-heart">❤️</span>
-                            <span>${formatLikes(user.likes)}</span>
+
+                        <div class="hero-tapper-info">
+                            <div class="tapper-header-row">
+                                ${rank === 1 ? '<span class="mvp-tag-ribbon">👑 MVP</span>' : ''}
+                                <span class="tapper-name">${user.nickname || user.uniqueId}</span>
+                            </div>
+
+                            <div class="metrics-row">
+                                <div class="metric-group">
+                                    <span class="streak-num">${streakVal}</span>
+                                    <svg class="candy-cane-icon" viewBox="0 0 28 36"><use href="#candy-cane-svg"/></svg>
+                                </div>
+                                <div class="metric-group" id="pts-${user.uniqueId}">
+                                    <span class="stat-icon heart">❤️</span>
+                                    <span class="stat-val-likes">${formatLikes(user.likes)}</span>
+                                </div>
+                            </div>
                         </div>
                     `;
                 } else {
-                    row.classList.add('empty-slot');
-                    row.innerHTML = `
-                        <div class="row-left">
-                            <div class="mini-rank-medal">#${rank}</div>
-                            <span class="empty-slot-text">👆 Da tap tap para entrar al #${rank}</span>
+                    card.classList.add('empty-slot');
+                    const medalText = rank === 1 ? '1' : `#${rank}`;
+                    card.innerHTML = `
+                        ${cornersHTML}
+                        <div class="avatar-section">
+                            ${rank === 1 ? santaHatAvatarSVG : ''}
+                            <div class="avatar-circle-ring">
+                                <div class="avatar-fallback">🎅</div>
+                            </div>
+                            <div class="rank-medal-badge medal-${rank}">${medalText}</div>
                         </div>
-                        <div class="row-right">
-                            <span style="opacity: 0.3;">--</span>
+                        <div class="hero-tapper-info">
+                            <div class="tapper-header-row">
+                                <span class="empty-slot-text">👆 Tap tap para #${rank}</span>
+                            </div>
+                            <div class="metrics-row">
+                                <div class="metric-group">
+                                    <span style="opacity:0.4;">--</span>
+                                </div>
+                            </div>
                         </div>
                     `;
                 }
 
-                runnersListEl.appendChild(row);
+                tappersListEl.appendChild(card);
             }
         }
 
-        function triggerPulse(uniqueId, isMvp) {
-            if (isMvp) {
-                mvpLikesEl.classList.remove('tap-pulse');
-                void mvpLikesEl.offsetWidth;
-                mvpLikesEl.classList.add('tap-pulse');
-            } else {
-                const rowPts = document.getElementById(`pts-${uniqueId}`);
-                if (rowPts) {
-                    rowPts.classList.remove('tap-pulse');
-                    void rowPts.offsetWidth;
-                    rowPts.classList.add('tap-pulse');
-                }
+        function triggerPulse(uniqueId) {
+            const rowPts = document.getElementById(`pts-${uniqueId}`);
+            if (rowPts) {
+                rowPts.classList.remove('tap-pulse');
+                void rowPts.offsetWidth;
+                rowPts.classList.add('tap-pulse');
             }
         }
 
@@ -868,7 +990,6 @@
             if (isUsingDemoData) {
                 isUsingDemoData = false;
                 tappersData = [];
-                liveStatusEl.textContent = '🟢 RECIBIENDO TAPS EN VIVO';
             }
 
             let user = tappersData.find(u => u.uniqueId === uniqueId);
@@ -895,12 +1016,11 @@
                 tappersData.push(user);
             }
 
-            renderTop5();
-            const isMvp = tappersData.length > 0 && tappersData[0].uniqueId === uniqueId;
-            triggerPulse(uniqueId, isMvp);
+            renderTop3();
+            triggerPulse(uniqueId);
         }
 
-        renderTop5();
+        renderTop3();
 
         const socket = window.__iframeBridgeSocket || (typeof io !== 'undefined' ? io({ query: userParam ? { user: userParam } : {} }) : null);
 
@@ -928,23 +1048,6 @@
                     data.likeCount || data.cantidad || 1
                 );
             });
-
-            socket.on('tiktokEstado', (data) => {
-                if (!data) return;
-                if (data.estado === 'conectado') {
-                    liveStatusEl.textContent = `🟢 LIVE DE @${(data.usuario || '').toUpperCase()}`;
-                    liveStatusEl.style.color = '#00e676';
-                } else if (data.estado === 'conectando') {
-                    liveStatusEl.textContent = `🟡 CONECTANDO A TIKTOK...`;
-                    liveStatusEl.style.color = '#ffee00';
-                } else if (data.estado === 'error') {
-                    liveStatusEl.textContent = `⚠️ ERROR DE CONEXIÓN`;
-                    liveStatusEl.style.color = '#ff5252';
-                } else if (data.estado === 'desconectado') {
-                    liveStatusEl.textContent = `🔴 ESPERANDO CONEXIÓN A LIVE`;
-                    liveStatusEl.style.color = '#ff5252';
-                }
-            });
         }
 
         window.addEventListener('message', (event) => {
@@ -967,8 +1070,7 @@
         if (isTestMode) {
             isUsingDemoData = false;
             tappersData = JSON.parse(JSON.stringify(demoData));
-            liveStatusEl.textContent = '⚠️ MODO PRUEBA ACTIVO (TECLA T PARA TAPS)';
-            renderTop5();
+            renderTop3();
         }
 
         window.addEventListener('keydown', (e) => {
@@ -978,9 +1080,7 @@
                     { id: 'eclonyx', name: 'ECLONYX' },
                     { id: 'queendancer', name: 'Sofia Queen 👑' },
                     { id: 'alex_tapper', name: 'Alex VIP ✨' },
-                    { id: 'carlos_live', name: 'Carlos R. ⚡' },
-                    { id: 'spooky_fan', name: 'Spooky Fan 🎃' },
-                    { id: 'new_challenger', name: 'Nuevo Fan 🔥' }
+                    { id: 'new_challenger', name: 'Nuevo Fan 🎄' }
                 ];
                 const selected = testUsers[Math.floor(Math.random() * testUsers.length)];
                 processLiveLike(selected.id, selected.name, '', 0, Math.floor(Math.random() * 85) + 15);

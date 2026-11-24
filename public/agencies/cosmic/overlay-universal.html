@@ -138,6 +138,7 @@
         socket.on('activadoresEstado', function(d) { forwardToIframe('activadoresEstado', d); });
         socket.on('activadoresUpdate', function(d) { forwardToIframe('activadoresUpdate', d); });
         socket.on('activadoresReset', function(d) { forwardToIframe('activadoresReset', d); });
+        socket.on('victoriasActualizadas', function(d) { forwardToIframe('victoriasActualizadas', d); });
 
         socket.on('actualizarCopa', function(d) { forwardToIframe('actualizarCopa', d); });
         socket.on('futbolConfigActualizada', function(d) { forwardToIframe('futbolConfigActualizada', d); });
